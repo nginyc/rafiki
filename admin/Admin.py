@@ -49,8 +49,10 @@ class Admin:
 
   def get_classifier(self, classifier_id):
     classifier = self._db.get_classifier(classifier_id)
+    hyperpartition = self._db.get_hyperpartition(classifier.hyperpartition_id)
     return {
       'id': classifier_id,
+      'method': hyperpartition.method,
       'hyperparameters': classifier.hyperparameter_values,
       'cv_accuracy': float(classifier.cv_judgment_metric)
     }
