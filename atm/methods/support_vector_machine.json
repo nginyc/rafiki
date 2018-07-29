@@ -1,0 +1,58 @@
+{   
+    "name": "svm",
+    "class": "sklearn.svm.SVC",
+    "hyperparameters": {
+        "C": {
+            "type": "float_exp",
+            "range": [1e-5, 1e5]
+        },
+        "gamma": {
+            "type": "float_exp",
+            "range": [1e-5, 1e5]
+        },
+        "kernel": {
+            "type": "string",
+            "values": ["rbf", "poly", "linear", "sigmoid"]
+        },
+        "degree": {
+            "type": "int",
+            "range": [2, 5]
+        },
+        "coef0": {
+            "type": "int",
+            "range": [-1e3, 1e3]
+        },
+        "probability": {
+            "type": "bool",
+            "values": [true]
+        },
+        "shrinking": {
+            "type": "bool",
+            "values": [true]
+        },
+        "cache_size": {
+            "type": "int",
+            "range": [15000]
+        },
+        "class_weight": {
+            "type": "string",
+            "values": ["balanced"]
+        },
+        "_scale": {
+            "type": "bool",
+            "values": [true]
+        },
+        "max_iter": {
+            "type": "int",
+            "range": [50000]
+        }
+    },
+    "root_hyperparameters": ["C", "kernel", "probability", "shrinking", "cache_size", "class_weight", "max_iter", "_scale"],
+    "conditional_hyperparameters": {
+        "kernel": {
+            "rbf": ["gamma"],
+            "sigmoid": ["gamma", "coef0"],
+            "poly": ["degree", "gamma", "coef0"]
+        }
+    }
+}

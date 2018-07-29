@@ -1,0 +1,57 @@
+{   
+    "name": "mlp",
+    "class": "sklearn.neural_network.MLPClassifier",
+    "hyperparameters": {
+        "batch_size": {
+            "type": "string",
+            "values": ["auto"]
+        },
+        "solver": {
+            "type": "string",
+            "values": ["lbfgs", "sgd", "adam"]
+        },
+        "alpha": {
+            "type": "float",
+            "range": [0.0001, 0.009]
+        },
+        "learning_rate_init": {
+            "type": "float",
+            "range": [0.001, 0.99]
+        },
+        "beta_1": {
+            "type": "float",
+            "range": [0.8, 0.9999]
+        },
+        "beta_2": {
+            "type": "float",
+            "range": [0.8, 0.9999]
+        },
+        "learning_rate": {
+            "type": "string",
+            "values": ["constant", "invscaling", "adaptive"]
+        },
+        "activation": {
+            "type": "string",
+            "values": ["relu", "logistic", "identity", "tanh"]
+        },
+        "hidden_layer_sizes": {
+            "type": "list",
+            "list_length": [1, 2, 3],
+            "element": {
+                "type": "int",
+                "range": [2, 300]
+            }
+        },
+        "_scale": {
+            "type": "string",
+            "values": [true]
+        }
+    },
+    "root_hyperparameters": ["batch_size", "solver", "alpha", "activation", "hidden_layer_sizes", "_scale"],
+    "conditional_hyperparameters": {
+        "solver": {
+            "sgd": ["learning_rate_init", "learning_rate"],
+            "adam": ["learning_rate_init", "beta_1", "beta_2"]
+        }
+    }
+}

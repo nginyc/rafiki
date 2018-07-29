@@ -1,0 +1,16 @@
+{   
+    "name": "ada",
+    "class": "sklearn.ensemble.AdaBoostClassifier",
+    "hyperparameters": {
+        "n_estimators": {
+            "type": "int",
+            "range": [25, 500]
+        },
+        "learning_rate": {
+            "type": "float",
+            "range": [0.5, 10]
+        }
+    },
+    "root_hyperparameters": ["n_estimators", "learning_rate"],
+    "conditional_hyperparameters": {}
+}

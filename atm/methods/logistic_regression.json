@@ -1,0 +1,40 @@
+{   
+    "name": "logreg",
+    "class": "sklearn.linear_model.LogisticRegression",
+    "hyperparameters": {
+        "C": {
+            "type": "float_exp",
+            "range": [1e-5, 1e5]
+        },
+        "tol": {
+            "type": "float_exp",
+            "range": [1e-5, 1e5]
+        },
+        "penalty": {
+            "type": "string",
+            "values": ["l1", "l2"]
+        },
+        "dual": {
+            "type": "bool",
+            "values": [true, false]
+        },
+        "fit_intercept": {
+            "type": "bool",
+            "values": [true, false]
+        },
+        "class_weight": {
+            "type": "string",
+            "values": ["balanced"]
+        },
+        "_scale": {
+            "type": "bool",
+            "values": [true]
+        }
+    },
+    "root_hyperparameters": ["C", "tol", "penalty", "fit_intercept", "class_weight", "_scale"],
+    "conditional_hyperparameters": {
+        "penalty": {
+            "l2": ["dual"]
+        }
+    }
+}
