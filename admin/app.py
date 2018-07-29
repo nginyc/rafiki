@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import os
 
 from .Admin import Admin
@@ -17,12 +17,33 @@ app = Flask(__name__)
 def index():
   return 'Admin is up.'
 
-@app.route("/datarun", methods=['POST'])
+@app.route("/dataruns", methods=['POST'])
 def post_datarun():
   params = request.get_json()
-  return str(admin.create_datarun(**params))
+  
+  return jsonify(admin.create_datarun(
+    dataset_url=params['dataset_url'],
+    class_column=params['class_column'],
+    budget_type=params['budget_type'],
+    budget=params['budget']
+  ))
 
-@app.route("/datarun", methods=['GET'])
-def get_datarun():
+@app.route("/dataruns/<datarun_id>", methods=['GET'])
+def get_datarun(datarun_id):
+  return jsonify(admin.get_datarun(
+    datarun_id=datarun_id
+  ))
+
+@app.route("/classifiers/<classifier_id>", methods=['GET'])
+def get_classifier(classifier_id):
+  return jsonify(admin.get_classifier(
+    classifier_id=classifier_id
+  ))
+
+@app.route("/classifiers/<classifier_id>/queries", methods=['POST'])
+def query_classifier(classifier_id):
   params = request.get_json()
-  return str(admin.get_datarun(**params))
+  return jsonify(admin.query_classifier(
+    classifier_id=classifier_id,
+    queries=params['queries']
+  ))

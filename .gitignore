@@ -6,3 +6,14 @@ envs/
 
 # Visual Studio Code config
 .vscode/
+
+# Models
+models/*
+
+# Python byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Gitkeeps
+!.gitkeep

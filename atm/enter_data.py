@@ -72,7 +72,7 @@ def create_datarun(db, dataset, run_config):
         # TODO: why not walltime and classifiers budget simultaneously?
         run_config.budget_type = 'walltime'
     elif run_config.budget_type == 'walltime':
-        deadline = datetime.now() + timedelta(minutes=budget)
+        deadline = datetime.now() + timedelta(minutes=run_config.budget)
 
     target = run_config.score_target + '_judgment_metric'
     datarun = db.create_datarun(dataset_id=dataset.id,

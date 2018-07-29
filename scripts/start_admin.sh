@@ -9,6 +9,7 @@ docker run --name $MODULE_NAME \
   -v "/$PWD/atm/":"/root/app/atm/" \
   -v "/$PWD/data/":"/root/app/data/" \
   -v "/$PWD/scripts/":"/root/app/scripts/" \
+  -v "/$PWD/models/":"/root/app/models/" \
   -e MYSQL_HOST=$MYSQL_HOST \
   -e MYSQL_PORT=$MYSQL_PORT \
   -e MYSQL_USER=$MYSQL_USER \

@@ -1,11 +1,13 @@
+import pandas as pd
+
 import atm
 from atm.enter_data import enter_data
 from atm.database import Database
 
 class Admin:
   def __init__(self, host, port, username, password, database):
-    log_config = self._build_log_config()
-    atm.config.initialize_logging(log_config)
+    self._log_config = self._build_log_config()
+    atm.config.initialize_logging(self._log_config)
     self._sql_config = self._build_sql_config(
       host, port, username, password, database
     )
@@ -13,8 +15,13 @@ class Admin:
       **vars(self._sql_config)
     )
 
-  def create_datarun(self, dataset_url, class_column):
-    run_config = self._build_run_config(dataset_url, class_column)
+  def create_datarun(self, dataset_url, class_column, budget_type, budget):
+    run_config = self._build_run_config(
+      dataset_url=dataset_url, 
+      class_column=class_column,
+      budget_type=budget_type,
+      budget=budget
+    )
     id = enter_data(
       self._sql_config,
       run_config
@@ -25,7 +32,37 @@ class Admin:
 
   def get_datarun(self, datarun_id):
     datarun = self._db.get_datarun(datarun_id)
-    return datarun
+    classifier = self._db.get_best_classifier(
+      score_target='cv', # TODO: change to accuracy on test data
+      datarun_id=datarun_id
+    )
+
+    return {
+      'id': datarun_id,
+      'status': datarun.status,
+      'budget': datarun.budget,
+      'budget_type': datarun.budget_type,
+      'start_time': datarun.start_time,
+      'end_time': datarun.end_time,
+      'best_classifier_id': classifier.id
+    }
+
+  def get_classifier(self, classifier_id):
+    classifier = self._db.get_classifier(classifier_id)
+    return {
+      'id': classifier_id,
+      'hyperparameters': classifier.hyperparameter_values,
+      'cv_accuracy': float(classifier.cv_judgment_metric)
+    }
+
+  def query_classifier(self, classifier_id, queries):
+    model = self._db.load_model(classifier_id)
+    query_df = pd.DataFrame(queries, index=range(len(queries)))
+    predictions = model.predict(query_df)
+    return {
+      'queries': queries,
+      'predictions': [x for x in predictions]
+    }
 
   def _build_log_config(self):
     x = atm.config.LogConfig()
@@ -41,14 +78,15 @@ class Admin:
     x.password = password
     return x
 
-  def _build_run_config(self, dataset_url, class_column):
+  def _build_run_config(self, dataset_url, class_column, budget_type, budget):
     x = atm.config.RunConfig()
     x.train_path = dataset_url
     x.class_column = class_column
-    x.methods = ['logreg', 'dt', 'knn']
+    x.methods = ['logreg', 'svm', 'sgd', 'dt', 'et', 'rf', 'gnb', 'mnb', 'bnb',
+      'gp', 'pa', 'knn', 'mlp', 'ada']
     x.priority = 1
-    x.budget_type = 'classifier'
-    x.budget = 100
+    x.budget_type = budget_type
+    x.budget = budget
     x.tuner = 'uniform'
     x.selector = 'uniform'
     x.r_minimum = 2

@@ -5,7 +5,6 @@ def prepare(csv_file_path, final_csv_file_path):
   df = pd.read_csv(csv_file_path)
   
   final_df = pd.DataFrame()
-  final_df['PassengerId'] = df['PassengerId']
   final_df['Survived'] = df['Survived']
   final_df['Pclass'] = df['Pclass']
   final_df['Sex-Male'] = (df['Sex'] == 'male').astype(int)
@@ -25,7 +24,7 @@ def prepare(csv_file_path, final_csv_file_path):
   final_df['Embarked-Q'] = (df['Embarked'] == 'Q').astype(int)
   final_df['Embarked-S'] = (df['Embarked'] == 'S').astype(int)
   
-  final_df.to_csv(final_csv_file_path)
+  final_df.to_csv(final_csv_file_path, index=False)
 
 if __name__ == '__main__':
   prepare(

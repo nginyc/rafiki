@@ -7,8 +7,8 @@ from atm.database import Database
 
 class Worker:
   def __init__(self, host, port, username, password, database):
-    log_config = self._build_log_config()
-    atm.config.initialize_logging(log_config)
+    self._log_config = self._build_log_config()
+    atm.config.initialize_logging(self._log_config)
     self._sql_config = self._build_sql_config(
       host, port, username, password, database
     )
@@ -20,12 +20,12 @@ class Worker:
 
     work(
       db,
+      log_config=self._log_config,
       save_files=True
     )
 
   def _build_log_config(self):
     x = atm.config.LogConfig()
-    x.model_dir = os.path.join(os.getcwd(), './models/') 
     return x
 
   def _build_sql_config(self, host, port, username, password, database):
