@@ -7,8 +7,13 @@ envs/
 # Visual Studio Code config
 .vscode/
 
-# Models
-models/*
+# Logs
+*.log
+logs/
+
+# Models & metrics
+models/
+metrics/
 
 # Python byte-compiled / optimized / DLL files
 __pycache__/
