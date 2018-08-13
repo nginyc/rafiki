@@ -28,6 +28,8 @@ from .encoder import DataEncoder, MetaData
 from .method import Method
 from .metrics import cross_validate_pipeline, test_pipeline
 
+import methods
+
 # load the library-wide logger
 logger = logging.getLogger('atm')
 
@@ -62,7 +64,6 @@ class Model(object):
             judgment_metric: string that indicates which metric should be
                 optimized for.
             params: parameters passed to the sklearn classifier constructor
-            class_: sklearn classifier class
         """
         # configuration & database
         self.method = method
@@ -99,15 +100,8 @@ class Model(object):
         # create a list of steps, starting with the data encoder
         steps = []
 
-        # create a classifier with specified parameters
-        hyperparameters = {k: v for k, v in list(self.params.items())
-                           if k not in Model.ATM_KEYS}
         atm_params = {k: v for k, v in list(self.params.items())
                       if k in Model.ATM_KEYS}
-
-        # do special conversions
-        hyperparameters = self.special_conversions(hyperparameters)
-        classifier = self.class_(**hyperparameters)
 
         if Model.PCA in atm_params and atm_params[Model.PCA]:
             whiten = (Model.WHITEN in atm_params and atm_params[Model.WHITEN])
@@ -128,7 +122,7 @@ class Model(object):
             steps.append(('minmax_scale', MinMaxScaler()))
 
         # add the classifier as the final step in the pipeline
-        steps.append((self.method, classifier))
+        steps.append((self.method, self.classifier))
         self.pipeline = Pipeline(steps)
 
     def cross_validate(self, X, y):
@@ -218,6 +212,7 @@ class Model(object):
         X_test, y_test = self.encoder.transform(test_data)
 
         # create and cross-validate pipeline
+        self._create_classifier()
         self.make_pipeline()
         cv_scores = self.cross_validate(X_train, y_train)
 
@@ -225,6 +220,20 @@ class Model(object):
         self.pipeline.fit(X_train, y_train)
         test_scores = self.test_final_model(X_test, y_test)
         return {'cv': cv_scores, 'test': test_scores}
+
+    def save(self, model_dir, model_id):
+        if issubclass(self.class_, methods.BaseMethod):
+            return self.class_.Save(self.classifier, model_dir, model_id)
+        else:
+            return methods.BaseMethod.Save(self.classifier, model_dir, model_id)
+
+    def load(self, model_dir, model_id):
+        if issubclass(self.class_, methods.BaseMethod):
+            self.classifier = self.class_.Load(model_dir, model_id)
+        else:
+            self.classifier = methods.BaseMethod.Load(model_dir, model_id)
+            
+        self.make_pipeline() # Re-build pipeline with new classifier
 
     def predict(self, data):
         """
@@ -290,3 +299,11 @@ class Model(object):
 
         # return the updated parameter vector
         return params
+
+    def _create_classifier(self):
+        # create a classifier with specified parameters
+        hyperparameters = {k: v for k, v in list(self.params.items())
+                           if k not in Model.ATM_KEYS}
+        # do special conversions
+        hyperparameters = self.special_conversions(hyperparameters)
+        self.classifier = self.class_(**hyperparameters)

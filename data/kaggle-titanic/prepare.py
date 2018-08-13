@@ -1,4 +1,5 @@
 import pandas as pd
+import argparse
 import os
 
 def prepare(csv_file_path, final_csv_file_path):
@@ -27,7 +28,9 @@ def prepare(csv_file_path, final_csv_file_path):
   final_df.to_csv(final_csv_file_path, index=False)
 
 if __name__ == '__main__':
-  prepare(
-    os.path.join(os.path.dirname(os.path.realpath(__file__)), 'train.csv'),
-    os.path.join(os.path.dirname(os.path.realpath(__file__)), 'train_final.csv')
-  )
+  parser = argparse.ArgumentParser()
+  parser.add_argument('in_csv_file')
+  parser.add_argument('out_csv_file')
+  args = parser.parse_args()
+
+  prepare(args.in_csv_file, args.out_csv_file)

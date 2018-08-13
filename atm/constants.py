@@ -81,7 +81,8 @@ METHODS_MAP = {
     'pa': 'passive_aggressive.json',
     'knn': 'k_nearest_neighbors.json',
     'mlp': 'multi_layer_perceptron.json',
-    'ada': 'adaboost.json'
+    'ada': 'adaboost.json',
+    'one_layer_tf': 'single_hidden_layer_tensorflow_model.json'
 }
 
 

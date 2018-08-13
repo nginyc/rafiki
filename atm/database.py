@@ -15,6 +15,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.orm.properties import ColumnProperty
 
+from .model import Model
 from .constants import *
 from .utilities import *
 
@@ -528,10 +529,16 @@ class Database(object):
         return max(classifiers, key=attrgetter(score_target))
 
     @try_with_session()
-    def load_model(self, classifier_id):
+    def load_model(self, classifier_id, log_config):
         clf = self.get_classifier(classifier_id)
-        with open(clf.model_location, 'rb') as f:
-            return pickle.load(f)
+        hp = self.get_hyperpartition(clf.hyperpartition_id)
+        dr = self.get_datarun(clf.datarun_id)
+        ds = self.get_dataset(dr.dataset_id)
+        classifier = Model(method=hp.method, params=clf.hyperparameter_values,
+                           judgment_metric=dr.metric,
+                           class_column=ds.class_column)
+        classifier.load(log_config.model_dir, clf.id)
+        return classifier
 
     @try_with_session()
     def load_metrics(self, classifier_id):

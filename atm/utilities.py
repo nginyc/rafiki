@@ -196,20 +196,6 @@ def make_save_path(dir, classifier, suffix):
     filename = "%s-%s.%s" % (run_name, params_hash, suffix)
     return os.path.join(dir, filename)
 
-
-def save_model(classifier, model_dir, model):
-    """
-    Save a serialized version of a Model object for a particular classifier.
-    The object will be stored at a path generated from the classifier's
-    attributes.
-    """
-    path = make_save_path(model_dir, classifier, 'model')
-    logger.info('Saving model in: %s' % path)
-    with open(path, 'wb') as f:
-        pickle.dump(model, f, protocol=pickle.HIGHEST_PROTOCOL)
-    return path
-
-
 def save_metrics(classifier, metric_dir, metrics):
     """
     Save a JSON-serialized version of a set of performance metrics for a

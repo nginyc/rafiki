@@ -1,0 +1,12 @@
+{   
+    "name": "one_layer_tf",
+    "class": "methods.SingleHiddenLayerTensorflowModel",
+    "hyperparameters": {
+        "hidden_layer_units": {
+            "type": "int",
+            "range": [2, 128]
+        }
+    },
+    "root_hyperparameters": ["hidden_layer_units"],
+    "conditional_hyperparameters": {}
+}

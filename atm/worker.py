@@ -255,7 +255,7 @@ class Worker(object):
             # access the linked hyperpartitions and dataruns
             with db_session(self.db):
                 classifier = self.db.get_classifier(classifier_id)
-                model_path = save_model(classifier, self.model_dir, model)
+                model_path = model.save(self.model_dir, classifier.id)
                 metric_path = save_metrics(classifier, self.metric_dir, metrics)
 
             # if necessary, save model and metrics to Amazon S3 bucket

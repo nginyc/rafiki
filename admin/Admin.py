@@ -58,7 +58,7 @@ class Admin:
     }
 
   def query_classifier(self, classifier_id, queries):
-    model = self._db.load_model(classifier_id)
+    model = self._db.load_model(classifier_id, self._log_config)
     query_df = pd.DataFrame(queries, index=range(len(queries)))
     predictions = model.predict(query_df)
     return {
@@ -84,8 +84,7 @@ class Admin:
     x = atm.config.RunConfig()
     x.train_path = dataset_url
     x.class_column = class_column
-    x.methods = ['logreg', 'svm', 'sgd', 'dt', 'et', 'rf', 'gnb', 'mnb', 'bnb',
-      'gp', 'pa', 'knn', 'mlp', 'ada']
+    x.methods = ['one_layer_tf']
     x.priority = 1
     x.budget_type = budget_type
     x.budget = budget
