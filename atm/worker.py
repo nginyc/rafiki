@@ -399,6 +399,7 @@ class Worker(object):
             model, metrics = self.test_classifier(hyperpartition.method, params)
             logger.debug('Saving classifier...')
             self.save_classifier(classifier.id, model, metrics)
+            model.destroy()
         except Exception:
             msg = traceback.format_exc()
             logger.error('Error testing classifier: datarun=%s' % str(self.datarun))

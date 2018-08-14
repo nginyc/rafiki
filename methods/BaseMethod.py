@@ -24,12 +24,17 @@ class BaseMethod():
         '''
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def predict_proba(self, X):
         '''
           Refer to corresponding method in 
           http://scikit-learn.org/stable/modules/generated/sklearn.linear_model.SGDClassifier.html
         '''
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def destroy(self):
+        pass
 
     @classmethod
     def Save(self, model, model_dir, model_id):
@@ -45,9 +50,10 @@ class BaseMethod():
         return model_file_path
 
     @classmethod
-    def Load(self, model_dir, model_id):
+    def Load(self, model_dir, model_id, hyperparameters):
         '''
-        Loads the model in the `model_dir` directory, uniquely identified by `model_id` 
+        Loads the model in the `model_dir` directory, uniquely identified by `model_id`
+          and has the given set of hyperparameters 
         Returns: model
         '''
         model_file_path = os.path.join(model_dir, str(model_id) + '.pickle')

@@ -9,36 +9,54 @@ from .BaseMethod import BaseMethod
 
 
 class SingleHiddenLayerTensorflowModel(BaseMethod):
-    def __init__(self, hidden_layer_units=2, _model=None):
-        if _model:
-          self._model = _model
-        else:
-          self._model = self._build_model(hidden_layer_units)
+    def __init__(self, hidden_layer_units=2):
+        self._graph = tf.Graph()
+        self._sess = tf.Session(graph=self._graph)
+        
+        with self._graph.as_default():
+            self._model = self._build_model(hidden_layer_units)
 
     def fit(self, X, y):
         y = keras.utils.to_categorical(y, num_classes=2)
-        self._model.fit(X, y, epochs=100, batch_size=32)
+        with self._graph.as_default():
+            with self._sess.as_default():
+                self._model.fit(X, y, epochs=100, batch_size=32)
 
     def predict(self, X):
         predictions = self.predict_proba(X)
         return np.argmax(predictions, axis=1)
 
     def predict_proba(self, X):
-        predictions = self._model.predict(X, batch_size=32)
+        with self._graph.as_default():
+            with self._sess.as_default():
+                predictions = self._model.predict(X)
+
         return predictions
+
+    def destroy(self):
+        self._sess.close()
 
     @classmethod
     def Save(self, model, model_dir, model_id):
         model_file_path = os.path.join(model_dir, str(model_id) + '.h5')
-        _model = model._model
-        _model.save(model_file_path)
-        return model_file_path
 
+        with model._graph.as_default():
+            with model._sess.as_default():
+                model._model.save(model_file_path)
+
+        return model_file_path
+        
     @classmethod
-    def Load(self, model_dir, model_id):
+    def Load(self, model_dir, model_id, hyperparameters):
+        model = SingleHiddenLayerTensorflowModel(**hyperparameters)
         model_file_path = os.path.join(model_dir, str(model_id) + '.h5')
-        _model = keras.models.load_model(model_file_path)
-        return SingleHiddenLayerTensorflowModel(_model=_model)
+
+        with model._graph.as_default():
+            with model._sess.as_default():
+                model._model = keras.models.load_model(model_file_path)
+
+        return model
+
 
     def _build_model(self, hidden_layer_units):
         model = keras.Sequential()

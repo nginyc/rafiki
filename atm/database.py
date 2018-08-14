@@ -534,11 +534,11 @@ class Database(object):
         hp = self.get_hyperpartition(clf.hyperpartition_id)
         dr = self.get_datarun(clf.datarun_id)
         ds = self.get_dataset(dr.dataset_id)
-        classifier = Model(method=hp.method, params=clf.hyperparameter_values,
+        model = Model(method=hp.method, params=clf.hyperparameter_values,
                            judgment_metric=dr.metric,
                            class_column=ds.class_column)
-        classifier.load(log_config.model_dir, clf.id)
-        return classifier
+        model.load(log_config.model_dir, clf.id)
+        return model
 
     @try_with_session()
     def load_metrics(self, classifier_id):

@@ -206,13 +206,13 @@ class Model(object):
                                                      random_state=self.random_state)
 
         # extract feature matrix and labels from raw data
-        self.encoder = DataEncoder(class_column=self.class_column)
-        self.encoder.fit(all_data)
-        X_train, y_train = self.encoder.transform(train_data)
-        X_test, y_test = self.encoder.transform(test_data)
+        X_train = self._extract_X(train_data)
+        X_test = self._extract_X(test_data)
+        y_train = self._extract_y(train_data)
+        y_test = self._extract_y(test_data)
 
         # create and cross-validate pipeline
-        self._create_classifier()
+        self._make_classifier()
         self.make_pipeline()
         cv_scores = self.cross_validate(X_train, y_train)
 
@@ -229,26 +229,30 @@ class Model(object):
 
     def load(self, model_dir, model_id):
         if issubclass(self.class_, methods.BaseMethod):
-            self.classifier = self.class_.Load(model_dir, model_id)
+            self.classifier = self.class_.Load(model_dir, model_id, self.params)
         else:
-            self.classifier = methods.BaseMethod.Load(model_dir, model_id)
-            
-        self.make_pipeline() # Re-build pipeline with new classifier
+            self.classifier = methods.BaseMethod.Load(model_dir, model_id, self.params)
+
+        self.make_pipeline()  # Re-build pipeline with new classifier
+
+    def destroy(self):
+        destroy_func = getattr(self.classifier, 'destroy', None)
+        if callable(destroy_func):
+            destroy_func()
 
     def predict(self, data):
         """
-        Use the trained encoder and pipeline to transform training data into
+        Use the pipeline to transform training data into
         predicted labels
 
         data: pd.DataFrame of data for which to predict classes
 
         returns: pd.Series populated with predictions, with index matching data.
         """
-        X, _ = self.encoder.transform(data)
+        X = self._extract_X(data)
         predictions = self.pipeline.predict(X)
-        labels = self.encoder.label_encoder.inverse_transform(predictions)
-        labels = pd.Series(labels, index=data.index)
-        return labels
+        predictions = pd.Series(predictions, index=data.index)
+        return predictions
 
     def special_conversions(self, params):
         """
@@ -277,7 +281,7 @@ class Model(object):
             # sort the list by index
             params[lname] = [val for idx, val in sorted(items)]
 
-        ## Gaussian process classifier
+        # Gaussian process classifier
         if self.method == "gp":
             if params["kernel"] == "constant":
                 params["kernel"] = ConstantKernel()
@@ -300,7 +304,27 @@ class Model(object):
         # return the updated parameter vector
         return params
 
-    def _create_classifier(self):
+    def _extract_X(self, data):
+        # We already assume that all features & labels are numeric
+        # Preparation & standardization of the dataset will be done elsewhere
+
+        X = np.array(data)
+        if self.class_column in data.columns:
+            X = np.array(data.drop([self.class_column], axis=1))
+
+        return X
+
+    def _extract_y(self, data):
+        # We already assume that all features & labels are numeric
+        # Preparation & standardization of the dataset will be done elsewhere
+
+        y = None
+        if self.class_column in data.columns:
+            y = np.array(data[self.class_column])
+
+        return y
+
+    def _make_classifier(self):
         # create a classifier with specified parameters
         hyperparameters = {k: v for k, v in list(self.params.items())
                            if k not in Model.ATM_KEYS}
