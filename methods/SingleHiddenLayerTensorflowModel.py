@@ -75,21 +75,3 @@ class SingleHiddenLayerTensorflowModel(BaseMethod):
         )
         return model
 
-
-if __name__ == '__main__':
-    # Temporarily use Kaggle titanic data
-    LABEL_COLUMN = 'Survived'
-    train_df = pd.read_csv('./data/kaggle-titanic/train_final.csv')
-    # print(train_df)
-    X = train_df[train_df.columns.difference(
-        [LABEL_COLUMN])].values.astype(float)
-    y = train_df[LABEL_COLUMN].values.astype(float)
-    # print(json.dumps(X))
-
-    # data = np.random.random((1000, 32))
-    # labels = (np.random.random((1000)) > 0.5).astype(int)
-    model = SingleHiddenLayerTensorflowModel(10)
-    model.fit(X, y)
-    predictions = model.predict(X)
-    assert np.shape(y) == np.shape(predictions)
-    print('Accuracy', np.sum(predictions == y) / len(y))
