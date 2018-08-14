@@ -33,7 +33,6 @@ HTTP_PREFIX = '^https?://'
 TIME_FMT = '%Y-%m-%d %H:%M'
 DATA_TEST_PATH = os.path.join(PROJECT_ROOT, 'data/test')
 DATA_DL_PATH = os.path.join(PROJECT_ROOT, 'data/downloads')
-METHOD_PATH = os.path.join(PROJECT_ROOT, 'methods')
 
 CUSTOM_CLASS_REGEX = '(.*\.py):(\w+)$'
 JSON_REGEX = '(.*\.json)$'
@@ -66,25 +65,6 @@ SELECTORS_MAP = {
     'recentkvel': RecentKVelocity,
     'hieralg': HierarchicalByAlgorithm,
 }
-
-METHODS_MAP = {
-    'logreg': 'logistic_regression.json',
-    'svm': 'support_vector_machine.json',
-    'sgd': 'stochastic_gradient_descent.json',
-    'dt': 'decision_tree.json',
-    'et': 'extra_trees.json',
-    'rf': 'random_forest.json',
-    'gnb': 'gaussian_naive_bayes.json',
-    'mnb': 'multinomial_naive_bayes.json',
-    'bnb': 'bernoulli_naive_bayes.json',
-    'gp': 'gaussian_process.json',
-    'pa': 'passive_aggressive.json',
-    'knn': 'k_nearest_neighbors.json',
-    'mlp': 'multi_layer_perceptron.json',
-    'ada': 'adaboost.json',
-    'one_layer_tf': 'single_hidden_layer_tensorflow_model.json'
-}
-
 
 class ClassifierStatus(object):
     RUNNING = 'running'

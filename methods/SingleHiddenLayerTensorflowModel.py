@@ -9,18 +9,21 @@ from .BaseMethod import BaseMethod
 
 
 class SingleHiddenLayerTensorflowModel(BaseMethod):
-    def __init__(self, hidden_layer_units=2):
+    def __init__(self, hidden_layer_units=2, epochs=100, learning_rate=0.001, batch_size=32):
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
+        self._batch_size = batch_size
+        self._epochs = epochs
         
         with self._graph.as_default():
-            self._model = self._build_model(hidden_layer_units)
+            self._model = self._build_model(hidden_layer_units, learning_rate)
 
     def fit(self, X, y):
-        y = keras.utils.to_categorical(y, num_classes=2)
+        y = keras.utils.to_categorical(y, num_classes=2) # TODO: Go beyond binary classification
         with self._graph.as_default():
             with self._sess.as_default():
-                self._model.fit(X, y, epochs=100, batch_size=32)
+                self._model.fit(X, y, epochs=self._epochs, 
+                                batch_size=self._batch_size)
 
     def predict(self, X):
         predictions = self.predict_proba(X)
@@ -58,7 +61,7 @@ class SingleHiddenLayerTensorflowModel(BaseMethod):
         return model
 
 
-    def _build_model(self, hidden_layer_units):
+    def _build_model(self, hidden_layer_units, learning_rate):
         model = keras.Sequential()
         model.add(keras.layers.Dense(
             hidden_layer_units,
@@ -66,7 +69,7 @@ class SingleHiddenLayerTensorflowModel(BaseMethod):
         ))
         model.add(keras.layers.Dense(2, activation='softmax'))
         model.compile(
-            optimizer=tf.train.AdamOptimizer(0.001),
+            optimizer=tf.train.AdamOptimizer(learning_rate),
             loss='categorical_crossentropy',
             metrics=['accuracy']
         )

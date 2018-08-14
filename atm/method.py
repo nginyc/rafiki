@@ -5,7 +5,7 @@ from builtins import object, range
 from builtins import str as newstr
 from os.path import join
 
-from .constants import METHOD_PATH, METHODS_MAP
+from methods import METHOD_CONFIG_FOLDER_PATH, METHOD_CONFIG_MAP
 
 import btb
 
@@ -141,9 +141,9 @@ class Method(object):
         method: method code or path to JSON file containing all the information
             needed to specify this enumerator.
         """
-        if method in METHODS_MAP:
+        if method in METHOD_CONFIG_MAP:
             # if the configured method is a code, look up the path to its json
-            config_path = join(METHOD_PATH, METHODS_MAP[method])
+            config_path = join(METHOD_CONFIG_FOLDER_PATH, METHOD_CONFIG_MAP[method])
         else:
             # otherwise, it must be a path to a file
             config_path = method

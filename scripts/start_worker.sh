@@ -11,6 +11,7 @@ docker run --name $MODULE_NAME \
   -v "/$PWD/scripts/":"/root/app/scripts/" \
   -v "/$PWD/models/":"/root/app/models/" \
   -v "/$PWD/methods/":"/root/app/methods/" \
+  -v "/$PWD/logs/":"/root/app/logs/" \
   -e MYSQL_HOST=$MYSQL_HOST \
   -e MYSQL_PORT=$MYSQL_PORT \
   -e MYSQL_USER=$MYSQL_USER \
