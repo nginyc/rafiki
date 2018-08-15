@@ -12,7 +12,8 @@ from .constants import *
 from .database import Database
 from .encoder import MetaData
 from .method import Method
-from .utilities import download_data
+
+from prepare import create_preparator
 
 # load the library-wide logger
 logger = logging.getLogger('atm')
@@ -26,28 +27,23 @@ def create_dataset(db, run_config, aws_config=None):
     run_config: RunConfig object describing the dataset to create
     aws_config: optional. AWS credentials for downloading data from S3.
     """
-    # download data to the local filesystem to extract metadata
-    train_local, test_local = download_data(run_config.train_path,
-                                            run_config.test_path,
-                                            aws_config)
 
-    # create the name of the dataset from the path to the data
-    name = os.path.basename(train_local)
-    name = name.replace("_train.csv", "").replace(".csv", "")
+    # Get train data with configured preprarator & its params
+    preparator = create_preparator(run_config.preparator_type, 
+        **run_config.preparator_params)
+    X, y = preparator.get_train_data()
 
-    # process the data into the form ATM needs and save it to disk
-    meta = MetaData(run_config.class_column, train_local, test_local)
+    # get metadata from dataset
+    meta = MetaData(X, y)
 
     # enter dataset into database
-    dataset = db.create_dataset(name=name,
-                                description=run_config.data_description,
-                                train_path=run_config.train_path,
-                                test_path=run_config.test_path,
-                                class_column=run_config.class_column,
+    dataset = db.create_dataset(name=run_config.dataset_name,
+                                description=run_config.dataset_description,
+                                preparator_type=run_config.preparator_type,
+                                preparator_params=run_config.preparator_params,
                                 n_examples=meta.n_examples,
                                 k_classes=meta.k_classes,
                                 d_features=meta.d_features,
-                                majority=meta.majority,
                                 size_kb=old_div(meta.size, 1000))
     return dataset
 
@@ -149,8 +145,7 @@ def enter_data(sql_config, run_config, aws_config=None,
 
     logger.info('Data entry complete. Summary:')
     logger.info('\tDataset ID: %d' % dataset.id)
-    logger.info('\tTraining data: %s' % dataset.train_path)
-    logger.info('\tTest data: %s' % (dataset.test_path or 'None'))
+    logger.info('\tDataset name: %s' % dataset.name)
     if run_per_partition:
         logger.info('\tDatarun IDs: %s' % ', '.join(map(str, run_ids)))
     else:

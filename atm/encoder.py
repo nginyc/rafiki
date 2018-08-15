@@ -9,30 +9,18 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
 
 class MetaData(object):
-    def __init__(self, class_column, train_path, test_path=None):
+    def __init__(self, X, y):
         """
         Compute a bunch of metadata about the dataset.
-
-        class_column: name of dataframe column containing labels
-        data_paths: paths to csvs with the same columns
         """
-        data = pd.read_csv(train_path)
-        if test_path is not None:
-            data = data.append(pd.read_csv(test_path))
-
         # compute the portion of labels that are the most common value
-        counts = data[class_column].value_counts()
-        total_features = data.shape[1] - 1
-        for c in data.columns:
-            if data[c].dtype == 'object':
-                total_features += len(np.unique(data[c])) - 1
-        majority_percentage = old_div(float(max(counts)), float(sum(counts)))
+        counts = np.shape(X)[0]
+        total_features = np.shape(X)[1]
 
-        self.n_examples = data.shape[0]
+        self.n_examples = counts
         self.d_features = total_features
-        self.k_classes = len(np.unique(data[class_column]))
-        self.majority = majority_percentage
-        self.size = np.array(data).nbytes
+        self.k_classes = len(np.unique(y))
+        self.size = X.nbytes + y.nbytes
 
 
 class DataEncoder(object):

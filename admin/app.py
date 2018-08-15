@@ -22,8 +22,9 @@ def post_datarun():
   params = request.get_json()
   
   return jsonify(admin.create_datarun(
-    dataset_url=params['dataset_url'],
-    class_column=params['class_column'],
+    dataset_name=params['dataset_name'],
+    preparator_type=params['preparator_type'],
+    preparator_params=params['preparator_params'],
     budget_type=params['budget_type'],
     budget=params['budget']
   ))

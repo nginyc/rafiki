@@ -27,9 +27,6 @@ DATARUN_STATUS = ['pending', 'running', 'complete']
 CLASSIFIER_STATUS = ['running', 'errored', 'complete']
 PARTITION_STATUS = ['incomplete', 'errored', 'gridding_done']
 
-S3_PREFIX = '^s3://'
-HTTP_PREFIX = '^https?://'
-
 TIME_FMT = '%Y-%m-%d %H:%M'
 DATA_TEST_PATH = os.path.join(PROJECT_ROOT, 'data/test')
 DATA_DL_PATH = os.path.join(PROJECT_ROOT, 'data/downloads')
@@ -83,11 +80,6 @@ class PartitionStatus(object):
     GRIDDING_DONE = 'gridding_done'
     ERRORED = 'errored'
 
-
-class FileType(object):
-    LOCAL = 'local'
-    S3 = 's3'
-    HTTP = 'http'
 
 
 # these are the strings that are used to index into results dictionaries

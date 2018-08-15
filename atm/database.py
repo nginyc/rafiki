@@ -104,22 +104,29 @@ class Database(object):
             name = Column(String(100), nullable=False)
 
             # columns necessary for loading/processing data
-            class_column = Column(String(100), nullable=False)
-            train_path = Column(String(200), nullable=False)
-            test_path = Column(String(200))
+            preparator_type = Column(String(200), nullable=False)
+            preparator_params_json = Column(Text, nullable=False)
             description = Column(String(1000))
 
             # metadata columns, for convenience
             n_examples = Column(Integer, nullable=False)
             k_classes = Column(Integer, nullable=False)
             d_features = Column(Integer, nullable=False)
-            majority = Column(Numeric(precision=10, scale=9), nullable=False)
             size_kb = Column(Integer, nullable=False)
 
             def __repr__(self):
                 base = "<%s: %s, %d classes, %d features, %d rows>"
                 return base % (self.name, self.description, self.k_classes,
                                self.d_features, self.n_examples)
+
+            @property
+            def preparator_params(self):
+                return json.loads(self.preparator_params_json)
+
+            @preparator_params.setter
+            def preparator_params(self, value):
+                self.preparator_params_json = json.dumps(value)
+
 
         class Datarun(Base):
             __tablename__ = 'dataruns'
@@ -527,18 +534,6 @@ class Database(object):
         if not classifiers:
             return None
         return max(classifiers, key=attrgetter(score_target))
-
-    @try_with_session()
-    def load_model(self, classifier_id, log_config):
-        clf = self.get_classifier(classifier_id)
-        hp = self.get_hyperpartition(clf.hyperpartition_id)
-        dr = self.get_datarun(clf.datarun_id)
-        ds = self.get_dataset(dr.dataset_id)
-        model = Model(method=hp.method, params=clf.hyperparameter_values,
-                           judgment_metric=dr.metric,
-                           class_column=ds.class_column)
-        model.load(log_config.model_dir, clf.id)
-        return model
 
     @try_with_session()
     def load_metrics(self, classifier_id):

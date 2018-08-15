@@ -2,8 +2,7 @@
 train_path: atm/data/test/pollution_1.csv
 # if test_path is not supplied, train_path is assumed to point to train/test data
 test_path: 
-data_description: "Example dataset description"
-class_column: class
+dataset_description: "Example dataset description"
 
 ## Datarun arguments
 dataset_id: 

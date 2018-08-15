@@ -7,6 +7,7 @@ docker build -t $MODULE_NAME -f admin.Dockerfile $PWD
 docker run --name $MODULE_NAME \
   -v "/$PWD/admin/":"/root/app/admin/" \
   -v "/$PWD/atm/":"/root/app/atm/" \
+  -v "/$PWD/prepare/":"/root/app/prepare/" \
   -v "/$PWD/data/":"/root/app/data/" \
   -v "/$PWD/scripts/":"/root/app/scripts/" \
   -v "/$PWD/models/":"/root/app/models/" \

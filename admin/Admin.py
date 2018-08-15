@@ -3,7 +3,7 @@ import pandas as pd
 import atm
 from atm.enter_data import enter_data
 from atm.database import Database
-
+from atm.predict import predict
 
 class Admin:
     def __init__(self, host, port, username, password, database):
@@ -16,10 +16,12 @@ class Admin:
             **vars(self._sql_config)
         )
 
-    def create_datarun(self, dataset_url, class_column, budget_type, budget):
+    def create_datarun(self, dataset_name, preparator_type, 
+        preparator_params, budget_type, budget):
         run_config = self._build_run_config(
-            dataset_url=dataset_url,
-            class_column=class_column,
+            dataset_name=dataset_name,
+            preparator_type=preparator_type,
+            preparator_params=preparator_params,
             budget_type=budget_type,
             budget=budget
         )
@@ -64,10 +66,7 @@ class Admin:
         }
 
     def query_classifier(self, classifier_id, queries):
-        query_df = pd.DataFrame(queries, index=range(len(queries)))
-        model = self._db.load_model(classifier_id, self._log_config)
-        predictions = model.predict(query_df)
-        model.destroy()
+        predictions = predict(self._db, classifier_id, queries, self._log_config)
         return {
             'queries': queries,
             'predictions': [x for x in predictions]
@@ -87,11 +86,13 @@ class Admin:
         x.password = password
         return x
 
-    def _build_run_config(self, dataset_url, class_column, budget_type, budget):
+    def _build_run_config(self, dataset_name, preparator_type, 
+            preparator_params, budget_type, budget):
         x = atm.config.RunConfig()
-        x.train_path = dataset_url
-        x.class_column = class_column
-        x.methods = ['one_layer_tf']
+        x.dataset_name = dataset_name
+        x.preparator_type = preparator_type
+        x.preparator_params = preparator_params
+        x.methods = ['one_layer_tf', 'dt', 'mlp']
         x.priority = 1
         x.budget_type = budget_type
         x.budget = budget

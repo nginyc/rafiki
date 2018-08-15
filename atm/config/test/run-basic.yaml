@@ -1,8 +1,7 @@
 # this will be overridden by the test script
 train_path:
 test_path:
-data_description:
-class_column: class
+dataset_description:
 
 # use every algorithm we have
 methods:

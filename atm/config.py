@@ -96,10 +96,10 @@ class RunConfig(Config):
     """ Stores configuration for Dataset and Datarun setup """
     PARAMETERS = [
         # dataset config
-        'train_path',
-        'test_path',
-        'data_description',
-        'class_column',
+        "dataset_name",
+        'dataset_description',
+        'preparator_type',
+        'preparator_params',
 
         # datarun config
         'dataset_id',
@@ -119,7 +119,6 @@ class RunConfig(Config):
 
     DEFAULTS = {
         'train_path': os.path.join(DATA_TEST_PATH, 'pollution_1.csv'),
-        'class_column': 'class',
         'methods': ['logreg', 'dt', 'knn'],
         'priority': 1,
         'budget_type': 'classifier',

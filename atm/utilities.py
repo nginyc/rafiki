@@ -223,29 +223,6 @@ def load_metrics(classifier, metric_dir):
         return json.load(f)
 
 
-## Downloading data from the web
-
-def get_local_data_path(data_path):
-    """
-    given a data path of the form "s3://..." or "http://...", return the local
-    path where the file should be stored once it's downloaded.
-    """
-    if data_path is None:
-        return None, None
-
-    m = re.match(S3_PREFIX, data_path)
-    if m:
-        path = data_path[len(m.group()):].split('/')
-        return os.path.join(DATA_DL_PATH, path[-1]), FileType.S3
-
-    m = re.match(HTTP_PREFIX, data_path)
-    if m:
-        path = data_path[len(m.group()):].split('/')
-        return os.path.join(DATA_DL_PATH, path[-1]), FileType.HTTP
-
-    return data_path, FileType.LOCAL
-
-
 def download_file_s3(aws_path, aws_config, local_folder=DATA_DL_PATH):
     """ Download a file from an S3 bucket and save it in the local folder. """
     # remove the prefix and extract the S3 bucket, folder, and file name
@@ -281,53 +258,3 @@ def download_file_s3(aws_path, aws_config, local_folder=DATA_DL_PATH):
     logger.info('file saved at %s' % path)
 
     return path
-
-
-def download_file_http(url, local_folder=DATA_DL_PATH):
-    """ Download a file from a public URL and save it locally. """
-    filename = url.split('/')[-1]
-    if local_folder is not None:
-        ensure_directory(local_folder)
-        path = os.path.join(local_folder, filename)
-    else:
-        path = filename
-
-    if os.path.isfile(path):
-        logger.warning('file %s already exists!' % path)
-        return path
-
-    logger.debug('downloading data from %s...' % url)
-    f = urllib.request.urlopen(url)
-    data = f.read()
-    with open(path, 'wb') as outfile:
-        outfile.write(data)
-    logger.info('file saved at %s' % path)
-
-    return path
-
-
-def download_data(train_path, test_path=None, aws_config=None):
-    """
-    Download a set of train/test data from AWS (if necessary) and return the
-    path to the local data.
-    """
-    local_train_path, train_type = get_local_data_path(train_path)
-    local_test_path, test_type = get_local_data_path(test_path)
-
-    # if the data are not present locally, try to download them from the
-    # internet (either an S3 bucket or a http connection)
-    if not os.path.isfile(local_train_path):
-        if train_type == FileType.HTTP:
-            assert (download_file_http(train_path) == local_train_path)
-        elif train_type == FileType.S3:
-            assert (download_file_s3(train_path, aws_config=aws_config) ==
-                    local_train_path)
-
-    if local_test_path and not os.path.isfile(local_test_path):
-        if test_type == FileType.HTTP:
-            assert (download_file_http(test_path) == local_test_path)
-        elif test_type == FileType.S3:
-            assert (download_file_s3(test_path, aws_config=aws_config) ==
-                    local_test_path)
-
-    return local_train_path, local_test_path

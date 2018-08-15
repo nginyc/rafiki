@@ -63,7 +63,7 @@ def test_create_dataset(db):
 
     run_conf = RunConfig(train_path=train_url,
                          test_path=test_url,
-                         data_description='test',
+                         dataset_description='test',
                          class_column='class')
     dataset = create_dataset(db, run_conf)
     dataset = db.get_dataset(dataset.id)
@@ -78,7 +78,6 @@ def test_create_dataset(db):
     assert dataset.n_examples == 60
     assert dataset.d_features == 16
     assert dataset.k_classes == 2
-    assert dataset.majority >= 0.5
 
 
 def test_enter_data_by_methods(dataset):

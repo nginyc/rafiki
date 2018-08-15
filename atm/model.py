@@ -55,7 +55,7 @@ class Model(object):
     # number of folds for cross-validation (arbitrary, for speed)
     N_FOLDS = 5
 
-    def __init__(self, method, params, judgment_metric, class_column,
+    def __init__(self, method, params, judgment_metric, 
                  testing_ratio=0.3, verbose_metrics=False):
         """
         Parameters:
@@ -69,7 +69,6 @@ class Model(object):
         self.method = method
         self.params = params
         self.judgment_metric = judgment_metric
-        self.class_column = class_column
         self.testing_ratio = testing_ratio
         self.verbose_metrics = verbose_metrics
 
@@ -85,14 +84,6 @@ class Model(object):
         # persistent random state
         self.random_state = np.random.randint(1e7)
 
-    def load_data(self, path, dropvals=None, sep=','):
-        # load data as a Pandas dataframe
-        data = pd.read_csv(path, skipinitialspace=True,
-                           na_values=dropvals, sep=sep)
-
-        # drop rows with any NA values
-        return data.dropna(how='any')
-
     def make_pipeline(self):
         """
         Makes the classifier as well as scaling or dimension reduction steps.
@@ -103,23 +94,25 @@ class Model(object):
         atm_params = {k: v for k, v in list(self.params.items())
                       if k in Model.ATM_KEYS}
 
-        if Model.PCA in atm_params and atm_params[Model.PCA]:
-            whiten = (Model.WHITEN in atm_params and atm_params[Model.WHITEN])
-            pca_dims = atm_params[Model.PCA_DIMS]
-            # PCA dimension in atm_params is a float reprsenting percentages of
-            # features to use
-            if pca_dims < 1:
-                dimensions = int(pca_dims * float(self.num_features))
-                logger.info("Using PCA to reduce %d features to %d dimensions"
-                            % (self.num_features, dimensions))
-                pca = decomposition.PCA(n_components=dimensions, whiten=whiten)
-                steps.append(('pca', pca))
+        # TODO: Move scaling/PCA logic to method definition
+        
+        # if Model.PCA in atm_params and atm_params[Model.PCA]:
+        #     whiten = (Model.WHITEN in atm_params and atm_params[Model.WHITEN])
+        #     pca_dims = atm_params[Model.PCA_DIMS]
+        #     # PCA dimension in atm_params is a float reprsenting percentages of
+        #     # features to use
+        #     if pca_dims < 1:
+        #         dimensions = int(pca_dims * float(self.num_features))
+        #         logger.info("Using PCA to reduce %d features to %d dimensions"
+        #                     % (self.num_features, dimensions))
+        #         pca = decomposition.PCA(n_components=dimensions, whiten=whiten)
+        #         steps.append(('pca', pca))
 
         # should we scale the data?
-        if atm_params.get(Model.SCALE):
-            steps.append(('standard_scale', StandardScaler()))
-        elif self.params.get(Model.MINMAX):
-            steps.append(('minmax_scale', MinMaxScaler()))
+        # if atm_params.get(Model.SCALE):
+        #     steps.append(('standard_scale', StandardScaler()))
+        # elif self.params.get(Model.MINMAX):
+        #     steps.append(('minmax_scale', MinMaxScaler()))
 
         # add the classifier as the final step in the pipeline
         steps.append((self.method, self.classifier))
@@ -171,11 +164,9 @@ class Model(object):
 
         return test_scores
 
-    def train_test(self, train_path, test_path=None):
+    def train_test(self, X, y):
         # load train and (maybe) test data
-        metadata = MetaData(class_column=self.class_column,
-                            train_path=train_path,
-                            test_path=test_path)
+        metadata = MetaData(X, y)
         self.num_classes = metadata.k_classes
         self.num_features = metadata.d_features
 
@@ -192,25 +183,12 @@ class Model(object):
             elif self.judgment_metric == Metrics.ROC_AUC:
                 self.judgment_metric = Metrics.ROC_AUC_MACRO
 
-        # load training data
-        train_data = self.load_data(train_path)
-
-        # if necessary, generate permanent train/test split
-        if test_path is not None:
-            test_data = self.load_data(test_path)
-            all_data = pd.concat([train_data, test_data])
-        else:
-            all_data = train_data
-            train_data, test_data = train_test_split(train_data,
+        # generate train/test split
+        X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                      test_size=self.testing_ratio,
                                                      random_state=self.random_state)
 
-        # extract feature matrix and labels from raw data
-        X_train = self._extract_X(train_data)
-        X_test = self._extract_X(test_data)
-        y_train = self._extract_y(train_data)
-        y_test = self._extract_y(test_data)
-
+        # We assume that all features & labels are numeric
         # create and cross-validate pipeline
         self._make_classifier()
         self.make_pipeline()
@@ -240,18 +218,18 @@ class Model(object):
         if callable(destroy_func):
             destroy_func()
 
-    def predict(self, data):
+    def predict(self, X):
         """
         Use the pipeline to transform training data into
         predicted labels
 
-        data: pd.DataFrame of data for which to predict classes
+        Args:
+            X - n-d numpy array predict classes
 
-        returns: pd.Series populated with predictions, with index matching data.
+        Returns: 1d numpy array of predictions 
         """
-        X = self._extract_X(data)
         predictions = self.pipeline.predict(X)
-        predictions = pd.Series(predictions, index=data.index)
+
         return predictions
 
     def special_conversions(self, params):
@@ -303,26 +281,6 @@ class Model(object):
 
         # return the updated parameter vector
         return params
-
-    def _extract_X(self, data):
-        # We already assume that all features & labels are numeric
-        # Preparation & standardization of the dataset will be done elsewhere
-
-        X = np.array(data)
-        if self.class_column in data.columns:
-            X = np.array(data.drop([self.class_column], axis=1))
-
-        return X
-
-    def _extract_y(self, data):
-        # We already assume that all features & labels are numeric
-        # Preparation & standardization of the dataset will be done elsewhere
-
-        y = None
-        if self.class_column in data.columns:
-            y = np.array(data[self.class_column])
-
-        return y
 
     def _make_classifier(self):
         # create a classifier with specified parameters

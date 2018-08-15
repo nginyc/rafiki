@@ -23,6 +23,8 @@ from .database import ClassifierStatus, db_session
 from .model import Model
 from .utilities import *
 
+from prepare import create_preparator
+
 # shhh
 warnings.filterwarnings('ignore')
 
@@ -204,15 +206,16 @@ class Worker(object):
         classifier model.
         Returns: Model object and metrics dictionary
         """
-        model = Model(method=method, params=params,
+        preparator = create_preparator(self.dataset.preparator_type, 
+            **self.dataset.preparator_params)
+        X, y = preparator.get_train_data()
+        
+        model = Model(method=method, 
+                      params=params,
                       judgment_metric=self.datarun.metric,
-                      class_column=self.dataset.class_column,
                       verbose_metrics=self.verbose_metrics)
-        train_path, test_path = download_data(self.dataset.train_path,
-                                              self.dataset.test_path,
-                                              self.aws_config)
-        metrics = model.train_test(train_path=train_path,
-                                   test_path=test_path)
+
+        metrics = model.train_test(X, y)
         target = self.datarun.score_target
 
         def metric_string(model):
