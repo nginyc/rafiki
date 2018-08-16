@@ -5,7 +5,7 @@ import os
 
 class BaseMethod():
     @abc.abstractmethod
-    def __init__(self, **kwargs):
+    def __init__(self, num_classes, **kwargs):
         pass
 
     @abc.abstractmethod
@@ -50,7 +50,7 @@ class BaseMethod():
         return model_file_path
 
     @classmethod
-    def Load(self, model_dir, model_id, hyperparameters):
+    def Load(self, model_dir, model_id, num_classes, hyperparameters):
         '''
         Loads the model in the `model_dir` directory, uniquely identified by `model_id`
           and has the given set of hyperparameters 

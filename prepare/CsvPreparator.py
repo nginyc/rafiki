@@ -5,6 +5,7 @@ import logging
 import urllib
 import pandas as pd
 import numpy as np
+import random
 
 from .BasePreparator import BasePreparator
 
@@ -30,20 +31,29 @@ class CsvPreparator(BasePreparator):
         self._class_column = class_column
         self._query_columns = query_columns
 
-    def process_data(self, queries_data, labels_data=None):
+    def transform_data(self, queries, labels=None):
         '''
         Args:
-            queries_data - iterable of dicts {<column>: <value:int>} as queries
-            labels_data - iterable of ints as labels (if labelled)
+            queries - iterable of dicts {<column>: <value:int>} as queries
+            labels - iterable of ints as labels (if labelled)
         '''
         X = np.array([
                 [query[column] for column in self._query_columns] # Sort list by query columns
-                for query in queries_data
+                for query in queries
             ])
         
         y = None
-        if labels_data:
-            y = np.array(labels_data) 
+        if labels is not None:
+            y = np.array(labels) 
+
+        return X, y
+
+    def reverse_transform_data(self, X=None, y=None):
+        if X is not None:
+            X = X.tolist()
+            
+        if y is not None:
+            y = [int(x) for x in y]
 
         return X, y
 
@@ -52,10 +62,10 @@ class CsvPreparator(BasePreparator):
         df = pd.read_csv(csv_file_path)
         queries_df = df[self._query_columns]
         labels_df = df[self._class_column]
-        queries_data = [x.to_dict() for i, x in queries_df.iterrows()] 
-        labels_data = labels_df.tolist()
+        queries = [x.to_dict() for i, x in queries_df.iterrows()] 
+        labels = labels_df.tolist()
 
-        X, y = self.process_data(queries_data, labels_data)
+        X, y = self.transform_data(queries, labels)
         return X, y
 
 

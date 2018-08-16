@@ -55,7 +55,7 @@ class Model(object):
     # number of folds for cross-validation (arbitrary, for speed)
     N_FOLDS = 5
 
-    def __init__(self, method, params, judgment_metric, 
+    def __init__(self, method, params, judgment_metric, num_classes, 
                  testing_ratio=0.3, verbose_metrics=False):
         """
         Parameters:
@@ -71,6 +71,7 @@ class Model(object):
         self.judgment_metric = judgment_metric
         self.testing_ratio = testing_ratio
         self.verbose_metrics = verbose_metrics
+        self._num_classes = num_classes
 
         # load the classifier method's class
         path = Method(method).class_path.split('.')
@@ -120,7 +121,7 @@ class Model(object):
 
     def cross_validate(self, X, y):
         # TODO: this is hacky. See https://github.com/HDI-Project/ATM/issues/48
-        binary = self.num_classes == 2
+        binary = self._num_classes == 2
         kwargs = {}
         if self.verbose_metrics:
             kwargs['include_curves'] = True
@@ -149,7 +150,7 @@ class Model(object):
         self.avg_predict_time = old_div(total, float(len(y)))
 
         # TODO: this is hacky. See https://github.com/HDI-Project/ATM/issues/48
-        binary = self.num_classes == 2
+        binary = self._num_classes == 2
         kwargs = {}
         if self.verbose_metrics:
             kwargs['include_curves'] = True
@@ -165,13 +166,8 @@ class Model(object):
         return test_scores
 
     def train_test(self, X, y):
-        # load train and (maybe) test data
-        metadata = MetaData(X, y)
-        self.num_classes = metadata.k_classes
-        self.num_features = metadata.d_features
-
         # if necessary, cast judgment metric into its binary/multiary equivalent
-        if self.num_classes == 2:
+        if self._num_classes == 2:
             if self.judgment_metric in [Metrics.F1_MICRO, Metrics.F1_MACRO]:
                 self.judgment_metric = Metrics.F1
             elif self.judgment_metric in [Metrics.ROC_AUC_MICRO,
@@ -207,9 +203,19 @@ class Model(object):
 
     def load(self, model_dir, model_id):
         if issubclass(self.class_, methods.BaseMethod):
-            self.classifier = self.class_.Load(model_dir, model_id, self.params)
+            self.classifier = self.class_.Load(
+                model_dir, 
+                model_id, 
+                num_classes=self._num_classes,
+                hyperparameters=self.params
+            )
         else:
-            self.classifier = methods.BaseMethod.Load(model_dir, model_id, self.params)
+            self.classifier = methods.BaseMethod.Load(
+                model_dir, 
+                model_id, 
+                num_classes=self._num_classes, 
+                hyperparameters=self.params
+            )
 
         self.make_pipeline()  # Re-build pipeline with new classifier
 
@@ -224,9 +230,9 @@ class Model(object):
         predicted labels
 
         Args:
-            X - n-d numpy array predict classes
+            X - numpy array of n-d array of floats as queries 
 
-        Returns: 1d numpy array of predictions 
+        Returns: numpy array of ints as predictions 
         """
         predictions = self.pipeline.predict(X)
 
@@ -288,4 +294,7 @@ class Model(object):
                            if k not in Model.ATM_KEYS}
         # do special conversions
         hyperparameters = self.special_conversions(hyperparameters)
-        self.classifier = self.class_(**hyperparameters)
+        self.classifier = self.class_(
+            num_classes=self.num_classes, 
+            **hyperparameters
+        )

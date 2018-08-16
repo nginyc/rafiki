@@ -1,10 +1,12 @@
 from .CsvPreparator import CsvPreparator
+from .TensorflowKerasDatasetPreparator import TensorflowKerasDatasetPreparator
 
 class PreparatorNotFoundError(Exception):
     pass
 
 PREPARATOR_TYPE_MAP = {
-    'csv': CsvPreparator
+    'csv': CsvPreparator,
+    'tf_keras_dataset': TensorflowKerasDatasetPreparator 
 }
 
 def create_preparator(preparator_type, **kwargs):

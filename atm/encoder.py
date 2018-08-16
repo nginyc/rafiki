@@ -14,11 +14,11 @@ class MetaData(object):
         Compute a bunch of metadata about the dataset.
         """
         # compute the portion of labels that are the most common value
-        counts = np.shape(X)[0]
-        total_features = np.shape(X)[1]
+        n_examples = np.shape(X)[0]
+        d_features = X.size / n_examples
 
-        self.n_examples = counts
-        self.d_features = total_features
+        self.n_examples = n_examples
+        self.d_features = d_features
         self.k_classes = len(np.unique(y))
         self.size = X.nbytes + y.nbytes
 

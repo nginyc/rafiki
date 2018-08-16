@@ -210,8 +210,9 @@ class Worker(object):
             **self.dataset.preparator_params)
         X, y = preparator.get_train_data()
         
-        model = Model(method=method, 
+        model = Model(method=method,
                       params=params,
+                      num_classes=self.dataset.k_classes,
                       judgment_metric=self.datarun.metric,
                       verbose_metrics=self.verbose_metrics)
 

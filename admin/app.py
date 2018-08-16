@@ -17,6 +17,7 @@ app = Flask(__name__)
 def index():
   return 'Admin is up.'
 
+
 @app.route("/dataruns", methods=['POST'])
 def post_datarun():
   params = request.get_json()
@@ -35,11 +36,28 @@ def get_datarun(datarun_id):
     datarun_id=datarun_id
   ))
 
+
+@app.route("/datasets/<dataset_id>", methods=['GET'])
+def get_dataset(dataset_id):
+  return jsonify(admin.get_dataset(
+    dataset_id=dataset_id
+  ))
+
+@app.route("/datasets/<dataset_id>/random", methods=['GET'])
+@app.route("/datasets/<dataset_id>/<int:example_id>", methods=['GET'])
+def get_dataset_example(dataset_id, example_id=None):
+  return jsonify(admin.get_dataset_example(
+    dataset_id=dataset_id,
+    example_id=example_id
+  ))
+
+
 @app.route("/classifiers/<classifier_id>", methods=['GET'])
 def get_classifier(classifier_id):
   return jsonify(admin.get_classifier(
     classifier_id=classifier_id
   ))
+
 
 @app.route("/classifiers/<classifier_id>/queries", methods=['POST'])
 def query_classifier(classifier_id):
@@ -48,3 +66,4 @@ def query_classifier(classifier_id):
     classifier_id=classifier_id,
     queries=params['queries']
   ))
+

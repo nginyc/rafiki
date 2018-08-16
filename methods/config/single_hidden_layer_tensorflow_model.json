@@ -8,7 +8,7 @@
         },
         "epochs": {
             "type": "int",
-            "range": [10, 1000]
+            "range": [5, 10]
         },
         "learning_rate": {
             "type": "float_exp",
