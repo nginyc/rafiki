@@ -1,6 +1,6 @@
 source .env
 
-MODULE_NAME=atm_db
+MODULE_NAME=rafiki2_db
 
 docker build -t $MODULE_NAME -f db.Dockerfile $PWD
 docker run --name $MODULE_NAME \

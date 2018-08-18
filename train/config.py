@@ -179,7 +179,7 @@ def initialize_logging(config):
     if not len(handlers):
         handlers.append(logging.NullHandler())
 
-    for lib in ['atm', 'btb']:
+    for lib in ['train', 'btb']:
         logger = logging.getLogger(lib)
         logger.setLevel(min(file_level, stdout_level))
 

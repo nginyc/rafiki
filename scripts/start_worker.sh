@@ -1,12 +1,12 @@
 source .env
 
-MODULE_NAME=atm_worker
+MODULE_NAME=rafiki2_worker
 
 docker rm -f $MODULE_NAME
 docker build -t $MODULE_NAME -f worker.Dockerfile $PWD
 docker run --name $MODULE_NAME \
   -v "/$PWD/worker/":"/root/app/worker/" \
-  -v "/$PWD/atm/":"/root/app/atm/" \
+  -v "/$PWD/train/":"/root/app/train/" \
   -v "/$PWD/prepare/":"/root/app/prepare/" \
   -v "/$PWD/data/":"/root/app/data/" \
   -v "/$PWD/scripts/":"/root/app/scripts/" \
@@ -21,10 +21,10 @@ docker run --name $MODULE_NAME \
   $MODULE_NAME \
   bash -c "
     # Ensures python stdout appears immediately
-    export PYTHONUNBUFFERED=1; 
+    export PYTHONUNBUFFERED=1
     
     # Allow importing of python modules from project root
-    export PYTHONPATH=/root/app/; 
+    export PYTHONPATH=/root/app/
 
-    python scripts/start_worker.py;
+    python scripts/start_worker.py
   "

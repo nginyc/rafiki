@@ -10,7 +10,7 @@ import os
 # reference files relative to there.
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-# this defines which modules will be imported by "from atm import *"
+# this defines which modules will be imported by "from train import *"
 __all__ = ['config', 'constants', 'database', 'enter_data', 'method', 'metrics',
            'model', 'utilities', 'worker']
 

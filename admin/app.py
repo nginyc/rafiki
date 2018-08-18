@@ -4,11 +4,11 @@ import os
 from .Admin import Admin
 
 admin = Admin(
-  host=os.environ['MYSQL_HOST'],
-  port=os.environ['MYSQL_PORT'],
-  password=os.environ['MYSQL_PASSWORD'],
-  username=os.environ['MYSQL_USER'],
-  database=os.environ['MYSQL_DATABASE']
+  db_host=os.environ['MYSQL_HOST'],
+  db_port=os.environ['MYSQL_PORT'],
+  db_password=os.environ['MYSQL_PASSWORD'],
+  db_username=os.environ['MYSQL_USER'],
+  db_database=os.environ['MYSQL_DATABASE']
 )
 
 app = Flask(__name__)
@@ -18,8 +18,20 @@ def index():
   return 'Admin is up.'
 
 
+@app.route('/start')
+def start():
+  admin.start()
+  return jsonify({ 'success': True })
+
+
+@app.route('/stop')
+def stop():
+  admin.stop()
+  return jsonify({ 'success': True })
+
+
 @app.route("/dataruns", methods=['POST'])
-def post_datarun():
+def create_datarun():
   params = request.get_json()
   
   return jsonify(admin.create_datarun(
@@ -52,18 +64,39 @@ def get_dataset_example(dataset_id, example_id=None):
   ))
 
 
-@app.route("/classifiers/<classifier_id>", methods=['GET'])
-def get_classifier(classifier_id):
-  return jsonify(admin.get_classifier(
-    classifier_id=classifier_id
+@app.route("/models/<model_id>", methods=['GET'])
+def get_model(model_id):
+  return jsonify(admin.get_model(
+    model_id=model_id
   ))
 
 
-@app.route("/classifiers/<classifier_id>/queries", methods=['POST'])
-def query_classifier(classifier_id):
+@app.route("/models/<model_id>/queries", methods=['POST'])
+def query_model(model_id):
   params = request.get_json()
-  return jsonify(admin.query_classifier(
-    classifier_id=classifier_id,
+  return jsonify(admin.query_model(
+    model_id=model_id,
     queries=params['queries']
   ))
 
+@app.route("/models/<model_id>/deployments/<deployment_name>", methods=['POST'])
+def create_model_deployment(model_id, deployment_name):
+  return jsonify(admin.deploy_model(
+    model_id=model_id,
+    deployment_name=deployment_name
+  ))
+
+@app.route("/apps/<app_name>", methods=['POST'])
+def create_app(app_name):
+  params = request.get_json()
+  return jsonify(admin.create_app(
+    name=app_name,
+    slo_micros=params['slo_micros'], 
+    model_deployment_names=params['model_deployment_names']
+  ))
+
+@app.route("/apps/<app_name>", methods=['DELETE'])
+def delete_app(app_name):
+  return jsonify(admin.delete_app(
+    name=app_name
+  ))

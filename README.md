@@ -26,6 +26,7 @@ bash scripts/start_db.sh
 Run in terminal 2:
 
 ```shell
+pip install -r ./requirements.txt
 bash scripts/start_admin.sh
 ```
 
