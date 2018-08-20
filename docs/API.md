@@ -45,7 +45,7 @@
 - constructor(hyperparameters_set: HyperparameterSet)
 - train(dataset: Dataset)
 - dump_parameters(): ModelParameterSet
-- load_parameters(ModelParameterSet)
+- load_parameters(model_params: ModelParameterSet)
 - predict(queries: [DatasetQuery]): [DatasetLabel]
 - evaluate(dataset: Dataset): [ModelMetric]
 - hyperparameter_set: HyperparameterSet
