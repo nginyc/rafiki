@@ -11,7 +11,7 @@
 
 ### App
 
-- constructor(name: String, train_dataset: Dataset, test_dataset: Dataset, task: Task)
+- constructor(name: String, train_dataset: Dataset, task: Task)
 - train(budget: TrainJobBudget): TrainJob
 - deploy(train_job: TrainJob): DeploymentJob
 - id: String
