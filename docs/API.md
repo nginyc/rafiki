@@ -48,6 +48,7 @@
 - load_parameters(model_params: ModelParameterSet)
 - predict(queries: [DatasetQuery]): [DatasetLabel]
 - evaluate(dataset: Dataset): [ModelMetric]
+- name: String
 - hyperparameter_set: HyperparameterSet
 - hyperparameter_set_config: HyperparameterSetConfig
 
