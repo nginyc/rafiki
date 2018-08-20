@@ -18,7 +18,7 @@
 - name: String
 - task: Task
 - models: [TrainedModel]
-- model_deployments: [ModelDeployment]
+- model_deployments: [DeploymentJob]
 
 ### Dataset
 
