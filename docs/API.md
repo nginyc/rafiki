@@ -12,10 +12,8 @@
 ### App
 
 - constructor(name: String, train_dataset: Dataset, test_dataset: Dataset, task: Task)
-- get_trained_models(filter_by_metric: ModelMetric, sort_by_metric: ModelMetric): [TrainedModel]
 - train(budget: TrainJobBudget): TrainJob
-- deploy(model: TrainedModel): ModelDeployment
-
+- deploy(train_job: TrainJob): DeploymentJob
 - id: String
 - name: String
 - task: Task
@@ -25,32 +23,31 @@
 ### Dataset
 
 - url: String
+- input_shape: [Int]
+- output_shape: [Int]
 
-### ModelDeployment
+### DeploymentJob
 
 - id: String
-- model: TrainedModel
-- status: Enum('running', 'deploying')
+- train_job: TrainJob
+- status: Enum('deployed', 'deploying')
 
 ### TrainJob
 
 - id: String
 - app: App
+- version: Int
 - budget: TrainJobBudget
 - status: Enum('completed', 'in_progress')
 
 ### Model (Defined by Model Contributor)
 
 - constructor(hyperparameters_set: HyperparameterSet)
-- preprocess(dataset: Dataset): [(DatasetQuery, DatasetLabel)]
-- train([(DatasetQuery, DatasetLabel)])
-- save_to_path(file_path: String)
-- dump(): [Bytes]
-- load_from_path(file_path: String)
-- load(bytes: [Bytes])
-- predict([DatasetQuery]): [DatasetLabel]
-- evaluate([(DatasetQuery, DatasetLabel)]): [ModelMetric]
-
+- train(dataset: Dataset)
+- dump_parameters(): ModelParameterSet
+- load_parameters(ModelParameterSet)
+- predict(queries: [DatasetQuery]): [DatasetLabel]
+- evaluate(dataset: Dataset): [ModelMetric]
 - hyperparameter_set: HyperparameterSet
 - hyperparameter_set_config: HyperparameterSetConfig
 
@@ -71,6 +68,14 @@
 - type: String
 - value: Double
 
+### ModelParameterSet
+
+Dict<parameter_name: String, paramater_value: Bytes>
+
+### Task
+
+String
+
 ### DatasetQuery
 
 Any
@@ -79,22 +84,11 @@ Any
 
 Int
 
-### Task
-
-String
-
 ### HyperparameterSet
 
-Dictionary(hyperparameter_name: String, hyperparameter_value: Double)
+Dict<hyperparameter_name: String, hyperparameter_value: String>
 
 ### HyperparameterSetConfig
 
 Similar to https://github.com/HDI-Project/ATM/blob/master/docs/source/add_method.rst
-
-#### Method
-
-parse(json_file)
-
-## Schema
-
  
