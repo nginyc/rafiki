@@ -27,8 +27,6 @@ def propose_with_tuner(tuner):
     return hyperparameters
 
 def train_tuner(tuner, hyperparameters_list, scores):
-    print('hyperparameters_list: {}'.format(str(hyperparameters_list)))
-    print('scores: {}'.format(str(scores)))
     if len(hyperparameters_list) == 0:
         return tuner
     

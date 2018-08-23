@@ -8,13 +8,17 @@ class Admin(object):
     def __init__(self, database_config=DatabaseConfig()):
         self._db = Database(database_config)
 
-    def create_app(self, name, task, train_dataset_config):
+    def create_app(self, name, task, train_dataset_config, test_dataset_config):
         with self._db:
-            dataset = self._db.create_dataset(
+            train_dataset = self._db.create_dataset(
                 dataset_type=train_dataset_config.dataset_type,
                 params=train_dataset_config.params
             )
-            app = self._db.create_app(name, task, dataset)
+            test_dataset = self._db.create_dataset(
+                dataset_type=test_dataset_config.dataset_type,
+                params=test_dataset_config.params
+            )
+            app = self._db.create_app(name, task, train_dataset, test_dataset)
             return app
 
 

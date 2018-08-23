@@ -1,8 +1,8 @@
-from sqlalchemy import Column, String, ForeignKey, Integer, Float, Binary
+from sqlalchemy import Column, String, ForeignKey, Integer, Float, Binary, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSON
 
-from .utils import generate_uuid
+from .utils import generate_uuid, generate_datetime
 from .Base import Base
 
 class Model(Base):

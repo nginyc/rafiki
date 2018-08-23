@@ -49,9 +49,9 @@ class Worker(object):
         try:
             app = self._db.get_app(train_job.app_id)
             models = self._db.get_models_by_task(app.task)
-            dataset = self._db.get_dataset(app.dataset_id)
-            dataset_config = self._get_dataset_config(dataset)
-            self._do_trial(models, dataset_config, train_job)
+            train_dataset = self._db.get_dataset(app.train_dataset_id)
+            test_dataset = self._db.get_dataset(app.test_dataset_id)
+            self._do_trial(models, train_job, train_dataset, test_dataset)
             self._check_train_job_budget(train_job)
         except Exception as error:
             logger.error('Error while running train job:')
@@ -59,7 +59,7 @@ class Worker(object):
 
         return True
 
-    def _do_trial(self, models, dataset_config, train_job):
+    def _do_trial(self, models, train_job, train_dataset, test_dataset):
         
         (model, hyperparameters) = \
             self._do_hyperparameter_selection(models, train_job)
@@ -74,10 +74,14 @@ class Worker(object):
         try:
             model_inst = unserialize_model(model.model_serialized)
             model_inst.init(hyperparameters)
-            model_inst.train(dataset_config)
 
-            # TODO: use test dataset instead of train dataset
-            score = model_inst.evaluate(dataset_config)
+            # Train model
+            train_dataset_config = self._get_dataset_config(train_dataset)
+            model_inst.train(train_dataset_config)
+
+            # Evaluate model
+            test_dataset_config = self._get_dataset_config(test_dataset)
+            score = model_inst.evaluate(test_dataset_config)
             
             parameters = model_inst.dump_parameters()
             model_inst.destroy()
@@ -104,7 +108,9 @@ class Worker(object):
             trials = self._db.get_completed_trials_by_train_job(train_job)
             max_trials = train_job.budget_amount 
             if len(trials) >= max_trials:
+                logger.info('Train job has reached target trial count')
                 self._db.mark_train_job_as_complete(train_job)
+                self._db.commit()
 
         else:
             raise InvalidBudgetTypeException()

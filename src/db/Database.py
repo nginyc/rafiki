@@ -35,8 +35,13 @@ class Database(object):
             self._session.close()
             self._session = None
 
-    def create_app(self, name, task, dataset):
-        app = App(name=name, task=task, dataset=dataset)
+    def create_app(self, name, task, train_dataset, test_dataset):
+        app = App(
+            name=name, 
+            task=task,
+            train_dataset=train_dataset,
+            test_dataset=test_dataset
+        )
         self._session.add(app)
         return app
 
@@ -74,6 +79,7 @@ class Database(object):
 
     def mark_train_job_as_complete(self, train_job):
         train_job.status = TrainJobStatus.COMPLETE
+        train_job.datetime_completed = datetime.datetime.utcnow()
         self._session.add(train_job)
         return train_job
 
