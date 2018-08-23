@@ -1,0 +1,12 @@
+source .env
+
+MODULE_NAME=rafiki2_db
+
+docker build -t $MODULE_NAME -f db.Dockerfile $PWD
+docker run --name $MODULE_NAME \
+  -e MYSQL_USER=$MYSQL_USER \
+  -e MYSQL_DATABASE=$MYSQL_DATABASE \
+  -e MYSQL_ROOT_PASSWORD=$MYSQL_PASSWORD \
+  -e MYSQL_PASSWORD=$MYSQL_PASSWORD \
+  -p 3306:3306 \
+  $MODULE_NAME
