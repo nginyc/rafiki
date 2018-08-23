@@ -35,12 +35,12 @@ class Database(object):
             self._session.close()
             self._session = None
 
-    def create_app(self, name, task, train_dataset, test_dataset):
+    def create_app(self, name, task, train_dataset_id, test_dataset_id):
         app = App(
             name=name, 
             task=task,
-            train_dataset=train_dataset,
-            test_dataset=test_dataset
+            train_dataset_id=train_dataset_id,
+            test_dataset_id=test_dataset_id
         )
         self._session.add(app)
         return app
@@ -62,11 +62,11 @@ class Database(object):
         self._session.add(dataset)
         return dataset
 
-    def create_train_job(self, budget_type, budget_amount, app):
+    def create_train_job(self, budget_type, budget_amount, app_id):
         train_job = TrainJob(
             budget_type=budget_type, 
             budget_amount=budget_amount,
-            app=app
+            app_id=app_id
         )
         self._session.add(train_job)
         return train_job
@@ -77,8 +77,16 @@ class Database(object):
 
         return train_jobs
 
+    def get_train_jobs_by_app(self, app_id):
+        train_jobs = self._session.query(TrainJob) \
+            .join(Trial, TrainJob.id == Trial.train_job_id) \
+            .filter(App.id == app_id) \
+            .order_by(TrainJob.datetime_started.desc()).all()
+
+        return train_jobs
+
     def mark_train_job_as_complete(self, train_job):
-        train_job.status = TrainJobStatus.COMPLETE
+        train_job.status = TrainJobStatus.COMPLETED
         train_job.datetime_completed = datetime.datetime.utcnow()
         self._session.add(train_job)
         return train_job
@@ -98,22 +106,37 @@ class Database(object):
 
         return models
 
-    def get_completed_trials_by_train_job(self, train_job):
-        trials = self._session.query(Trial) \
-            .filter(Trial.status == TrainJobStatus.COMPLETE) \
-            .filter(Trial.train_job == train_job).all()
+    def get_model(self, id):
+        model = self._session.query(Model).get(id)
+        return model
 
-        return trials
-
-    def create_trial(self, model, train_job, 
+    def create_trial(self, model, train_job_id, 
                     hyperparameters):
         trial = Trial(
-            model=model,
-            train_job=train_job,
+            model_id=model.id,
+            train_job_id=train_job_id,
             hyperparameters=hyperparameters
         )
         self._session.add(trial)
         return trial
+
+    def get_best_trials_by_app(self, app_id, max_count=1):
+        trials = self._session.query(Trial) \
+            .join(TrainJob, Trial.train_job_id == TrainJob.id) \
+            .join(App, TrainJob.app_id == app_id) \
+            .filter(App.id == app_id) \
+            .filter(Trial.status == TrainJobStatus.COMPLETED) \
+            .order_by(Trial.score.desc()) \
+            .limit(max_count).all()
+
+        return trials
+
+    def get_completed_trials_by_train_job(self, train_job_id):
+        trials = self._session.query(Trial) \
+            .filter(Trial.status == TrainJobStatus.COMPLETED) \
+            .filter(Trial.train_job_id == train_job_id).all()
+
+        return trials
 
     def mark_trial_as_errored(self, trial):
         trial.status = TrialStatus.ERRORED
@@ -121,7 +144,7 @@ class Database(object):
         return trial
 
     def mark_trial_as_complete(self, trial, score, parameters):
-        trial.status = TrialStatus.COMPLETE
+        trial.status = TrialStatus.COMPLETED
         trial.score = score
         trial.datetime_completed = datetime.datetime.utcnow()
         trial.parameters = parameters

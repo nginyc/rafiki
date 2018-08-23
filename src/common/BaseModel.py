@@ -30,6 +30,7 @@ class BaseModel(abc.ABC):
         '''
         raise NotImplementedError()
 
+    # TODO: Allow configuration of other metrics
     @abc.abstractmethod
     def evaluate(self, dataset_config):
         '''

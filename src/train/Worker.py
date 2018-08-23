@@ -66,7 +66,7 @@ class Worker(object):
                 
         trial = self._db.create_trial(
             model=model, 
-            train_job=train_job, 
+            train_job_id=train_job.id, 
             hyperparameters=hyperparameters
         )
         self._db.commit()
@@ -105,7 +105,7 @@ class Worker(object):
     # Updates train job based on budget
     def _check_train_job_budget(self, train_job):
         if train_job.budget_type == BudgetType.TRIAL_COUNT:
-            trials = self._db.get_completed_trials_by_train_job(train_job)
+            trials = self._db.get_completed_trials_by_train_job(train_job.id)
             max_trials = train_job.budget_amount 
             if len(trials) >= max_trials:
                 logger.info('Train job has reached target trial count')
@@ -156,7 +156,7 @@ class Worker(object):
         tuner = create_tuner(hyperparameters_config)
 
         # Train tuner
-        trials = self._db.get_completed_trials_by_train_job(train_job)
+        trials = self._db.get_completed_trials_by_train_job(train_job.id)
         model_trial_history = [(x.hyperparameters, x.score) for x in trials if x.model_id == model.id]
         (hyperparameters_list, scores) = [list(x) for x in zip(*model_trial_history)] \
             if len(model_trial_history) > 0 else ([], [])

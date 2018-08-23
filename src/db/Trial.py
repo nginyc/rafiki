@@ -1,6 +1,5 @@
 import datetime
 from sqlalchemy import Column, String, ForeignKey, Integer, Float, DateTime
-from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSON
 
 from .utils import generate_uuid, generate_datetime
@@ -9,7 +8,7 @@ from .Base import Base
 class TrialStatus():
     STARTED = 'STARTED'
     ERRORED = 'ERRORED'
-    COMPLETE = 'COMPLETE'
+    COMPLETED = 'COMPLETED'
 
 
 class Trial(Base):
@@ -19,9 +18,7 @@ class Trial(Base):
     hyperparameters = Column(JSON, nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     train_job_id = Column(String, ForeignKey('train_job.id'), nullable=False)
-    train_job = relationship('TrainJob', uselist=False)
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
-    model = relationship('Model', uselist=False)
     status = Column(String, nullable=False, default=TrialStatus.STARTED)
     score = Column(Float, default=0)
     parameters = Column(JSON, default=None)

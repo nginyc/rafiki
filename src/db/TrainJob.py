@@ -1,5 +1,4 @@
 from sqlalchemy import Column, String, ForeignKey, Integer, Binary, DateTime
-from sqlalchemy.orm import relationship
 
 from .utils import generate_uuid, generate_datetime
 from .Base import Base
@@ -7,7 +6,7 @@ from .Base import Base
 class TrainJobStatus():
     STARTED = 'STARTED'
     ERRORED = 'ERRORED'
-    COMPLETE = 'COMPLETE'
+    COMPLETED = 'COMPLETED'
 
 
 class TrainJob(Base):
@@ -18,7 +17,6 @@ class TrainJob(Base):
     budget_type = Column(String, nullable=False)
     budget_amount = Column(Integer, nullable=False)
     app_id = Column(String, ForeignKey('app.id'), nullable=False)
-    app = relationship('App', uselist=False)
     status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     state_serialized = Column(Binary)
     datetime_completed = Column(DateTime, default=None)
