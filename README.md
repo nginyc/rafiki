@@ -1,4 +1,4 @@
-# Auto Tune Models Example
+# Rafiki2
 
 ## Installation
 
