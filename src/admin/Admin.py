@@ -11,12 +11,12 @@ class Admin(object):
     def create_app(self, name, task, train_dataset_config, test_dataset_config):
         with self._db:
             train_dataset = self._db.create_dataset(
-                dataset_type=train_dataset_config.dataset_type,
-                params=train_dataset_config.params
+                dataset_type=train_dataset_config['dataset_type'],
+                config=train_dataset_config
             )
             test_dataset = self._db.create_dataset(
-                dataset_type=test_dataset_config.dataset_type,
-                params=test_dataset_config.params
+                dataset_type=test_dataset_config['dataset_type'],
+                config=train_dataset_config
             )
             self._db.commit()
             app = self._db.create_app(name, task, train_dataset.id, test_dataset.id)
@@ -35,14 +35,8 @@ class Admin(object):
                 'name': app.name,
                 'task': app.task,
                 'datetime_created': app.datetime_created,
-                'train_dataset': {
-                    'dataset_type': train_dataset.dataset_type,
-                    'params': train_dataset.params,
-                },
-                'test_dataset': {
-                    'dataset_type': test_dataset.dataset_type,
-                    'params': test_dataset.params,
-                },
+                'train_dataset': train_dataset.config,
+                'test_dataset': test_dataset.config,
                 'train_jobs': [
                     {
                         'status': train_job.status,
@@ -55,6 +49,7 @@ class Admin(object):
                 ],
                 'best_trials': [
                     {
+                        'id': trial.id,
                         'hyperparameters': trial.hyperparameters,
                         'datetime_started': trial.datetime_started,
                         'model_name': model.name,
@@ -75,11 +70,17 @@ class Admin(object):
 
         # TODO: Deploy workers based on current train jobs
 
-    # def predict(self, app_name, queries):
-    #     with self._db:
+    def predict(self, trial_id, queries):
+        with self._db:
+            trial = self._db.get_trial(trial_id)
+            model = self._db.get_model(trial.model_id)
+            model_inst = unserialize_model(model.model_serialized)
+            model_inst.init(trial.hyperparameters)
+            model_inst.load_parameters(trial.parameters)
+            preds = model_inst.predict(queries)
+            model_inst.destroy()
+            return preds
             
-    #     model_inst = unserialize_model(model.model_serialized)
-    #     model_inst.init(hyperparameters)
 
     def create_model(self, name, task, model_inst):
         with self._db:

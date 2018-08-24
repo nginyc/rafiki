@@ -57,8 +57,8 @@ class Database(object):
         dataset = self._session.query(Dataset).get(id)
         return dataset
 
-    def create_dataset(self, dataset_type, params):
-        dataset = Dataset(dataset_type=dataset_type, params=params)
+    def create_dataset(self, dataset_type, config):
+        dataset = Dataset(dataset_type=dataset_type, config=config)
         self._session.add(dataset)
         return dataset
 
@@ -118,6 +118,10 @@ class Database(object):
             hyperparameters=hyperparameters
         )
         self._session.add(trial)
+        return trial
+
+    def get_trial(self, id):
+        trial =  self._session.query(Trial).get(id)
         return trial
 
     def get_best_trials_by_app(self, app_id, max_count=1):

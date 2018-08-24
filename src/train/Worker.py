@@ -5,7 +5,7 @@ import dill
 import traceback
 
 from common import unserialize_model, create_tuner, \
-    propose_with_tuner, train_tuner, BudgetType, DatasetConfig
+    propose_with_tuner, train_tuner, BudgetType
 from db import DatabaseConfig, Database, TrainJobStatus, TrialStatus
 
 logger = logging.getLogger(__name__)
@@ -76,12 +76,10 @@ class Worker(object):
             model_inst.init(hyperparameters)
 
             # Train model
-            train_dataset_config = self._get_dataset_config(train_dataset)
-            model_inst.train(train_dataset_config)
+            model_inst.train(train_dataset.config)
 
             # Evaluate model
-            test_dataset_config = self._get_dataset_config(test_dataset)
-            score = model_inst.evaluate(test_dataset_config)
+            score = model_inst.evaluate(test_dataset.config)
             
             parameters = model_inst.dump_parameters()
             model_inst.destroy()
@@ -142,12 +140,6 @@ class Worker(object):
 
         return (model, hyperparameters)
         
-    def _get_dataset_config(self, dataset):
-        dataset_config = DatasetConfig()
-        dataset_config.dataset_type = dataset.dataset_type
-        dataset_config.params = dataset.params
-        return dataset_config
-
     # Retrieves/creates a tuner for the model for the associated train job
     def _get_tuner_for_model(self, train_job, model):
         # Instantiate tuner

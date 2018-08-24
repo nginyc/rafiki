@@ -7,7 +7,7 @@ import tempfile
 import numpy as np
 import base64
 
-from common import DatasetType, BaseModel, InvalidModelParamsException
+from common import DatasetType, BaseModel, InvalidModelParamsException, load_tf_keras_dataset
 
 class SingleHiddenLayerTensorflowModel(BaseModel):
 
@@ -82,9 +82,9 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
         accuracy = sum(labels == preds) / len(y)
         return accuracy
 
+
     def predict(self, queries):
         X = queries
-
         with self._graph.as_default():
             with self._sess.as_default():
                 probs = self._model.predict(X)
@@ -141,24 +141,12 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
 
 
     def _load_dataset(self, dataset_config):
-        if dataset_config.dataset_type == DatasetType.TF_KERAS:
-            train_or_test =  dataset_config.params.get('train_or_test')
-            dataset_name = dataset_config.params.get('dataset_name')
-            keras_dataset = getattr(keras.datasets, dataset_name)
-
-            (train_images, train_labels), (test_images, test_labels) = \
-                keras_dataset.load_data()
-
-            if train_or_test == 'train':
-                return (train_images, train_labels)
-            elif train_or_test == 'test':
-                return (test_images, test_labels)
-            else:
-                raise Exception('train_or_test should be \'train\' or \'test\'')
+        dataset_type = dataset_config['dataset_type']
+        if dataset_type == DatasetType.TF_KERAS:
+            return load_tf_keras_dataset(dataset_config)
         else:
             raise Exception('Unsupported dataset type: {}' \
-                .format(dataset_config.dataset_type))        
-
+                .format(dataset_type))   
 
     def _build_model(self, num_classes):
         hidden_layer_units = self._hidden_layer_units

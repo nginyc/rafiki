@@ -21,6 +21,7 @@ export PYTHONPATH=$PWD/src
 Run in terminal 1:
 
 ```shell
+source .env.sh
 bash scripts/start_db.sh
 ```
 
@@ -36,10 +37,11 @@ python src/scripts/create_train_job.py
 Run in terminal 3:
 
 ```shell
+source .env.sh
 python src/scripts/start_worker.py
 ```
 
-As training occurs, view the app's status with:
+As training occurs, view the app's status in terminal 2 with:
 
 ```
 python src/scripts/get_app_status.py

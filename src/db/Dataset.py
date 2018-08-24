@@ -9,5 +9,5 @@ class Dataset(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     dataset_type = Column(String, nullable=False)
-    params = Column(JSON, nullable=False)
+    config = Column(JSON, nullable=False)
 
