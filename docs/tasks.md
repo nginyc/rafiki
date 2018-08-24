@@ -8,7 +8,7 @@
 
 ### Query Types
 
-- (N, M) vector of integers ranging 0-255, corresponding to pixel values of an query image in grayscale
+- (Nx, Ny) vector of integers ranging 0-255, corresponding to pixel values of an query image in grayscale
 
 ### Prediction Type
 
