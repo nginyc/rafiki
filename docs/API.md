@@ -49,6 +49,7 @@ rafiki_admin/
         task.py
         train_job.py
         worker.py
+        metric.py
         model/
             __init__.py
             convolution_neural_network.py
@@ -135,7 +136,7 @@ class RafikiConnection(object):
                            name, 
                            version, 
                            task_name, 
-                           models, 
+                           model_names, 
                            train_dataset_zip_file, 
                            test_dataset_zip_file):
         """ Creates a new `Application` object.
@@ -150,7 +151,7 @@ class RafikiConnection(object):
             The name of the machine learning task that the application
             is built for. The task name must be an element of the list
             of task names returned by `RafikiConnection.get_task_names`.
-        models: list(str)
+        model_names: list(str)
             The list of model names to be used by Rafiki. All model 
             names must stem from the list of model names returned by
             `RafikiConnection.get_task_models`.
@@ -305,30 +306,162 @@ class ContainerManager(ABC):
 **application.py**
 
 ``` python
+class Application:
+
+    def __init__(self, name, version, model_names, task_name):
+        """ Creates an instance of `Application`. """
+        pass
+
+    def train(self, budget_type, budget_amount):
+        """ Starts a train job.
+
+        Parameters
+        ----------
+        budget_type: str
+            The type of budget.
+        budget_amount: str
+            The total resource allocated to the training job.
+        
+        Returns
+        -------
+        `TrainJob`:
+            An instance of `TrainJob`.
+        """
+        pass
+
+    def evaluate(self):
+        """ Evaluate deployed models.
+
+        Returns
+        -------
+        `Metric`:
+            An instance of `Metric`.
+        """
+        pass
+
+    def predict(self, input):
+        """ Returns prediction from deployed models.
+
+        Parameters
+        ----------
+        input: [str]/[int]/[double]/[bytes]
+            The input for prediction.
+
+        Returns
+        -------
+        str:
+            The predicted result.
+        """
+        pass
+
+    def get_trained_model_names(sort):
+        pass
+
 ```
 
 <a name="library_model"></a>
 **model.py**
 
 ``` python
+from abc import ABC, abstractmethod
+
+class Model(ABC):
+
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def get_name(self):
+        pass
+
+    @abstractmethod
+    def get_hyperparameters_config():
+        pass
+    
+    @abstractmethod
+    def init(self, hyperparameters):
+        pass
+
+    @abstractmethod
+    def preprocess(self, train_dataset):
+        pass
+
+    @abstractmethod
+    def train(self, train_dataset_features, train_dataset_labels):
+        pass
+
+    @abstractmethod
+    def evaluate(self, test_dataset_features, test_dataset_labels):
+        pass
+
+    @abstractmethod
+    def predict(self, inputs):  
+        pass
+
+    @abstractmethod
+    def load_parameters(self, params):
+        pass
+
+    @abstractmethod
+    def dump_parameters(self):
+        pass
+
+    @abstractmethod
+    def destroy(self):
+        pass
+
 ```
 
 <a name="library_task"></a>
 **task.py**
 
 ``` python
+from abc import ABC, abstractmethod
+
+class Task(ABC):
+
+    def __init__(self, name, train_dataset_zip_file, test_dataset_zip_file):
+        self.name = name
+        self.train_dataset_zip_file = train_dataset_zip_file
+        self.test_dataset_zip_file = test_dataset_zip_file
+
+    @abstractmethod
+    def get_train_dataset_features(self):
+        pass
+
+    @abstractmethod
+    def get_train_dataset_labels():
+        pass
+
+    @abstractmethod
+    def get_test_dataset_features():
+        pass
+
+    @abstractmethod
+    def get_test_dataset_labels():
+        pass
+
 ```
 
 <a name="library_train_job"></a>
 **train_job.py**
 
 ``` python
-```
+from enum import Enum
 
-<a name="library_worker"></a>
-**worker.py**
+class Status(Enum):
+    CREATED = "CREATED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
-``` python
+class TrainJob:
+    def __init__(budget_type, budget_amount):
+        self.status = Status.CREATED
+
+    def has_completed():
+        return self.status == Status.COMPLETED
+
 ```
 
 <a name="roles"></a>
@@ -353,7 +486,7 @@ def main():
     app = rafiki.create_application(name="food-identifier", 
                                     version="v1", 
                                     task_name="image-classification",
-                                    models=["cnn, mlp"],
+                                    model_names=["cnn, mlp"],
                                     train_dataset_zip_file="./train.zip",
                                     test_dataset_zip_file="./test.zip")
     train_job = app.train(budget_type="trial_count", budget_amount="10")
