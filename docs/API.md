@@ -19,6 +19,13 @@
         * [Defining new Task](#defining_new_task)
     3. [Application User](#application_user)
 3. [Schemas](#schemas)
+    1. [Application](#schema_application)
+    2. [Model](#schema_model)
+    3. [Task](#schema_task)
+    4. [Train Job](#schema_train_job)
+    5. [Trial](#schema_trial)
+    6. [Application Trial Junction](#schema_application_trial)
+    7. [Task Model Junction](#schema_task_model)
 
 <a name="packages_overview"></a>
 ## Packages Overview
@@ -67,7 +74,6 @@ rafiki_admin/
             __init__.py
             base.py
             application.py
-            dataset.py
             model.py
             task.py
             train_job.py
@@ -372,42 +378,120 @@ class Model(ABC):
 
     @abstractmethod
     def get_name(self):
+        """ Returns model name.
+
+        Returns
+        -------
+        str:
+            Name of model.
+        """
         pass
 
     @abstractmethod
-    def get_hyperparameters_config():
+    def get_hyperparameters_config(self):
+        """ Returns dictionary of conditional parameter tree.
+
+        Returns
+        -------
+        dict:
+            Dictionary of conditional parameter tree.
+        """
         pass
     
     @abstractmethod
     def init(self, hyperparameters):
+        """ True init method.
+
+        Parameters
+        ----------
+        hyperparameters: dict
+            Selected hyperparameters and their values.
+        """
         pass
 
     @abstractmethod
-    def preprocess(self, train_dataset):
+    def preprocess(self, train_dataset_features):
+        """ Do preprocessing before train, evaluate and predict methods.
+
+        Parameters
+        ----------
+        train_dataset_features: nd-list
+            N-dimension array of features from train dataset.
+        """
         pass
 
     @abstractmethod
     def train(self, train_dataset_features, train_dataset_labels):
+        """ Train method.
+
+        Parameters
+        ----------
+        train_dataset_features: nd-list
+            N-dimension array of features from train dataset.
+        train_dataset_labels: list
+            Labels of train dataset.
+        """
         pass
 
     @abstractmethod
     def evaluate(self, test_dataset_features, test_dataset_labels):
+        """ Evaluate method.
+
+        Parameters
+        ----------
+        test_dataset_features: nd-list
+            N-dimension array of features from test dataset.
+        test_dataset_labels: list
+            Labels of test dataset.   
+        
+        Returns
+        -------
+        `Metric`:
+            An instance of `Metric` object.
+        """
         pass
 
     @abstractmethod
     def predict(self, inputs):  
+        """ Predict method.
+
+        Parameters
+        ----------
+        inputs: [str]/[int]/[double]/[bytes]
+            The input for prediction.
+
+        Returns
+        -------
+        str:
+            The predicted result.
+        """
         pass
 
     @abstractmethod
-    def load_parameters(self, params):
+    def load_parameters(self, parameters):
+        """ Initialised model with parameters.
+
+        Parameters
+        ----------
+        parameters: dict
+            Parameters to initalise model.
+        """
         pass
 
     @abstractmethod
     def dump_parameters(self):
+        """ Returns dictionary of parameters to save.
+
+        Returns
+        -------
+        dict:
+            Dictionary of parameters to save.
+        """
         pass
 
     @abstractmethod
     def destroy(self):
+        """ Cleaning up method. """
         pass
 
 ```
@@ -559,3 +643,96 @@ def main():
 
 <a name="schemas"></a>
 ## Schemas
+
+<a name="schema_application"></a>
+### Application
+
+``` SQL
+CREATE TABLE Application (
+    Name varchar(255) NOT NULL,
+    Version varchar(255) NOT NULL,
+    TaskName varchar(255),
+    TrainJobID int,
+    PRIMARY KEY (Name, Version),
+    FOREIGN KEY (TaskName) REFERENCES Task(Name),
+    FOREIGN KEY (TrainJobID) REFERENCES TrainJob(ID)
+);
+```
+
+<a name="schema_model"></a>
+### Model
+
+``` SQL
+CREATE TABLE Model (
+    Name varchar(255) PRIMARY KEY,
+    ModelSerialised binary NOT NULL
+);
+```
+
+<a name="schema_task"></a>
+### Task
+
+``` SQL
+CREATE TABLE Task (
+      Name varchar(255) PRIMARY KEY,
+      TaskSerialised binary NOT NULL
+);
+```
+
+<a name="schema_train_job"></a>
+### Train Job
+
+``` SQL
+CREATE TABLE TrainJob (
+    ID int PRIMARY KEY,
+    BudgetType varchar(255) NOT NULL,
+    BudgetAmount varchar(255) NOT NULL,
+    Status varchar(255) NOT NULL,
+    ApplicationName varchar(255),
+    FOREIGN KEY (ApplicationName) REFERENCES Application(Name)
+)
+```
+
+<a name="schema_trial"></a>
+### Trial
+
+``` SQL
+CREATE TABLE Trial (
+    ID int PRIMARY KEY,
+    Score varchar(255),
+    TrainJobID int,
+    FOREIGN KEY (TrainJobID) REFERENCES TrainJob(ID)
+);
+```
+
+<a name="schema_application_trial"></a>
+### Application Trial Junction
+
+Represents deployed models.
+
+``` SQL
+CREATE TABLE ApplicationTrialJunction (
+    ApplicationName varchar(255) NOT NULL,
+    ApplicationVersion varchar(255) NOT NULL,
+    TrialID int NOT NULL,
+    PRIMARY KEY (ApplicationName, ApplicationVersion, TrialID),
+    FOREIGN KEY (ApplicationName) REFERENCES Application(Name),
+    FOREIGN KEY (ApplicationVersion) REFERENCES Application(Version),
+    FOREIGN KEY (TrialID) REFERENCES Trial(ID)
+);
+```
+
+<a name="schema_task_model"></a>
+### Task Model Junction
+
+Represents available models associated with the task.
+
+``` SQL
+CREATE TABLE TaskModelJunction(
+    TaskName varchar(255) NOT NULL,
+    ModelName varchar(255) NOT NULL,
+    PRIMARY KEY (TaskName, ModelName),
+    FOREIGN KEY (TaskName) REFERENCES Task(Name),
+    FOREIGN KEY (ModelName) REFERENCES Model(Name)
+);
+```
