@@ -10,6 +10,9 @@
         * [database.py](#database_client_database)
         * [base.py](#database_schema_base)
 2. [Roles](#roles)
+    1. [Application Developer](#application_developer)
+    2. [Model Developer](#model_developer)
+    3. [Application User](#application_user)
 3. [Schemas](#schemas)
 
 <a name="packages_overview"></a>
@@ -34,9 +37,19 @@ rafiki_admin/
         docker/
             __init__.py
             docker_container_manager.py
-    class/
+    library/
         __init__.py
         application.py
+        dataset.py
+        model.py
+        task.py
+        model/
+            __init__.py
+            convolution_neural_network.py
+            multi_layer_perceptron.py
+        task/
+            __task__.py
+            image_classification.py
     database/
         __init__.py
         client/
@@ -82,19 +95,21 @@ class RafikiConnection(object):
         """
         pass
 
-    def start_rafiki(self, database_image, 
-                     frontend_image, redis_image):
+    def start_rafiki(self, 
+                     database_image, 
+                     frontend_image, 
+                     redis_image):
         """ Starts a new Rafiki cluster.
         
         Parameters
         ----------
-        database_image: str(optional)
+        database_image: str {optional}
             The database docker image to use. You can set this argument
             to specify a custom build of the database.
-        frontend_image: str(optional)
+        frontend_image: str {optional}
             The frontend docker image to use. You can set this argument
             to specify a custom build of the frontend.
-        redis_image: str(optional)
+        redis_image: str {optional}
             The redis docker image to use. You can set this argument
             to specify a custom build of the redis database.
 
@@ -113,14 +128,41 @@ class RafikiConnection(object):
         """
         pass
 
-    def create_application(self, name, task, models, 
+    def create_application(self, 
+                           name, 
+                           version, 
+                           task_name, 
+                           models, 
                            train_dataset_zip_file, 
                            test_dataset_zip_file):
-        """ Creates an application
+        """ Creates an application.
+        
+        Parameters
+        ----------
+        name: str
+            Name of application. It must be unique.
+        version: str
+            Version of application.
+        task_name: str
+            The name of the machine learning task that the application
+            is built for. The task name must be an element of the list
+            of task names returned by `RafikiConnection.get_task_names`.
+        models: list(str)
+            The list of model names to be used by Rafiki. All model 
+            names must stem from the list of model names returned by
+            `RafikiConnection.get_task_models`.
+        train_dataset_zip_file: str
+            The path to the train dataset zip file. The format of the
+            zip file must follow the specifications defined by the 
+            `Task`.
+        test_dataset_zip_file: str
+            The path to the test dataset zip file. The format of the zip
+            file must follow the specifications defined by the `Task`.
 
         Returns
         -------
-
+        `Application`:
+            An `Application` instance that was created.
 
         Raises
         ------
@@ -128,10 +170,21 @@ class RafikiConnection(object):
         """
         pass
 
-    def create_model(self, name, tasks, model):
-        """
+    def create_model(self, model, tasks):
+        """ Creates a model.
 
-        tasks is list
+        Parameters
+        ----------
+        tasks: list(str)
+            The list of task names that the model would be categorised
+            under. All task names must stem from the list returned by 
+            `RafikiConnectionn.get_task_names`.
+        model: `BaseModel`
+            An instance of a concrete subclass of `BaseModel`.
+
+        Raises
+        ------
+        `RafikiException`
         """
         pass
     
@@ -140,22 +193,22 @@ class RafikiConnection(object):
         """
         pass
 
-    def add_model_to_tasks(self, name, tasks):
+    def get_task_names(self):
+        """
+        """
+        pass
+    
+    def get_application(self, name):
         """
         """
         pass
 
-    def get_tasks(self):
+    def get_application_names(self):
         """
         """
         pass
 
-    def get_applications(self):
-        """
-        """
-        pass
-
-    def get_models(self, task):
+    def get_task_models(self, task):
         """
         """
         pass
@@ -163,6 +216,51 @@ class RafikiConnection(object):
 
 <a name="roles"></a>
 ## Roles
+
+<a name="application_developer"></a>
+### Application Developer
+
+``` python
+def main():
+    rafiki = RafikiConnection(KubernetesContainerManager())
+    rafiki.connect() # or rafiki.start_rafiki()
+    task_names = rafiki.get_task_names()
+
+    if ("image-classification" not in set(task_names)):
+        return
+    
+    app = rafiki.create_application(name="food-identifier", 
+                                    version="v1", 
+                                    task_name="image-classification"
+                                    train_dataset_zip_file="./train.zip",
+                                    test_dataset_zip_file="./test.zip")
+    train_job = app.train(budget_type="trial_count", budget_amount="10")
+    
+    while not train_job.has_completed():
+        pass
+    
+    trained_model_names = app.get_trained_model_names(sort="DESC")
+    app.deploy_model(name=trained_models[0])
+    app.deploy_model(name=trained_models[1])
+    app.deploy_model(name=trained_models[2])
+    app.predict(input=image) # image must be in bytes or string
+```
+
+<a name="model_developer"></a>
+### Model_Developer
+
+``` python
+from rafiki_admin.library.model import Model
+
+class BayesianClassifier(Model): pass # Assumes abstract methods are implemented.
+
+def main():
+    rafiki = RafikiConnection(KubernetesContainerManager())
+    rafiki.connect() # or rafiki.start_rafiki()   
+```
+
+<a name="application_user"></a>
+### Application User
 
 <a name="schemas"></a>
 ## Schemas
