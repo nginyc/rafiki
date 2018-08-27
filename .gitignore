@@ -2,6 +2,7 @@
 .env*
 
 # Python virtualenv environments
+env/
 envs/
 
 # Visual Studio Code config
@@ -10,10 +11,6 @@ envs/
 # Logs
 *.log
 logs/
-
-# Models & metrics
-models/
-metrics/
 
 # Python byte-compiled / optimized / DLL files
 __pycache__/
