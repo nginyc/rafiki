@@ -3,11 +3,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from .Base import Base
-from .Dataset import Dataset
 from .TrainJob import TrainJob, TrainJobStatus
 from .Trial import Trial, TrialStatus
 from .Model import Model
+from .User import User
 from .App import App
+
 
 class Database(object):
     def __init__(self, database_config):
@@ -15,32 +16,34 @@ class Database(object):
         self._engine = create_engine(db_connection_url, echo=True)
         self._session = None
         self._define_tables()
-        
-    def __enter__(self):
-        self.connect()        
 
-    def connect(self):
-        Session = sessionmaker(bind=self._engine)
-        self._session = Session()
+    ####################################
+    # Users
+    ####################################
 
-    def __exit__(self, exception_type, exception_value, traceback):
-        self.disconnect()
+    def create_user(self, email, password_hash, user_type):
+        user = User(
+            email=email,
+            password_hash=password_hash,
+            user_type=user_type
+        )
+        self._session.add(user)
+        return user
 
-    def commit(self):
-        self._session.commit()
+    def get_user_by_email(self, email):
+        user = self._session.query(User).filter(User.email == email).first()
+        return user
 
-    def disconnect(self):
-        if self._session is not None:
-            self._session.commit()
-            self._session.close()
-            self._session = None
+    ####################################
+    # Apps
+    ####################################
 
-    def create_app(self, name, task, train_dataset_id, test_dataset_id):
+    def create_app(self, name, task, train_dataset_uri, test_dataset_uri):
         app = App(
             name=name, 
             task=task,
-            train_dataset_id=train_dataset_id,
-            test_dataset_id=test_dataset_id
+            train_dataset_uri=train_dataset_uri,
+            test_dataset_uri=test_dataset_uri
         )
         self._session.add(app)
         return app
@@ -53,15 +56,14 @@ class Database(object):
         app = self._session.query(App).get(id)
         return app
 
-    def get_dataset(self, id):
-        dataset = self._session.query(Dataset).get(id)
-        return dataset
+    def get_apps(self):
+        apps = self._session.query(App).all()
+        return apps
 
-    def create_dataset(self, dataset_type, config):
-        dataset = Dataset(dataset_type=dataset_type, config=config)
-        self._session.add(dataset)
-        return dataset
-
+    ####################################
+    # Train Jobs
+    ####################################
+    
     def create_train_job(self, budget_type, budget_amount, app_id):
         train_job = TrainJob(
             budget_type=budget_type, 
@@ -79,8 +81,7 @@ class Database(object):
 
     def get_train_jobs_by_app(self, app_id):
         train_jobs = self._session.query(TrainJob) \
-            .join(Trial, TrainJob.id == Trial.train_job_id) \
-            .filter(App.id == app_id) \
+            .filter(TrainJob.app_id == app_id) \
             .order_by(TrainJob.datetime_started.desc()).all()
 
         return train_jobs
@@ -90,6 +91,10 @@ class Database(object):
         train_job.datetime_completed = datetime.datetime.utcnow()
         self._session.add(train_job)
         return train_job
+
+    ####################################
+    # Models
+    ####################################
 
     def create_model(self, name, task, model_serialized):
         model = Model(
@@ -109,6 +114,14 @@ class Database(object):
     def get_model(self, id):
         model = self._session.query(Model).get(id)
         return model
+    
+    def get_models(self):
+        models = self._session.query(Model).all()
+        return models
+
+    ####################################
+    # Trials
+    ####################################
 
     def create_trial(self, model, train_job_id, 
                     hyperparameters):
@@ -120,11 +133,17 @@ class Database(object):
         self._session.add(trial)
         return trial
 
-    def get_trial(self, id):
-        trial =  self._session.query(Trial).get(id)
+    def get_trial(self, app_id, id):
+        trial = self._session.query(Trial) \
+            .join(TrainJob, Trial.train_job_id == TrainJob.id) \
+            .join(App, TrainJob.app_id == app_id) \
+            .filter(Trial.id == id) \
+            .filter(App.id == app_id) \
+            .one()
+
         return trial
 
-    def get_best_trials_by_app(self, app_id, max_count=1):
+    def get_best_trials_by_app(self, app_id, max_count=3):
         trials = self._session.query(Trial) \
             .join(TrainJob, Trial.train_job_id == TrainJob.id) \
             .join(App, TrainJob.app_id == app_id) \
@@ -132,6 +151,15 @@ class Database(object):
             .filter(Trial.status == TrainJobStatus.COMPLETED) \
             .order_by(Trial.score.desc()) \
             .limit(max_count).all()
+
+        return trials
+
+    def get_trials_by_train_job(self, app_id, train_job_id):
+        trials = self._session.query(Trial) \
+            .join(TrainJob, Trial.train_job_id == TrainJob.id) \
+            .filter(App.id == app_id) \
+            .filter(TrainJob.id == train_job_id) \
+            .order_by(Trial.datetime_started.desc()).all()
 
         return trials
 
@@ -155,6 +183,29 @@ class Database(object):
         self._session.add(trial)
         return trial
 
+    ####################################
+    # Others
+    ####################################
+    
+    def __enter__(self):
+        self.connect()
+
+    def connect(self):
+        Session = sessionmaker(bind=self._engine)
+        self._session = Session()
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.disconnect()
+
+    def commit(self):
+        self._session.commit()
+
+    def disconnect(self):
+        if self._session is not None:
+            self._session.commit()
+            self._session.close()
+            self._session = None
+            
     def clear_all_data(self):
         for table in reversed(Base.metadata.sorted_tables):
             self._session.execute(table.delete())

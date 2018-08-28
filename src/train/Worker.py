@@ -49,9 +49,9 @@ class Worker(object):
         try:
             app = self._db.get_app(train_job.app_id)
             models = self._db.get_models_by_task(app.task)
-            train_dataset = self._db.get_dataset(app.train_dataset_id)
-            test_dataset = self._db.get_dataset(app.test_dataset_id)
-            self._do_trial(models, train_job, train_dataset, test_dataset)
+            train_dataset_uri = app.train_dataset_uri
+            test_dataset_uri = app.train_dataset_uri
+            self._do_trial(models, train_job, train_dataset_uri, test_dataset_uri)
             self._check_train_job_budget(train_job)
         except Exception as error:
             logger.error('Error while running train job:')
@@ -59,7 +59,7 @@ class Worker(object):
 
         return True
 
-    def _do_trial(self, models, train_job, train_dataset, test_dataset):
+    def _do_trial(self, models, train_job, train_dataset_uri, test_dataset_uri):
         
         (model, hyperparameters) = \
             self._do_hyperparameter_selection(models, train_job)
@@ -76,10 +76,10 @@ class Worker(object):
             model_inst.init(hyperparameters)
 
             # Train model
-            model_inst.train(train_dataset.config)
+            model_inst.train(train_dataset_uri)
 
             # Evaluate model
-            score = model_inst.evaluate(test_dataset.config)
+            score = model_inst.evaluate(test_dataset_uri)
             
             parameters = model_inst.dump_parameters()
             model_inst.destroy()

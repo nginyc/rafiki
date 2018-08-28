@@ -7,7 +7,7 @@ import tempfile
 import numpy as np
 import base64
 
-from common import DatasetType, BaseModel, InvalidModelParamsException, load_tf_keras_dataset
+from common import BaseModel, InvalidModelParamsException, load_dataset
 
 class SingleHiddenLayerTensorflowModel(BaseModel):
 
@@ -45,8 +45,8 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
         self._sess = tf.Session(graph=self._graph)
         
         
-    def train(self, dataset_config):
-        (images, labels) = self._load_dataset(dataset_config)
+    def train(self, dataset_uri):
+        (images, labels) = self._load_dataset(dataset_uri)
 
         num_classes = len(np.unique(labels))
 
@@ -66,8 +66,8 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
                     batch_size=self._batch_size
                 )
 
-    def evaluate(self, dataset_config):
-        (images, labels) = self._load_dataset(dataset_config)
+    def evaluate(self, dataset_uri):
+        (images, labels) = self._load_dataset(dataset_uri)
 
         num_classes = len(np.unique(labels))
 
@@ -84,7 +84,7 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
 
 
     def predict(self, queries):
-        X = queries
+        X = np.array(queries)
         with self._graph.as_default():
             with self._sess.as_default():
                 probs = self._model.predict(X)
@@ -140,13 +140,9 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
         os.remove(tmp.name)
 
 
-    def _load_dataset(self, dataset_config):
-        dataset_type = dataset_config['dataset_type']
-        if dataset_type == DatasetType.TF_KERAS:
-            return load_tf_keras_dataset(dataset_config)
-        else:
-            raise Exception('Unsupported dataset type: {}' \
-                .format(dataset_type))   
+    def _load_dataset(self, dataset_uri):
+        # Here, we use Rafiki's in-built dataset loader
+        return load_dataset(dataset_uri) 
 
     def _build_model(self, num_classes):
         hidden_layer_units = self._hidden_layer_units

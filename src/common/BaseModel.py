@@ -5,8 +5,8 @@ import os
 class InvalidModelParamsException(Exception):
     pass
 
-class BaseModel(abc.ABC):    
-    
+class BaseModel(abc.ABC):   
+
     @abc.abstractmethod
     def get_hyperparameter_config(self):
         raise NotImplementedError()
@@ -18,9 +18,9 @@ class BaseModel(abc.ABC):
         '''
 
     @abc.abstractmethod
-    def train(self, dataset_config):
+    def train(self, dataset_uri):
         '''
-            dataset_config - dict that configures the dataset for training
+            dataset_uri - URI string that points to the dataset for evaluation
 
             Supported Dataset Types are task-dependent
         '''
@@ -28,9 +28,9 @@ class BaseModel(abc.ABC):
 
     # TODO: Allow configuration of other metrics
     @abc.abstractmethod
-    def evaluate(self, dataset_config):
+    def evaluate(self, dataset_uri):
         '''
-            dataset_config - dict that configures the dataset for evaluation
+            dataset_uri - URI string that points to the dataset for evaluation
 
             Returns:
                 float as accuracy on test dataset
