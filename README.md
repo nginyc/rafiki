@@ -60,6 +60,11 @@ As the worker generates trials, checking on the trials of the train job:
 python src/scripts/get_train_job_trials.py <train_job_id>
 ```
 
+Making a prediction with the best trial of the app:
+```shell
+python src/scripts/predict_with_best_trial.py
+```
+
 This example uses the [Fashion MNIST dataset](https://github.com/zalandoresearch/fashion-mnist).
 
 ## Using Rafiki over HTTP
