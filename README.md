@@ -69,20 +69,34 @@ This example uses the [Fashion MNIST dataset](https://github.com/zalandoresearch
 
 ## Using Rafiki over HTTP
 
-Start the admin HTTP server in terminal 3:
+In terminal 3, create an admin with the Python SDK:
+
+```shell
+python src/scripts/create_user.py <email> <password> ADMIN
+```
+
+Then, start the admin HTTP server:
 
 ```shell
 source .env.sh
 python src/scripts/start_admin.py
 ```
 
-The list of available HTTP endpoints are available as a *Postman* collection in the root of this project.
+To make calls to the HTTP endpoints, you'll need first authentication with email & password against the `POST /tokens` endpoint to obtain an authentication token `token`, and subsequently add the `Authorization` header for every other call:
 
-For the HTTP endpoint to create a model, you'll need to first serialize the model:
+`Authorization: Bearer {{token}}`
+
+The list of available HTTP endpoints & their request formats are available as a *Postman* collection in the root of this project.
+
+### Creating a Model
+
+For the `POST /models` endpoint, you'll need to first serialize the model:
 
 ```shell
 python src/scripts/serialize_model.py <model_class_name>
 ```
+
+Then, together with the `name` & `task` fields, upload this file as the `model_serialized` field of a multi-part form data request.
 
 ## Credits
 

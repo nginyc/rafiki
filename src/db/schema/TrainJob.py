@@ -3,11 +3,7 @@ from sqlalchemy import Column, String, ForeignKey, Integer, Binary, DateTime
 from .utils import generate_uuid, generate_datetime
 from .Base import Base
 
-class TrainJobStatus():
-    STARTED = 'STARTED'
-    ERRORED = 'ERRORED'
-    COMPLETED = 'COMPLETED'
-
+from common import TrainJobStatus
 
 class TrainJob(Base):
     __tablename__ = 'train_job'
@@ -20,4 +16,5 @@ class TrainJob(Base):
     status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     state_serialized = Column(Binary)
     datetime_completed = Column(DateTime, default=None)
+    user_id = Column(String, ForeignKey('user.id'), nullable=False)
 

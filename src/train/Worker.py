@@ -4,9 +4,11 @@ import random
 import dill
 import traceback
 
-from common import unserialize_model, create_tuner, \
-    propose_with_tuner, train_tuner, BudgetType
-from db import DatabaseConfig, Database, TrainJobStatus, TrialStatus
+from .tuner import propose_with_tuner, train_tuner, create_tuner
+
+from common import unserialize_model, BudgetType, TrainJobStatus, TrialStatus
+from db import DatabaseConfig, Database
+
 
 logger = logging.getLogger(__name__)
 

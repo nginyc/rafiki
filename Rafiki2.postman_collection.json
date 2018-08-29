@@ -9,6 +9,16 @@
 		{
 			"name": "Get Models",
 			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
 				"method": "GET",
 				"header": [],
 				"body": {},
@@ -29,6 +39,16 @@
 		{
 			"name": "Get Apps",
 			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
 				"method": "GET",
 				"header": [],
 				"body": {},
@@ -49,6 +69,16 @@
 		{
 			"name": "Create App",
 			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
 				"method": "POST",
 				"header": [],
 				"body": {
@@ -68,13 +98,13 @@
 						},
 						{
 							"key": "train_dataset_uri",
-							"value": "tf_keras://fashion_mnist?train_or_test=train",
+							"value": "tf-keras://fashion_mnist?train_or_test=train",
 							"description": "",
 							"type": "text"
 						},
 						{
 							"key": "test_dataset_uri",
-							"value": "tf_keras://fashion_mnist?train_or_test=test",
+							"value": "tf-keras://fashion_mnist?train_or_test=test",
 							"description": "",
 							"type": "text"
 						}
@@ -97,6 +127,16 @@
 		{
 			"name": "Create Model",
 			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
 				"method": "POST",
 				"header": [],
 				"body": {
@@ -139,6 +179,16 @@
 		{
 			"name": "Create Train Job",
 			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
 				"method": "POST",
 				"header": [],
 				"body": {
@@ -177,6 +227,16 @@
 		{
 			"name": "Get Train Jobs",
 			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
 				"method": "GET",
 				"header": [],
 				"body": {},
@@ -223,11 +283,21 @@
 		{
 			"name": "Get App's Best Trials",
 			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
 				"method": "GET",
 				"header": [],
 				"body": {},
 				"url": {
-					"raw": "http://{{host}}/apps/{{app_name}}/trials?max_count=2",
+					"raw": "http://{{host}}/apps/{{app_name}}/trials?max_count=3",
 					"protocol": "http",
 					"host": [
 						"{{host}}"
@@ -240,7 +310,7 @@
 					"query": [
 						{
 							"key": "max_count",
-							"value": "2",
+							"value": "3",
 							"equals": true
 						}
 					]
@@ -252,6 +322,16 @@
 		{
 			"name": "Predict with Trial",
 			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
 				"method": "POST",
 				"header": [
 					{
@@ -275,6 +355,94 @@
 						"trials",
 						"{{trial_id}}",
 						"predict"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Authenticate User",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "email",
+							"value": "admin@rafiki",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "admin",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://{{host}}/tokens",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"tokens"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Create User",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "email",
+							"value": "app_developer@rafiki",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "app_developer",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "user_type",
+							"value": "APP_DEVELOPER",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://{{host}}/users",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"users"
 					]
 				},
 				"description": ""

@@ -53,7 +53,7 @@ def generate_user_token():
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def create_app(auth):
     params = get_request_params()
-    return jsonify(admin.create_app(**params))
+    return jsonify(admin.create_app(auth['user_id'], **params))
 
 @app.route('/apps', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
@@ -75,7 +75,7 @@ def get_app(auth, app_name):
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def create_train_job(auth, app_name):
     params = get_request_params()
-    return jsonify(admin.create_train_job(app_name, **params))
+    return jsonify(admin.create_train_job(auth['user_id'], app_name, **params))
 
 @app.route('/apps/<app_name>/train_jobs', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
@@ -91,6 +91,10 @@ def get_train_jobs(auth, app_name):
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def get_best_trials_by_app(auth, app_name):
     params = get_request_params()
+    
+    if 'max_count' in params:
+        params['max_count'] = int(params['max_count'])
+
     return jsonify(admin.get_best_trials_by_app(app_name, **params))
 
 @app.route('/apps/<app_name>/train_jobs/<train_job_id>/trials', methods=['GET'])
@@ -110,16 +114,16 @@ def predict_with_trial(auth, app_name, trial_id):
 # Models
 ####################################
 
-@app.route('/models', methods=['GET'])
-@auth([UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER])
-def get_models(auth):
-    params = get_request_params()
-    return jsonify(admin.get_models(**params))
-
 @app.route('/models', methods=['POST'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER])
 def create_model(auth):
     params = get_request_params()
     model_serialized = request.files['model_serialized'].read()
     params['model_serialized'] = model_serialized
-    return jsonify(admin.create_model(**params))
+    return jsonify(admin.create_model(auth['user_id'], **params))
+    
+@app.route('/models', methods=['GET'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER])
+def get_models(auth):
+    params = get_request_params()
+    return jsonify(admin.get_models(**params))

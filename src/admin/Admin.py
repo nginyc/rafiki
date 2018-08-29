@@ -46,11 +46,11 @@ class Admin(object):
     # Apps
     ####################################
 
-    def create_app(self, name, task, train_dataset_uri, test_dataset_uri):
+    def create_app(self, user_id, name, task, train_dataset_uri, test_dataset_uri):
         # TODO: Validate that name is url-friendly
 
         with self._db:
-            app = self._db.create_app(name, task, train_dataset_uri, test_dataset_uri)
+            app = self._db.create_app(user_id, name, task, train_dataset_uri, test_dataset_uri)
             return {
                 'name': app.name,
             }
@@ -78,10 +78,11 @@ class Admin(object):
                 for x in apps
             ]
 
-    def create_train_job(self, app_name, budget_type, budget_amount):
+    def create_train_job(self, user_id, app_name, budget_type, budget_amount):
         with self._db:
             app = self._db.get_app_by_name(app_name)
             train_job = self._db.create_train_job(
+                user_id=user_id,
                 budget_type=budget_type,
                 budget_amount=budget_amount,
                 app_id=app.id
@@ -156,7 +157,7 @@ class Admin(object):
             model_inst = unserialize_model(model.model_serialized)
             model_inst.init(trial.hyperparameters)
             model_inst.load_parameters(trial.parameters)
-            preds = model_inst.predict(np.array(queries))
+            preds = model_inst.predict(queries)
             model_inst.destroy()
 
             return preds
@@ -166,9 +167,10 @@ class Admin(object):
     # Models
     ####################################
 
-    def create_model(self, name, task, model_serialized):
+    def create_model(self, user_id, name, task, model_serialized):
         with self._db:
             model = self._db.create_model(
+                user_id=user_id,
                 name=name,
                 task=task,
                 model_serialized=model_serialized

@@ -12,4 +12,4 @@ class App(Base):
     datetime_created = Column(DateTime, nullable=False, default=generate_datetime)
     train_dataset_uri = Column(String, nullable=False)
     test_dataset_uri = Column(String, nullable=False)
-    
+    user_id = Column(String, ForeignKey('user.id'), nullable=False)

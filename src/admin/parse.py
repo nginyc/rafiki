@@ -13,7 +13,7 @@ def get_request_params():
     # Merge in query params
     # We assume query params are always single-valued
     query_params = {
-        k: v[0]
+        k: v
         for k, v in request.args.items()
     }
     params = {**params, **query_params}

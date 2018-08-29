@@ -2,7 +2,7 @@ import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from .schemas import Base, TrainJob, TrainJobStatus, Trial, TrialStatus, Model, User, App
+from .schema import Base, TrainJob, TrainJobStatus, Trial, TrialStatus, Model, User, App
 
 class Database(object):
     def __init__(self, database_config):
@@ -32,8 +32,9 @@ class Database(object):
     # Apps
     ####################################
 
-    def create_app(self, name, task, train_dataset_uri, test_dataset_uri):
+    def create_app(self, user_id, name, task, train_dataset_uri, test_dataset_uri):
         app = App(
+            user_id=user_id,
             name=name, 
             task=task,
             train_dataset_uri=train_dataset_uri,
@@ -58,8 +59,9 @@ class Database(object):
     # Train Jobs
     ####################################
     
-    def create_train_job(self, budget_type, budget_amount, app_id):
+    def create_train_job(self, user_id, budget_type, budget_amount, app_id):
         train_job = TrainJob(
+            user_id=user_id,
             budget_type=budget_type, 
             budget_amount=budget_amount,
             app_id=app_id
@@ -90,8 +92,9 @@ class Database(object):
     # Models
     ####################################
 
-    def create_model(self, name, task, model_serialized):
+    def create_model(self, user_id, name, task, model_serialized):
         model = Model(
+            user_id=user_id,
             name=name,
             task=task,
             model_serialized=model_serialized
@@ -133,7 +136,7 @@ class Database(object):
             .join(App, TrainJob.app_id == app_id) \
             .filter(Trial.id == id) \
             .filter(App.id == app_id) \
-            .one()
+            .first()
 
         return trial
 

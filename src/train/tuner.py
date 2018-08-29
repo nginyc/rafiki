@@ -2,8 +2,7 @@ from btb.tuning import GP
 from btb import HyperParameter, ParamTypes
 import numpy as np
 
-from .BaseModel import BaseModel
-from .model import InvalidModelException
+from common import BaseModel, InvalidModelException
 
 def create_tuner(hyperparameters_config):
     hyperparameters = hyperparameters_config['hyperparameters']
