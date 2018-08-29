@@ -4,3 +4,4 @@ from .budget import BudgetType
 from .model import InvalidModelException
 from .BaseModel import InvalidModelParamsException, BaseModel
 from .dataset import load_dataset
+from .user import UserType

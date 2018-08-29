@@ -24,15 +24,20 @@ class Admin(object):
 
             if not user: 
                 raise NoSuchUserException()
-
+            
             if not if_hash_matches_password(password, user.password_hash):
                 raise InvalidPasswordException()
 
+            return {
+                'id': user.id,
+                'user_type': user.user_type
+            }
 
     def create_user(self, email, password, user_type):
         password_hash = hash_password(password)
         with self._db:
             user = self._db.create_user(email, password_hash, user_type)
+            self._db.commit()
             return {
                 'id': user.id
             }

@@ -2,13 +2,7 @@ import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from .Base import Base
-from .TrainJob import TrainJob, TrainJobStatus
-from .Trial import Trial, TrialStatus
-from .Model import Model
-from .User import User
-from .App import App
-
+from .schemas import Base, TrainJob, TrainJobStatus, Trial, TrialStatus, Model, User, App
 
 class Database(object):
     def __init__(self, database_config):
