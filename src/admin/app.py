@@ -84,6 +84,22 @@ def get_train_jobs(auth, app_name):
     return jsonify(admin.get_train_jobs(app_name, **params))
 
 ####################################
+# Deployment Jobs
+####################################
+
+@app.route('/apps/<app_name>/deployment_jobs', methods=['POST'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
+def create_deployment_jobs(auth, app_name):
+    params = get_request_params()
+    return jsonify(admin.create_deployment_job(auth['user_id'], app_name, **params))
+
+@app.route('/apps/<app_name>/deployment_jobs', methods=['GET'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
+def get_deployment_jobs(auth, app_name):
+    params = get_request_params()
+    return jsonify(admin.get_deployment_jobs(app_name, **params))
+
+####################################
 # Trials
 ####################################
 

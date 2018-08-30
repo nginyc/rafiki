@@ -34,25 +34,26 @@ python src/scripts/start_worker.py
 
 ## Using Rafiki with Python
 
-In terminal 3, first run:
+In terminal 3, first create an admin with the Python SDK:
 
 ```shell
 source .env.sh
+python src/scripts/create_user.py <email> <password> ADMIN
 ```
 
 Creating an app:
 ```shell
-python src/scripts/create_app.py
+python src/scripts/create_app.py <email> <password>
 ```
 
 Creating a model:
 ```shell
-python src/scripts/create_model.py
+python src/scripts/create_model.py <email> <password>
 ```
 
 Creating a train job for the newly created app:
 ```shell
-python src/scripts/create_model.py
+python src/scripts/create_train_job.py <email> <password>
 ```
 
 As the worker generates trials, checking on the trials of the train job:
@@ -65,6 +66,11 @@ Making a prediction with the best trial of the app:
 python src/scripts/predict_with_best_trial.py
 ```
 
+Creating a deployment job for the app after model training:
+```shell
+python src/scripts/create_deployment_job.py <email> <password>
+```
+
 This example uses the [Fashion MNIST dataset](https://github.com/zalandoresearch/fashion-mnist).
 
 ## Using Rafiki over HTTP
@@ -72,17 +78,17 @@ This example uses the [Fashion MNIST dataset](https://github.com/zalandoresearch
 In terminal 3, create an admin with the Python SDK:
 
 ```shell
+source .env.sh
 python src/scripts/create_user.py <email> <password> ADMIN
 ```
 
 Then, start the admin HTTP server:
 
 ```shell
-source .env.sh
 python src/scripts/start_admin.py
 ```
 
-To make calls to the HTTP endpoints, you'll need first authentication with email & password against the `POST /tokens` endpoint to obtain an authentication token `token`, and subsequently add the `Authorization` header for every other call:
+To make calls to the HTTP endpoints, you'll need first authenticate with email & password against the `POST /tokens` endpoint to obtain an authentication token `token`, and subsequently add the `Authorization` header for every other call:
 
 `Authorization: Bearer {{token}}`
 

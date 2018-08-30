@@ -14,9 +14,7 @@ admin = Admin()
 
 user = admin.authenticate_user(email, password)
 
-admin.create_train_job(
+admin.create_deployment_job(
     user_id=user['id'],
-    app_name='fashion_mnist_app',
-    budget_type=BudgetType.TRIAL_COUNT,
-    budget_amount=10
+    app_name='fashion_mnist_app'
 )

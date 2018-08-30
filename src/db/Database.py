@@ -2,7 +2,10 @@ import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from .schema import Base, TrainJob, TrainJobStatus, Trial, TrialStatus, Model, User, App
+from common import TrainJobStatus, TrialStatus
+
+from .schema import Base, TrainJob, \
+    DeploymentJob, Trial, Model, User, App
 
 class Database(object):
     def __init__(self, database_config):
@@ -87,6 +90,25 @@ class Database(object):
         train_job.datetime_completed = datetime.datetime.utcnow()
         self._session.add(train_job)
         return train_job
+
+    ####################################
+    # Deployment Jobs
+    ####################################
+    
+    def create_deployment_job(self, user_id, app_id):
+        deployment_job = DeploymentJob(
+            user_id=user_id,
+            app_id=app_id
+        )
+        self._session.add(deployment_job)
+        return deployment_job
+
+    def get_deployment_jobs_by_app(self, app_id):
+        deployment_jobs = self._session.query(DeploymentJob) \
+            .filter(DeploymentJob.app_id == app_id) \
+            .order_by(DeploymentJob.datetime_started.desc()).all()
+
+        return deployment_jobs
 
     ####################################
     # Models

@@ -63,7 +63,8 @@ class Admin(object):
                 'task': app.task,
                 'datetime_created': app.datetime_created,
                 'train_dataset_uri': app.train_dataset_uri,
-                'test_dataset_uri': app.test_dataset_uri
+                'test_dataset_uri': app.test_dataset_uri,
+                'user_id': app.user_id
             }
 
     def get_apps(self):
@@ -78,6 +79,10 @@ class Admin(object):
                 for x in apps
             ]
 
+    ####################################
+    # Train Job
+    ####################################
+
     def create_train_job(self, user_id, app_name, budget_type, budget_amount):
         with self._db:
             app = self._db.get_app_by_name(app_name)
@@ -88,11 +93,13 @@ class Admin(object):
                 app_id=app.id
             )
             self._db.commit()
+
+            # TODO: Deploy workers based on current train jobs
+            
             return {
                 'id': train_job.id
             }
 
-        # TODO: Deploy workers based on current train jobs
 
     def get_train_jobs(self, app_name):
         with self._db:
@@ -110,6 +117,39 @@ class Admin(object):
                 for x in train_jobs
             ]
 
+    ####################################
+    # Deployment Job
+    ####################################
+
+    def create_deployment_job(self, user_id, app_name, max_models=3):
+        with self._db:
+            app = self._db.get_app_by_name(app_name)
+            best_trials = self._db.get_best_trials_by_app(app.id, max_count=max_models)
+            best_trials_models = [self._db.get_model(x.model_id) for x in best_trials]
+
+            deployment_job = self._db.create_deployment_job(user_id, app.id)
+            self._db.commit()
+
+            # TODO: Deploy workers based on current deployment jobs
+
+            return {
+                'id': deployment_job.id
+            }
+
+    def get_deployment_jobs(self, app_name):
+        with self._db:
+            app = self._db.get_app_by_name(app_name)
+            deployment_jobs = self._db.get_deployment_jobs_by_app(app.id)
+            return [
+                {
+                    'id': x.id,
+                    'status': x.status,
+                    'datetime_started': x.datetime_started,
+                    'datetime_stopped': x.datetime_stopped,
+                }
+                for x in deployment_jobs
+            ]
+    
     ####################################
     # Trials
     ####################################
@@ -187,7 +227,8 @@ class Admin(object):
                 {
                     'name': model.name,
                     'task': model.task,
-                    'datetime_created': model.datetime_created
+                    'datetime_created': model.datetime_created,
+                    'user_id': model.user_id
                 }
                 for model in models
             ]
