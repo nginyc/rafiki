@@ -31,39 +31,45 @@
 ## Packages Overview
 
 ``` bash
+README.md
+docs/
+    api.md
+hub/
+    __init__.py
+    convolution_neural_network.py
+    multi_layer_perceptron.py 
 rafiki_admin/
     __init__.py
+    core/
+        __init__.py
+        model.py
+        budget.py
+        metric.py
+    utils/
+        __init__.py
+        pca.py
+        keras.py
     client/
         __init__.py
-        rafiki_connection.py
-        container_manager.py
-        kubernetes/
-            __init__.py
-            kubernetes_container_manager.py
-            redis_service.yaml
-            redis_deployment.yaml
-            frontend_service.yaml
-            frontend_deployment.yaml
-            database_service.yaml
-            database_deployment.yaml
-        docker/
-            __init__.py
-            docker_container_manager.py
-    library/
+        rafiki_client.py
+    server/
         __init__.py
-        application.py
-        model.py
-        task.py
-        train_job.py
+        rafiki_server.py
+        routes/
+            app_route.py
+    master/
+        __init__.py
+        start.sh
+        redis_service.yaml
+        redis_deployment.yaml
+        server_service.yaml
+        server_deployment.yaml
+        database_service.yaml
+        database_deployment.yaml
+    worker/
+        __init__.py
+        worker_manager.py
         worker.py
-        metric.py
-        model/
-            __init__.py
-            convolution_neural_network.py
-            multi_layer_perceptron.py
-        task/
-            __task__.py
-            image_classification.py
     database/
         __init__.py
         client/
@@ -80,7 +86,7 @@ rafiki_admin/
             trial.py 
     exception/
         __init__.py
-        rafiki_exception.py    
+        rafiki_exception.py 
 ```
 
 <a name="client_package"></a>
