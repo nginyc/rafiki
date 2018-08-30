@@ -448,6 +448,70 @@
 				"description": ""
 			},
 			"response": []
+		},
+		{
+			"name": "Get Deployment Jobs",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "http://{{host}}/apps/{{app_name}}/deployment_jobs",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"apps",
+						"{{app_name}}",
+						"deployment_jobs"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Create Deployment Job",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "http://{{host}}/apps/{{app_name}}/deployment_jobs",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"apps",
+						"{{app_name}}",
+						"deployment_jobs"
+					]
+				},
+				"description": ""
+			},
+			"response": []
 		}
 	]
 }
