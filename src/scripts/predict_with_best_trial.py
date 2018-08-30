@@ -41,7 +41,6 @@ best_trial = trials[0]
 show_first_image(predict_images)
 
 predictions = admin.predict_with_trial(
-    app_name='fashion_mnist_app',
     trial_id=best_trial.get('id'), 
     queries=predict_images
 )

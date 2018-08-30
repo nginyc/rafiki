@@ -466,7 +466,7 @@
 				"header": [],
 				"body": {},
 				"url": {
-					"raw": "http://{{host}}/apps/{{app_name}}/deployment_jobs",
+					"raw": "http://{{host}}/apps/{{app_name}}/inference_jobs",
 					"protocol": "http",
 					"host": [
 						"{{host}}"
@@ -474,7 +474,7 @@
 					"path": [
 						"apps",
 						"{{app_name}}",
-						"deployment_jobs"
+						"inference_jobs"
 					]
 				},
 				"description": ""
@@ -498,7 +498,7 @@
 				"header": [],
 				"body": {},
 				"url": {
-					"raw": "http://{{host}}/apps/{{app_name}}/deployment_jobs",
+					"raw": "http://{{host}}/apps/{{app_name}}/inference_jobs",
 					"protocol": "http",
 					"host": [
 						"{{host}}"
@@ -506,7 +506,7 @@
 					"path": [
 						"apps",
 						"{{app_name}}",
-						"deployment_jobs"
+						"inference_jobs"
 					]
 				},
 				"description": ""

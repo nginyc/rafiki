@@ -46,84 +46,62 @@ def generate_user_token():
     })
 
 ####################################
-# Apps
-####################################
-
-@app.route('/apps', methods=['POST'])
-@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def create_app(auth):
-    params = get_request_params()
-    return jsonify(admin.create_app(auth['user_id'], **params))
-
-@app.route('/apps', methods=['GET'])
-@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_apps(auth):
-    params = get_request_params()
-    return jsonify(admin.get_apps(**params))
-
-@app.route('/apps/<app_name>', methods=['GET'])
-@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_app(auth, app_name):
-    params = get_request_params()
-    return jsonify(admin.get_app(app_name, **params))
-
-####################################
 # Train Jobs
 ####################################
 
-@app.route('/apps/<app_name>/train_jobs', methods=['POST'])
+@app.route('/train_jobs', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def create_train_job(auth, app_name):
+def create_train_job(auth):
     params = get_request_params()
-    return jsonify(admin.create_train_job(auth['user_id'], app_name, **params))
+    return jsonify(admin.create_train_job(auth['user_id'], **params))
 
-@app.route('/apps/<app_name>/train_jobs', methods=['GET'])
+@app.route('/train_jobs', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_train_jobs(auth, app_name):
+def get_train_jobs(auth):
     params = get_request_params()
-    return jsonify(admin.get_train_jobs(app_name, **params))
+    return jsonify(admin.get_train_jobs(**params))
+
+@app.route('/train_job/<train_job_id>/trials', methods=['GET'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
+def get_trials_by_train_job(auth, train_job_id):
+    params = get_request_params()
+    return jsonify(admin.get_trials_by_train_job(train_job_id, **params))
 
 ####################################
-# Deployment Jobs
+# Inference Jobs
 ####################################
 
-@app.route('/apps/<app_name>/deployment_jobs', methods=['POST'])
+@app.route('/inference_jobs', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def create_deployment_jobs(auth, app_name):
+def create_inference_jobs(auth):
     params = get_request_params()
-    return jsonify(admin.create_deployment_job(auth['user_id'], app_name, **params))
+    return jsonify(admin.create_inference_job(auth['user_id'], **params))
 
-@app.route('/apps/<app_name>/deployment_jobs', methods=['GET'])
+@app.route('/inference_jobs', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_deployment_jobs(auth, app_name):
+def get_inference_jobs(auth, app_name):
     params = get_request_params()
-    return jsonify(admin.get_deployment_jobs(app_name, **params))
+    return jsonify(admin.get_inference_jobs(app_name, **params))
 
 ####################################
 # Trials
 ####################################
 
-@app.route('/apps/<app_name>/trials', methods=['GET'])
+@app.route('/trials', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_best_trials_by_app(auth, app_name):
+def get_best_trials_by_app(auth):
     params = get_request_params()
     
     if 'max_count' in params:
         params['max_count'] = int(params['max_count'])
 
-    return jsonify(admin.get_best_trials_by_app(app_name, **params))
+    return jsonify(admin.get_best_trials_by_app(**params))
 
-@app.route('/apps/<app_name>/train_jobs/<train_job_id>/trials', methods=['GET'])
+@app.route('/trials/<trial_id>/predict', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_trials(auth, app_name, train_job_id):
+def predict_with_trial(auth, trial_id):
     params = get_request_params()
-    return jsonify(admin.get_trials(app_name, train_job_id, **params))
-
-@app.route('/apps/<app_name>/trials/<trial_id>/predict', methods=['POST'])
-@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def predict_with_trial(auth, app_name, trial_id):
-    params = get_request_params()
-    preds = admin.predict_with_trial(app_name, trial_id, **params)
+    preds = admin.predict_with_trial(trial_id, **params)
     return jsonify([to_json_serializable(x) for x in preds])
 
 ####################################

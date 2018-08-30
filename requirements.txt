@@ -16,4 +16,3 @@ tensorflow==1.10.0
 h5py==2.8.0
 matplotlib==2.2.3
 PyJWT>=1.6.4
-git+https://github.com/ucbrise/clipper.git@develop#subdirectory=clipper_admin

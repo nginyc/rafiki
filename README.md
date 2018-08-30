@@ -41,17 +41,12 @@ source .env.sh
 python src/scripts/create_user.py <email> <password> ADMIN
 ```
 
-Creating an app:
-```shell
-python src/scripts/create_app.py <email> <password>
-```
-
 Creating a model:
 ```shell
 python src/scripts/create_model.py <email> <password>
 ```
 
-Creating a train job for the newly created app:
+Creating a train job:
 ```shell
 python src/scripts/create_train_job.py <email> <password>
 ```
@@ -61,14 +56,14 @@ As the worker generates trials, checking on the trials of the train job:
 python src/scripts/get_train_job_trials.py <train_job_id>
 ```
 
-Making a prediction with the best trial of the app:
+Making a prediction with the best trial of an app:
 ```shell
 python src/scripts/predict_with_best_trial.py
 ```
 
-Creating a deployment job for the app after model training:
+Creating a deployment job for an app after model training:
 ```shell
-python src/scripts/create_deployment_job.py <email> <password>
+python src/scripts/create_inference_job.py <email> <password>
 ```
 
 This example uses the [Fashion MNIST dataset](https://github.com/zalandoresearch/fashion-mnist).

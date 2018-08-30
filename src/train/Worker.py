@@ -49,10 +49,9 @@ class Worker(object):
         )
 
         try:
-            app = self._db.get_app(train_job.app_id)
-            models = self._db.get_models_by_task(app.task)
-            train_dataset_uri = app.train_dataset_uri
-            test_dataset_uri = app.train_dataset_uri
+            models = self._db.get_models_by_task(train_job.task)
+            train_dataset_uri = train_job.train_dataset_uri
+            test_dataset_uri = train_job.train_dataset_uri
             self._do_trial(models, train_job, train_dataset_uri, test_dataset_uri)
             self._check_train_job_budget(train_job)
         except Exception as error:

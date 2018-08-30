@@ -43,54 +43,21 @@ class Admin(object):
             }
 
     ####################################
-    # Apps
-    ####################################
-
-    def create_app(self, user_id, name, task, train_dataset_uri, test_dataset_uri):
-        # TODO: Validate that name is url-friendly
-
-        with self._db:
-            app = self._db.create_app(user_id, name, task, train_dataset_uri, test_dataset_uri)
-            return {
-                'name': app.name,
-            }
-
-    def get_app(self, name):
-        with self._db:
-            app = self._db.get_app_by_name(name)
-            return {
-                'name': app.name,
-                'task': app.task,
-                'datetime_created': app.datetime_created,
-                'train_dataset_uri': app.train_dataset_uri,
-                'test_dataset_uri': app.test_dataset_uri,
-                'user_id': app.user_id
-            }
-
-    def get_apps(self):
-        with self._db:
-            apps = self._db.get_apps()
-            return [
-                {
-                    'name': x.name,
-                    'task': x.task,
-                    'datetime_created': x.datetime_created
-                }
-                for x in apps
-            ]
-
-    ####################################
     # Train Job
     ####################################
 
-    def create_train_job(self, user_id, app_name, budget_type, budget_amount):
+    def create_train_job(self, user_id, app_name, 
+        task, train_dataset_uri, test_dataset_uri,
+        budget_type, budget_amount):
         with self._db:
-            app = self._db.get_app_by_name(app_name)
             train_job = self._db.create_train_job(
                 user_id=user_id,
                 budget_type=budget_type,
                 budget_amount=budget_amount,
-                app_id=app.id
+                app_name=app_name,
+                task=task,
+                train_dataset_uri=train_dataset_uri,
+                test_dataset_uri=test_dataset_uri,
             )
             self._db.commit()
 
@@ -103,12 +70,15 @@ class Admin(object):
 
     def get_train_jobs(self, app_name):
         with self._db:
-            app = self._db.get_app_by_name(app_name)
-            train_jobs = self._db.get_train_jobs_by_app(app.id)
+            train_jobs = self._db.get_train_jobs_by_app(app_name)
             return [
                 {
                     'id': x.id,
                     'status': x.status,
+                    'app_name': x.app_name,
+                    'task': x.task,
+                    'train_dataset_uri': x.train_dataset_uri,
+                    'test_dataset_uri': x.test_dataset_uri,
                     'datetime_started': x.datetime_started,
                     'datetime_completed': x.datetime_completed,
                     'budget_type': x.budget_type,
@@ -117,29 +87,42 @@ class Admin(object):
                 for x in train_jobs
             ]
 
+    def get_trials_by_train_job(self, train_job_id):
+        with self._db:
+            trials = self._db.get_trials_by_train_job(train_job_id)
+            trials_models = [self._db.get_model(x.model_id) for x in trials]
+            return [
+                {
+                    'id': trial.id,
+                    'hyperparameters': trial.hyperparameters,
+                    'datetime_started': trial.datetime_started,
+                    'model_name': model.name,
+                    'score': trial.score
+                }
+                for (trial, model) in zip(trials, trials_models)
+            ]
+
     ####################################
-    # Deployment Job
+    # Inference Job
     ####################################
 
-    def create_deployment_job(self, user_id, app_name, max_models=3):
+    def create_inference_job(self, user_id, app_name, max_models=3):
         with self._db:
-            app = self._db.get_app_by_name(app_name)
-            best_trials = self._db.get_best_trials_by_app(app.id, max_count=max_models)
+            best_trials = self._db.get_best_trials_by_app(app_name, max_count=max_models)
             best_trials_models = [self._db.get_model(x.model_id) for x in best_trials]
 
-            deployment_job = self._db.create_deployment_job(user_id, app.id)
+            inference_job = self._db.create_inference_job(user_id, app_name)
             self._db.commit()
 
             # TODO: Deploy workers based on current deployment jobs
 
             return {
-                'id': deployment_job.id
+                'id': inference_job.id
             }
 
-    def get_deployment_jobs(self, app_name):
+    def get_inference_jobs(self, app_name):
         with self._db:
-            app = self._db.get_app_by_name(app_name)
-            deployment_jobs = self._db.get_deployment_jobs_by_app(app.id)
+            inference_jobs = self._db.get_inference_jobs_by_app(app_name)
             return [
                 {
                     'id': x.id,
@@ -147,7 +130,7 @@ class Admin(object):
                     'datetime_started': x.datetime_started,
                     'datetime_stopped': x.datetime_stopped,
                 }
-                for x in deployment_jobs
+                for x in inference_jobs
             ]
     
     ####################################
@@ -156,8 +139,7 @@ class Admin(object):
 
     def get_best_trials_by_app(self, app_name, max_count=3):
         with self._db:
-            app = self._db.get_app_by_name(app_name)
-            best_trials = self._db.get_best_trials_by_app(app.id, max_count=max_count)
+            best_trials = self._db.get_best_trials_by_app(app_name, max_count=max_count)
             best_trials_models = [self._db.get_model(x.model_id) for x in best_trials]
             return [
                 {
@@ -171,26 +153,9 @@ class Admin(object):
                 for (trial, model) in zip(best_trials, best_trials_models)
             ]
 
-    def get_trials(self, app_name, train_job_id):
+    def predict_with_trial(self, trial_id, queries):
         with self._db:
-            app = self._db.get_app_by_name(app_name)
-            trials = self._db.get_trials_by_train_job(app.id, train_job_id)
-            trials_models = [self._db.get_model(x.model_id) for x in trials]
-            return [
-                {
-                    'id': trial.id,
-                    'hyperparameters': trial.hyperparameters,
-                    'datetime_started': trial.datetime_started,
-                    'model_name': model.name,
-                    'score': trial.score
-                }
-                for (trial, model) in zip(trials, trials_models)
-            ]
-
-    def predict_with_trial(self, app_name, trial_id, queries):
-        with self._db:
-            app = self._db.get_app_by_name(app_name)
-            trial = self._db.get_trial(app.id, trial_id)
+            trial = self._db.get_trial(trial_id)
             model = self._db.get_model(trial.model_id)
             
             # Load model based on trial & make predictions
@@ -202,7 +167,6 @@ class Admin(object):
 
             return preds
             
-
     ####################################
     # Models
     ####################################
