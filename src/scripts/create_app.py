@@ -1,20 +1,22 @@
+import sys
+
 from admin import Admin
-from common import build_tf_keras_dataset_config
+
+if len(sys.argv) < 3:
+    print('Usage: python {} <email> <password>'.format(__file__))
+    exit(1)
+
+email = sys.argv[1]
+password = sys.argv[2]
 
 admin = Admin()
 
-train_dataset_config = build_tf_keras_dataset_config(
-    dataset_name='fashion_mnist', 
-    train_or_test='train'
-)
-test_dataset_config = build_tf_keras_dataset_config(
-    dataset_name='fashion_mnist', 
-    train_or_test='test'
-)
+user = admin.authenticate_user(email, password)
 
 admin.create_app(
+    user_id=user['id'],
     name='fashion_mnist_app',
     task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
-    train_dataset_config=train_dataset_config,
-    test_dataset_config=test_dataset_config
+    train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
+    test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test'
 )

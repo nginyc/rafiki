@@ -19,3 +19,6 @@ __pycache__/
 
 # Gitkeeps
 !.gitkeep
+
+# Serialized models
+src/model/*.pickle

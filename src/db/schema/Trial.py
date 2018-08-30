@@ -2,14 +2,10 @@ import datetime
 from sqlalchemy import Column, String, ForeignKey, Integer, Float, DateTime
 from sqlalchemy.dialects.postgresql import JSON
 
+from common import TrialStatus
+
 from .utils import generate_uuid, generate_datetime
 from .Base import Base
-
-class TrialStatus():
-    STARTED = 'STARTED'
-    ERRORED = 'ERRORED'
-    COMPLETED = 'COMPLETED'
-
 
 class Trial(Base):
     __tablename__ = 'trial'

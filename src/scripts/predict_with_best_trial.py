@@ -17,29 +17,34 @@ def get_predict_data():
     )
 
 def show_first_image(images):
+    image = images[0]
     plt.figure()
-    plt.imshow(images[0])
+    plt.imshow(image)
     plt.colorbar()
     plt.gca().grid(False)
     print('Showing first image...')
+    pprint.pprint(image)
     plt.show()
 
 admin = Admin()
 
-app_status = admin.get_app_status(
-    name='fashion_mnist_app'
+trials = admin.get_best_trials_by_app(
+    app_name='fashion_mnist_app',
+    max_count=1
 )
-
-best_trials = app_status.get('best_trials')
-
-if len(best_trials) == 0:
+if len(trials) == 0:
     raise Exception('No trials yet!')
 
-best_trial = best_trials[0]
+best_trial = trials[0]
 
 (predict_images, predict_labels) = get_predict_data()
 show_first_image(predict_images)
-predictions = admin.predict(best_trial.get('id'), predict_images)
+
+predictions = admin.predict_with_trial(
+    app_name='fashion_mnist_app',
+    trial_id=best_trial.get('id'), 
+    queries=predict_images
+)
 
 print()
 print('Predictions:')

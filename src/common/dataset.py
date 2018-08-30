@@ -1,20 +1,21 @@
 import os
 import abc
+from urllib.parse import urlparse, parse_qs
 from tensorflow import keras
 
-class DatasetType():
-    TF_KERAS = 'TF_KERAS'
+def load_dataset(dataset_uri):
+    parse_result = urlparse(dataset_uri)
 
-def build_tf_keras_dataset_config(dataset_name, train_or_test = 'train'):
-    return {
-        'dataset_type': DatasetType.TF_KERAS,
-        'dataset_name': dataset_name,
-        'train_or_test': train_or_test
-    }
+    if parse_result.scheme == 'tf-keras':
+        dataset_name = parse_result.netloc
+        query = parse_qs(parse_result.query)
+        train_or_test = query.get('train_or_test', ['train'])[0]
+        return load_tf_keras_dataset(dataset_name, train_or_test)
+    else:
+        raise Exception('Dataset URI scheme not supported: {}'.format(parse_result.scheme))
 
-def load_tf_keras_dataset(dataset_config):
-    train_or_test =  dataset_config['train_or_test']
-    dataset_name = dataset_config['dataset_name']
+
+def load_tf_keras_dataset(dataset_name, train_or_test):
     keras_dataset = getattr(keras.datasets, dataset_name)
 
     (train_images, train_labels), (test_images, test_labels) = \
@@ -25,4 +26,5 @@ def load_tf_keras_dataset(dataset_config):
     elif train_or_test == 'test':
         return (test_images, test_labels)
     else:
-        raise Exception('train_or_test should be \'train\' or \'test\'')
+        raise Exception('Invalid `train_or_test` value: {}'.format(train_or_test))
+        

@@ -12,4 +12,5 @@ class Model(Base):
     name = Column(String, unique=True, nullable=False)
     task = Column(String, nullable=False)
     model_serialized = Column(Binary, nullable=False)
+    user_id = Column(String, ForeignKey('user.id'), nullable=False)
     

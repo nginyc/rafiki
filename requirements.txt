@@ -1,5 +1,6 @@
 baytune==0.2.1
 boto>=2.48.0
+bcrypt>=3.1.4
 joblib>=0.11
 future>=0.16.0
 numpy==1.14.5
@@ -14,4 +15,5 @@ dill==0.2.8.2
 tensorflow==1.10.0
 h5py==2.8.0
 matplotlib==2.2.3
+PyJWT>=1.6.4
 git+https://github.com/ucbrise/clipper.git@develop#subdirectory=clipper_admin
