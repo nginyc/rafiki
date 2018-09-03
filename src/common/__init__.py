@@ -1,6 +1,5 @@
-from .model import unserialize_model, serialize_model
+from .model import unserialize_model, serialize_model, InvalidModelException, serialize_model_to_file
 from .budget import BudgetType
-from .model import InvalidModelException
 from .BaseModel import InvalidModelParamsException, BaseModel
 from .dataset import load_dataset
 from .user import UserType

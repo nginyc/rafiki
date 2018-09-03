@@ -11,7 +11,7 @@ train_job_id = sys.argv[1]
 
 admin = Admin()
 
-trials = admin.get_trials(
+trials = admin.get_trials_by_train_job(
     train_job_id=train_job_id
 )
 

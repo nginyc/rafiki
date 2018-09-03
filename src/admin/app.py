@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 import os
-
+import traceback
 from common import UserType
 
 from .auth import generate_token, decode_token, UnauthorizedException, auth
@@ -121,3 +121,8 @@ def create_model(auth):
 def get_models(auth):
     params = get_request_params()
     return jsonify(admin.get_models(**params))
+
+# Handle uncaught exceptions with a server error & the error's stack trace (for development)
+@app.errorhandler(Exception)
+def handle_error(error):
+    return traceback.format_exc(), 500
