@@ -5,12 +5,12 @@ from .Base import Base
 
 from common import DeployStatus
 
-class DeploymentJob(Base):
-    __tablename__ = 'deployment_job'
+class InferenceJob(Base):
+    __tablename__ = 'inference_job'
 
     id = Column(String, primary_key=True, default=generate_uuid)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
-    app_id = Column(String, ForeignKey('app.id'), nullable=False)
+    app_name = Column(String, nullable=False)
     status = Column(String, nullable=False, default=DeployStatus.STARTED)
     datetime_stopped = Column(DateTime, default=None)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)

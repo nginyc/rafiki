@@ -12,7 +12,6 @@ train_job_id = sys.argv[1]
 admin = Admin()
 
 trials = admin.get_trials(
-    app_name='fashion_mnist_app',
     train_job_id=train_job_id
 )
 

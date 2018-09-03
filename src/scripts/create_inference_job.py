@@ -1,6 +1,7 @@
 import sys
 
 from admin import Admin
+from common import BudgetType
 
 if len(sys.argv) < 3:
     print('Usage: python {} <email> <password>'.format(__file__))
@@ -13,10 +14,7 @@ admin = Admin()
 
 user = admin.authenticate_user(email, password)
 
-admin.create_app(
+admin.create_inference_job(
     user_id=user['id'],
-    name='fashion_mnist_app',
-    task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
-    train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
-    test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test'
+    app_name='fashion_mnist_app'
 )

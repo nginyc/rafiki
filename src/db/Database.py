@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from common import TrainJobStatus, TrialStatus
 
 from .schema import Base, TrainJob, \
-    DeploymentJob, Trial, Model, User, App
+    InferenceJob, Trial, Model, User
 
 class Database(object):
     def __init__(self, database_config):
@@ -32,42 +32,20 @@ class Database(object):
         return user
 
     ####################################
-    # Apps
-    ####################################
-
-    def create_app(self, user_id, name, task, train_dataset_uri, test_dataset_uri):
-        app = App(
-            user_id=user_id,
-            name=name, 
-            task=task,
-            train_dataset_uri=train_dataset_uri,
-            test_dataset_uri=test_dataset_uri
-        )
-        self._session.add(app)
-        return app
-
-    def get_app_by_name(self, name):
-        app = self._session.query(App).filter(App.name == name).first()
-        return app
-
-    def get_app(self, id):
-        app = self._session.query(App).get(id)
-        return app
-
-    def get_apps(self):
-        apps = self._session.query(App).all()
-        return apps
-
-    ####################################
     # Train Jobs
     ####################################
-    
-    def create_train_job(self, user_id, budget_type, budget_amount, app_id):
+
+    def create_train_job(self, user_id, app_name, task, 
+        train_dataset_uri, test_dataset_uri,
+        budget_type, budget_amount):
         train_job = TrainJob(
             user_id=user_id,
             budget_type=budget_type, 
             budget_amount=budget_amount,
-            app_id=app_id
+            app_name=app_name,
+            task=task,
+            train_dataset_uri=train_dataset_uri,
+            test_dataset_uri=test_dataset_uri
         )
         self._session.add(train_job)
         return train_job
@@ -78,9 +56,9 @@ class Database(object):
 
         return train_jobs
 
-    def get_train_jobs_by_app(self, app_id):
+    def get_train_jobs_by_app(self, app_name):
         train_jobs = self._session.query(TrainJob) \
-            .filter(TrainJob.app_id == app_id) \
+            .filter(TrainJob.app_name == app_name) \
             .order_by(TrainJob.datetime_started.desc()).all()
 
         return train_jobs
@@ -92,23 +70,23 @@ class Database(object):
         return train_job
 
     ####################################
-    # Deployment Jobs
+    # Inference Jobs
     ####################################
     
-    def create_deployment_job(self, user_id, app_id):
-        deployment_job = DeploymentJob(
+    def create_inference_job(self, user_id, app_name):
+        inference_job = InferenceJob(
             user_id=user_id,
-            app_id=app_id
+            app_name=app_name
         )
-        self._session.add(deployment_job)
-        return deployment_job
+        self._session.add(inference_job)
+        return inference_job
 
-    def get_deployment_jobs_by_app(self, app_id):
-        deployment_jobs = self._session.query(DeploymentJob) \
-            .filter(DeploymentJob.app_id == app_id) \
-            .order_by(DeploymentJob.datetime_started.desc()).all()
+    def get_inference_jobs_by_app(self, app_name):
+        inference_jobs = self._session.query(InferenceJob) \
+            .filter(InferenceJob.app_name == app_name) \
+            .order_by(InferenceJob.datetime_started.desc()).all()
 
-        return deployment_jobs
+        return inference_jobs
 
     ####################################
     # Models
@@ -152,31 +130,27 @@ class Database(object):
         self._session.add(trial)
         return trial
 
-    def get_trial(self, app_id, id):
+    def get_trial(self, id):
         trial = self._session.query(Trial) \
             .join(TrainJob, Trial.train_job_id == TrainJob.id) \
-            .join(App, TrainJob.app_id == app_id) \
             .filter(Trial.id == id) \
-            .filter(App.id == app_id) \
             .first()
 
         return trial
 
-    def get_best_trials_by_app(self, app_id, max_count=3):
+    def get_best_trials_by_app(self, app_name, max_count=3):
         trials = self._session.query(Trial) \
             .join(TrainJob, Trial.train_job_id == TrainJob.id) \
-            .join(App, TrainJob.app_id == app_id) \
-            .filter(App.id == app_id) \
+            .filter(TrainJob.app_name == app_name) \
             .filter(Trial.status == TrainJobStatus.COMPLETED) \
             .order_by(Trial.score.desc()) \
             .limit(max_count).all()
 
         return trials
 
-    def get_trials_by_train_job(self, app_id, train_job_id):
+    def get_trials_by_train_job(self, train_job_id):
         trials = self._session.query(Trial) \
             .join(TrainJob, Trial.train_job_id == TrainJob.id) \
-            .filter(App.id == app_id) \
             .filter(TrainJob.id == train_job_id) \
             .order_by(Trial.datetime_started.desc()).all()
 
