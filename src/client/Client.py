@@ -1,7 +1,7 @@
 import requests
 import pprint
 
-from common import serialize_model
+from model import serialize_model
 
 class Client(object):
     def __init__(self, admin_host='http://localhost:8000'):

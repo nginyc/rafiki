@@ -6,7 +6,8 @@ import traceback
 
 from .tuner import propose_with_tuner, train_tuner, create_tuner
 
-from common import unserialize_model, BudgetType, TrainJobStatus, TrialStatus
+from common import BudgetType, TrainJobStatus, TrialStatus
+from model import unserialize_model
 from db import DatabaseConfig, Database
 
 

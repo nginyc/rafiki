@@ -11,7 +11,6 @@ def get_request_params():
         params = request.form.to_dict()
 
     # Merge in query params
-    # We assume query params are always single-valued
     query_params = {
         k: v
         for k, v in request.args.items()

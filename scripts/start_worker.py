@@ -1,4 +1,4 @@
-from train import Worker
+from worker import Worker
 
 worker = Worker()
 worker.start()

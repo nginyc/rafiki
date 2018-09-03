@@ -1,7 +1,7 @@
 import numpy as np
 from db import Database, DatabaseConfig
 
-from common import unserialize_model, serialize_model
+from model import unserialize_model, serialize_model
 from .auth import hash_password, if_hash_matches_password
 
 class NoSuchUserException(Exception): 

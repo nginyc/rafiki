@@ -4,32 +4,42 @@
 
 1. Install Docker
 
-2. Install Python 3.6 & install the project's Python dependencies by running `pip install -r ./requirements.txt`.
+2. Install Python 3.6
 
 ## Setting Up the Stack
 
-Create a .env.sh at root of project:
+Create a custom Docker network for Rafiki:
+
+```sh
+docker network create raifki
 ```
-export POSTGRES_HOST=localhost
-export POSTGRES_PORT=5433
+
+Create the file `.env.sh` at root of project:
+
+```sh
+export POSTGRES_HOST=rafiki_db
+export POSTGRES_PORT=5432
 export POSTGRES_USER=rafiki
 export POSTGRES_DB=rafiki
 export POSTGRES_PASSWORD=rafiki
 export PYTHONPATH=$PWD/src
+export APP_SECRET=rafiki
+export DOCKER_NETWORK=rafiki
 ```
 
 Start the database in terminal 1:
 
-```shell
+```sh
 source .env.sh
 bash scripts/start_db.sh
 ```
 
 Start a single worker in terminal 2:
 
-```shell
+```sh
 source .env.sh
-python src/scripts/start_worker.py
+bash src/scripts/build_worker_image.sh
+bash src/scripts/start_worker.sh
 ```
 
 ## Using Rafiki with the Admin Python module
@@ -41,7 +51,7 @@ source .env.sh
 python
 ```
 
-```python
+```py
 from admin import Admin
 admin = Admin()
 admin.create_user(
@@ -53,13 +63,13 @@ admin.create_user(
 
 Authenticating as an user:
 
-```python
+```py
 user = admin.authenticate_user('admin@rafiki', 'rafiki')
 ```
 
 Creating & viewing models:
 
-```python
+```py
 from common import serialize_model
 from model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
 model = SingleHiddenLayerTensorflowModel()
@@ -74,7 +84,8 @@ admin.get_models()
 ```
 
 Creating a train job:
-```python
+
+```py
 admin.create_train_job(
     user_id=user['id'],
     budget_type='TRIAL_COUNT',
@@ -88,17 +99,20 @@ admin.get_train_jobs(app_name='fashion_mnist_app')
 ```
 
 As the worker generates trials, checking on the completed trials of the train job:
-```shell
+
+```sh
 admin.get_trials_by_train_job(train_job_id=<train_job_id>)
 ```
 
 Making a prediction with the best trial of an app:
-```shell
+
+```sh
 python src/scripts/predict_with_best_trial.py
 ```
 
 Creating a deployment job for an app after model training:
-```shell
+
+```sh
 python src/scripts/create_inference_job.py <email> <password>
 ```
 
@@ -108,12 +122,12 @@ This example uses the [Fashion MNIST dataset](https://github.com/zalandoresearch
 
 In terminal 3, first create an admin with the Rafiki Admin Python module:
 
-```shell
+```sh
 source .env.sh
 python
 ```
 
-```python
+```py
 from admin import Admin
 admin = Admin()
 admin.create_user(
@@ -125,15 +139,20 @@ admin.create_user(
 
 Then, start the Rafiki Admin HTTP server:
 
-```shell
-python src/scripts/start_admin.py
+```sh
+bash scripts/start_admin.sh
 ```
 
-In terminal 4, use the Rafiki Client Python module on the Python CLI.
+In terminal 4, use the Rafiki Client Python module on the Python CLI. You'll need to install the Rafiki Client's Python dependencies by running `pip install -r ./src/client/requirements.txt`.
+
+```sh
+source .env.sh
+python
+```
 
 Initilizing the client & logging in:
 
-```python
+```py
 from client import Client
 client = Client()
 client.login(email='admin@rafiki', password='rafiki')
@@ -141,7 +160,7 @@ client.login(email='admin@rafiki', password='rafiki')
 
 Creating an user:
 
-```python
+```py
 client.create_user(
     email='app_developer@rafiki',
     password='app_developer',
@@ -151,7 +170,7 @@ client.create_user(
 
 Creating & viewing models:
 
-```python
+```py
 from model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
 model_inst = SingleHiddenLayerTensorflowModel()
 client.create_model(
@@ -164,7 +183,7 @@ client.get_models()
 
 Creating & viewing train jobs:
 
-```python
+```py
 client.create_train_job(
     budget_type='TRIAL_COUNT',
     budget_amount=10,
@@ -178,7 +197,7 @@ client.get_train_jobs(app_name='fashion_mnist_app')
 
 Viewing best trials of an app:
 
-```python
+```py
 client.get_best_trials_by_app(app_name='fashion_mnist_app')
 ```
 
@@ -194,7 +213,7 @@ The list of available HTTP endpoints & their request formats are available as a 
 
 For the `POST /models` endpoint, you'll need to first serialize the model:
 
-```python
+```py
 from common import serialize_model_to_file
 from model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
 model_inst = SingleHiddenLayerTensorflowModel()
