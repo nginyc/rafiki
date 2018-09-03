@@ -1,6 +1,7 @@
 import requests
 import pprint
 
+from common import BudgetType
 from model import serialize_model
 
 class Client(object):
@@ -62,8 +63,13 @@ class Client(object):
     # Train Jobs
     ####################################
     
-    def create_train_job(self, app_name, task, train_dataset_uri,
-                        test_dataset_uri, budget_type, budget_amount):
+    def create_train_job(self, 
+                        app_name, 
+                        task, 
+                        train_dataset_uri,
+                        test_dataset_uri, 
+                        budget_type=BudgetType.TRIAL_COUNT, 
+                        budget_amount=10):
         data = self._post('/train_jobs', form_data={
             'app_name': app_name,
             'task': task,
