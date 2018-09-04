@@ -4,77 +4,66 @@ import random
 import dill
 import traceback
 
-from .tuner import propose_with_tuner, train_tuner, create_tuner
-
-from common import BudgetType, TrainJobStatus, TrialStatus
+from common import TrainJobStatus, TrialStatus
 from model import unserialize_model
-from db import DatabaseConfig, Database
+from db import Database
 
+from .tuner import propose_with_tuner, train_tuner, create_tuner
 
 logger = logging.getLogger(__name__)
 
-class NoModelsForTaskException(Exception):
+class NoSuchTrainJobException(Exception):
     pass
 
-class InvalidBudgetTypeException(Exception):
+class NoSuchModelException(Exception):
     pass
 
 class Worker(object):
-    TRAIN_JOB_POLL_INTERVAL_SECONDS = 10
-
-    def __init__(self, database_config=DatabaseConfig()):
-        self._db = Database(database_config)
+    def __init__(self, worker_id, db=Database()):
+        self._db = db
+        self._worker_id = worker_id
 
     def start(self):
-        with self._db:
-            while True:
-                has_train_job = self._do_train_loop()
-                
-                if not has_train_job:
-                    sleep_secs = self.TRAIN_JOB_POLL_INTERVAL_SECONDS
-                    logger.info('No uncompleted train jobs left. Sleeping for {}s...' \
-                        .format(sleep_secs))
-                    time.sleep(sleep_secs)
-
-                
-    # Returns False if there is no train job
-    def _do_train_loop(self):
-        train_job = self._select_train_job()
-
-        if train_job is None:
-            return False
-
         logger.info(
-            'Working on train job of ID {}...' \
-                .format(train_job.id)
+            'Starting worker of ID {}...'.format(self._worker_id)
         )
 
-        try:
-            models = self._db.get_models_by_task(train_job.task)
-            train_dataset_uri = train_job.train_dataset_uri
-            test_dataset_uri = train_job.train_dataset_uri
-            self._do_trial(models, train_job, train_dataset_uri, test_dataset_uri)
-            self._check_train_job_budget(train_job)
-        except Exception as error:
-            logger.error('Error while running train job:')
-            logger.error(traceback.format_exc())
-
-        return True
-
-    def _do_trial(self, models, train_job, train_dataset_uri, test_dataset_uri):
+        with self._db:
+            worker = self._db.get_train_job_worker(self._worker_id)
+            self._db.mark_train_job_worker_as_running(worker)
         
-        (model, hyperparameters) = \
-            self._do_hyperparameter_selection(models, train_job)
+        while True:
+            try:
+                model_id = None
+                train_job_id = None
+
+                with self._db:
+                    worker = self._db.get_train_job_worker(self._worker_id)
+                    model_id = worker.model_id
+                    train_job_id = worker.train_job_id
+                        
+                self._do_new_trial(train_job_id, model_id)
                 
-        trial = self._db.create_trial(
-            model=model, 
-            train_job_id=train_job.id, 
-            hyperparameters=hyperparameters
-        )
-        self._db.commit()
-        
+            except Exception:
+                with self._db:
+                    worker = self._db.get_train_job_worker(self._worker_id)
+                    self._db.mark_train_job_worker_as_errored(worker)
+
+                logger.error('Error while running worker:')
+                logger.error(traceback.format_exc())
+                logger.error('Exiting worker...')
+                exit(1)
+
+    def _do_new_trial(self, train_job_id, model_id):
+
+        self._db.connect()
+        (train_dataset_uri, test_dataset_uri,
+            model_serialized, hyperparameters, trial_id) = \
+                self._create_new_trial(train_job_id, model_id)
+        self._db.disconnect()
+
         try:
-            model_inst = unserialize_model(model.model_serialized)
+            model_inst = unserialize_model(model_serialized)
             model_inst.init(hyperparameters)
 
             # Train model
@@ -86,61 +75,55 @@ class Worker(object):
             parameters = model_inst.dump_parameters()
             model_inst.destroy()
 
-            self._db.mark_trial_as_complete(
-                trial,
-                score=score,
-                parameters=parameters
-            )
-            self._db.commit()
+            with self._db:
+                trial = self._db.get_trial(trial_id)
+                self._db.mark_trial_as_complete(
+                    trial,
+                    score=score,
+                    parameters=parameters
+                )
 
         except Exception as error:
             logger.error('Error while running trial:')
             logger.error(traceback.format_exc())
 
-            self._db.mark_trial_as_errored(trial)
-            self._db.commit()
+            with self._db:
+                trial = self._db.get_trial(trial_id)
+                self._db.mark_trial_as_errored(trial)
 
-        return True
+    def _create_new_trial(self, train_job_id, model_id):
+        train_job = self._db.get_train_job(train_job_id)
+        if train_job is None:
+            raise NoSuchTrainJobException('ID: {}'.format(train_job_id))
 
-    # Updates train job based on budget
-    def _check_train_job_budget(self, train_job):
-        if train_job.budget_type == BudgetType.TRIAL_COUNT:
-            trials = self._db.get_completed_trials_by_train_job(train_job.id)
-            max_trials = train_job.budget_amount 
-            if len(trials) >= max_trials:
-                logger.info('Train job has reached target trial count')
-                self._db.mark_train_job_as_complete(train_job)
-                self._db.commit()
+        model = self._db.get_model(model_id)
+        if model is None:
+            raise NoSuchModelException('ID: {}'.format(model_id))
+    
+        hyperparameters = self._do_hyperparameter_selection(train_job, model)
 
-        else:
-            raise InvalidBudgetTypeException()
+        trial = self._db.create_trial(
+            model=model, 
+            train_job_id=train_job.id, 
+            hyperparameters=hyperparameters
+        )
+        self._db.commit()
 
-
-    # Returns an uncompleted train job
-    def _select_train_job(self):
-        train_jobs = self._db.get_uncompleted_train_jobs()
-
-        if len(train_jobs) == 0:
-            return None
-
-        # TODO: Better train job selection
-        return train_jobs[0]
+        return (
+            train_job.train_dataset_uri,
+            train_job.test_dataset_uri,
+            model.model_serialized,
+            hyperparameters,
+            trial.id
+        )
 
     # Returns a set of hyperparameter values
-    def _do_hyperparameter_selection(self, models, train_job):
-        if len(models) == 0:
-            raise NoModelsForTaskException()
-        
-        # TODO: Better hyperparameter values selection
-
-        # Randomly pick a model
-        model = random.choice(models)
-
+    def _do_hyperparameter_selection(self, train_job, model):
         # Pick hyperparameter values
         tuner = self._get_tuner_for_model(train_job, model)
         hyperparameters = propose_with_tuner(tuner)
 
-        return (model, hyperparameters)
+        return hyperparameters
         
     # Retrieves/creates a tuner for the model for the associated train job
     def _get_tuner_for_model(self, train_job, model):

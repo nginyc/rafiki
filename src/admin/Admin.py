@@ -1,7 +1,8 @@
 import numpy as np
-from db import Database, DatabaseConfig
 
+from db import Database
 from model import unserialize_model, serialize_model
+
 from .auth import hash_password, if_hash_matches_password
 
 class NoSuchUserException(Exception): 
@@ -11,8 +12,10 @@ class InvalidPasswordException(Exception):
     pass
 
 class Admin(object):
-    def __init__(self, database_config=DatabaseConfig()):
-        self._db = Database(database_config)
+    DEFAULT_MODEL_IMAGE_NAME = 'rafiki_worker'
+
+    def __init__(self, db=Database()):
+        self._db = db
 
     ####################################
     # Users
@@ -171,13 +174,15 @@ class Admin(object):
     # Models
     ####################################
 
-    def create_model(self, user_id, name, task, model_serialized):
+    def create_model(self, user_id, name, task, 
+        model_serialized, docker_image_name=None):
         with self._db:
             model = self._db.create_model(
                 user_id=user_id,
                 name=name,
                 task=task,
-                model_serialized=model_serialized
+                model_serialized=model_serialized,
+                docker_image_name=(docker_image_name or self.DEFAULT_MODEL_IMAGE_NAME)
             )
 
             return {
@@ -192,7 +197,8 @@ class Admin(object):
                     'name': model.name,
                     'task': model.task,
                     'datetime_created': model.datetime_created,
-                    'user_id': model.user_id
+                    'user_id': model.user_id,
+                    'docker_image_name': model.docker_image_name
                 }
                 for model in models
             ]

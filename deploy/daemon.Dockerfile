@@ -10,15 +10,15 @@ WORKDIR /root/app/
 COPY src/db/ db/
 COPY src/common/ common/
 COPY src/model/ model/
-COPY src/worker/ worker/
+COPY src/daemon/ daemon/
 
 # Install python dependencies
-RUN pip install -r worker/requirements.txt
+RUN pip install -r daemon/requirements.txt
 
 # Copy init script
-COPY scripts/start_worker.py start_worker.py
+COPY scripts/start_daemon.py start_daemon.py
 
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONPATH /root/app/
 
-ENTRYPOINT [ "python", "start_worker.py" ]
+CMD ["python", "start_daemon.py"]

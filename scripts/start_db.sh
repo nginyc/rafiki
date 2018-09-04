@@ -8,3 +8,4 @@ docker run --name $MODULE_NAME \
   -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
   -p 5433:5432 \
   $MODULE_NAME
+  

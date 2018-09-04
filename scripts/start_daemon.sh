@@ -1,19 +1,12 @@
-IMAGE_NAME=rafiki_worker
+MODULE_NAME=rafiki_daemon
 
-usage()  {
-  echo "Usage: $0 <service_name> <worker_id>"
-  exit 1
-}
-
-if [ $# -ne 2 ] ; then
-    usage
-fi
-
-docker service create --name $1 \
+docker build -t $MODULE_NAME -f ./deploy/daemon.Dockerfile $PWD
+docker run --name $MODULE_NAME \
   --network $DOCKER_NETWORK \
   -e POSTGRES_HOST=$POSTGRES_HOST \
   -e POSTGRES_PORT=$POSTGRES_PORT \
   -e POSTGRES_USER=$POSTGRES_USER \
   -e POSTGRES_DB=$POSTGRES_DB \
   -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
-  $IMAGE_NAME $2
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  $MODULE_NAME
