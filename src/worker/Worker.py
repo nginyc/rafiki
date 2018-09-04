@@ -3,6 +3,7 @@ import logging
 import random
 import dill
 import traceback
+import pprint
 
 from common import TrainJobStatus, TrialStatus
 from model import unserialize_model
@@ -24,9 +25,7 @@ class Worker(object):
         self._worker_id = worker_id
 
     def start(self):
-        logger.info(
-            'Starting worker of ID {}...'.format(self._worker_id)
-        )
+        logger.info('Starting worker of ID {}...'.format(self._worker_id))
 
         with self._db:
             worker = self._db.get_train_job_worker(self._worker_id)
@@ -43,7 +42,7 @@ class Worker(object):
                     train_job_id = worker.train_job_id
                         
                 self._do_new_trial(train_job_id, model_id)
-                
+
             except Exception:
                 with self._db:
                     worker = self._db.get_train_job_worker(self._worker_id)
@@ -62,14 +61,19 @@ class Worker(object):
                 self._create_new_trial(train_job_id, model_id)
         self._db.disconnect()
 
+        logger.info('Starting trial with hyperparameters:')
+        logger.info(pprint.pformat(hyperparameters))
+
         try:
             model_inst = unserialize_model(model_serialized)
             model_inst.init(hyperparameters)
 
             # Train model
+            logger.info('Training model...')
             model_inst.train(train_dataset_uri)
 
             # Evaluate model
+            logger.info('Evaluating model...')
             score = model_inst.evaluate(test_dataset_uri)
             
             parameters = model_inst.dump_parameters()
@@ -132,7 +136,7 @@ class Worker(object):
         hyperparameters_config = model_inst.get_hyperparameter_config()
         tuner = create_tuner(hyperparameters_config)
 
-        # Train tuner
+        # Train tuner with previous trials' scores
         trials = self._db.get_completed_trials_by_train_job(train_job.id)
         model_trial_history = [(x.hyperparameters, x.score) for x in trials if x.model_id == model.id]
         (hyperparameters_list, scores) = [list(x) for x in zip(*model_trial_history)] \

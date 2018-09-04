@@ -1,7 +1,7 @@
 MODULE_NAME=rafiki_admin
 
 docker build -t $MODULE_NAME -f ./deploy/admin.Dockerfile $PWD
-docker run --name $MODULE_NAME \
+docker run --rm --name $MODULE_NAME \
   --network $DOCKER_NETWORK \
   -e POSTGRES_HOST=$POSTGRES_HOST \
   -e POSTGRES_PORT=$POSTGRES_PORT \

@@ -12,7 +12,11 @@ Prerequisites: Unix-like environment
 
 ## Setting Up the Stack
 
-Create a Docker Swarm.
+Create a Docker Swarm e.g.:
+
+```sh
+docker swarm init
+```
 
 Create a custom overlay Docker network for Rafiki, scoped to the Docker Swarm:
 
@@ -31,6 +35,14 @@ export POSTGRES_PASSWORD=rafiki
 export PYTHONPATH=$PWD/src
 export APP_SECRET=rafiki
 export DOCKER_NETWORK=rafiki
+export LOGS_FOLDER_PATH=/var/log/rafiki
+```
+
+Setup the Rafiki logs directory by creating the directory `/var/log/rafiki/` and ensuring Docker has the permissions to mount it onto containers:
+
+```sh
+sudo mkdir /var/log/rafiki
+sudo chmod 777 /var/log/rafiki
 ```
 
 Start the database in terminal 1:
@@ -213,6 +225,14 @@ As the worker generates trials, checking on the completed trials of the train jo
 
 ```sh
 admin.get_trials_by_train_job(train_job_id=<train_job_id>)
+```
+
+## Troubleshooting
+
+You can read all logs in the logs directory:
+
+```sh
+open /var/log/rafiki
 ```
 
 ## Credits

@@ -6,7 +6,8 @@ class ContainerManager(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def create_service(self, service_name, image_name, replicas, args, environment_vars):
+    def create_service(self, service_name, image_name, 
+        replicas, args, environment_vars, mounts={}):
         '''
             Creates a service
 
@@ -16,6 +17,7 @@ class ContainerManager(abc.ABC):
                 replicas: Int - Number of replicas to initialize for the service
                 args: [String] - Arguments to pass to the service
                 environment_vars: {String: String} - Dict of environment variable names to values
+                mounts: {String: String} - Dict of host directory to container directory for mounting of volumes onto container
 
             Returns 
                 id: String - ID for the service created

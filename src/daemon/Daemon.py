@@ -70,7 +70,7 @@ class Daemon(object):
 
             if worker.service_id is None:
                 service_id = self._create_service_for_worker(worker.id, image_name, replicas)
-                self._db.update_train_job_worker(worker, service_id=service_id)
+                self._db.update_train_job_worker(worker, service_id=service_id, replicas=replicas)
                 self._db.commit()
             
             # If actual worker replicas do not match intended replicas, update service's replicas
@@ -82,11 +82,18 @@ class Daemon(object):
     def _create_service_for_worker(self, worker_id, image_name, replicas):
         service_name = 'rafiki_worker_{}'.format(worker_id)
         environment_vars = {
-            'POSTGRES_HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
-            'POSTGRES_PORT': os.environ.get('POSTGRES_PORT', 5432),
-            'POSTGRES_USER': os.environ.get('POSTGRES_USER', 'rafiki'),
-            'POSTGRES_DB': os.environ.get('POSTGRES_DB', 'rafiki'),
-            'POSTGRES_PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'rafiki')
+            'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
+            'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
+            'POSTGRES_USER': os.environ['POSTGRES_USER'],
+            'POSTGRES_DB': os.environ['POSTGRES_DB'],
+            'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
+            'LOGS_FOLDER_PATH': os.environ['LOGS_FOLDER_PATH']
+        }
+
+        # Mount logs folder onto workers too
+        logs_folder_path = os.environ['LOGS_FOLDER_PATH']
+        mounts = {
+            logs_folder_path: logs_folder_path
         }
 
         service_id = self._container_manager.create_service(
@@ -94,7 +101,8 @@ class Daemon(object):
             image_name=image_name, 
             replicas=replicas, 
             args=[worker_id], 
-            environment_vars=environment_vars
+            environment_vars=environment_vars,
+            mounts=mounts
         )
         return service_id
 

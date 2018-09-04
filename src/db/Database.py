@@ -148,7 +148,8 @@ class Database(object):
         return worker
 
     def destroy_train_job_worker(self, id):
-        self._session.query(TrainJobWorker).get(id).delete()
+        worker = self._session.query(TrainJobWorker).get(id)
+        self._session.delete(worker)
 
     ####################################
     # Models
