@@ -61,7 +61,7 @@ class Worker(object):
                 self._create_new_trial(train_job_id, model_id)
         self._db.disconnect()
 
-        logger.info('Starting trial with hyperparameters:')
+        logger.info('Starting trial of ID {} with hyperparameters:'.format(trial_id))
         logger.info(pprint.pformat(hyperparameters))
 
         try:
