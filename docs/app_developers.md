@@ -143,3 +143,9 @@ Viewing all trials of an app:
 ```py
 client.get_trials_by_app(app_name='fashion_mnist_app')
 ```
+
+Stopping a train job prematurely:
+
+```py
+client.stop_train_job(train_job_id=<train_job_id>)
+```

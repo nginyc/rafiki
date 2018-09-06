@@ -9,7 +9,10 @@ class ContainerManager(abc.ABC):
     def create_service(self, service_name, image_name, 
         replicas, args, environment_vars, mounts={}):
         '''
-            Creates a service
+            Creates a service with a set number of replicas.
+
+            The service should regenerate replicas if they exit with a non-zero code. 
+            However, if a replica exit with code 0, it should not regenerate the replica.
 
             Args
                 service_name: String - Name of the service
@@ -31,7 +34,7 @@ class ContainerManager(abc.ABC):
 
             Args
                 service_id: String - ID of service to update
-                repliaces: Int - Adjusted number of replicas for the service
+                replicas: Int - Adjusted number of replicas for the service
         '''
         raise NotImplementedError()
 

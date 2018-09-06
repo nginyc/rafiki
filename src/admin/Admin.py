@@ -3,6 +3,8 @@ import numpy as np
 from db import Database
 from model import unserialize_model, serialize_model
 
+from .deployer import Deployer
+from .containers import DockerSwarmContainerManager 
 from .auth import hash_password, if_hash_matches_password
 
 class NoSuchUserException(Exception): 
@@ -14,8 +16,9 @@ class InvalidPasswordException(Exception):
 class Admin(object):
     DEFAULT_MODEL_IMAGE_NAME = 'rafiki_worker'
 
-    def __init__(self, db=Database()):
+    def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
         self._db = db
+        self._deployer = Deployer(db=db, container_manager=container_manager)
 
     ####################################
     # Users
@@ -53,6 +56,9 @@ class Admin(object):
         task, train_dataset_uri, test_dataset_uri,
         budget_type, budget_amount):
         
+        train_job_id = None
+        app_version = None
+
         with self._db:
             # Compute auto-incremented app version
             train_jobs = self._db.get_train_jobs_by_app(app_name)
@@ -69,12 +75,31 @@ class Admin(object):
                 budget_amount=budget_amount
             )
             self._db.commit()
-            
-            return {
-                'id': train_job.id,
-                'app_version': train_job.app_version
-            }
 
+            train_job_id = train_job.id
+            app_version = train_job.app_version
+
+        # Deploy train workers
+        self._deployer.redeploy_workers_for_train_job(train_job_id)
+
+        return {
+            'id': train_job_id,
+            'app_version': app_version
+        }
+
+    def stop_train_job(self, train_job_id):
+        # Mark train job as complete
+        with self._db:
+            train_job = self._db.get_train_job(train_job_id)
+            self._db.mark_train_job_as_complete(train_job)
+
+        # Stop all workers for train job
+        self._deployer.destroy_train_workers_for_train_job(train_job_id)
+
+        return {
+            'id': train_job_id
+        }
+            
     def get_train_job(self, train_job_id):
         with self._db:
             train_job = self._db.get_train_job(train_job_id)

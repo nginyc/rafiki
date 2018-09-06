@@ -125,7 +125,17 @@ class Database(object):
 
         if replicas is not None:
             worker.replicas = replicas
-            
+
+        self._session.add(worker)
+        return worker
+
+    def mark_train_job_worker_as_running(self, worker):
+        worker.status = TrainJobWorkerStatus.RUNNING
+        self._session.add(worker)
+        return worker
+
+    def mark_train_job_worker_as_stopped(self, worker):
+        worker.status = TrainJobWorkerStatus.STOPPED
         self._session.add(worker)
         return worker
 
@@ -137,20 +147,6 @@ class Database(object):
     def get_train_job_worker(self, id):
         worker = self._session.query(TrainJobWorker).get(id)
         return worker
-
-    def mark_train_job_worker_as_errored(self, worker):
-        worker.status = TrainJobWorkerStatus.ERRORED
-        self._session.add(worker)
-        return worker
-
-    def mark_train_job_worker_as_running(self, worker):
-        worker.status = TrainJobWorkerStatus.RUNNING
-        self._session.add(worker)
-        return worker
-
-    def destroy_train_job_worker(self, id):
-        worker = self._session.query(TrainJobWorker).get(id)
-        self._session.delete(worker)
 
     ####################################
     # Models

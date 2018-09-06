@@ -67,6 +67,12 @@ def get_train_job(auth, train_job_id):
     params = get_request_params()
     return jsonify(admin.get_train_job(train_job_id, **params))
 
+@app.route('/train_jobs/<train_job_id>/stop', methods=['POST'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
+def stop_train_job(auth, train_job_id):
+    params = get_request_params()
+    return jsonify(admin.stop_train_job(train_job_id, **params))
+
 ####################################
 # Inference Jobs
 ####################################

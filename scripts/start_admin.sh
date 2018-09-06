@@ -9,5 +9,8 @@ docker run --rm --name $MODULE_NAME \
   -e POSTGRES_DB=$POSTGRES_DB \
   -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
   -e APP_SECRET=$APP_SECRET \
+  -e LOGS_FOLDER_PATH=$LOGS_FOLDER_PATH \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v $LOGS_FOLDER_PATH:$LOGS_FOLDER_PATH \
   -p 8000:8000 \
   $MODULE_NAME

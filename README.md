@@ -59,14 +59,7 @@ source .env.sh
 bash scripts/start_admin.sh
 ```
 
-Start the Rafiki Daemon in terminal 3:
-
-```sh
-source .env.sh
-bash scripts/start_daemon.sh
-```
-
-In terminal 4, bash into the Docker container of Rafiki Admin to create a new admin with the Rafiki Admin Python module:
+In terminal 3, bash into the Docker container of Rafiki Admin to create a new admin with the Rafiki Admin Python module:
 
 ```sh
 docker exec -it rafiki_admin bash

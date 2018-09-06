@@ -98,6 +98,10 @@ class Client(object):
         data = self._get('/train_jobs/{}'.format(train_job_id))
         return data
 
+    def stop_train_job(self, train_job_id):
+        data = self._post('/train_jobs/{}/stop'.format(train_job_id))
+        return data
+
     ####################################
     # Trials
     ####################################

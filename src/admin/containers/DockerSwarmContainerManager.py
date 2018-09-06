@@ -31,7 +31,11 @@ class DockerSwarmContainerManager(ContainerManager):
             networks=[self._network],
             name=service_name,
             env=env,
-            mounts=mounts_list
+            mounts=mounts_list,
+            # Restart replicas when they exit with error
+            restart_policy={
+                'Condition': 'on-failure'
+            }
         )
 
         service.scale(replicas)
