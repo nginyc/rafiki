@@ -235,6 +235,16 @@ You can read all logs in the logs directory:
 open /var/log/rafiki
 ```
 
+By default, you can connect to the PostgreSQL using a PostgreSQL client (e.g [Postico](https://eggerapps.at/postico/)) with these credentials:
+
+```sh
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5433
+POSTGRES_USER=rafiki
+POSTGRES_DB=rafiki
+POSTGRES_PASSWORD=rafiki
+```
+
 ## Credits
 
 Original Auto-Tune Models (ATM) project: https://github.com/HDI-Project/ATM
