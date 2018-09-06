@@ -10,7 +10,6 @@ envs/
 
 # Logs
 *.log
-logs/
 
 # Python byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,2 +1,4 @@
 requests==2.19.1
 dill==0.2.8.2
+tensorflow==1.10.1
+pandas>=0.22.0

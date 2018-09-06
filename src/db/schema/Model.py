@@ -13,4 +13,4 @@ class Model(Base):
     task = Column(String, nullable=False)
     model_serialized = Column(Binary, nullable=False)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
-    
+    docker_image_name = Column(String, nullable=False)

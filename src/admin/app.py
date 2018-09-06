@@ -61,11 +61,11 @@ def get_train_jobs(auth):
     params = get_request_params()
     return jsonify(admin.get_train_jobs(**params))
 
-@app.route('/train_job/<train_job_id>/trials', methods=['GET'])
+@app.route('/train_jobs/<train_job_id>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_trials_by_train_job(auth, train_job_id):
+def get_train_job(auth, train_job_id):
     params = get_request_params()
-    return jsonify(admin.get_trials_by_train_job(train_job_id, **params))
+    return jsonify(admin.get_train_job(train_job_id, **params))
 
 ####################################
 # Inference Jobs
@@ -89,14 +89,30 @@ def get_inference_jobs(auth, app_name):
 
 @app.route('/trials', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_best_trials_by_app(auth):
+def get_trials_by_app(auth):
     params = get_request_params()
+
+    # Return best trials by app
+    if params.get('type') == 'best':
+        del params['type']
+
+        if 'max_count' in params:
+            params['max_count'] = int(params['max_count'])
+
+        return jsonify(admin.get_best_trials_by_app(**params))
     
-    if 'max_count' in params:
-        params['max_count'] = int(params['max_count'])
+    # Return all trials by app
+    else:
+        return jsonify(admin.get_trials_by_app(**params))
 
-    return jsonify(admin.get_best_trials_by_app(**params))
 
+@app.route('/train_job/<train_job_id>/trials', methods=['GET'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
+def get_trials_by_train_job(auth, train_job_id):
+    params = get_request_params()
+    return jsonify(admin.get_trials_by_train_job(train_job_id, **params))
+
+    
 @app.route('/trials/<trial_id>/predict', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def predict_with_trial(auth, trial_id):
@@ -115,11 +131,20 @@ def create_model(auth):
     model_serialized = request.files['model_serialized'].read()
     params['model_serialized'] = model_serialized
     return jsonify(admin.create_model(auth['user_id'], **params))
-    
+
 @app.route('/models', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER])
 def get_models(auth):
     params = get_request_params()
+
+    # Return models by task
+    if params.get('task') is not None:
+        return jsonify(admin.get_models_by_task(**params))
+    
+    # Return all models
+    else:
+        return jsonify(admin.get_models(**params))
+
     return jsonify(admin.get_models(**params))
 
 # Handle uncaught exceptions with a server error & the error's stack trace (for development)

@@ -7,7 +7,8 @@ import tempfile
 import numpy as np
 import base64
 
-from common import BaseModel, InvalidModelParamsException, load_dataset
+from .dataset import load_dataset
+from .BaseModel import BaseModel, InvalidModelParamsException
 
 class SingleHiddenLayerTensorflowModel(BaseModel):
 

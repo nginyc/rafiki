@@ -1,16 +1,30 @@
 import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+import os
 
-from common import TrainJobStatus, TrialStatus
+from common import TrainJobStatus, TrialStatus, TrainJobWorkerStatus
 
-from .schema import Base, TrainJob, \
+from .schema import Base, TrainJob, TrainJobWorker, \
     InferenceJob, Trial, Model, User
 
 class Database(object):
-    def __init__(self, database_config):
-        db_connection_url = self._make_connection_url(database_config)
-        self._engine = create_engine(db_connection_url, echo=True)
+    def __init__(self, 
+        host=os.environ.get('POSTGRES_HOST', 'localhost'), 
+        port=os.environ.get('POSTGRES_PORT', 5432),
+        user=os.environ.get('POSTGRES_USER', 'rafiki'),
+        db=os.environ.get('POSTGRES_DB', 'rafiki'),
+        password=os.environ.get('POSTGRES_PASSWORD', 'rafiki')):
+
+        db_connection_url = self._make_connection_url(
+            host=host, 
+            port=port, 
+            db=db,
+            user=user, 
+            password=password
+        )
+        
+        self._engine = create_engine(db_connection_url)
         self._session = None
         self._define_tables()
 
@@ -35,17 +49,18 @@ class Database(object):
     # Train Jobs
     ####################################
 
-    def create_train_job(self, user_id, app_name, task, 
-        train_dataset_uri, test_dataset_uri,
+    def create_train_job(self, user_id, app_name, 
+        app_version, task, train_dataset_uri, test_dataset_uri,
         budget_type, budget_amount):
         train_job = TrainJob(
             user_id=user_id,
-            budget_type=budget_type, 
-            budget_amount=budget_amount,
             app_name=app_name,
+            app_version=app_version,
             task=task,
             train_dataset_uri=train_dataset_uri,
-            test_dataset_uri=test_dataset_uri
+            test_dataset_uri=test_dataset_uri,
+            budget_type=budget_type, 
+            budget_amount=budget_amount
         )
         self._session.add(train_job)
         return train_job
@@ -62,6 +77,10 @@ class Database(object):
             .order_by(TrainJob.datetime_started.desc()).all()
 
         return train_jobs
+
+    def get_train_job(self, id):
+        train_job = self._session.query(TrainJob).first()
+        return train_job
 
     def mark_train_job_as_complete(self, train_job):
         train_job.status = TrainJobStatus.COMPLETED
@@ -89,15 +108,61 @@ class Database(object):
         return inference_jobs
 
     ####################################
+    # Train Job Workers
+    ####################################
+
+    def create_train_job_worker(self, train_job_id, model_id):
+        worker = TrainJobWorker(
+            train_job_id=train_job_id,
+            model_id=model_id
+        )
+        self._session.add(worker)
+        return worker
+
+    def update_train_job_worker(self, worker, service_id=None, replicas=None):
+        if service_id is not None:
+            worker.service_id = service_id
+
+        if replicas is not None:
+            worker.replicas = replicas
+            
+        self._session.add(worker)
+        return worker
+
+    def get_train_job_workers_by_train_job(self, train_job_id):
+        workers = self._session.query(TrainJobWorker) \
+            .filter(TrainJobWorker.train_job_id == train_job_id).all()
+        return workers
+
+    def get_train_job_worker(self, id):
+        worker = self._session.query(TrainJobWorker).get(id)
+        return worker
+
+    def mark_train_job_worker_as_errored(self, worker):
+        worker.status = TrainJobWorkerStatus.ERRORED
+        self._session.add(worker)
+        return worker
+
+    def mark_train_job_worker_as_running(self, worker):
+        worker.status = TrainJobWorkerStatus.RUNNING
+        self._session.add(worker)
+        return worker
+
+    def destroy_train_job_worker(self, id):
+        worker = self._session.query(TrainJobWorker).get(id)
+        self._session.delete(worker)
+
+    ####################################
     # Models
     ####################################
 
-    def create_model(self, user_id, name, task, model_serialized):
+    def create_model(self, user_id, name, task, model_serialized, docker_image_name):
         model = Model(
             user_id=user_id,
             name=name,
             task=task,
-            model_serialized=model_serialized
+            model_serialized=model_serialized,
+            docker_image_name=docker_image_name
         )
         self._session.add(model)
         return model
@@ -145,6 +210,14 @@ class Database(object):
             .filter(Trial.status == TrainJobStatus.COMPLETED) \
             .order_by(Trial.score.desc()) \
             .limit(max_count).all()
+
+        return trials
+
+    def get_trials_by_app(self, app_name):
+        trials = self._session.query(Trial) \
+            .join(TrainJob, Trial.train_job_id == TrainJob.id) \
+            .filter(TrainJob.app_name == app_name) \
+            .order_by(Trial.datetime_started.desc())
 
         return trials
 
@@ -203,13 +276,9 @@ class Database(object):
         for table in reversed(Base.metadata.sorted_tables):
             self._session.execute(table.delete())
 
-    def _make_connection_url(self, database_config):
+    def _make_connection_url(self, host, port, db, user, password):
         return 'postgresql://{}:{}@{}:{}/{}'.format(
-            database_config.user,
-            database_config.password,
-            database_config.host,
-            database_config.port,
-            database_config.db
+            user, password, host, port, db
         )
 
     def _define_tables(self):

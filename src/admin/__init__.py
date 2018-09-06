@@ -1,2 +1,2 @@
-from .Admin import Admin, DatabaseConfig
+from .Admin import Admin
 from .app import app
