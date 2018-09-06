@@ -41,7 +41,6 @@ class Daemon(object):
             
             if if_budget_reached:
                 self._destroy_train_workers_for_train_job(train_job)
-                self._db.mark_train_job_as_complete(train_job)
             else:
                 self._redeploy_train_workers_for_train_job(train_job)
 
@@ -54,6 +53,10 @@ class Daemon(object):
                 self._container_manager.destroy_service(worker.service_id)
 
             self._db.destroy_train_job_worker(worker.id)
+            self._db.commit()
+
+        self._db.mark_train_job_as_complete(train_job)
+        self._db.commit()
 
     def _redeploy_train_workers_for_train_job(self, train_job):
         workers = self._db.get_train_job_workers_by_train_job(train_job.id)

@@ -1,1 +1,1 @@
-FROM rafiki2_worker
+FROM rafiki_worker

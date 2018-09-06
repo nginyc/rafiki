@@ -7,13 +7,14 @@ RUN apt-get install -y postgresql postgresql-contrib
 RUN mkdir /root/app/
 WORKDIR /root/app/
 
+# Install python dependencies
+COPY src/daemon/requirements.txt daemon/requirements.txt
+RUN pip install -r daemon/requirements.txt
+
 COPY src/db/ db/
 COPY src/common/ common/
 COPY src/model/ model/
 COPY src/daemon/ daemon/
-
-# Install python dependencies
-RUN pip install -r daemon/requirements.txt
 
 # Copy init script
 COPY scripts/start_daemon.py start_daemon.py

@@ -75,6 +75,8 @@ class Worker(object):
             # Evaluate model
             logger.info('Evaluating model...')
             score = model_inst.evaluate(test_dataset_uri)
+
+            logger.info('Score: {}'.format(score))
             
             parameters = model_inst.dump_parameters()
             model_inst.destroy()

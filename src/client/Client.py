@@ -59,6 +59,12 @@ class Client(object):
         data = self._get('/models')
         return data
 
+    def get_models_by_task(self, task):
+        data = self._get('/models', params={
+            'task': task
+        })
+        return data
+
     ####################################
     # Train Jobs
     ####################################
@@ -70,6 +76,7 @@ class Client(object):
                         test_dataset_uri, 
                         budget_type=BudgetType.TRIAL_COUNT, 
                         budget_amount=10):
+
         data = self._post('/train_jobs', form_data={
             'app_name': app_name,
             'task': task,
@@ -86,14 +93,28 @@ class Client(object):
         })
         return data
 
+    # Additionally returns a train job's models & workers' details
+    def get_train_job(self, train_job_id):
+        data = self._get('/train_jobs/{}'.format(train_job_id))
+        return data
+
     ####################################
     # Trials
     ####################################
     
+    # Returns only completed trials ordered by highest scores
     def get_best_trials_by_app(self, app_name, max_count=3):
         data = self._get('/trials', params={
             'app_name': app_name,
+            'type': 'best',
             'max_count': max_count
+        })
+        return data
+
+    # Returns all trials ordered from most recently started
+    def get_trials_by_app(self, app_name):
+        data = self._get('/trials', params={
+            'app_name': app_name
         })
         return data
 

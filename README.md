@@ -52,22 +52,21 @@ source .env.sh
 bash scripts/start_db.sh
 ```
 
-Build the base Rafiki worker image in Docker:
+Start the Rafiki Admin HTTP server in terminal 2:
 
 ```sh
 source .env.sh
-bash scripts/build_worker_image.sh
-```
-
-## Using Rafiki over HTTP
-
-In terminal 2, start the Rafiki Admin HTTP server:
-
-```sh
 bash scripts/start_admin.sh
 ```
 
-In terminal 3, bash in the Docker container of Rafiki Admin to create a new admin with the Rafiki Admin Python module:
+Start the Rafiki Daemon in terminal 3:
+
+```sh
+source .env.sh
+bash scripts/start_daemon.sh
+```
+
+In terminal 4, bash into the Docker container of Rafiki Admin to create a new admin with the Rafiki Admin Python module:
 
 ```sh
 docker exec -it rafiki_admin bash
@@ -89,61 +88,22 @@ exit()
 exit
 ```
 
-On terminal 3, use the Rafiki Client Python module on the Python CLI. You'll need to install the Rafiki Client's Python dependencies by running `pip install -r ./src/client/requirements.txt`.
+Additionally, build the base Rafiki worker image in Docker:
 
 ```sh
 source .env.sh
-python
+bash scripts/build_worker_image.sh
 ```
 
-Initilizing the client & logging in:
+## Using Rafiki
 
-```py
-from client import Client
-client = Client()
-client.login(email='admin@rafiki', password='rafiki')
-```
+Use the Rafiki Client Python module on the Python CLI.
 
-Creating an user:
+Rafiki Client guides by role:
 
-```py
-client.create_user(
-    email='app_developer@rafiki',
-    password='app_developer',
-    user_type='APP_DEVELOPER'
-)
-```
-
-Creating & viewing models:
-
-```py
-from model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
-model_inst = SingleHiddenLayerTensorflowModel()
-client.create_model(
-    name='single_hidden_layer_tf',
-    task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
-    model_inst=model_inst
-)
-client.get_models()
-```
-
-Creating & viewing train jobs:
-
-```py
-client.create_train_job(
-    app_name='fashion_mnist_app',
-    task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
-    train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
-    test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test'
-)
-client.get_train_jobs(app_name='fashion_mnist_app')
-```
-
-Viewing best trials of an app:
-
-```py
-client.get_best_trials_by_app(app_name='fashion_mnist_app')
-```
+- [Rafiki Admins](./docs/admins.md)
+- [Rafiki Model Developers](./docs/model_developers.md)
+- [Rafiki App Developers](./docs/app_developers.md)
 
 ## Rafiki Admin HTTP Server REST API
 
@@ -151,7 +111,7 @@ To make calls to the HTTP endpoints, you'll need first authenticate with email &
 
 `Authorization: Bearer {{token}}`
 
-The list of available HTTP endpoints & their request formats are available as a *Postman* collection in the root of this project.
+The list of available HTTP endpoints & their request formats are available as a *Postman* collection (outdated) in the root of this project.
 
 ### Creating a Model
 
@@ -243,6 +203,15 @@ POSTGRES_PORT=5433
 POSTGRES_USER=rafiki
 POSTGRES_DB=rafiki
 POSTGRES_PASSWORD=rafiki
+```
+
+When running the whole stack locally, if you encounter an error like "No space left on device", you might be running out of space allocated for Docker. Try removing all containers & images:
+
+```sh
+# Delete all containers
+docker rm $(docker ps -a -q)
+# Delete all images
+docker rmi $(docker images -q)
 ```
 
 ## Credits
