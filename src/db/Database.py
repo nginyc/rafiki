@@ -79,7 +79,7 @@ class Database(object):
         return train_jobs
 
     def get_train_job(self, id):
-        train_job = self._session.query(TrainJob).get(id).first()
+        train_job = self._session.query(TrainJob).get(id)
         return train_job
 
     def mark_train_job_as_complete(self, train_job):
