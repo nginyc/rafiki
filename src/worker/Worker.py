@@ -109,7 +109,7 @@ class Worker(object):
         hyperparameters = self._do_hyperparameter_selection(train_job, model)
 
         trial = self._db.create_trial(
-            model=model, 
+            model_id=model.id, 
             train_job_id=train_job.id, 
             hyperparameters=hyperparameters
         )

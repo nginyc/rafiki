@@ -79,7 +79,7 @@ class Database(object):
         return train_jobs
 
     def get_train_job(self, id):
-        train_job = self._session.query(TrainJob).first()
+        train_job = self._session.query(TrainJob).get(id).first()
         return train_job
 
     def mark_train_job_as_complete(self, train_job):
@@ -185,10 +185,10 @@ class Database(object):
     # Trials
     ####################################
 
-    def create_trial(self, model, train_job_id, 
+    def create_trial(self, model_id, train_job_id, 
                     hyperparameters):
         trial = Trial(
-            model_id=model.id,
+            model_id=model_id,
             train_job_id=train_job_id,
             hyperparameters=hyperparameters
         )
