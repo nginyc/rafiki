@@ -10,6 +10,7 @@ class TrainJob(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     app_name = Column(String, nullable=False)
+    app_version = Column(Integer, nullable=False)
     task = Column(String, nullable=False)
     train_dataset_uri = Column(String, nullable=False)
     test_dataset_uri = Column(String, nullable=False)
@@ -17,7 +18,6 @@ class TrainJob(Base):
     budget_type = Column(String, nullable=False)
     budget_amount = Column(Integer, nullable=False)
     status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
-    state_serialized = Column(Binary)
-    datetime_completed = Column(DateTime, default=None)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
+    datetime_completed = Column(DateTime, default=None)
 

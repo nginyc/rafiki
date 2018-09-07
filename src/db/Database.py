@@ -49,17 +49,18 @@ class Database(object):
     # Train Jobs
     ####################################
 
-    def create_train_job(self, user_id, app_name, task, 
-        train_dataset_uri, test_dataset_uri,
+    def create_train_job(self, user_id, app_name, 
+        app_version, task, train_dataset_uri, test_dataset_uri,
         budget_type, budget_amount):
         train_job = TrainJob(
             user_id=user_id,
-            budget_type=budget_type, 
-            budget_amount=budget_amount,
             app_name=app_name,
+            app_version=app_version,
             task=task,
             train_dataset_uri=train_dataset_uri,
-            test_dataset_uri=test_dataset_uri
+            test_dataset_uri=test_dataset_uri,
+            budget_type=budget_type, 
+            budget_amount=budget_amount
         )
         self._session.add(train_job)
         return train_job
@@ -78,7 +79,7 @@ class Database(object):
         return train_jobs
 
     def get_train_job(self, id):
-        train_job = self._session.query(TrainJob).first()
+        train_job = self._session.query(TrainJob).get(id)
         return train_job
 
     def mark_train_job_as_complete(self, train_job):
@@ -124,7 +125,17 @@ class Database(object):
 
         if replicas is not None:
             worker.replicas = replicas
-            
+
+        self._session.add(worker)
+        return worker
+
+    def mark_train_job_worker_as_running(self, worker):
+        worker.status = TrainJobWorkerStatus.RUNNING
+        self._session.add(worker)
+        return worker
+
+    def mark_train_job_worker_as_stopped(self, worker):
+        worker.status = TrainJobWorkerStatus.STOPPED
         self._session.add(worker)
         return worker
 
@@ -136,20 +147,6 @@ class Database(object):
     def get_train_job_worker(self, id):
         worker = self._session.query(TrainJobWorker).get(id)
         return worker
-
-    def mark_train_job_worker_as_errored(self, worker):
-        worker.status = TrainJobWorkerStatus.ERRORED
-        self._session.add(worker)
-        return worker
-
-    def mark_train_job_worker_as_running(self, worker):
-        worker.status = TrainJobWorkerStatus.RUNNING
-        self._session.add(worker)
-        return worker
-
-    def destroy_train_job_worker(self, id):
-        worker = self._session.query(TrainJobWorker).get(id)
-        self._session.delete(worker)
 
     ####################################
     # Models
@@ -184,10 +181,10 @@ class Database(object):
     # Trials
     ####################################
 
-    def create_trial(self, model, train_job_id, 
+    def create_trial(self, model_id, train_job_id, 
                     hyperparameters):
         trial = Trial(
-            model_id=model.id,
+            model_id=model_id,
             train_job_id=train_job_id,
             hyperparameters=hyperparameters
         )
@@ -209,6 +206,14 @@ class Database(object):
             .filter(Trial.status == TrainJobStatus.COMPLETED) \
             .order_by(Trial.score.desc()) \
             .limit(max_count).all()
+
+        return trials
+
+    def get_trials_by_app(self, app_name):
+        trials = self._session.query(Trial) \
+            .join(TrainJob, Trial.train_job_id == TrainJob.id) \
+            .filter(TrainJob.app_name == app_name) \
+            .order_by(Trial.datetime_started.desc())
 
         return trials
 
