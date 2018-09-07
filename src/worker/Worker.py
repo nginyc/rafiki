@@ -1,12 +1,12 @@
 import time
 import logging
-import random
-import dill
+import os
 import traceback
 import pprint
 
 from common import TrainJobStatus, TrialStatus
 from model import unserialize_model
+from client import Client
 from db import Database
 
 from .budget import if_train_job_budget_reached
@@ -24,6 +24,7 @@ class Worker(object):
     def __init__(self, worker_id, db=Database()):
         self._db = db
         self._worker_id = worker_id
+        self._client = self._make_client()
 
     def start(self):
         logger.info('Starting replica for worker of ID {}...'.format(self._worker_id))
@@ -32,26 +33,25 @@ class Worker(object):
             worker = self._db.get_train_job_worker(self._worker_id)
             self._db.mark_train_job_worker_as_running(worker)
         
-        exit_code = None
-
         while True:
             try:
                 model_id = None
                 train_job_id = None
+                if_budget_reached = None
 
                 with self._db:
                     worker = self._db.get_train_job_worker(self._worker_id)
                     model_id = worker.model_id
                     train_job_id = worker.train_job_id
+                    if_budget_reached = self._if_budget_reached(train_job_id)
 
-                if self._if_budget_reached(train_job_id):
-                    # TODO: Inform admin to remove the service
+                if if_budget_reached:
+                    self._client.stop_train_job_worker(self._worker_id)
                     logger.info('Budget for train job has reached.')
                     logger.info('Exiting worker with success...')
                     
                     # Exit with success
-                    exit_code = 0
-                    break
+                    exit(0)
 
                 self._do_new_trial(train_job_id, model_id)
 
@@ -61,15 +61,7 @@ class Worker(object):
                 logger.error('Exiting worker with error...')
 
                 # Exit with error
-                exit_code = 1
-                break
-
-        with self._db:
-            # TODO: Make tracking of number of replicas more fail-safe
-            worker = self._db.get_train_job_worker(self._worker_id)
-            self._db.mark_train_job_worker_as_stopped(worker)
-
-        exit(exit_code)
+                exit(1)
 
     def _do_new_trial(self, train_job_id, model_id):
 
@@ -116,15 +108,14 @@ class Worker(object):
                 self._db.mark_trial_as_errored(trial)
 
     def _if_budget_reached(self, train_job_id):
-        with self._db:
-            train_job = self._db.get_train_job(train_job_id)
-            completed_trials = self._db.get_completed_trials_by_train_job(train_job_id)
+        train_job = self._db.get_train_job(train_job_id)
+        completed_trials = self._db.get_completed_trials_by_train_job(train_job_id)
 
-            return if_train_job_budget_reached(
-                budget_type=train_job.budget_type,
-                budget_amount=train_job.budget_amount,
-                completed_trials=completed_trials
-            )
+        return if_train_job_budget_reached(
+            budget_type=train_job.budget_type,
+            budget_amount=train_job.budget_amount,
+            completed_trials=completed_trials
+        )
 
     def _create_new_trial(self, train_job_id, model_id):
         train_job = self._db.get_train_job(train_job_id)
@@ -175,3 +166,12 @@ class Worker(object):
         tuner = train_tuner(tuner, hyperparameters_list, scores)
 
         return tuner
+
+    def _make_client(self):
+        admin_host = os.environ['ADMIN_HOST']
+        admin_port = os.environ['ADMIN_PORT']
+        superadmin_email = os.environ['SUPERADMIN_EMAIL']
+        superadmin_password = os.environ['SUPERADMIN_PASSWORD']
+        client = Client(admin_host=admin_host, admin_port=admin_port)
+        client.login(email=superadmin_email, password=superadmin_password)
+        return client

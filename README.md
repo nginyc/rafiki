@@ -59,28 +59,6 @@ source .env.sh
 bash scripts/start_admin.sh
 ```
 
-In terminal 3, bash into the Docker container of Rafiki Admin to create a new admin with the Rafiki Admin Python module:
-
-```sh
-docker exec -it rafiki_admin bash
-python
-```
-
-```py
-from admin import Admin
-admin = Admin()
-admin.create_user(
-    email='admin@rafiki',
-    password='rafiki',
-    user_type='ADMIN'
-)
-exit()
-```
-
-```sh
-exit
-```
-
 Additionally, build the base Rafiki worker image in Docker:
 
 ```sh

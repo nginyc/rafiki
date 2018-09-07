@@ -1,11 +1,19 @@
 import numpy as np
+import os
+import logging
 
 from db import Database
 from model import unserialize_model, serialize_model
+from common import TrainJobWorkerStatus, UserType
 
-from .deployer import Deployer
+from .worker import compute_train_worker_replicas_for_models
 from .containers import DockerSwarmContainerManager 
 from .auth import hash_password, if_hash_matches_password
+
+logger = logging.getLogger(__name__)
+
+class UserExistsException(Exception):
+    pass
 
 class NoSuchUserException(Exception): 
     pass
@@ -18,7 +26,10 @@ class Admin(object):
 
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
         self._db = db
-        self._deployer = Deployer(db=db, container_manager=container_manager)
+        self._container_manager = container_manager
+        self._superadmin_email = os.environ['SUPERADMIN_EMAIL']
+        self._superadmin_password = os.environ['SUPERADMIN_PASSWORD']
+        self._seed_users()
 
     ####################################
     # Users
@@ -42,6 +53,11 @@ class Admin(object):
     def create_user(self, email, password, user_type):
         password_hash = hash_password(password)
         with self._db:
+            user = self._db.get_user_by_email(email)
+
+            if user is not None:
+                raise UserExistsException()
+
             user = self._db.create_user(email, password_hash, user_type)
             self._db.commit()
             return {
@@ -79,8 +95,8 @@ class Admin(object):
             train_job_id = train_job.id
             app_version = train_job.app_version
 
-        # Deploy train workers
-        self._deployer.redeploy_workers_for_train_job(train_job_id)
+            # Deploy train workers
+            self._deploy_train_job_workers(train_job)
 
         return {
             'id': train_job_id,
@@ -88,13 +104,11 @@ class Admin(object):
         }
 
     def stop_train_job(self, train_job_id):
-        # Mark train job as complete
         with self._db:
-            train_job = self._db.get_train_job(train_job_id)
-            self._db.mark_train_job_as_complete(train_job)
-
-        # Stop all workers for train job
-        self._deployer.destroy_train_workers_for_train_job(train_job_id)
+            # Stop all workers for train job
+            workers = self._db.get_train_job_workers_by_train_job(train_job_id)
+            for worker in workers:
+                self._destroy_train_job_worker(worker)
 
         return {
             'id': train_job_id
@@ -153,6 +167,19 @@ class Admin(object):
                 }
                 for x in train_jobs
             ]
+
+    ####################################
+    # Train Job Workers
+    ####################################
+
+    def stop_train_job_worker(self, worker_id):
+        with self._db:
+            worker = self._db.get_train_job_worker(worker_id)
+            self._destroy_train_job_worker(worker)
+        
+        return {
+            'id': worker_id
+        }
 
     ####################################
     # Inference Job
@@ -309,3 +336,85 @@ class Admin(object):
         with self._db:
             self._db.clear_all_data()
 
+    ####################################
+    # Private Methods
+    ####################################
+
+    def _seed_users(self):
+        logger.info('Seeding users...')
+
+        # Seed superadmin
+        try:
+            self.create_user(
+                email=self._superadmin_email,
+                password=self._superadmin_password,
+                user_type=UserType.SUPERADMIN
+            )
+        except UserExistsException:
+            logger.info('Skipping superadmin creation as it already exists...')
+
+    def _deploy_train_job_workers(self, train_job):
+        workers = self._db.get_train_job_workers_by_train_job(train_job.id)
+        models = self._db.get_models_by_task(train_job.task)
+        model_to_replicas = compute_train_worker_replicas_for_models(models)
+
+        for (model, replicas) in model_to_replicas.items():
+            worker = next((x for x in workers if x.model_id == model.id), None)
+            image_name = model.docker_image_name
+
+            worker = self._db.create_train_job_worker(train_job.id, model.id)
+            self._db.commit()
+
+            # Create corresponding service for newly created worker
+            service_id = self._create_service_for_worker(worker.id, image_name, replicas)
+            self._db.update_train_job_worker(worker, service_id=service_id, replicas=replicas)
+            self._db.commit()
+
+    def _destroy_train_job_worker(self, worker):
+        if worker.service_id is not None:
+            self._container_manager.destroy_service(worker.service_id)
+
+        self._db.mark_train_job_worker_as_stopped(worker)
+        self._db.commit()
+
+        # If all workers for the train job has have stopped, stop train job as well
+        workers = self._db.get_train_job_workers_by_train_job(worker.train_job_id)
+        if next((
+            x for x in workers 
+            if x.status in [TrainJobWorkerStatus.RUNNING, TrainJobWorkerStatus.STARTED]
+        ), None) is None:
+            train_job = self._db.get_train_job(worker.train_job_id)
+            self._db.mark_train_job_as_complete(train_job)
+
+
+    def _create_service_for_worker(self, worker_id, image_name, replicas):
+        service_name = 'rafiki_worker_{}'.format(worker_id)
+        environment_vars = {
+            'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
+            'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
+            'POSTGRES_USER': os.environ['POSTGRES_USER'],
+            'POSTGRES_DB': os.environ['POSTGRES_DB'],
+            'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
+            'LOGS_FOLDER_PATH': os.environ['LOGS_FOLDER_PATH'],
+            'ADMIN_HOST': os.environ['ADMIN_HOST'],
+            'ADMIN_PORT': os.environ['ADMIN_PORT'],
+            'SUPERADMIN_EMAIL': self._superadmin_email,
+            'SUPERADMIN_PASSWORD': self._superadmin_password
+        }
+
+        # Mount logs folder onto workers too
+        logs_folder_path = os.environ['LOGS_FOLDER_PATH']
+        mounts = {
+            logs_folder_path: logs_folder_path
+        }
+
+        service_id = self._container_manager.create_service(
+            service_name=service_name, 
+            image_name=image_name, 
+            replicas=replicas, 
+            args=[worker_id], 
+            environment_vars=environment_vars,
+            mounts=mounts
+        )
+        return service_id
+        

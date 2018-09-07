@@ -10,11 +10,14 @@ WORKDIR /root/app/
 # Install python dependencies
 COPY src/worker/requirements.txt worker/requirements.txt
 RUN pip install -r worker/requirements.txt
+COPY src/client/requirements.txt client/requirements.txt
+RUN pip install -r client/requirements.txt
 
 COPY src/db/ db/
 COPY src/common/ common/
 COPY src/model/ model/
 COPY src/worker/ worker/
+COPY src/client/ client/
 
 # Copy init script
 COPY scripts/start_worker.py start_worker.py
