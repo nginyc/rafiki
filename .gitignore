@@ -21,3 +21,5 @@ __pycache__/
 
 # Serialized models
 src/model/*.pickle
+
+.DS_Store
