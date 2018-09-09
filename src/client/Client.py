@@ -25,7 +25,6 @@ class Client(object):
     def logout(self):
         self._token = None
 
-
     ####################################
     # User
     ####################################

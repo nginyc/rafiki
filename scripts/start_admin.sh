@@ -3,6 +3,7 @@ MODULE_NAME=rafiki_admin
 docker build -t $MODULE_NAME -f ./deploy/admin.Dockerfile $PWD
 docker run --rm --name $MODULE_NAME \
   --network $DOCKER_NETWORK \
+  -e ADMIN_PORT= $ADMIN_PORT \
   -e POSTGRES_HOST=$POSTGRES_HOST \
   -e POSTGRES_PORT=$POSTGRES_PORT \
   -e POSTGRES_USER=$POSTGRES_USER \
@@ -14,7 +15,10 @@ docker run --rm --name $MODULE_NAME \
   -e SUPERADMIN_EMAIL=$SUPERADMIN_EMAIL \
   -e SUPERADMIN_PASSWORD=$SUPERADMIN_PASSWORD \
   -e LOGS_FOLDER_PATH=$LOGS_FOLDER_PATH \
+  -e QFE_PORT=$QFE_PORT \
+  -e REDIS_HOST=$REDIS_HOST \
+  -e REDIS_PORT=$REDIS_PORT \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $LOGS_FOLDER_PATH:$LOGS_FOLDER_PATH \
-  -p 8000:8000 \
+  -p $ADMIN_PORT:$ADMIN_PORT \
   $MODULE_NAME

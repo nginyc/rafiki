@@ -248,8 +248,7 @@ class Admin(object):
                     'score': trial.score
                 }
                 for (trial, model) in zip(trials, trials_models)
-            ]
-            
+            ] 
         
     def get_trials_by_train_job(self, train_job_id):
         with self._db:

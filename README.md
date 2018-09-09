@@ -27,6 +27,7 @@ docker network create rafiki -d overlay --attachable --scope=swarm
 Create the file `.env.sh` at root of project:
 
 ```sh
+export ADMIN_PORT=8000
 export POSTGRES_HOST=rafiki_db
 export POSTGRES_PORT=5432
 export POSTGRES_USER=rafiki
@@ -35,7 +36,11 @@ export POSTGRES_PASSWORD=rafiki
 export PYTHONPATH=$PWD/src
 export APP_SECRET=rafiki
 export DOCKER_NETWORK=rafiki
-export LOGS_FOLDER_PATH=/var/log/rafiki
+export LOGS_FOLDER_PATH=/private/var/log/rafiki
+export QFE_PORT=8001
+export REDIS_HOST=qfe_cache
+export REDIS_PORT=6379
+export REBROW_PORT=5001
 ```
 
 Setup the Rafiki logs directory by creating the directory `/var/log/rafiki/` and ensuring Docker has the permissions to mount it onto containers:
@@ -64,6 +69,19 @@ Additionally, build the base Rafiki worker image in Docker:
 ```sh
 source .env.sh
 bash scripts/build_worker_image.sh
+```
+
+Start the cache in terminal 3:
+
+```sh
+source .env.sh
+bash scripts/start_cache
+```
+
+Start the Query Frontend (QFE) in terminal 4:
+```sh
+source .env.sh
+bash scripts/start_qfe.sh
 ```
 
 ## Using Rafiki

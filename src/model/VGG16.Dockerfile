@@ -1,1 +1,3 @@
-FROM rafiki2_worker
+FROM rafiki_worker
+
+RUN pip install pillow

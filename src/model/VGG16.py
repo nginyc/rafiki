@@ -9,8 +9,8 @@ import tempfile
 import numpy as np
 import base64
 
-from dataset import load_dataset
-from BaseModel import BaseModel, InvalidModelParamsException
+from .dataset import load_dataset
+from .BaseModel import BaseModel, InvalidModelParamsException
 
 import abc
 from urllib.parse import urlparse, parse_qs 
@@ -166,16 +166,15 @@ class VGG16(BaseModel):
         )
         return model
 
+# if __name__ == '__main__':
+#     hyperparameters = {
+#         'batch_size': 8,
+#         'epochs': 1,
+#         'learning_rate': 1e-5
+#     }
 
-if __name__ == '__main__':
-    hyperparameters = {
-        'batch_size': 8,
-        'epochs': 1,
-        'learning_rate': 1e-5
-    }
-
-    model = VGG16()
-    model.init(hyperparameters)
-    model.train('tf-keras://fashion_mnist?train_or_test=train')
-    accuracy = model.evaluate('tf-keras://fashion_mnist?train_or_test=test') 
-    print(accuracy)
+#     model = VGG16()
+#     model.init(hyperparameters)
+#     model.train('tf-keras://fashion_mnist?train_or_test=train')
+#     accuracy = model.evaluate('tf-keras://fashion_mnist?train_or_test=test') 
+#     print(accuracy)

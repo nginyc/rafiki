@@ -13,7 +13,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-  return 'Rafiki Admin is up.'
+    return 'Rafiki Admin is up.'
 
 ####################################
 # Users
