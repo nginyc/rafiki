@@ -22,7 +22,7 @@ class InvalidModelException(Exception):
 class InvalidBudgetTypeException(Exception):
     pass
 
-class Worker(object):
+class TrainWorker(object):
     def __init__(self, worker_id, db=Database()):
         self._db = db
         self._worker_id = worker_id
@@ -117,7 +117,7 @@ class Worker(object):
 
         if budget_type == BudgetType.MODEL_TRIAL_COUNT:
             max_trials = budget_amount 
-            completed_trials = self._db.get_completed_trials_by_train_job(worker.train_job_id)
+            completed_trials = self._db.get_completed_trials_of_train_job(worker.train_job_id)
             model_completed_trials = [x for x in completed_trials if x.model_id == model_id]
             return len(model_completed_trials) >= max_trials
         else:
@@ -166,7 +166,7 @@ class Worker(object):
         tuner = create_tuner(hyperparameters_config)
 
         # Train tuner with previous trials' scores
-        trials = self._db.get_completed_trials_by_train_job(train_job.id)
+        trials = self._db.get_completed_trials_of_train_job(train_job.id)
         model_trial_history = [(x.hyperparameters, x.score) for x in trials if x.model_id == model.id]
         (hyperparameters_list, scores) = [list(x) for x in zip(*model_trial_history)] \
             if len(model_trial_history) > 0 else ([], [])

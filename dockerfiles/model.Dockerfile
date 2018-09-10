@@ -8,21 +8,21 @@ RUN mkdir /root/app/
 WORKDIR /root/app/
 
 # Install python dependencies
-COPY src/worker/requirements.txt worker/requirements.txt
-RUN pip install -r worker/requirements.txt
+COPY src/model/requirements.txt model/requirements.txt
+RUN pip install -r model/requirements.txt
 COPY src/client/requirements.txt client/requirements.txt
 RUN pip install -r client/requirements.txt
 
 COPY src/db/ db/
 COPY src/common/ common/
 COPY src/model/ model/
-COPY src/worker/ worker/
+COPY src/train_worker/ train_worker/
 COPY src/client/ client/
 
 # Copy init script
-COPY scripts/start_worker.py start_worker.py
+COPY scripts/start_train_worker.py start_train_worker.py
 
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONPATH /root/app/
 
-ENTRYPOINT [ "python", "start_worker.py" ]
+ENTRYPOINT [ "python", "start_train_worker.py" ]

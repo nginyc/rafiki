@@ -16,5 +16,5 @@ user = admin.authenticate_user(email, password)
 
 admin.create_inference_job(
     user_id=user['id'],
-    app_name='fashion_mnist_app'
+    app='fashion_mnist_app'
 )

@@ -4,7 +4,7 @@
 
 ### Dataset Types
 
-- TF_KERAS
+- tf-keras://
 
 ### Query Types
 

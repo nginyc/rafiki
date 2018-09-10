@@ -67,7 +67,7 @@ Additionally, build the base Rafiki worker image in Docker:
 
 ```sh
 source .env.sh
-bash scripts/build_worker_image.sh
+bash scripts/build_model_image.sh
 ```
 
 ## Using Rafiki
@@ -148,18 +148,18 @@ Creating a train job:
 ```py
 admin.create_train_job(
     user_id=user['id'],
-    app_name='fashion_mnist_app',
+    app='fashion_mnist_app',
     task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
     train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
     test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test'
 )
-admin.get_train_jobs(app_name='fashion_mnist_app')
+admin.get_train_jobs(app='fashion_mnist_app')
 ```
 
 As the worker generates trials, checking on the completed trials of the train job:
 
 ```sh
-admin.get_trials_by_train_job(train_job_id=<train_job_id>)
+admin.get_trials_of_train_job(train_job_id=<train_job_id>)
 ```
 
 ## Troubleshooting

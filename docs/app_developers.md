@@ -30,12 +30,12 @@ client.login(email='app_developer@rafiki', password='rafiki')
 Getting models by task:
 
 ```py
-client.get_models_by_task(task='IMAGE_CLASSIFICATION_WITH_ARRAYS')
+client.get_models_of_task(task='IMAGE_CLASSIFICATION_WITH_ARRAYS')
 ```
 
 ```sh
 [{'datetime_created': 'Thu, 06 Sep 2018 04:38:48 GMT',
-  'docker_image_name': 'rafiki_worker',
+  'docker_image': 'rafiki_model',
   'name': 'single_hidden_layer_tf',
   'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
   'user_id': 'a8959685-6667-41d5-8f91-b195fda27f91'}]
@@ -45,10 +45,12 @@ Creating train jobs:
 
 ```py
 client.create_train_job(
-    app_name='fashion_mnist_app',
+    app='fashion_mnist_app',
     task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
     train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
-    test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test'
+    test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test',
+    budget_type='MODEL_TRIAL_COUNT',
+    budget_amount=3
 )
 ```
 
@@ -59,11 +61,11 @@ client.create_train_job(
 Viewing train jobs of an app:
 
 ```py
-client.get_train_jobs(app_name='fashion_mnist_app')
+client.get_train_jobs_of_app(app='fashion_mnist_app')
 ```
 
 ```sh
-[{'app_name': 'fashion_mnist_app',
+[{'app': 'fashion_mnist_app',
   'app_version': 1,
   'budget_amount': 10,
   'budget_type': 'MODEL_TRIAL_COUNT',
@@ -76,14 +78,14 @@ client.get_train_jobs(app_name='fashion_mnist_app')
   'train_dataset_uri': 'tf-keras://fashion_mnist?train_or_test=train'}]
 ```
 
-Viewing details of a train job:
+Viewing details of the latest train job of an app:
 
 ```py
-client.get_train_job(train_job_id=<train_job_id>)
+client.get_train_job_of_app(app='fashion_mnist_app')
 ```
 
 ```sh
-[{'app_name': 'fashion_mnist_app',
+[{'app': 'fashion_mnist_app',
   'app_version': 1,
   'budget_amount': 10,
   'budget_type': 'MODEL_TRIAL_COUNT',
@@ -105,7 +107,7 @@ client.get_train_job(train_job_id=<train_job_id>)
 Viewing best trials of an app:
 
 ```py
-client.get_best_trials_by_app(app_name='fashion_mnist_app')
+client.get_best_trials_of_app(app='fashion_mnist_app')
 ```
 
 ```sh
@@ -141,7 +143,7 @@ client.get_best_trials_by_app(app_name='fashion_mnist_app')
 Viewing all trials of an app:
 
 ```py
-client.get_trials_by_app(app_name='fashion_mnist_app')
+client.get_trials_of_app(app='fashion_mnist_app')
 ```
 
 Stopping a train job prematurely:

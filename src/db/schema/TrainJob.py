@@ -9,7 +9,7 @@ class TrainJob(Base):
     __tablename__ = 'train_job'
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    app_name = Column(String, nullable=False)
+    app = Column(String, nullable=False)
     app_version = Column(Integer, nullable=False)
     task = Column(String, nullable=False)
     train_dataset_uri = Column(String, nullable=False)

@@ -1,1 +1,0 @@
-FROM rafiki_worker
