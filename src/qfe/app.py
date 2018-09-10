@@ -11,9 +11,9 @@ def index():
 @app.route('/predict', methods=['POST'])
 def predict():
     params = request.get_json()
-    input = params['input']
+    query = params['query']
     type = params['type']
     
     #TODO: check input type
-    result = qfe.predict(input)
+    result = qfe.predict(query)
     return jsonify(result)
