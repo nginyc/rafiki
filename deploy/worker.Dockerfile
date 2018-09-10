@@ -12,8 +12,8 @@ COPY src/worker/requirements.txt worker/requirements.txt
 RUN pip install -r worker/requirements.txt
 COPY src/client/requirements.txt client/requirements.txt
 RUN pip install -r client/requirements.txt
-COPY src/inference_worker/requirments.txt inference_worker/requirments.txt
-RUN pip install -r inference_worker/requirments.txt
+COPY src/inference_worker/requirements.txt inference_worker/requirements.txt
+RUN pip install -r inference_worker/requirements.txt
 
 COPY src/db/ db/
 COPY src/common/ common/

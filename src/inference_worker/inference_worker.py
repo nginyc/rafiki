@@ -1,16 +1,17 @@
 import numpy as np
+from db import Database
 from cache import Cache
 from common import REQUEST_QUEUE, INFERENCE_WORKER_SLEEP, BATCH_SIZE
 import time
 
 class InferenceWorker(object):
 
-    def __init__(self, cache=Cache()):
+    def __init__(self, cache=Cache(), db=Database()):
         self._cache = cache
-        self._load_model()
+        self._db = db
 
-    def _load_model(self):
-        #TODO: implement model
+    def load_model(self, trial_id):
+        #TODO: load model from db and unserialize it.
         self._model = model
 
     def start(self):
