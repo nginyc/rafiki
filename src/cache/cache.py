@@ -24,6 +24,9 @@ class Cache(object):
     def trim_list(self, key, start, stop):
         self._redis.ltrim(key, start, stop)
 
+    def delete_list_value(self, key, value):
+        self._redis.lrem(key, 0, value)
+
     def get(self, key):
         return self._redis.get(key)
 

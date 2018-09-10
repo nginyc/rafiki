@@ -27,8 +27,9 @@ COPY src/config.py config.py
 
 # Copy init script
 COPY scripts/start_worker.py start_worker.py
+COPY scripts/start_inference_worker.py start_inference_worker.py
 
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONPATH /root/app/
 
-ENTRYPOINT [ "python", "start_worker.py" ]
+# ENTRYPOINT [ "python", "start_worker.py" ]

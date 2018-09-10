@@ -5,6 +5,7 @@ from config import RUNNING_INFERENCE_WORKERS, REQUEST_QUEUE, INFERENCE_WORKER_SL
 import time
 import uuid
 import random
+import os
 
 #TODO: For testing only. remove when not needed.
 class Model(object):
@@ -24,17 +25,17 @@ class InferenceWorker(object):
 
     def __init__(self, 
         cache=Cache(), 
-        db=Database(), 
-        inference_job_id=os.getenv('INFERENCE_JOB_ID')
+        db=None, 
+        inference_job_id=os.getenv('INFERENCE_JOB_ID'),
         trial_id=os.getenv('TRIAL_ID'), 
         model_name=os.getenv('MODEL_NAME')):
         
         self._cache = cache
-        self._db = db
+        self._db = db #TODO change to Database()
         self._inference_job_id = inference_job_id
         self._trial_id = trial_id
         self._model_name = model_name
-        self._load_model(trial_id, model_name)
+        self._load_model(trial_id)
         self._add_id()
 
     def _load_model(self, trial_id):
@@ -73,3 +74,8 @@ class InferenceWorker(object):
                     request_id = '{}_{}'.format(id, self._worker_id)
                     self._cache.append_list(request_id, prediction)
             time.sleep(INFERENCE_WORKER_SLEEP)
+
+    def stop(self):
+        queue_key = '{}_{}'.format(REQUEST_QUEUE, self._worker_id)
+        self._cache.delete_list_value(RUNNING_INFERENCE_WORKERS, self._worker_id)
+        self._cache.delete(queue_key)
