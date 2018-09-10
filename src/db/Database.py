@@ -49,12 +49,12 @@ class Database(object):
     # Train Jobs
     ####################################
 
-    def create_train_job(self, user_id, app_name, 
+    def create_train_job(self, user_id, app, 
         app_version, task, train_dataset_uri, test_dataset_uri,
         budget_type, budget_amount):
         train_job = TrainJob(
             user_id=user_id,
-            app_name=app_name,
+            app=app,
             app_version=app_version,
             task=task,
             train_dataset_uri=train_dataset_uri,
@@ -71,10 +71,10 @@ class Database(object):
 
         return train_jobs
 
-    def get_train_jobs_by_app(self, app_name):
+    def get_train_jobs_of_app(self, app):
         train_jobs = self._session.query(TrainJob) \
-            .filter(TrainJob.app_name == app_name) \
-            .order_by(TrainJob.datetime_started.desc()).all()
+            .filter(TrainJob.app == app) \
+            .order_by(TrainJob.app_version.desc()).all()
 
         return train_jobs
 
@@ -92,17 +92,17 @@ class Database(object):
     # Inference Jobs
     ####################################
     
-    def create_inference_job(self, user_id, app_name):
+    def create_inference_job(self, user_id, app):
         inference_job = InferenceJob(
             user_id=user_id,
-            app_name=app_name
+            app=app
         )
         self._session.add(inference_job)
         return inference_job
 
-    def get_inference_jobs_by_app(self, app_name):
+    def get_inference_jobs_of_app(self, app):
         inference_jobs = self._session.query(InferenceJob) \
-            .filter(InferenceJob.app_name == app_name) \
+            .filter(InferenceJob.app == app) \
             .order_by(InferenceJob.datetime_started.desc()).all()
 
         return inference_jobs
@@ -139,7 +139,7 @@ class Database(object):
         self._session.add(worker)
         return worker
 
-    def get_train_job_workers_by_train_job(self, train_job_id):
+    def get_workers_of_train_job(self, train_job_id):
         workers = self._session.query(TrainJobWorker) \
             .filter(TrainJobWorker.train_job_id == train_job_id).all()
         return workers
@@ -152,18 +152,18 @@ class Database(object):
     # Models
     ####################################
 
-    def create_model(self, user_id, name, task, model_serialized, docker_image_name):
+    def create_model(self, user_id, name, task, model_serialized, docker_image):
         model = Model(
             user_id=user_id,
             name=name,
             task=task,
             model_serialized=model_serialized,
-            docker_image_name=docker_image_name
+            docker_image=docker_image
         )
         self._session.add(model)
         return model
 
-    def get_models_by_task(self, task):
+    def get_models_of_task(self, task):
         models = self._session.query(Model) \
             .filter(Model.task == task).all()
 
@@ -199,25 +199,25 @@ class Database(object):
 
         return trial
 
-    def get_best_trials_by_app(self, app_name, max_count=3):
+    def get_best_trials_of_app(self, app, max_count=3):
         trials = self._session.query(Trial) \
             .join(TrainJob, Trial.train_job_id == TrainJob.id) \
-            .filter(TrainJob.app_name == app_name) \
+            .filter(TrainJob.app == app) \
             .filter(Trial.status == TrainJobStatus.COMPLETED) \
             .order_by(Trial.score.desc()) \
             .limit(max_count).all()
 
         return trials
 
-    def get_trials_by_app(self, app_name):
+    def get_trials_of_app(self, app):
         trials = self._session.query(Trial) \
             .join(TrainJob, Trial.train_job_id == TrainJob.id) \
-            .filter(TrainJob.app_name == app_name) \
+            .filter(TrainJob.app == app) \
             .order_by(Trial.datetime_started.desc())
 
         return trials
 
-    def get_trials_by_train_job(self, train_job_id):
+    def get_trials_of_train_job(self, train_job_id):
         trials = self._session.query(Trial) \
             .join(TrainJob, Trial.train_job_id == TrainJob.id) \
             .filter(TrainJob.id == train_job_id) \
@@ -225,7 +225,7 @@ class Database(object):
 
         return trials
 
-    def get_completed_trials_by_train_job(self, train_job_id):
+    def get_completed_trials_of_train_job(self, train_job_id):
         trials = self._session.query(Trial) \
             .filter(Trial.status == TrainJobStatus.COMPLETED) \
             .filter(Trial.train_job_id == train_job_id).all()

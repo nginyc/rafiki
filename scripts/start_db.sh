@@ -1,6 +1,6 @@
 MODULE_NAME=rafiki_db
 
-docker build -t $MODULE_NAME -f ./deploy/db.Dockerfile $PWD
+docker build -t $MODULE_NAME -f ./dockerfiles/db.Dockerfile $PWD
 docker run --name $MODULE_NAME \
   --network $DOCKER_NETWORK \
   -e POSTGRES_HOST=$POSTGRES_HOST \

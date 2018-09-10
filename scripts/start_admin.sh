@@ -1,6 +1,6 @@
 MODULE_NAME=rafiki_admin
 
-docker build -t $MODULE_NAME -f ./deploy/admin.Dockerfile $PWD
+docker build -t $MODULE_NAME -f ./dockerfiles/admin.Dockerfile $PWD
 docker run --rm --name $MODULE_NAME \
   --network $DOCKER_NETWORK \
   -e ADMIN_PORT= $ADMIN_PORT \

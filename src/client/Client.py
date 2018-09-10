@@ -41,7 +41,7 @@ class Client(object):
     # Models
     ####################################
 
-    def create_model(self, name, task, model_inst):
+    def create_model(self, name, task, model_inst, docker_image=None):
         model_serialized = serialize_model(model_inst)
         data = self._post(
             '/models', 
@@ -50,7 +50,8 @@ class Client(object):
             },
             form_data={
                 'name': name,
-                'task': task
+                'task': task,
+                'docker_image': docker_image
             }
         )
         return data
@@ -59,7 +60,7 @@ class Client(object):
         data = self._get('/models')
         return data
 
-    def get_models_by_task(self, task):
+    def get_models_of_task(self, task):
         data = self._get('/models', params={
             'task': task
         })
@@ -70,15 +71,15 @@ class Client(object):
     ####################################
     
     def create_train_job(self, 
-                        app_name, 
+                        app, 
                         task, 
                         train_dataset_uri,
                         test_dataset_uri, 
-                        budget_type=BudgetType.TRIAL_COUNT, 
+                        budget_type=BudgetType.MODEL_TRIAL_COUNT, 
                         budget_amount=10):
 
         data = self._post('/train_jobs', form_data={
-            'app_name': app_name,
+            'app': app,
             'task': task,
             'train_dataset_uri': train_dataset_uri,
             'test_dataset_uri': test_dataset_uri,
@@ -87,11 +88,25 @@ class Client(object):
         })
         return data
     
-    def get_train_jobs(self, app_name):
+    def get_train_jobs_of_app(self, app):
         data = self._get('/train_jobs', params={
-            'app_name': app_name
+            'app': app
         })
         return data
+
+    # Returns train job with the latest app version by default
+    def get_train_job_of_app(self, app, app_version=-1):
+        train_jobs = self.get_train_jobs_of_app(app)
+
+        if app_version == -1:
+            app_version = max([x.get('app_version') for x in train_jobs], default=None)
+
+        train_job = next((x for x in train_jobs if x.get('app_version') == app_version), None)
+        
+        if train_job is None:
+            return None
+
+        return self.get_train_job(train_job.get('id'))
 
     # Additionally returns a train job's models & workers' details
     def get_train_job(self, train_job_id):
@@ -116,18 +131,18 @@ class Client(object):
     ####################################
     
     # Returns only completed trials ordered by highest scores
-    def get_best_trials_by_app(self, app_name, max_count=3):
+    def get_best_trials_of_app(self, app, max_count=3):
         data = self._get('/trials', params={
-            'app_name': app_name,
+            'app': app,
             'type': 'best',
             'max_count': max_count
         })
         return data
 
     # Returns all trials ordered from most recently started
-    def get_trials_by_app(self, app_name):
+    def get_trials_of_app(self, app):
         data = self._get('/trials', params={
-            'app_name': app_name
+            'app': app
         })
         return data
 

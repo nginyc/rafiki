@@ -36,11 +36,11 @@ export POSTGRES_PASSWORD=rafiki
 export PYTHONPATH=$PWD/src
 export APP_SECRET=rafiki
 export DOCKER_NETWORK=rafiki
-export LOGS_FOLDER_PATH=/private/var/log/rafiki
-export QFE_PORT=8001
-export REDIS_HOST=qfe_cache
-export REDIS_PORT=6379
-export REBROW_PORT=5001
+export LOGS_FOLDER_PATH=/var/log/rafiki
+export ADMIN_HOST=rafiki_admin
+export ADMIN_PORT=8000
+export SUPERADMIN_EMAIL=superadmin@rafiki
+export SUPERADMIN_PASSWORD=rafiki
 ```
 
 Setup the Rafiki logs directory by creating the directory `/var/log/rafiki/` and ensuring Docker has the permissions to mount it onto containers:
@@ -68,20 +68,7 @@ Additionally, build the base Rafiki worker image in Docker:
 
 ```sh
 source .env.sh
-bash scripts/build_worker_image.sh
-```
-
-Start the cache in terminal 3:
-
-```sh
-source .env.sh
-bash scripts/start_cache
-```
-
-Start the Query Frontend (QFE) in terminal 4:
-```sh
-source .env.sh
-bash scripts/start_qfe.sh
+bash scripts/build_model_image.sh
 ```
 
 ## Using Rafiki
@@ -162,18 +149,18 @@ Creating a train job:
 ```py
 admin.create_train_job(
     user_id=user['id'],
-    app_name='fashion_mnist_app',
+    app='fashion_mnist_app',
     task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
     train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
     test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test'
 )
-admin.get_train_jobs(app_name='fashion_mnist_app')
+admin.get_train_jobs(app='fashion_mnist_app')
 ```
 
 As the worker generates trials, checking on the completed trials of the train job:
 
 ```sh
-admin.get_trials_by_train_job(train_job_id=<train_job_id>)
+admin.get_trials_of_train_job(train_job_id=<train_job_id>)
 ```
 
 ## Troubleshooting

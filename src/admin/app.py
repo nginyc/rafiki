@@ -57,9 +57,9 @@ def create_train_job(auth):
 
 @app.route('/train_jobs', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_train_jobs(auth):
+def get_train_jobs_of_app(auth):
     params = get_request_params()
-    return jsonify(admin.get_train_jobs(**params))
+    return jsonify(admin.get_train_jobs_of_app(**params))
 
 @app.route('/train_jobs/<train_job_id>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
@@ -95,9 +95,9 @@ def create_inference_jobs(auth):
 
 @app.route('/inference_jobs', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_inference_jobs(auth, app_name):
+def get_inference_jobs(auth, app):
     params = get_request_params()
-    return jsonify(admin.get_inference_jobs(app_name, **params))
+    return jsonify(admin.get_inference_jobs(app, **params))
 
 ####################################
 # Trials
@@ -105,7 +105,7 @@ def get_inference_jobs(auth, app_name):
 
 @app.route('/trials', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_trials_by_app(auth):
+def get_trials_of_app(auth):
     params = get_request_params()
 
     # Return best trials by app
@@ -115,18 +115,18 @@ def get_trials_by_app(auth):
         if 'max_count' in params:
             params['max_count'] = int(params['max_count'])
 
-        return jsonify(admin.get_best_trials_by_app(**params))
+        return jsonify(admin.get_best_trials_of_app(**params))
     
     # Return all trials by app
     else:
-        return jsonify(admin.get_trials_by_app(**params))
+        return jsonify(admin.get_trials_of_app(**params))
 
 
 @app.route('/train_job/<train_job_id>/trials', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_trials_by_train_job(auth, train_job_id):
+def get_trials_of_train_job(auth, train_job_id):
     params = get_request_params()
-    return jsonify(admin.get_trials_by_train_job(train_job_id, **params))
+    return jsonify(admin.get_trials_of_train_job(train_job_id, **params))
 
     
 @app.route('/trials/<trial_id>/predict', methods=['POST'])
@@ -155,7 +155,7 @@ def get_models(auth):
 
     # Return models by task
     if params.get('task') is not None:
-        return jsonify(admin.get_models_by_task(**params))
+        return jsonify(admin.get_models_of_task(**params))
     
     # Return all models
     else:

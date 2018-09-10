@@ -28,8 +28,8 @@ def show_first_image(images):
 
 admin = Admin()
 
-trials = admin.get_best_trials_by_app(
-    app_name='fashion_mnist_app',
+trials = admin.get_best_trials_of_app(
+    app='fashion_mnist_app',
     max_count=1
 )
 if len(trials) == 0:
