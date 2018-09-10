@@ -78,7 +78,19 @@ source .env.sh
 bash scripts/start_cache
 ```
 
-Start the Query Frontend (QFE) in terminal 4:
+Start inference worker 1 in terminal 4:
+```sh
+source .env.sh
+bash scripts/start_inference_worker.sh inference_worker_1 1 1 VGG16
+```
+
+Start inference worker 2 in terminal 5:
+```sh
+source .env.sh
+bash scripts/start_inference_worker.sh inference_worker_2 1 2 InceptionV3
+```
+
+Start the Query Frontend (QFE) in terminal 6:
 ```sh
 source .env.sh
 bash scripts/start_qfe.sh

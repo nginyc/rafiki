@@ -17,6 +17,9 @@ class Cache(object):
 
     def append_list(self, key, value):
         self._redis.rpush(key, value)
+
+    def append_list_seq(self, key, seq):
+        self._redis.rpush(key, *seq)
     
     def get_list_range(self, key, start, stop):
         return self._redis.lrange(key, start, stop)

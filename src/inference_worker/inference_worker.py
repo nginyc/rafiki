@@ -6,6 +6,7 @@ import time
 import uuid
 import random
 import os
+import ast
 
 #TODO: For testing only. remove when not needed.
 class Model(object):
@@ -17,8 +18,9 @@ class Model(object):
     def predict(self, queries):
         result = []
         for query in queries:
-            digit = random.choice([0, 1, 2, 3, 4, 5, 6, 7, 8 ,9])
-            result.append([str(digit)])
+            digit1 = random.choice([0, 1, 2, 3, 4, 5, 6, 7, 8 ,9])
+            digit2 = random.choice([0, 1, 2, 3, 4, 5, 6, 7, 8 ,9])
+            result.append([str(digit1), str(digit2)])
         return result
 
 class InferenceWorker(object):
@@ -61,6 +63,7 @@ class InferenceWorker(object):
             queries = None
 
             for request in requests:
+                request = ast.literal_eval(request.decode())
                 if queries is None:
                     queries = request['query']
                 else:
@@ -72,7 +75,7 @@ class InferenceWorker(object):
                 self._cache.trim_list(queue_key, len(ids), -1)
                 for (id, prediction) in zip(ids, predictions):
                     request_id = '{}_{}'.format(id, self._worker_id)
-                    self._cache.append_list(request_id, prediction)
+                    self._cache.append_list_seq(request_id, prediction)
             time.sleep(INFERENCE_WORKER_SLEEP)
 
     def stop(self):
