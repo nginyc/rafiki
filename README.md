@@ -36,6 +36,10 @@ export PYTHONPATH=$PWD/src
 export APP_SECRET=rafiki
 export DOCKER_NETWORK=rafiki
 export LOGS_FOLDER_PATH=/var/log/rafiki
+export ADMIN_HOST=rafiki_admin
+export ADMIN_PORT=8000
+export SUPERADMIN_EMAIL=superadmin@rafiki
+export SUPERADMIN_PASSWORD=rafiki
 ```
 
 Setup the Rafiki logs directory by creating the directory `/var/log/rafiki/` and ensuring Docker has the permissions to mount it onto containers:
