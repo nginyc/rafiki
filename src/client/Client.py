@@ -75,7 +75,7 @@ class Client(object):
                         task, 
                         train_dataset_uri,
                         test_dataset_uri, 
-                        budget_type=BudgetType.TRIAL_COUNT, 
+                        budget_type=BudgetType.MODEL_TRIAL_COUNT, 
                         budget_amount=10):
 
         data = self._post('/train_jobs', form_data={

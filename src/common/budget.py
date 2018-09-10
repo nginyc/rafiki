@@ -1,2 +1,2 @@
 class BudgetType():
-    TRIAL_COUNT = 'TRIAL_COUNT'
+    MODEL_TRIAL_COUNT = 'MODEL_TRIAL_COUNT'
