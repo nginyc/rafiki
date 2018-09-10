@@ -20,7 +20,7 @@ def index():
 ####################################
 
 @app.route('/users', methods=['POST'])
-@auth([UserType.ADMIN])
+@auth([UserType.SUPERADMIN, UserType.ADMIN])
 def create_user(auth):
     params = get_request_params()
     return jsonify(admin.create_user(**params))
@@ -66,6 +66,22 @@ def get_train_jobs(auth):
 def get_train_job(auth, train_job_id):
     params = get_request_params()
     return jsonify(admin.get_train_job(train_job_id, **params))
+
+@app.route('/train_jobs/<train_job_id>/stop', methods=['POST'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
+def stop_train_job(auth, train_job_id):
+    params = get_request_params()
+    return jsonify(admin.stop_train_job(train_job_id, **params))
+
+####################################
+# Train Job Workers
+####################################
+
+@app.route('/train_job_workers/<worker_id>/stop', methods=['POST'])
+@auth([UserType.SUPERADMIN])
+def stop_train_job_worker(auth, worker_id):
+    params = get_request_params()
+    return jsonify(admin.stop_train_job_worker(worker_id, **params))
 
 ####################################
 # Inference Jobs

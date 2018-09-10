@@ -1,6 +1,6 @@
 class TrainJobStatus():
     STARTED = 'STARTED'
-    ERRORED = 'ERRORED'
+    STOPPED = 'STOPPED'
     COMPLETED = 'COMPLETED'
 
 
@@ -9,7 +9,8 @@ class TrialStatus():
     ERRORED = 'ERRORED'
     COMPLETED = 'COMPLETED'
 
+
 class TrainJobWorkerStatus():
     STARTED = 'STARTED'
     RUNNING = 'RUNNING'
-    ERRORED = 'ERRORED'
+    STOPPED = 'STOPPED'

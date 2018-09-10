@@ -18,7 +18,6 @@ class TrainJob(Base):
     budget_type = Column(String, nullable=False)
     budget_amount = Column(Integer, nullable=False)
     status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
-    state_serialized = Column(Binary)
-    datetime_completed = Column(DateTime, default=None)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
+    datetime_completed = Column(DateTime, default=None)
 

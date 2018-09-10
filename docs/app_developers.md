@@ -66,7 +66,7 @@ client.get_train_jobs(app_name='fashion_mnist_app')
 [{'app_name': 'fashion_mnist_app',
   'app_version': 1,
   'budget_amount': 10,
-  'budget_type': 'TRIAL_COUNT',
+  'budget_type': 'MODEL_TRIAL_COUNT',
   'datetime_completed': None,
   'datetime_started': 'Thu, 06 Sep 2018 04:48:58 GMT',
   'id': 'd6a00b3a-317d-4804-ae1f-9a7d0e57d75f',
@@ -86,7 +86,7 @@ client.get_train_job(train_job_id=<train_job_id>)
 [{'app_name': 'fashion_mnist_app',
   'app_version': 1,
   'budget_amount': 10,
-  'budget_type': 'TRIAL_COUNT',
+  'budget_type': 'MODEL_TRIAL_COUNT',
   'datetime_completed': None,
   'datetime_started': 'Thu, 06 Sep 2018 04:48:58 GMT',
   'id': 'd6a00b3a-317d-4804-ae1f-9a7d0e57d75f',
@@ -142,4 +142,10 @@ Viewing all trials of an app:
 
 ```py
 client.get_trials_by_app(app_name='fashion_mnist_app')
+```
+
+Stopping a train job prematurely:
+
+```py
+client.stop_train_job(train_job_id=<train_job_id>)
 ```

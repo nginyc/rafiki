@@ -196,7 +196,7 @@
 					"formdata": [
 						{
 							"key": "budget_type",
-							"value": "TRIAL_COUNT",
+							"value": "MODEL_TRIAL_COUNT",
 							"description": "",
 							"type": "text"
 						},

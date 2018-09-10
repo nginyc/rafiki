@@ -5,8 +5,9 @@ from common import BudgetType
 from model import serialize_model
 
 class Client(object):
-    def __init__(self, admin_host='http://localhost:8000'):
+    def __init__(self, admin_host='localhost', admin_port=8000):
         self._admin_host = admin_host
+        self._admin_port = admin_port
         self._token = None
 
     def login(self, email, password):
@@ -74,7 +75,7 @@ class Client(object):
                         task, 
                         train_dataset_uri,
                         test_dataset_uri, 
-                        budget_type=BudgetType.TRIAL_COUNT, 
+                        budget_type=BudgetType.MODEL_TRIAL_COUNT, 
                         budget_amount=10):
 
         data = self._post('/train_jobs', form_data={
@@ -96,6 +97,19 @@ class Client(object):
     # Additionally returns a train job's models & workers' details
     def get_train_job(self, train_job_id):
         data = self._get('/train_jobs/{}'.format(train_job_id))
+        return data
+
+    def stop_train_job(self, train_job_id):
+        data = self._post('/train_jobs/{}/stop'.format(train_job_id))
+        return data
+
+    ####################################
+    # Train Job Workers
+    ####################################
+
+    # Only for train job workers
+    def stop_train_job_worker(self, worker_id):
+        data = self._post('/train_job_workers/{}/stop'.format(worker_id))
         return data
 
     ####################################
@@ -123,7 +137,7 @@ class Client(object):
     ####################################
 
     def _get(self, path, params={}):
-        url = self._admin_host + path
+        url = 'http://{}:{}{}'.format(self._admin_host, self._admin_port, path)
         headers = self._get_headers()
         res = requests.get(
             url,
@@ -133,7 +147,7 @@ class Client(object):
         return self._parse_response(res)
 
     def _post(self, path, params={}, files={}, form_data={}):
-        url = self._admin_host + path
+        url = 'http://{}:{}{}'.format(self._admin_host, self._admin_port, path)
         headers = self._get_headers()
         res = requests.post(
             url, 

@@ -20,14 +20,22 @@ Logging in:
 ```py
 from client import Client
 client = Client()
-client.login(email='admin@rafiki', password='rafiki')
+client.login(email='superadmin@rafiki', password='rafiki')
 ```
 
 ```py
-{'user_id': 'e6078ff2-2257-4147-85a6-14a2d7730a8b', 'user_type': 'ADMIN'}
+{'user_id': '36641447-1105-4fd4-9797-377bd71cf561', 'user_type': 'SUPERADMIN'}
 ```
 
 Creating users:
+
+```py
+client.create_user(
+    email='admin@rafiki',
+    password='rafiki',
+    user_type='ADMIN'
+)
+```
 
 ```py
 client.create_user(
@@ -37,18 +45,10 @@ client.create_user(
 )
 ```
 
-```sh
-{'id': 'eb273359-c74b-492b-80af-b9ea47ca959a'}
-```
-
 ```py
 client.create_user(
     email='model_developer@rafiki',
     password='rafiki',
     user_type='MODEL_DEVELOPER'
 )
-```
-
-```sh
-{'id': 'a8959685-6667-41d5-8f91-b195fda27f91'}
 ```
