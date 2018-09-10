@@ -22,6 +22,8 @@ COPY src/worker/ worker/
 COPY src/client/ client/
 COPY src/cache cache/
 COPY src/inference_worker inference_worker/
+COPY src/__init__.py __init__.py 
+COPY src/config.py config.py
 
 # Copy init script
 COPY scripts/start_worker.py start_worker.py

@@ -21,14 +21,17 @@ class Cache(object):
     def get_list_range(self, key, start, stop):
         return self._redis.lrange(key, start, stop)
 
+    def trim_list(self, key, start, stop):
+        self._redis.ltrim(key, start, stop)
+
     def get(self, key):
         return self._redis.get(key)
 
     def set(self, key, value):
-        return self._redis.set(key, value)
+        self._redis.set(key, value)
 
     def delete(self, key):
-        return self._redis.delete(key)
+        self._redis.delete(key)
 
     def _make_connection_url(self, host, port):
         return 'redis://{}:{}'.format(host, port)

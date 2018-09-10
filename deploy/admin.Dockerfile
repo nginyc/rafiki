@@ -15,6 +15,8 @@ COPY src/db/ db/
 COPY src/common/ common/
 COPY src/model/ model/
 COPY src/admin/ admin/
+COPY src/__init__.py __init__.py 
+COPY src/config.py config.py
 
 # Copy init script
 COPY scripts/start_admin.py start_admin.py

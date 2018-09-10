@@ -1,12 +1,12 @@
 import numpy as np
 from db import Database
 from cache import Cache
-from common import RUNNING_INFERENCE_WORKERS, REQUEST_QUEUE, INFERENCE_WORKER_SLEEP, BATCH_SIZE
+from config import RUNNING_INFERENCE_WORKERS, REQUEST_QUEUE, INFERENCE_WORKER_SLEEP, BATCH_SIZE
 import time
 import uuid
 import random
 
-# For testing only
+#TODO: For testing only. remove when not needed.
 class Model(object):
 
     def __init__(self): pass
@@ -22,42 +22,54 @@ class Model(object):
 
 class InferenceWorker(object):
 
-    #TODO: remove model_name
-    def __init__(self, cache=Cache(), db=Database(), trial_id=1, model_name=os.getenv('MODEL_NAME')):
+    def __init__(self, 
+        cache=Cache(), 
+        db=Database(), 
+        inference_job_id=os.getenv('INFERENCE_JOB_ID')
+        trial_id=os.getenv('TRIAL_ID'), 
+        model_name=os.getenv('MODEL_NAME')):
+        
         self._cache = cache
         self._db = db
+        self._inference_job_id = inference_job_id
+        self._trial_id = trial_id
+        self._model_name = model_name
         self._load_model(trial_id, model_name)
         self._add_id()
 
-    def _load_model(self, trial_id, model_name):
+    def _load_model(self, trial_id):
         #TODO: load model from db and unserialize it.
         # self._model = model (required)
-        # self._model_name = model_name (required)
         self._model = Model()
-        self._model_name = model_name
 
     def _add_id(self):
         self._id = str(uuid.uuid4())
-        self._cache.append_list(RUNNING_INFERENCE_WORKERS, '{}_{}'.format(self._model_name, self._id))
+        self._worker_id = '{}_{}_{}_{}'.format(
+            self._inference_job_id,
+            self._trial_id,
+            self._model_name,
+            self._id
+        )
+        self._cache.append_list(RUNNING_INFERENCE_WORKERS, self._worker_id)
 
     def start(self):
-        queue_key = '{}_{}_{}'.format(REQUEST_QUEUE, self._model_name, self._id)
+        queue_key = '{}_{}'.format(REQUEST_QUEUE, self._worker_id)
         while True:
             requests = self._cache.get_list_range(queue_key, 0, BATCH_SIZE - 1)
             ids = []
-            inputs = None
+            queries = None
 
             for request in requests:
-                if inputs is None:
-                    inputs = request['input']
+                if queries is None:
+                    queries = request['query']
                 else:
-                    inputs = np.vstack([inputs, request['input']])
+                    queries = np.vstack([queries, request['query']])
                 ids.append(request['id'])
             
             if len(ids) > 0:
-                predictions = self._model.predict(inputs)
+                predictions = self._model.predict(queries)
+                self._cache.trim_list(queue_key, len(ids), -1)
                 for (id, prediction) in zip(ids, predictions):
-                    self._cache.append_list(id, prediction)
-
+                    request_id = '{}_{}'.format(id, self._worker_id)
+                    self._cache.append_list(request_id, prediction)
             time.sleep(INFERENCE_WORKER_SLEEP)
-

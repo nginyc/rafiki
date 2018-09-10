@@ -11,7 +11,8 @@ RUN pip install -r qfe/requirements.txt
 
 COPY src/qfe/ qfe/
 COPY src/cache cache/
-COPY src/common common/
+COPY src/__init__.py __init__.py 
+COPY src/config.py config.py
 
 # Copy init script
 COPY scripts/start_qfe.py start_qfe.py

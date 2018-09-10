@@ -1,5 +1,5 @@
 from cache import Cache
-from common import RUNNING_INFERENCE_WORKERS, REQUEST_QUEUE, QFE_SLEEP
+from config import RUNNING_INFERENCE_WORKERS, REQUEST_QUEUE, QFE_SLEEP
 import uuid
 import time
 import json
@@ -31,10 +31,12 @@ class QueryFrontend(object):
                 prediction = self._cache.get(unresponded_id)
                 if prediction is not None:
                     response_ids.add(unresponded_id)
-                    request_id, model_name, inference_worker_id = unresponded_id.split('_')
+                    keys = unresponded_id.split('_')
                     prediction = { 
-                        'model': model_name,
-                        'inference_worker_id': inference_worker_id,
+                        'inference_job_id': keys[1],
+                        'trial_id': keys[2]
+                        'model_name': keys[3],
+                        'inference_worker_id': keys[4],
                         'prediction': prediction
                     }
                     responses['responses'].append(prediction)
