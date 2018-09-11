@@ -16,7 +16,7 @@ class DockerSwarmContainerManager(ContainerManager):
         self._network = network
         self._client = docker.from_env()
 
-    def create_service(self, service_name, image_name, replicas, 
+    def create_service(self, service_name, docker_image, replicas, 
         args, environment_vars, mounts={}):
         env = [
             '{}={}'.format(k, v)
@@ -29,7 +29,7 @@ class DockerSwarmContainerManager(ContainerManager):
         ]
 
         service = self._client.services.create(
-            image=image_name,
+            image=docker_image,
             args=args,
             networks=[self._network],
             name=service_name,
@@ -48,7 +48,7 @@ class DockerSwarmContainerManager(ContainerManager):
         service_id = service.id
 
         logger.info('Created service of ID {} (name: "{}") of {} x {} replicas' \
-            .format(service_id, service_name, image_name, replicas))
+            .format(service_id, service_name, docker_image, replicas))
 
         return service_id
 

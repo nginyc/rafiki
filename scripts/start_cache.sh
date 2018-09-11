@@ -1,6 +1,6 @@
-MODULE_NAME=qfe_cache
+MODULE_NAME=rafiki_cache
 
-docker build -t $MODULE_NAME -f ./deploy/cache.Dockerfile $PWD
+docker build -t $MODULE_NAME -f ./dockerfiles/cache.Dockerfile $PWD
 docker run --name $MODULE_NAME \
   --network $DOCKER_NETWORK \
   -e REDIS_HOST=$REDIS_HOST \

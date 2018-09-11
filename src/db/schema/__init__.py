@@ -4,4 +4,6 @@ from .Trial import Trial
 from .Model import Model
 from .User import User
 from .Base import Base
-from .TrainJobWorker import TrainJobWorker
+from .TrainJobService import TrainJobService
+from .Service import Service
+from .Worker import Worker

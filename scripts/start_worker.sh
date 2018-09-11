@@ -1,11 +1,11 @@
-IMAGE_NAME=rafiki_model
+IMAGE_NAME=rafiki_worker
 
 usage()  {
-  echo "Usage: $0 <service_name> <worker_id>"
+  echo "Usage: $0 <service_name> <service_id>"
   exit 1
 }
 
-if [ $# -ne 2 ] ; then
+if [ $# -ne 3 ] ; then
     usage
 fi
 

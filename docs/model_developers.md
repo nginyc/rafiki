@@ -29,11 +29,19 @@ client.login(email='model_developer@rafiki', password='rafiki')
 
 Creating models:
 
-Most likely, you'll be using a deep learning framework e.g. Tensorflow to build your model. You might want to build a custom Docker image for the model training & inference. This Docker image has to extend `rafiki_model`.
+Most likely, you'll be using a deep learning framework e.g. Tensorflow to build your model. The base Rafiki worker image has the following python libraries pre-installed:
+
+```txt
+tensorflow==1.10.1
+h5py==2.8.0
+```
+
+You might want to build a custom Docker image for the model training & inference. This Docker image has to extend `rafiki_worker`. An example is available at `./src/model/dockerfiles/TensorflowModel.Dockerfile`.
+
+Run
 
 ```sh
 pip install tensorflow==1.10.1 h5py==2.8.0
-bash src/model/scripts/build_tensorflow_worker_image.sh
 ```
 
 ```python
@@ -43,7 +51,7 @@ client.create_model(
     name='single_hidden_layer_tf',
     task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
     model_inst=model_inst,
-    docker_image='rafiki_tf_model'
+    docker_image='rafiki_worker'
 )
 ```
 
@@ -59,7 +67,7 @@ client.get_models()
 
 ```sh
 [{'datetime_created': 'Thu, 06 Sep 2018 04:38:48 GMT',
-  'docker_image': 'rafiki_model',
+  'docker_image': 'rafiki_worker',
   'name': 'single_hidden_layer_tf',
   'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
   'user_id': 'a8959685-6667-41d5-8f91-b195fda27f91'}]

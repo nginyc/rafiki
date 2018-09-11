@@ -117,13 +117,9 @@ class Client(object):
         data = self._post('/train_jobs/{}/stop'.format(train_job_id))
         return data
 
-    ####################################
-    # Train Job Workers
-    ####################################
-
-    # Only for train job workers
-    def stop_train_job_worker(self, worker_id):
-        data = self._post('/train_job_workers/{}/stop'.format(worker_id))
+    # Only for internal use
+    def stop_train_job_service(self, service_id):
+        data = self._post('/train_job_services/{}/stop'.format(service_id))
         return data
 
     ####################################

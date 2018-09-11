@@ -41,6 +41,9 @@ export ADMIN_HOST=rafiki_admin
 export ADMIN_PORT=8000
 export SUPERADMIN_EMAIL=superadmin@rafiki
 export SUPERADMIN_PASSWORD=rafiki
+export REDIS_HOST=rafiki_cache
+export REDIS_PORT=6379
+export REBROW_PORT=5001
 ```
 
 Setup the Rafiki logs directory by creating the directory `/var/log/rafiki/` and ensuring Docker has the permissions to mount it onto containers:
@@ -64,11 +67,18 @@ source .env.sh
 bash scripts/start_admin.sh
 ```
 
+Start the Rafiki Cache in terminal 3:
+
+```sh
+source .env.sh
+bash scripts/start_cache.sh
+```
+
 Additionally, build the base Rafiki worker image in Docker:
 
 ```sh
 source .env.sh
-bash scripts/build_model_image.sh
+bash scripts/build_worker_image.sh
 ```
 
 ## Using Rafiki
@@ -179,6 +189,20 @@ POSTGRES_PORT=5433
 POSTGRES_USER=rafiki
 POSTGRES_DB=rafiki
 POSTGRES_PASSWORD=rafiki
+```
+
+Next, you can connect to Redis with *rebrow*:
+
+```sh
+source .env.sh
+bash scripts/start_rebrow.sh
+```
+
+...with these credentials by default:
+
+```sh
+REDIS_HOST=rafiki_cache
+REDIS_PORT=6379
 ```
 
 When running the whole stack locally, if you encounter an error like "No space left on device", you might be running out of space allocated for Docker. Try removing all containers & images:

@@ -3,10 +3,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import os
 
-from common import TrainJobStatus, TrialStatus, TrainJobWorkerStatus
+from common import TrainJobStatus, TrialStatus, WorkerStatus, ServiceStatus
 
-from .schema import Base, TrainJob, TrainJobWorker, \
-    InferenceJob, Trial, Model, User
+from .schema import Base, TrainJob, TrainJobService, \
+    InferenceJob, Trial, Model, User, Service, Worker
 
 class Database(object):
     def __init__(self, 
@@ -65,6 +65,24 @@ class Database(object):
         self._session.add(train_job)
         return train_job
 
+    def create_train_job_service(self, service_id, train_job_id, model_id):
+        train_job_service = TrainJobService(
+            train_job_id=train_job_id,
+            model_id=model_id,
+            service_id=service_id
+        )
+        self._session.add(train_job_service)
+        return train_job_service
+
+    def get_train_job_service(self, service_id):
+        train_job_service = self._session.query(TrainJobService).get(service_id)
+        return train_job_service
+
+    def get_services_of_train_job(self, train_job_id):
+        workers = self._session.query(TrainJobService) \
+            .filter(TrainJobService.train_job_id == train_job_id).all()
+        return workers
+
     def get_uncompleted_train_jobs(self):
         train_jobs = self._session.query(TrainJob) \
             .filter(TrainJob.status == TrainJobStatus.STARTED).all()
@@ -108,44 +126,68 @@ class Database(object):
         return inference_jobs
 
     ####################################
-    # Train Job Workers
+    # Services
     ####################################
 
-    def create_train_job_worker(self, train_job_id, model_id):
-        worker = TrainJobWorker(
-            train_job_id=train_job_id,
-            model_id=model_id
+    def create_service(self, service_type, container_manager_type, 
+                        docker_image):
+        service = Service(
+            service_type=service_type,
+            docker_image=docker_image,
+            container_manager_type=container_manager_type
+        )
+        self._session.add(service)
+        return service
+
+    def mark_service_as_running(self, service, container_service_id, 
+                                container_service_name, replicas):
+        service.container_service_id = container_service_id
+        service.container_service_name = container_service_name
+        service.status = ServiceStatus.RUNNING
+        service.replicas = replicas
+        self._session.add(service)
+
+    def mark_service_as_errored(self, service):
+        service.status = ServiceStatus.ERRORED
+        self._session.add(service)
+
+    def mark_service_as_stopped(self, service):
+        service.status = ServiceStatus.STOPPED
+        self._session.add(service)
+
+    def get_service(self, service_id):
+        service = self._session.query(Service).get(service_id)
+        return service
+
+    ####################################
+    # Workers
+    ####################################
+
+    def create_worker(self, container_worker_id, service_id):
+        worker = Worker(
+            container_worker_id=container_worker_id,
+            service_id=service_id
         )
         self._session.add(worker)
         return worker
 
-    def update_train_job_worker(self, worker, service_id=None, replicas=None):
-        if service_id is not None:
-            worker.service_id = service_id
-
-        if replicas is not None:
-            worker.replicas = replicas
-
-        self._session.add(worker)
+    def get_worker(self, worker_id):
+        worker = self._session.query(Worker).get(worker_id)
         return worker
 
-    def mark_train_job_worker_as_running(self, worker):
-        worker.status = TrainJobWorkerStatus.RUNNING
-        self._session.add(worker)
-        return worker
-
-    def mark_train_job_worker_as_stopped(self, worker):
-        worker.status = TrainJobWorkerStatus.STOPPED
-        self._session.add(worker)
-        return worker
-
-    def get_workers_of_train_job(self, train_job_id):
-        workers = self._session.query(TrainJobWorker) \
-            .filter(TrainJobWorker.train_job_id == train_job_id).all()
+    def get_workers_of_service(self, service_id):
+        workers = self._session.query(Worker) \
+            .filter(Worker.service_id == service_id).all()
         return workers
 
-    def get_train_job_worker(self, id):
-        worker = self._session.query(TrainJobWorker).get(id)
+    def mark_worker_as_stopped(self, worker):
+        worker.status = WorkerStatus.STOPPED
+        self._session.add(worker)
+        return worker
+
+    def mark_worker_as_errored(self, worker):
+        worker.status = WorkerStatus.ERRORED
+        self._session.add(worker)
         return worker
 
     ####################################

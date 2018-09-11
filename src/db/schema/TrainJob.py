@@ -20,4 +20,3 @@ class TrainJob(Base):
     status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
     datetime_completed = Column(DateTime, default=None)
-

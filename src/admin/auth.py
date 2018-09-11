@@ -4,6 +4,8 @@ import os
 import jwt
 from functools import wraps
 
+from common import UserType
+
 APP_SECRET = os.environ['APP_SECRET']
 
 class UnauthorizedException(Exception): 
@@ -28,6 +30,10 @@ def decode_token(token):
     return payload
 
 def auth(user_types=None):
+
+    # Superadmin can do anything
+    user_types = user_types.append(UserType.SUPERADMIN)
+
     def decorator(f):
         @wraps(f)
         def wrapped(*args, **kwargs):

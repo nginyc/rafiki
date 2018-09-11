@@ -1,12 +1,13 @@
 import numpy as np
 import os
 import logging
+import traceback
 
 from db import Database
 from model import unserialize_model, serialize_model
-from common import TrainJobWorkerStatus, UserType
+from common import ServiceStatus, UserType, ServiceType
 
-from .worker import compute_train_worker_replicas_for_models
+from .train import compute_train_worker_replicas_for_models
 from .containers import DockerSwarmContainerManager 
 from .auth import hash_password, if_hash_matches_password
 
@@ -22,7 +23,7 @@ class InvalidPasswordException(Exception):
     pass
 
 class Admin(object):
-    DEFAULT_MODEL_IMAGE = 'rafiki_model'
+    DEFAULT_MODEL_IMAGE = 'rafiki_worker'
 
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
         self._db = db
@@ -72,9 +73,6 @@ class Admin(object):
         task, train_dataset_uri, test_dataset_uri,
         budget_type, budget_amount):
         
-        train_job_id = None
-        app_version = None
-
         with self._db:
             # Compute auto-incremented app version
             train_jobs = self._db.get_train_jobs_of_app(app)
@@ -95,8 +93,7 @@ class Admin(object):
             train_job_id = train_job.id
             app_version = train_job.app_version
 
-            # Deploy train workers
-            self._deploy_train_job_workers(train_job)
+            self._deploy_train_job_services(train_job)
 
         return {
             'id': train_job_id,
@@ -105,10 +102,10 @@ class Admin(object):
 
     def stop_train_job(self, train_job_id):
         with self._db:
-            # Stop all workers for train job
-            workers = self._db.get_workers_of_train_job(train_job_id)
-            for worker in workers:
-                self._destroy_train_job_worker(worker)
+            # Stop all services for train job
+            train_job_services = self._db.get_services_of_train_job(train_job_id)
+            for train_job_service in train_job_services:
+                self._destroy_train_job_service(train_job_service)
 
         return {
             'id': train_job_id
@@ -117,7 +114,7 @@ class Admin(object):
     def get_train_job(self, train_job_id):
         with self._db:
             train_job = self._db.get_train_job(train_job_id)
-            workers = self._db.get_workers_of_train_job(train_job_id)
+            workers = self._db.get_services_of_train_job(train_job_id)
             models = self._db.get_models_of_task(train_job.task)
             return [
                 {
@@ -167,18 +164,16 @@ class Admin(object):
                 for x in train_jobs
             ]
 
-    ####################################
-    # Train Job Workers
-    ####################################
-
-    def stop_train_job_worker(self, worker_id):
+    def stop_train_job_service(self, service_id):
         with self._db:
-            worker = self._db.get_train_job_worker(worker_id)
-            self._destroy_train_job_worker(worker)
+            train_job_service = self._db.get_train_job_service(service_id)
+            self._destroy_train_job_service(train_job_service)
         
-        return {
-            'id': worker_id
-        }
+            return {
+                'service_id': train_job_service.service_id,
+                'model_id': train_job_service.model_id,
+                'train_job_id': train_job_service.train_job_id
+            }
 
     ####################################
     # Inference Job
@@ -327,66 +322,21 @@ class Admin(object):
             ]
 
     ####################################
-    # Others
+    # Services
     ####################################
 
-    def clear_all_data(self):
-        with self._db:
-            self._db.clear_all_data()
-
-    ####################################
-    # Private Methods
-    ####################################
-
-    def _seed_users(self):
-        logger.info('Seeding users...')
-
-        # Seed superadmin
-        try:
-            self.create_user(
-                email=self._superadmin_email,
-                password=self._superadmin_password,
-                user_type=UserType.SUPERADMIN
-            )
-        except UserExistsException:
-            logger.info('Skipping superadmin creation as it already exists...')
-
-    def _deploy_train_job_workers(self, train_job):
-        workers = self._db.get_workers_of_train_job(train_job.id)
+    def _deploy_train_job_services(self, train_job):
         models = self._db.get_models_of_task(train_job.task)
         model_to_replicas = compute_train_worker_replicas_for_models(models)
 
         for (model, replicas) in model_to_replicas.items():
-            worker = next((x for x in workers if x.model_id == model.id), None)
-            image_name = model.docker_image
-
-            worker = self._db.create_train_job_worker(train_job.id, model.id)
-            self._db.commit()
-
             # Create corresponding service for newly created worker
-            service_id = self._create_service_for_worker(worker.id, image_name, replicas)
-            self._db.update_train_job_worker(worker, service_id=service_id, replicas=replicas)
-            self._db.commit()
+            self._create_train_job_service(train_job, model, replicas)
 
-    def _destroy_train_job_worker(self, worker):
-        if worker.service_id is not None:
-            self._container_manager.destroy_service(worker.service_id)
+        self._update_train_job_status(train_job.id)
 
-        self._db.mark_train_job_worker_as_stopped(worker)
-        self._db.commit()
-
-        # If all workers for the train job has have stopped, stop train job as well
-        workers = self._db.get_workers_of_train_job(worker.train_job_id)
-        if next((
-            x for x in workers 
-            if x.status in [TrainJobWorkerStatus.RUNNING, TrainJobWorkerStatus.STARTED]
-        ), None) is None:
-            train_job = self._db.get_train_job(worker.train_job_id)
-            self._db.mark_train_job_as_complete(train_job)
-
-
-    def _create_service_for_worker(self, worker_id, image_name, replicas):
-        service_name = 'rafiki_train_worker_{}'.format(worker_id)
+    def _create_train_job_service(self, train_job, model, replicas):
+        service_type = ServiceType.TRAIN
         environment_vars = {
             'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
             'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
@@ -400,19 +350,113 @@ class Admin(object):
             'SUPERADMIN_PASSWORD': self._superadmin_password
         }
 
+        service = self._create_service(
+            service_type=service_type,
+            docker_image=model.docker_image,
+            replicas=replicas,
+            environment_vars=environment_vars
+        )
+
+        self._db.create_train_job_service(
+            service_id=service.id,
+            train_job_id=train_job.id,
+            model_id=model.id
+        )
+
+    def _destroy_train_job_service(self, train_job_service):
+        train_job_id = train_job_service.train_job_id
+        service_id = train_job_service.service_id
+
+        service = self._db.get_service(service_id)
+        self._destroy_service(service)
+
+        self._update_train_job_status(train_job_id)
+
+    def _update_train_job_status(self, train_job_id):
+        train_job_services = self._db.get_services_of_train_job(train_job_id)
+        services = [self._db.get_service(x.service_id) for x in train_job_services]
+        
+        # If all services for the train job have stopped, stop train job as well
+        if next((
+            x for x in services 
+            if x.status in [ServiceStatus.RUNNING, ServiceStatus.STARTED]
+        ), None) is None:
+            train_job = self._db.get_train_job(train_job_id)
+            self._db.mark_train_job_as_complete(train_job)
+
+    def _destroy_service(self, service):
+        if service.container_service_id is not None:
+            self._container_manager.destroy_service(service.container_service_id)
+
+        self._db.mark_service_as_stopped(service)
+
+        # Mark its workers as stopped
+        workers = self._db.get_workers_of_service(service.id)
+        for worker in workers:
+            self._db.mark_worker_as_stopped(worker)
+
+        self._db.commit()
+
+    def _create_service(self, service_type, docker_image,
+                        replicas, environment_vars):
         # Mount logs folder onto workers too
         logs_folder_path = os.environ['LOGS_FOLDER_PATH']
         mounts = {
             logs_folder_path: logs_folder_path
         }
+        container_manager_type = type(self._container_manager).__name__
 
-        service_id = self._container_manager.create_service(
-            service_name=service_name, 
-            image_name=image_name, 
-            replicas=replicas, 
-            args=[worker_id], 
-            environment_vars=environment_vars,
-            mounts=mounts
+        service = self._db.create_service(
+            container_manager_type=container_manager_type,
+            service_type=service_type,
+            docker_image=docker_image
         )
-        return service_id
+        self._db.commit()
+
+        try:
+            container_service_name = 'rafiki_service_{}'.format(service.id)
+            container_service_id = self._container_manager.create_service(
+                service_name=container_service_name,
+                docker_image=docker_image, 
+                replicas=replicas, 
+                args=[service.id], # Pass service id to workers
+                environment_vars=environment_vars,
+                mounts=mounts
+            )
+
+            self._db.mark_service_as_running(
+                service,
+                container_service_name=container_service_name,
+                container_service_id=container_service_id,
+                replicas=replicas
+            )
+            self._db.commit()
+
+        except Exception:
+            logger.error('Error while creating service with ID {}'.format(service.id))
+            logger.error(traceback.format_exc())
+            self._db.mark_service_as_errored(service)
+            self._db.commit()
+
+        return service
         
+    ####################################
+    # Others
+    ####################################
+
+    def clear_all_data(self):
+        with self._db:
+            self._db.clear_all_data()
+    
+    def _seed_users(self):
+        logger.info('Seeding users...')
+
+        # Seed superadmin
+        try:
+            self.create_user(
+                email=self._superadmin_email,
+                password=self._superadmin_password,
+                user_type=UserType.SUPERADMIN
+            )
+        except UserExistsException:
+            logger.info('Skipping superadmin creation as it already exists...')
