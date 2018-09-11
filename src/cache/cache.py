@@ -16,12 +16,18 @@ class Cache(object):
 
     def append_list(self, key, value):
         self._redis.rpush(key, value)
+
+    def append_list_seq(self, key, seq):
+        self._redis.rpush(key, *seq)
     
     def get_list_range(self, key, start, stop):
         return self._redis.lrange(key, start, stop)
 
     def trim_list(self, key, start, stop):
         self._redis.ltrim(key, start, stop)
+
+    def delete_list_value(self, key, value):
+        self._redis.lrem(key, 0, value)
 
     def get(self, key):
         return self._redis.get(key)

@@ -41,7 +41,7 @@ client.get_models_of_task(task='IMAGE_CLASSIFICATION_WITH_ARRAYS')
   'user_id': 'a8959685-6667-41d5-8f91-b195fda27f91'}]
 ```
 
-Creating train jobs:
+Creating a train job for an app:
 
 ```py
 client.create_train_job(
