@@ -7,8 +7,7 @@
 2. Setup & configure Raifki Client by running:
 
 ```sh
-pip install -r ./src/client/requirements.txt
-export PYTHONPATH=$PWD/src
+pip install -r ./rafiki/client/requirements.txt
 ```
 
 ## Using Rafiki
@@ -18,7 +17,7 @@ Use the Rafiki Client Python module on the Python CLI:
 Logging in:
 
 ```py
-from client import Client
+from rafiki.client import Client
 client = Client()
 client.login(email='superadmin@rafiki', password='rafiki')
 ```

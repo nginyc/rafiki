@@ -1,20 +1,18 @@
 import sys
-import logging
 import os
 
-from worker import start_worker
+from rafiki.constants import ServiceType
+from rafiki.utils.log import configure_logging
 
-if len(sys.argv) < 2:
-    print('Usage: python {} <service_id>'.format(__file__))
-    exit(1)
-
-service_id = sys.argv[1]
+service_id = os.environ['RAFIKI_SERVICE_ID']
+service_type = os.environ['RAFIKI_SERVICE_TYPE']
 container_id = os.environ.get('HOSTNAME', 'localhost')
 
-# Configure all logging to a log file
-LOGS_FOLDER_PATH = os.environ['LOGS_FOLDER_PATH']
-logging.basicConfig(level=logging.INFO, 
-                    format='%(asctime)s %(levelname)s %(message)s', 
-                    filename='{}/worker-{}-{}.log'.format(LOGS_FOLDER_PATH, service_id, container_id))
+configure_logging('service-{}-{}'.format(service_id, container_id))
 
-start_worker(container_id, service_id)
+if service_type == ServiceType.TRAIN:
+    from rafiki.train_worker import TrainWorker
+    worker = TrainWorker(service_id)
+    worker.start()
+else:
+    raise Exception('Invalid service type: {}'.format(service_type))

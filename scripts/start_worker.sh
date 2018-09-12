@@ -1,4 +1,4 @@
-IMAGE_NAME=rafiki_worker
+IMAGE_NAME=rafiki_model
 
 usage()  {
   echo "Usage: $0 <service_name> <service_id>"

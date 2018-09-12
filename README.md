@@ -33,7 +33,6 @@ export POSTGRES_PORT=5432
 export POSTGRES_USER=rafiki
 export POSTGRES_DB=rafiki
 export POSTGRES_PASSWORD=rafiki
-export PYTHONPATH=$PWD/src
 export APP_SECRET=rafiki
 export DOCKER_NETWORK=rafiki
 export LOGS_FOLDER_PATH=/var/log/rafiki
@@ -74,11 +73,11 @@ source .env.sh
 bash scripts/start_cache.sh
 ```
 
-Additionally, build the base Rafiki worker image in Docker:
+Additionally, build the base Rafiki model image in Docker:
 
 ```sh
 source .env.sh
-bash scripts/build_worker_image.sh
+bash scripts/build_model_image.sh
 ```
 
 ## Using Rafiki
@@ -104,8 +103,8 @@ The list of available HTTP endpoints & their request formats are available as a 
 For the `POST /models` endpoint, you'll need to first serialize the model:
 
 ```py
-from common import serialize_model_to_file
-from model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
+from rafiki.model import serialize_model_to_file
+from rafiki.model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
 model_inst = SingleHiddenLayerTensorflowModel()
 serialize_model_to_file(model_inst, out_file_path='model.pickle')
 ```
@@ -114,7 +113,7 @@ Then, together with the `name` & `task` fields, upload the output serialized mod
 
 ## Using Rafiki with the Admin Python module
 
-Use the Rafiki Admin Python module on the Python CLI. You'll need to install the Rafiki Admin's Python dependencies by running `pip install -r ./src/admin/requirements.txt`. You'll also need to make sure `POSTGRES_HOST` and `POSTGRES_PORT` are configured right to communicate directly to the DB.
+Use the Rafiki Admin Python module on the Python CLI. You'll need to install the Rafiki Admin's Python dependencies by running `pip install -r ./rafiki/admin/requirements.txt`. You'll also need to make sure `POSTGRES_HOST` and `POSTGRES_PORT` are configured right to communicate directly to the DB.
 
 ```shell
 python
@@ -141,8 +140,8 @@ user = admin.authenticate_user('admin@rafiki', 'rafiki')
 Creating & viewing models:
 
 ```py
-from common import serialize_model
-from model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
+from rafiki.constants import serialize_model
+from rafiki.model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
 model = SingleHiddenLayerTensorflowModel()
 model_serialized = serialize_model(model)
 admin.create_model(

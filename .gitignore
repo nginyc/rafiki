@@ -20,6 +20,6 @@ __pycache__/
 !.gitkeep
 
 # Serialized models
-src/model/*.pickle
+rafiki/model/*.pickle
 
 .DS_Store

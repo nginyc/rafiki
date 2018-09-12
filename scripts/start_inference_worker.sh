@@ -7,7 +7,7 @@ if [ $# -ne 4 ] ; then
     usage
 fi
 
-docker build -t $1 -f ./deploy/worker.Dockerfile $PWD
+docker build -t $1 -f ./deploy/model.Dockerfile $PWD
 docker run --rm --name $1 \
   --network $DOCKER_NETWORK \
   -e INFERENCE_JOB_ID=$2 \

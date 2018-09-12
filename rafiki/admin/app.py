@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
 import os
 import traceback
-from rafiki.constants import UserType
 
+from rafiki.constants import UserType
 from .auth import generate_token, decode_token, UnauthorizedException, auth
 from .parse import get_request_params, to_json_serializable
 from .Admin import Admin

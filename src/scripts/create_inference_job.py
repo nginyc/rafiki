@@ -1,7 +1,7 @@
 import sys
 
 from admin import Admin
-from common import BudgetType
+from rafiki.constants import BudgetType
 
 if len(sys.argv) < 3:
     print('Usage: python {} <email> <password>'.format(__file__))
