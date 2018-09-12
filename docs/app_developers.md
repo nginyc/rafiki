@@ -139,6 +139,16 @@ client.get_best_trials_of_app(app='fashion_mnist_app')
   'train_job_id': 'd6a00b3a-317d-4804-ae1f-9a7d0e57d75f'}]
 ```
 
+Creating an inference job for an app:
+
+```py
+client.create_inference_job(app='fashion_mnist_app')
+```
+
+```sh
+{'id': '3fea65bf-cc72-4d27-be52-6324432bcc13', 'query_host': '192.168.1.75:30000'}
+```
+
 Viewing all trials of an app:
 
 ```py
@@ -151,8 +161,8 @@ Stopping a train job prematurely:
 client.stop_train_job(train_job_id=<train_job_id>)
 ```
 
-Creating an inference job for an app:
+Stopping an inference job:
 
 ```py
-client.create_inference_job(app='fashion_mnist_app')
+client.stop_inference_job(inference_job_id=<inference_job_id>)
 ```

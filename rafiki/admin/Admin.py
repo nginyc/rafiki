@@ -89,7 +89,7 @@ class Admin(object):
             train_job_id = train_job.id
             app_version = train_job.app_version
 
-            self._deploy_train_job_services(train_job)
+            self._create_train_job_services(train_job)
 
         return {
             'id': train_job_id,
@@ -110,7 +110,7 @@ class Admin(object):
     def get_train_job(self, train_job_id):
         with self._db:
             train_job = self._db.get_train_job(train_job_id)
-            workers = self._db.get_services_of_train_job(train_job_id)
+            services = self._db.get_services_of_train_job(train_job_id)
             models = self._db.get_models_of_task(train_job.task)
             return [
                 {
@@ -125,15 +125,14 @@ class Admin(object):
                     'datetime_completed': train_job.datetime_completed,
                     'budget_type': train_job.budget_type,
                     'budget_amount': train_job.budget_amount,
-                    'workers': [
+                    'services': [
                         {
-                            'model': next(y.name for y in models if y.id == x.model_id),
-                            'service_id': x.service_id,
+                            'id': x.id,
                             'datetime_started': x.datetime_started,
                             'status': x.status,
                             'replicas': x.replicas
                         }
-                        for x in workers
+                        for x in services
                     ],
                     'models': [x.name for x in models]
                 }
@@ -184,13 +183,23 @@ class Admin(object):
             )
             self._db.commit()
 
-            self._deploy_inference_job_services(inference_job)
+            self._create_inference_job_services(inference_job)
             
             query_service = self._db.get_service(inference_job.query_service_id)
 
             return {
                 'id': inference_job.id,
                 'query_host': '{}:{}'.format(query_service.hostname, query_service.port)
+            }
+
+    def stop_inference_job(self, inference_job_id):
+        with self._db:
+            inference_job = self._db.get_inference_job(inference_job_id)
+            self._destroy_inference_job_services(inference_job)
+            self._db.mark_inference_job_as_stopped(inference_job)
+            self._db.commit()
+            return {
+                'id': inference_job.id
             }
 
     def get_inference_jobs(self, app):
@@ -325,7 +334,7 @@ class Admin(object):
     # Services
     ####################################
 
-    def _deploy_inference_job_services(self, inference_job):
+    def _create_inference_job_services(self, inference_job):
         query_service = self._create_query_service(inference_job)
 
         # TODO: Deploy inference workers
@@ -340,6 +349,30 @@ class Admin(object):
             query_service_id=query_service.id
         )
         self._db.commit()
+
+    def _destroy_inference_job_services(self, inference_job):
+        # TODO: Destroy inference workers
+        service = self._db.get_service(inference_job.query_service_id)
+        self._destroy_service(service)
+
+    def _create_train_job_services(self, train_job):
+        models = self._db.get_models_of_task(train_job.task)
+        model_to_replicas = compute_train_worker_replicas_for_models(models)
+
+        for (model, replicas) in model_to_replicas.items():
+            # Create corresponding service for newly created worker
+            self._create_train_job_service(train_job, model, replicas)
+
+        self._update_train_job_status(train_job.id)
+        
+    def _destroy_train_job_service(self, train_job_service):
+        train_job_id = train_job_service.train_job_id
+        service_id = train_job_service.service_id
+
+        service = self._db.get_service(service_id)
+        self._destroy_service(service)
+
+        self._update_train_job_status(train_job_id)
 
     def _create_query_service(self, inference_job):
         service_type = ServiceType.QUERY
@@ -363,16 +396,6 @@ class Admin(object):
         )
 
         return service
-    
-    def _deploy_train_job_services(self, train_job):
-        models = self._db.get_models_of_task(train_job.task)
-        model_to_replicas = compute_train_worker_replicas_for_models(models)
-
-        for (model, replicas) in model_to_replicas.items():
-            # Create corresponding service for newly created worker
-            self._create_train_job_service(train_job, model, replicas)
-
-        self._update_train_job_status(train_job.id)
 
     def _create_train_job_service(self, train_job, model, replicas):
         service_type = ServiceType.TRAIN
@@ -430,12 +453,6 @@ class Admin(object):
             self._container_manager.destroy_service(service.container_service_id)
 
         self._db.mark_service_as_stopped(service)
-
-        # Mark its workers as stopped
-        workers = self._db.get_workers_of_service(service.id)
-        for worker in workers:
-            self._db.mark_worker_as_stopped(worker)
-
         self._db.commit()
 
     def _create_service(self, service_type, docker_image,

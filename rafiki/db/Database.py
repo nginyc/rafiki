@@ -120,6 +120,10 @@ class Database(object):
         self._session.add(inference_job)
         return inference_job
 
+    def get_inference_job(self, id):
+        inference_job = self._session.query(InferenceJob).get(id)
+        return inference_job
+
     def mark_inference_job_as_running(self, inference_job, 
                                     query_service_id):
         inference_job.status = InferenceJobStatus.RUNNING

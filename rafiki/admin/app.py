@@ -89,6 +89,12 @@ def create_inference_jobs(auth):
     params = get_request_params()
     return jsonify(admin.create_inference_job(auth['user_id'], **params))
 
+@app.route('/inference_jobs/<inference_job_id>/stop', methods=['POST'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
+def stop_inference_job(auth, inference_job_id):
+    params = get_request_params()
+    return jsonify(admin.stop_inference_job(inference_job_id, **params))
+
 @app.route('/inference_jobs', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def get_inference_jobs(auth, app):

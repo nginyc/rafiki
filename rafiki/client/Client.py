@@ -146,16 +146,16 @@ class Client(object):
     # Inference Jobs
     ####################################
 
-    def create_inference_job(self, 
-                            app,
-                            app_version=-1):
-
+    def create_inference_job(self, app, app_version=-1):
         data = self._post('/inference_jobs', form_data={
             'app': app,
             'app_version': app_version
         })
         return data
     
+    def stop_inference_job(self, inference_job_id):
+        data = self._post('/inference_jobs/{}/stop'.format(inference_job_id))
+        return data
 
     ####################################
     # Private
