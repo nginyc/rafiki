@@ -3,7 +3,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import os
 
-from rafiki.constants import TrainJobStatus, TrialStatus, ServiceStatus
+from rafiki.constants import TrainJobStatus, \
+    TrialStatus, ServiceStatus, InferenceJobStatus
 
 from .schema import Base, TrainJob, TrainJobService, \
     InferenceJob, Trial, Model, User, Service
@@ -110,11 +111,25 @@ class Database(object):
     # Inference Jobs
     ####################################
     
-    def create_inference_job(self, user_id, app):
+    def create_inference_job(self, user_id, app, app_version):
         inference_job = InferenceJob(
             user_id=user_id,
-            app=app
+            app=app,
+            app_version=app_version
         )
+        self._session.add(inference_job)
+        return inference_job
+
+    def mark_inference_job_as_running(self, inference_job, 
+                                    query_service_id):
+        inference_job.status = InferenceJobStatus.RUNNING
+        inference_job.query_service_id = query_service_id
+        self._session.add(inference_job)
+        return inference_job
+
+    def mark_inference_job_as_stopped(self, inference_job):
+        inference_job.status = InferenceJobStatus.STOPPED
+        inference_job.datetime_stopped = datetime.datetime.utcnow()
         self._session.add(inference_job)
         return inference_job
 
@@ -140,11 +155,14 @@ class Database(object):
         return service
 
     def mark_service_as_running(self, service, container_service_id, 
-                                container_service_name, replicas):
+                                container_service_name, replicas, hostname,
+                                port):
         service.container_service_id = container_service_id
         service.container_service_name = container_service_name
-        service.status = ServiceStatus.RUNNING
         service.replicas = replicas
+        service.hostname = hostname
+        service.port = port
+        service.status = ServiceStatus.RUNNING
         self._session.add(service)
 
     def mark_service_as_errored(self, service):
@@ -159,7 +177,11 @@ class Database(object):
         service = self._session.query(Service).get(service_id)
         return service
 
-    
+    def get_services(self, status=ServiceStatus.RUNNING):
+        services = self._session.query(Service) \
+                    .filter(Service.status == status).all()
+
+        return services
 
     ####################################
     # Models

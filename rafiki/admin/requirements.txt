@@ -1,6 +1,5 @@
 bcrypt>=3.1.4
 numpy==1.14.5
-pandas>=0.22.0
 scipy>=0.19.1
 SQLAlchemy==1.2.10
 psycopg2==2.7.5

@@ -16,6 +16,7 @@ docker run --rm --name $MODULE_NAME \
   -e LOGS_FOLDER_PATH=$LOGS_FOLDER_PATH \
   -e REDIS_HOST=$REDIS_HOST \
   -e REDIS_PORT=$REDIS_PORT \
+  -e RAFIKI_IP_ADDRESS=$RAFIKI_IP_ADDRESS \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $LOGS_FOLDER_PATH:$LOGS_FOLDER_PATH \
   -p 8000:$ADMIN_PORT \

@@ -6,6 +6,8 @@ import traceback
 from rafiki.db import Database
 from rafiki.model import unserialize_model, serialize_model
 from rafiki.constants import ServiceStatus, UserType, ServiceType
+from rafiki.config import BASE_MODEL_IMAGE, QUERY_FRONTEND_IMAGE, \
+    MIN_SERVICE_PORT, MAX_SERVICE_PORT, QUERY_FRONTEND_PORT
 
 from .train import compute_train_worker_replicas_for_models
 from .containers import DockerSwarmContainerManager 
@@ -23,14 +25,15 @@ class InvalidPasswordException(Exception):
     pass
 
 class Admin(object):
-    DEFAULT_MODEL_IMAGE = 'rafiki_model'
-
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
         self._db = db
         self._container_manager = container_manager
         self._superadmin_email = os.environ['SUPERADMIN_EMAIL']
         self._superadmin_password = os.environ['SUPERADMIN_PASSWORD']
-        self._seed_users()
+        self._service_ip_address = os.environ['RAFIKI_IP_ADDRESS']
+        
+        with self._db:
+            self._seed_users()
 
     ####################################
     # Users
@@ -52,15 +55,8 @@ class Admin(object):
             }
 
     def create_user(self, email, password, user_type):
-        password_hash = hash_password(password)
         with self._db:
-            user = self._db.get_user_by_email(email)
-
-            if user is not None:
-                raise UserExistsException()
-
-            user = self._db.create_user(email, password_hash, user_type)
-            self._db.commit()
+            user = self._create_user(email, password, user_type)
             return {
                 'id': user.id
             }
@@ -179,18 +175,22 @@ class Admin(object):
     # Inference Job
     ####################################
 
-    def create_inference_job(self, user_id, app, max_models=3):
+    def create_inference_job(self, user_id, app, app_version):
         with self._db:
-            best_trials = self._db.get_best_trials_of_app(app, max_count=max_models)
-            best_trials_models = [self._db.get_model(x.model_id) for x in best_trials]
-
-            inference_job = self._db.create_inference_job(user_id, app)
+            inference_job = self._db.create_inference_job(
+                user_id=user_id,
+                app=app,
+                app_version=app_version
+            )
             self._db.commit()
 
-            # TODO: Deploy workers based on current deployment jobs
+            self._deploy_inference_job_services(inference_job)
+            
+            query_service = self._db.get_service(inference_job.query_service_id)
 
             return {
-                'id': inference_job.id
+                'id': inference_job.id,
+                'query_host': '{}:{}'.format(query_service.hostname, query_service.port)
             }
 
     def get_inference_jobs(self, app):
@@ -286,7 +286,7 @@ class Admin(object):
                 name=name,
                 task=task,
                 model_serialized=model_serialized,
-                docker_image=(docker_image or self.DEFAULT_MODEL_IMAGE)
+                docker_image=(docker_image or BASE_MODEL_IMAGE)
             )
 
             return {
@@ -325,6 +325,45 @@ class Admin(object):
     # Services
     ####################################
 
+    def _deploy_inference_job_services(self, inference_job):
+        query_service = self._create_query_service(inference_job)
+
+        # TODO: Deploy inference workers
+        # best_trials = self._db.get_best_trials_of_app(app, max_count=max_models)
+        # best_trials_models = [self._db.get_model(x.model_id) for x in best_trials]
+
+        # inference_job = self._db.create_inference_job(user_id, app)
+        # self._db.commit() 
+
+        self._db.mark_inference_job_as_running(
+            inference_job,
+            query_service_id=query_service.id
+        )
+        self._db.commit()
+
+    def _create_query_service(self, inference_job):
+        service_type = ServiceType.QUERY
+        environment_vars = {
+            'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
+            'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
+            'POSTGRES_USER': os.environ['POSTGRES_USER'],
+            'POSTGRES_DB': os.environ['POSTGRES_DB'],
+            'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
+            'LOGS_FOLDER_PATH': os.environ['LOGS_FOLDER_PATH'],
+            'REDIS_HOST': os.environ['REDIS_HOST'],
+            'REDIS_PORT': os.environ['REDIS_PORT']
+        }
+
+        service = self._create_service(
+            service_type=service_type,
+            docker_image=QUERY_FRONTEND_IMAGE,
+            replicas=1,
+            environment_vars=environment_vars,
+            container_port=QUERY_FRONTEND_PORT
+        )
+
+        return service
+    
     def _deploy_train_job_services(self, train_job):
         models = self._db.get_models_of_task(train_job.task)
         model_to_replicas = compute_train_worker_replicas_for_models(models)
@@ -363,6 +402,8 @@ class Admin(object):
             model_id=model.id
         )
 
+        return service
+
     def _destroy_train_job_service(self, train_job_service):
         train_job_id = train_job_service.train_job_id
         service_id = train_job_service.service_id
@@ -398,7 +439,8 @@ class Admin(object):
         self._db.commit()
 
     def _create_service(self, service_type, docker_image,
-                        replicas, environment_vars={}, args=[]):
+                        replicas, environment_vars={}, args=[], 
+                        container_port=None):
         
         # Create service in DB
         container_manager_type = type(self._container_manager).__name__
@@ -409,17 +451,27 @@ class Admin(object):
         )
         self._db.commit()
 
+        # Pass service details as environment variables 
         environment_vars = {
             **environment_vars,
             'RAFIKI_SERVICE_ID': service.id,
             'RAFIKI_SERVICE_TYPE': service_type
         }
-        logs_folder_path = os.environ['LOGS_FOLDER_PATH']
 
         # Mount logs folder onto workers too
+        logs_folder_path = os.environ['LOGS_FOLDER_PATH']
         mounts = {
             logs_folder_path: logs_folder_path
         }
+
+        # Expose container port if it exists
+        ports_mapping = {}
+        hostname = None
+        service_port = None
+        if container_port is not None:
+            hostname = self._service_ip_address
+            service_port = self._get_available_service_port()
+            ports_mapping = { service_port: container_port }
 
         try:
             container_service_name = 'rafiki_service_{}'.format(service.id)
@@ -429,14 +481,17 @@ class Admin(object):
                 replicas=replicas, 
                 args=args,
                 environment_vars=environment_vars,
-                mounts=mounts
+                mounts=mounts,
+                ports=ports_mapping
             )
 
             self._db.mark_service_as_running(
                 service,
                 container_service_name=container_service_name,
                 container_service_id=container_service_id,
-                replicas=replicas
+                replicas=replicas,
+                hostname=hostname,
+                port=service_port
             )
             self._db.commit()
 
@@ -452,19 +507,39 @@ class Admin(object):
     # Others
     ####################################
 
-    def clear_all_data(self):
-        with self._db:
-            self._db.clear_all_data()
+    # Compute next available port
+    def _get_available_service_port(self):
+        services = self._db.get_services(status=ServiceStatus.RUNNING)
+        used_ports = [x.port for x in services]
+        port = MIN_SERVICE_PORT
+        while port <= MAX_SERVICE_PORT:
+            if port not in used_ports:
+                return port
+
+            port += 1
+
+        return port
     
     def _seed_users(self):
         logger.info('Seeding users...')
 
         # Seed superadmin
         try:
-            self.create_user(
+            self._create_user(
                 email=self._superadmin_email,
                 password=self._superadmin_password,
                 user_type=UserType.SUPERADMIN
             )
         except UserExistsException:
             logger.info('Skipping superadmin creation as it already exists...')
+
+    def _create_user(self, email, password, user_type):
+        password_hash = hash_password(password)
+        user = self._db.get_user_by_email(email)
+
+        if user is not None:
+            raise UserExistsException()
+
+        user = self._db.create_user(email, password_hash, user_type)
+        self._db.commit()
+        return user

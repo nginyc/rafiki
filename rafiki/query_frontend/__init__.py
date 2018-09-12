@@ -1,2 +1,2 @@
 from .app import app
-from .query_frontend import QueryFrontend
+from .QueryFrontend import QueryFrontend

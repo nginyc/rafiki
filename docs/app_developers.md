@@ -150,3 +150,9 @@ Stopping a train job prematurely:
 ```py
 client.stop_train_job(train_job_id=<train_job_id>)
 ```
+
+Creating an inference job for an app:
+
+```py
+client.create_inference_job(app='fashion_mnist_app')
+```

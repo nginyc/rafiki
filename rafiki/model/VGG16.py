@@ -2,7 +2,6 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.preprocessing.image import img_to_array, array_to_img
 from PIL import Image
-import pandas as pd
 import json
 import os
 import tempfile

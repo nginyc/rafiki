@@ -15,7 +15,7 @@ Prerequisites: Unix-like environment
 Create a Docker Swarm e.g.:
 
 ```sh
-docker swarm init
+docker swarm init --advertise-addr <my-ip-address>
 ```
 
 Create a custom overlay Docker network for Rafiki, scoped to the Docker Swarm:
@@ -43,6 +43,7 @@ export SUPERADMIN_PASSWORD=rafiki
 export REDIS_HOST=rafiki_cache
 export REDIS_PORT=6379
 export REBROW_PORT=5001
+export RAFIKI_IP_ADDRESS=<your-ip-address>
 ```
 
 Setup the Rafiki logs directory by creating the directory `/var/log/rafiki/` and ensuring Docker has the permissions to mount it onto containers:

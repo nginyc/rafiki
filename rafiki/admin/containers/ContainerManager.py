@@ -7,7 +7,7 @@ class ContainerManager(abc.ABC):
 
     @abc.abstractmethod
     def create_service(self, service_name, docker_image, 
-        replicas, args, environment_vars, mounts={}):
+        replicas, args, environment_vars, mounts={}, ports={}):
         '''
             Creates a service with a set number of replicas.
 
@@ -21,7 +21,8 @@ class ContainerManager(abc.ABC):
                 args: [String] - Arguments to pass to the service
                 environment_vars: {String: String} - Dict of environment variable names to values
                 mounts: {String: String} - Dict of host directory to container directory for mounting of volumes onto container
-
+                ports: {Int: Int} - Dict of host port (port to be published) to container port 
+                    The service should then be reachable at the host ports
             Returns 
                 id: String - ID for the service created
         '''

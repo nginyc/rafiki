@@ -143,7 +143,22 @@ class Client(object):
         return data
 
     ####################################
-    # Utils
+    # Inference Jobs
+    ####################################
+
+    def create_inference_job(self, 
+                            app,
+                            app_version=-1):
+
+        data = self._post('/inference_jobs', form_data={
+            'app': app,
+            'app_version': app_version
+        })
+        return data
+    
+
+    ####################################
+    # Private
     ####################################
 
     def _get(self, path, params={}):

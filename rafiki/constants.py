@@ -1,7 +1,7 @@
 class BudgetType():
     MODEL_TRIAL_COUNT = 'MODEL_TRIAL_COUNT'
 
-class DeployStatus():
+class InferenceJobStatus():
     STARTED = 'STARTED'
     RUNNING = 'RUNNING'
     ERRORED = 'ERRORED'

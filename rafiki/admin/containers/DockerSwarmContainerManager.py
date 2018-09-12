@@ -17,7 +17,7 @@ class DockerSwarmContainerManager(ContainerManager):
         self._client = docker.from_env()
 
     def create_service(self, service_name, docker_image, replicas, 
-        args, environment_vars, mounts={}):
+                        args, environment_vars, mounts={}, ports={}):
         env = [
             '{}={}'.format(k, v)
             for (k, v) in environment_vars.items()
@@ -26,6 +26,11 @@ class DockerSwarmContainerManager(ContainerManager):
         mounts_list = [
             '{}:{}:rw'.format(k, v)
             for (k, v) in mounts.items()
+        ]
+        
+        ports_list = [
+            { 'PublishedPort': int(k), 'TargetPort': int(v) }
+            for (k, v) in ports.items()
         ]
 
         service = self._client.services.create(
@@ -38,6 +43,9 @@ class DockerSwarmContainerManager(ContainerManager):
             # Restart replicas when they exit with error
             restart_policy={
                 'Condition': 'on-failure'
+            },
+            endpoint_spec={
+                'Ports': ports_list
             }
         )
 
