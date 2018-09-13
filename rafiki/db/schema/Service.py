@@ -15,6 +15,8 @@ class Service(Base):
     docker_image = Column(String, nullable=False)
     container_manager_type = Column(String, nullable=False)
     replicas = Column(Integer, default=0)
+    ext_hostname = Column(String)
+    ext_port = Column(String)
     hostname = Column(String)
     port = Column(Integer)
     container_service_name = Column(String)

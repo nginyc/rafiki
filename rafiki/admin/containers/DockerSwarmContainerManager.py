@@ -9,7 +9,7 @@ from .ContainerManager import ContainerManager
 logger = logging.getLogger(__name__)
 
 class DockerSwarmContainerManager(ContainerManager):
-    SERVICE_CREATION_SLEEP_SECONDS = 3
+    SERVICE_CREATION_SLEEP_SECONDS = 5
 
     def __init__(self,
         network=os.environ.get('DOCKER_NETWORK', 'rafiki')):
@@ -17,7 +17,7 @@ class DockerSwarmContainerManager(ContainerManager):
         self._client = docker.from_env()
 
     def create_service(self, service_name, docker_image, replicas, 
-                        args, environment_vars, mounts={}, ports={}):
+                        args, environment_vars, mounts={}, publish_port=None):
         env = [
             '{}={}'.format(k, v)
             for (k, v) in environment_vars.items()
@@ -27,12 +27,20 @@ class DockerSwarmContainerManager(ContainerManager):
             '{}:{}:rw'.format(k, v)
             for (k, v) in mounts.items()
         ]
-        
-        ports_list = [
-            { 'PublishedPort': int(k), 'TargetPort': int(v) }
-            for (k, v) in ports.items()
-        ]
 
+        ports_list = []
+        container_port = None
+        published_port = None
+        hostname = service_name
+        if publish_port is not None:
+            # Host of Docker Swarm service = service's name at the container port
+            published_port = int(publish_port[0])
+            container_port = int(publish_port[1])
+            ports_list = [{ 
+                'PublishedPort': published_port, 
+                'TargetPort': container_port
+            }]
+        
         service = self._client.services.create(
             image=docker_image,
             args=args,
@@ -58,7 +66,12 @@ class DockerSwarmContainerManager(ContainerManager):
         logger.info('Created service of ID {} (name: "{}") of {} x {} replicas' \
             .format(service_id, service_name, docker_image, replicas))
 
-        return service_id
+        return {
+            'id': service_id,
+            # Host of Docker Swarm service = service's name at the container port
+            'hostname': hostname, 
+            'port': container_port
+        }
 
     def update_service(self, service_id, replicas):
         service = self._client.services.get(service_id)
@@ -66,7 +79,6 @@ class DockerSwarmContainerManager(ContainerManager):
 
         logger.info('Updated service of ID {} to {} replicas' \
             .format(service_id, replicas))
-
 
     def destroy_service(self, service_id):
         service = self._client.services.get(service_id)

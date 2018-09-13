@@ -160,12 +160,14 @@ class Database(object):
 
     def mark_service_as_running(self, service, container_service_id, 
                                 container_service_name, replicas, hostname,
-                                port):
+                                port, ext_hostname, ext_port):
         service.container_service_id = container_service_id
         service.container_service_name = container_service_name
         service.replicas = replicas
         service.hostname = hostname
         service.port = port
+        service.ext_hostname = ext_hostname
+        service.ext_port = ext_port
         service.status = ServiceStatus.RUNNING
         self._session.add(service)
 
