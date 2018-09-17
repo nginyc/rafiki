@@ -6,8 +6,8 @@ import os
 from rafiki.constants import TrainJobStatus, \
     TrialStatus, ServiceStatus, InferenceJobStatus
 
-from .schema import Base, TrainJob, TrainJobService, \
-    InferenceJob, Trial, Model, User, Service
+from .schema import Base, TrainJob, TrainJobWorker, \
+    InferenceJob, Trial, Model, User, Service, InferenceJobWorker
 
 class Database(object):
     def __init__(self, 
@@ -66,23 +66,23 @@ class Database(object):
         self._session.add(train_job)
         return train_job
 
-    def create_train_job_service(self, service_id, train_job_id, model_id):
-        train_job_service = TrainJobService(
+    def create_train_job_worker(self, service_id, train_job_id, model_id):
+        train_job_worker = TrainJobWorker(
             train_job_id=train_job_id,
             model_id=model_id,
             service_id=service_id
         )
-        self._session.add(train_job_service)
-        return train_job_service
+        self._session.add(train_job_worker)
+        return train_job_worker
 
-    def get_train_job_service(self, service_id):
-        train_job_service = self._session.query(TrainJobService).get(service_id)
-        return train_job_service
+    def get_train_job_worker(self, service_id):
+        train_job_worker = self._session.query(TrainJobWorker).get(service_id)
+        return train_job_worker
 
-    def get_services_of_train_job(self, train_job_id):
-        services = self._session.query(TrainJobService) \
-            .filter(TrainJobService.train_job_id == train_job_id).all()
-        return services
+    def get_workers_of_train_job(self, train_job_id):
+        workers = self._session.query(TrainJobWorker) \
+            .filter(TrainJobWorker.train_job_id == train_job_id).all()
+        return workers
 
     def get_uncompleted_train_jobs(self):
         train_jobs = self._session.query(TrainJob) \
@@ -99,6 +99,11 @@ class Database(object):
 
     def get_train_job(self, id):
         train_job = self._session.query(TrainJob).get(id)
+        return train_job
+
+    def mark_train_job_as_running(self, train_job):
+        train_job.status = TrainJobStatus.RUNNING
+        self._session.add(train_job)
         return train_job
 
     def mark_train_job_as_complete(self, train_job):
@@ -119,6 +124,24 @@ class Database(object):
         )
         self._session.add(inference_job)
         return inference_job
+
+    def create_inference_job_worker(self, service_id, inference_job_id, trial_id):
+        inference_job_worker = InferenceJobWorker(
+            inference_job_id=inference_job_id,
+            trial_id=trial_id,
+            service_id=service_id
+        )
+        self._session.add(inference_job_worker)
+        return inference_job_worker
+
+    def get_inference_job_worker(self, service_id):
+        inference_job_worker = self._session.query(InferenceJobWorker).get(service_id)
+        return inference_job_worker
+
+    def get_workers_of_inference_job(self, inference_job_id):
+        workers = self._session.query(InferenceJobWorker) \
+            .filter(InferenceJobWorker.inference_job_id == inference_job_id).all()
+        return workers
 
     def get_inference_job(self, id):
         inference_job = self._session.query(InferenceJob).get(id)
@@ -177,15 +200,23 @@ class Database(object):
 
     def mark_service_as_stopped(self, service):
         service.status = ServiceStatus.STOPPED
+        service.datetime_stopped = datetime.datetime.utcnow()
         self._session.add(service)
 
     def get_service(self, service_id):
         service = self._session.query(Service).get(service_id)
         return service
 
-    def get_services(self, status=ServiceStatus.RUNNING):
-        services = self._session.query(Service) \
-                    .filter(Service.status == status).all()
+    def get_services(self, status=None, ids=None):
+        query = self._session.query(Service)
+
+        if ids is not None:
+            query.filter(Service.id.in_(ids))
+
+        if status is not None:
+            query.filter(Service.status == status)
+
+        services = query.all()
 
         return services
 

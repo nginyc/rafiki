@@ -1,0 +1,445 @@
+{
+	"info": {
+		"name": "Rafiki Admin",
+		"_postman_id": "76ce3579-a6d4-a766-c26c-8a2ba0712913",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authenticate User",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "email",
+							"value": "superadmin@rafiki",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "rafiki",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://{{host}}/tokens",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"tokens"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create User",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "email",
+							"value": "app_developer@rafiki",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "rafiki",
+							"type": "text"
+						},
+						{
+							"key": "user_type",
+							"value": "APP_DEVELOPER",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://{{host}}/users",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Model",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "model_serialized",
+							"type": "file"
+						},
+						{
+							"key": "name",
+							"value": "single_hidden_layer_tf",
+							"type": "text"
+						},
+						{
+							"key": "task",
+							"value": "IMAGE_CLASSIFICATION_WITH_ARRAYS",
+							"type": "text"
+						},
+						{
+							"key": "docker_image",
+							"value": "rafiki_model",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://{{host}}/models",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"models"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Models",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://{{host}}/models?task=IMAGE_CLASSIFICATION_WITH_ARRAYS",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"models"
+					],
+					"query": [
+						{
+							"key": "task",
+							"value": "IMAGE_CLASSIFICATION_WITH_ARRAYS",
+							"equals": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Train Job",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "app",
+							"value": "fashion_mnist_app",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "task",
+							"value": "IMAGE_CLASSIFICATION_WITH_ARRAYS",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "train_dataset_uri",
+							"value": "tf-keras://fashion_mnist?train_or_test=train",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "test_dataset_uri",
+							"value": "tf-keras://fashion_mnist?train_or_test=test",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "budget_type",
+							"value": "MODEL_TRIAL_COUNT",
+							"type": "text"
+						},
+						{
+							"key": "budget_amount",
+							"value": "3",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://{{host}}/train_jobs",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"train_jobs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Train Jobs",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://{{host}}/train_jobs?app=fashion_mnist_app",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"train_jobs"
+					],
+					"query": [
+						{
+							"key": "app",
+							"value": "fashion_mnist_app",
+							"equals": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Train Job",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://{{host}}/train_jobs/{{train_job_id}}",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"train_jobs",
+						"{{train_job_id}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Stop Train Job",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://{{host}}/train_jobs/{{train_job_id}}/stop",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"train_jobs",
+						"{{train_job_id}}",
+						"stop"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Best Trials",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://{{host}}/trials?app=fashion_mnist_app&type=best&max_count=3",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"trials"
+					],
+					"query": [
+						{
+							"key": "app",
+							"value": "fashion_mnist_app",
+							"equals": true
+						},
+						{
+							"key": "type",
+							"value": "best",
+							"equals": true
+						},
+						{
+							"key": "max_count",
+							"value": "3",
+							"equals": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Trials",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://{{host}}/trials?app=fashion_mnist_app",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"trials"
+					],
+					"query": [
+						{
+							"key": "app",
+							"value": "fashion_mnist_app",
+							"equals": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Inference Job",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "app",
+							"value": "fashion_mnist_app",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "app_version",
+							"value": "-1",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://{{host}}/inference_jobs",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"inference_jobs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Stop Inference Job",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "http://{{host}}/inference_jobs/{{inference_job_id}}/stop",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"inference_jobs",
+						"{{inference_job_id}}",
+						"stop"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"id": "e87096e3-2d39-4022-9d77-c1f48304327c",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"id": "b1b52ed1-b2f2-4ca7-9fdc-3196116bbcf2",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

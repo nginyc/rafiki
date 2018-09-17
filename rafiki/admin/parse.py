@@ -1,6 +1,5 @@
 from flask import request
 import os
-import numpy as np
 
 def get_request_params():
     # Get params from body as JSON
@@ -19,8 +18,3 @@ def get_request_params():
 
     return params
 
-def to_json_serializable(data):
-    if isinstance(data, np.int64):
-        return int(data)
-
-    return data

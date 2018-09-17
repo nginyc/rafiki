@@ -1,10 +1,13 @@
 import uuid
 import time
 import json
+import logging
 
 from rafiki.cache import Cache
 from rafiki.db import Database
 from rafiki.config import RUNNING_INFERENCE_WORKERS, REQUEST_QUEUE, QFE_SLEEP
+
+logger = logging.getLogger(__name__)
  
 class QueryFrontend(object):
 
@@ -14,12 +17,16 @@ class QueryFrontend(object):
         self._cache = cache
 
     def predict(self, query):
+        logger.info('Received query:')
+        logger.info(query)
+
         id = str(uuid.uuid4())
         request = {
             'id': id,
             'query': query
         }
-        running_inference_workers = self._cache.get_list_range(RUNNING_INFERENCE_WORKERS, 0, -1)
+
+        running_inference_workers = self._cache.get_set(RUNNING_INFERENCE_WORKERS)
         request_ids = set()
         for running_inference_worker in running_inference_workers:
             queue_key = '{}_{}'.format(REQUEST_QUEUE, running_inference_worker.decode())
@@ -29,28 +36,30 @@ class QueryFrontend(object):
         
         response_ids = set()
         responses = { 'responses': [] }
-   
+
+        logger.info('Waiting for predictions...')
+
         #TODO: add SLO. break loop when timer is out.
         while True:
             unresponded_ids = request_ids - response_ids
             for unresponded_id in unresponded_ids:
-                prediction = self._cache.get_list_range(unresponded_id, 0, -1)
-                prediction = [p.decode() for p in prediction]
-                if prediction :
+                prediction_jsons = self._cache.get_list_range(unresponded_id, 0, -1)
+                if len(prediction_jsons) > 0:
+                    prediction_json = prediction_jsons[0]
+                    prediction = json.loads(prediction_json)
                     response_ids.add(unresponded_id)
-                    keys = unresponded_id.split('_')
-                    prediction = { 
-                        'inference_job_id': keys[1],
-                        'trial_id': keys[2],
-                        'model_name': keys[3],
-                        'inference_worker_id': keys[4],
-                        'prediction': prediction
-                    }
                     responses['responses'].append(prediction)
                     self._cache.delete(unresponded_id)
             if (request_ids == response_ids): break
             time.sleep(QFE_SLEEP)
+
+        logger.info('Responding with predictions:')
+        logger.info(responses)
+
         return responses
+
+    def get_queue_key(self):
+        return '{}_{}'.format(REQUEST_QUEUE, self._service_id)
 
     def predict_batch(self, queries):
         #TODO: implement method

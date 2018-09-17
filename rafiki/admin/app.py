@@ -3,8 +3,9 @@ import os
 import traceback
 
 from rafiki.constants import UserType
+
 from .auth import generate_token, decode_token, UnauthorizedException, auth
-from .parse import get_request_params, to_json_serializable
+from .parse import get_request_params
 from .Admin import Admin
 
 admin = Admin()
@@ -79,12 +80,12 @@ def stop_train_job(auth, train_job_id):
     with admin:
         return jsonify(admin.stop_train_job(train_job_id, **params))
 
-@app.route('/train_job_services/<service_id>/stop', methods=['POST'])
+@app.route('/train_job_workers/<service_id>/stop', methods=['POST'])
 @auth([])
-def stop_train_job_service(auth, service_id):
+def stop_train_job_worker(auth, service_id):
     params = get_request_params()
     with admin:
-        return jsonify(admin.stop_train_job_service(service_id, **params))
+        return jsonify(admin.stop_train_job_worker(service_id, **params))
 
 ####################################
 # Inference Jobs
@@ -142,17 +143,6 @@ def get_trials_of_train_job(auth, train_job_id):
     params = get_request_params()
     with admin:
         return jsonify(admin.get_trials_of_train_job(train_job_id, **params))
-
-    
-@app.route('/trials/<trial_id>/predict', methods=['POST'])
-@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def predict_with_trial(auth, trial_id):
-    params = get_request_params()
-
-    with admin:
-        preds = admin.predict_with_trial(trial_id, **params)
-        
-    return jsonify([to_json_serializable(x) for x in preds])
 
 ####################################
 # Models

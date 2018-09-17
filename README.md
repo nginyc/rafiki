@@ -44,6 +44,7 @@ export REDIS_HOST=rafiki_cache
 export REDIS_PORT=6379
 export REBROW_PORT=5001
 export RAFIKI_IP_ADDRESS=<your-ip-address>
+export PYTHONPATH=${PWD}
 ```
 
 Setup the Rafiki logs directory by creating the directory `/var/log/rafiki/` and ensuring Docker has the permissions to mount it onto containers:
@@ -74,11 +75,12 @@ source .env.sh
 bash scripts/start_cache.sh
 ```
 
-Additionally, build the base Rafiki model image in Docker:
+Additionally, build the base Rafiki images in Docker:
 
 ```sh
 source .env.sh
 bash scripts/build_model_image.sh
+bash scripts/build_query_frontend_image.sh
 ```
 
 ## Using Rafiki

@@ -9,8 +9,6 @@ from .ContainerManager import ContainerManager
 logger = logging.getLogger(__name__)
 
 class DockerSwarmContainerManager(ContainerManager):
-    SERVICE_CREATION_SLEEP_SECONDS = 5
-
     def __init__(self,
         network=os.environ.get('DOCKER_NETWORK', 'rafiki')):
         self._network = network
@@ -54,13 +52,14 @@ class DockerSwarmContainerManager(ContainerManager):
             },
             endpoint_spec={
                 'Ports': ports_list
+            },
+            mode={
+                'Replicated': {
+                    'Replicas': replicas
+                }
             }
         )
 
-        # Sleep for a while for async Docker service creation
-        time.sleep(self.SERVICE_CREATION_SLEEP_SECONDS)
-
-        service.scale(replicas)
         service_id = service.id
 
         logger.info('Created service of ID {} (name: "{}") of {} x {} replicas' \

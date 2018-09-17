@@ -9,6 +9,7 @@ class InferenceJobStatus():
 
 class TrainJobStatus():
     STARTED = 'STARTED'
+    RUNNING = 'RUNNING'
     STOPPED = 'STOPPED'
     COMPLETED = 'COMPLETED'
 

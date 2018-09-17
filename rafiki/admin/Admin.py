@@ -9,7 +9,6 @@ from rafiki.constants import ServiceStatus, UserType, ServiceType
 from rafiki.config import BASE_MODEL_IMAGE, QUERY_FRONTEND_IMAGE, \
     MIN_SERVICE_PORT, MAX_SERVICE_PORT, QUERY_FRONTEND_PORT
 
-from .train import compute_train_worker_replicas_for_models
 from .containers import DockerSwarmContainerManager 
 from .auth import hash_password, if_hash_matches_password
 from .ServicesManager import ServicesManager
@@ -97,7 +96,8 @@ class Admin(object):
             
     def get_train_job(self, train_job_id):
         train_job = self._db.get_train_job(train_job_id)
-        services = self._db.get_services_of_train_job(train_job_id)
+        workers = self._db.get_workers_of_train_job(train_job_id)
+        services = self._db.get_services(ids=[x.id for x in workers])
         models = self._db.get_models_of_task(train_job.task)
         return [
             {
@@ -112,11 +112,12 @@ class Admin(object):
                 'datetime_completed': train_job.datetime_completed,
                 'budget_type': train_job.budget_type,
                 'budget_amount': train_job.budget_amount,
-                'services': [
+                'workers': [
                     {
-                        'id': x.id,
-                        'datetime_started': x.datetime_started,
+                        'service_id': x.service_id,
                         'status': x.status,
+                        'datetime_started': x.datetime_started,
+                        'datetime_stopped': x.datetime_stopped,
                         'replicas': x.replicas
                     }
                     for x in services
@@ -144,12 +145,12 @@ class Admin(object):
             for x in train_jobs
         ]
 
-    def stop_train_job_service(self, service_id):
-        train_job_service = self._services_manager.stop_train_job_service(service_id)
+    def stop_train_job_worker(self, service_id):
+        worker = self._services_manager.stop_train_job_worker(service_id)
         return {
-            'service_id': train_job_service.service_id,
-            'model_id': train_job_service.model_id,
-            'train_job_id': train_job_service.train_job_id
+            'service_id': worker.service_id,
+            'model_id': worker.model_id,
+            'train_job_id': worker.train_job_id
         }
 
     ####################################
@@ -241,19 +242,6 @@ class Admin(object):
             for (trial, model) in zip(trials, trials_models)
         ]
 
-    def predict_with_trial(self, trial_id, queries):
-        trial = self._db.get_trial(trial_id)
-        model = self._db.get_model(trial.model_id)
-        
-        # Load model based on trial & make predictions
-        model_inst = unserialize_model(model.model_serialized)
-        model_inst.init(trial.hyperparameters)
-        model_inst.load_parameters(trial.parameters)
-        preds = model_inst.predict(queries)
-        model_inst.destroy()
-
-        return preds
-            
     ####################################
     # Models
     ####################################

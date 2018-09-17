@@ -29,33 +29,36 @@ class TrainWorker(object):
         self._client = self._make_client()
 
     def start(self):
-        logger.info('Starting worker for service of id {}...' \
+        logger.info('Starting train worker for service of id {}...' \
             .format(self._service_id))
 
-        # Get info about service
+        # Get info about worker service
         with self._db:
-            train_job_service = self._db.get_train_job_service(self._service_id)
-            model_id = train_job_service.model_id
-            train_job_id = train_job_service.train_job_id
+            worker = self._db.get_train_job_worker(self._service_id)
+            model_id = worker.model_id
+            train_job_id = worker.train_job_id
 
         while True:
-            # If budget reached, stop service
+            # If budget reached, stop worker service
             with self._db:
                 if_budget_reached = self._if_budget_reached(train_job_id, model_id)
                 if if_budget_reached:
                     logger.info('Budget for train job has reached')
 
                     try:
-                        self._client.stop_train_job_service(self._service_id)
+                        self._client.stop_train_job_worker(self._service_id)
                     except Exception:
                         # Throw a warning - likely that another worker has stopped the service
-                        logger.warning('Error while stopping train job service:')
+                        logger.warning('Error while stopping train job worker service:')
                         logger.warning(traceback.format_exc())
                         
                     break
             
             # Otherwise, create a new trial
             self._do_new_trial(train_job_id, model_id)
+
+    def stop(self):
+        pass
 
     def _do_new_trial(self, train_job_id, model_id):
         self._db.connect()

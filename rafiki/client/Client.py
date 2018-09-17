@@ -118,8 +118,8 @@ class Client(object):
         return data
 
     # Only for internal use
-    def stop_train_job_service(self, service_id):
-        data = self._post('/train_job_services/{}/stop'.format(service_id))
+    def stop_train_job_worker(self, service_id):
+        data = self._post('/train_job_workers/{}/stop'.format(service_id))
         return data
 
     ####################################
@@ -171,7 +171,7 @@ class Client(object):
         )
         return self._parse_response(res)
 
-    def _post(self, path, params={}, files={}, form_data={}):
+    def _post(self, path, params={}, files={}, form_data=None, json=None):
         url = 'http://{}:{}{}'.format(self._admin_host, self._admin_port, path)
         headers = self._get_headers()
         res = requests.post(
@@ -179,6 +179,7 @@ class Client(object):
             headers=headers,
             params=params, 
             data=form_data,
+            json=json,
             files=files
         )
         return self._parse_response(res)

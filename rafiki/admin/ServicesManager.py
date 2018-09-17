@@ -3,13 +3,13 @@ import os
 import logging
 import traceback
 
+
 from rafiki.db import Database
 from rafiki.model import unserialize_model, serialize_model
 from rafiki.constants import ServiceStatus, UserType, ServiceType
 from rafiki.config import BASE_MODEL_IMAGE, QUERY_FRONTEND_IMAGE, \
     MIN_SERVICE_PORT, MAX_SERVICE_PORT, QUERY_FRONTEND_PORT
 
-from .train import compute_train_worker_replicas_for_models
 from .containers import DockerSwarmContainerManager 
 from .auth import hash_password, if_hash_matches_password
 
@@ -31,60 +31,99 @@ class ServicesManager(object):
 
     def create_inference_job_services(self, inference_job_id):
         inference_job = self._db.get_inference_job(inference_job_id)
+        
+        # Create query frontend
         query_service = self._create_query_service(inference_job)
 
-        # TODO: Deploy inference workers
-        # best_trials = self._db.get_best_trials_of_app(app, max_count=max_models)
-        # best_trials_models = [self._db.get_model(x.model_id) for x in best_trials]
+        # Create a worker service for each trial
+        best_trials = self._db.get_best_trials_of_app(inference_job.app, max_count=2)
+        trial_to_replicas = self._compute_inference_worker_replicas_for_trials(best_trials)
+        for (trial, replicas) in trial_to_replicas.items():
+            self._create_inference_job_worker(inference_job, trial, replicas)
 
-        # inference_job = self._db.create_inference_job(user_id, app)
-        # self._db.commit() 
-
-        self._db.mark_inference_job_as_running(
-            inference_job,
-            query_service_id=query_service.id
-        )
+        self._db.mark_inference_job_as_running(inference_job, query_service_id=query_service.id)
         self._db.commit()
+
         return (inference_job, query_service)
 
     def stop_inference_job_services(self, inference_job_id):
         inference_job = self._db.get_inference_job(inference_job_id)
-        # TODO: Destroy inference workers
+        
+        # Stop query frontend
         service = self._db.get_service(inference_job.query_service_id)
-        self._destroy_service(service)
+        self._stop_service(service)
+
+        # Stop all workers for inference job
+        workers = self._db.get_workers_of_inference_job(inference_job_id)
+        for worker in workers:
+            service = self._db.get_service(worker.service_id)
+            self._stop_service(service)
+
         self._db.mark_inference_job_as_stopped(inference_job)
         self._db.commit()
+
         return inference_job
 
     def create_train_job_services(self, train_job_id):
         train_job = self._db.get_train_job(train_job_id)
         models = self._db.get_models_of_task(train_job.task)
-        model_to_replicas = compute_train_worker_replicas_for_models(models)
+        model_to_replicas = self._compute_train_worker_replicas_for_models(models)
 
+        # Create a worker service for each model
         for (model, replicas) in model_to_replicas.items():
-            # Create corresponding service for newly created worker
-            self._create_train_job_service(train_job, model, replicas)
+            self._create_train_job_worker(train_job, model, replicas)
 
         self._update_train_job_status(train_job)
         return train_job
 
     def stop_train_job_services(self, train_job_id):
         train_job = self._db.get_train_job(train_job_id)
-        # Stop all services for train job
-        train_job_services = self._db.get_services_of_train_job(train_job_id)
-        for train_job_service in train_job_services:
-            self._stop_train_job_service(train_job_service)
+
+        # Stop all workers for train job
+        workers = self._db.get_workers_of_train_job(train_job_id)
+        for worker in workers:
+            self._stop_train_job_worker(worker)
 
         return train_job
         
-    def stop_train_job_service(self, train_job_service_id):
-        train_job_service = self._db.get_train_job_service(train_job_service_id)
-        self._stop_train_job_service(train_job_service)
+    def stop_train_job_worker(self, service_id):
+        train_job_service = self._db.get_train_job_worker(service_id)
+        self._stop_train_job_worker(train_job_service)
         return train_job_service
 
     ####################################
     # Private
     ####################################
+
+    def _create_inference_job_worker(self, inference_job, trial, replicas):
+        model = self._db.get_model(trial.model_id)
+        service_type = ServiceType.INFERENCE
+        environment_vars = {
+            'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
+            'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
+            'POSTGRES_USER': os.environ['POSTGRES_USER'],
+            'POSTGRES_DB': os.environ['POSTGRES_DB'],
+            'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
+            'LOGS_FOLDER_PATH': os.environ['LOGS_FOLDER_PATH'],
+            'REDIS_HOST': os.environ['REDIS_HOST'],
+            'REDIS_PORT': os.environ['REDIS_PORT']
+        }
+
+        service = self._create_service(
+            service_type=service_type,
+            docker_image=model.docker_image,
+            replicas=replicas,
+            environment_vars=environment_vars
+        )
+
+        self._db.create_inference_job_worker(
+            service_id=service.id,
+            inference_job_id=inference_job.id,
+            trial_id=trial.id
+        )
+        self._db.commit()
+
+        return service
 
     def _create_query_service(self, inference_job):
         service_type = ServiceType.QUERY
@@ -109,7 +148,7 @@ class ServicesManager(object):
 
         return service
 
-    def _create_train_job_service(self, train_job, model, replicas):
+    def _create_train_job_worker(self, train_job, model, replicas):
         service_type = ServiceType.TRAIN
         environment_vars = {
             'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
@@ -131,25 +170,26 @@ class ServicesManager(object):
             environment_vars=environment_vars
         )
 
-        self._db.create_train_job_service(
+        self._db.create_train_job_worker(
             service_id=service.id,
             train_job_id=train_job.id,
             model_id=model.id
         )
+        self._db.commit()
 
         return service
 
-    def _stop_train_job_service(self, train_job_service):
-        service = self._db.get_service(train_job_service.service_id)
-        self._destroy_service(service)
-        train_job = self._db.get_train_job(train_job_service.train_job_id)
+    def _stop_train_job_worker(self, worker):
+        service = self._db.get_service(worker.service_id)
+        self._stop_service(service)
+        train_job = self._db.get_train_job(worker.train_job_id)
         self._update_train_job_status(train_job)
 
     def _update_train_job_status(self, train_job):
-        train_job_services = self._db.get_services_of_train_job(train_job.id)
-        services = [self._db.get_service(x.service_id) for x in train_job_services]
+        workers = self._db.get_workers_of_train_job(train_job.id)
+        services = [self._db.get_service(x.service_id) for x in workers]
         
-        # If all services for the train job have stopped, stop train job as well
+        # If all workers for the train job have stopped, stop train job as well
         if next((
             x for x in services 
             if x.status in [ServiceStatus.RUNNING, ServiceStatus.STARTED]
@@ -157,7 +197,15 @@ class ServicesManager(object):
             self._db.mark_train_job_as_complete(train_job)
             self._db.commit()
 
-    def _destroy_service(self, service):
+        # If any worker for the train job is running, mark train job as running
+        elif next((
+            x for x in services 
+            if x.status in [ServiceStatus.RUNNING]
+        ), None) is not None:
+            self._db.mark_train_job_as_running(train_job)
+            self._db.commit()
+
+    def _stop_service(self, service):
         if service.container_service_id is not None:
             self._container_manager.destroy_service(service.container_service_id)
 
@@ -196,7 +244,7 @@ class ServicesManager(object):
         ext_port = None
         if container_port is not None:
             ext_hostname = os.environ['RAFIKI_IP_ADDRESS']
-            ext_port = self._get_available_service_port()
+            ext_port = self._get_available_ext_port()
             publish_port = (ext_port, container_port)
 
         try:
@@ -235,10 +283,10 @@ class ServicesManager(object):
 
         return service
 
-    # Compute next available port
-    def _get_available_service_port(self):
+    # Compute next available external port
+    def _get_available_ext_port(self):
         services = self._db.get_services(status=ServiceStatus.RUNNING)
-        used_ports = [x.port for x in services]
+        used_ports = [int(x.ext_port) for x in services if x.ext_port is not None]
         port = MIN_SERVICE_PORT
         while port <= MAX_SERVICE_PORT:
             if port not in used_ports:
@@ -247,4 +295,18 @@ class ServicesManager(object):
             port += 1
 
         return port
+
+    def _compute_train_worker_replicas_for_models(self, models):
+        # TODO: Improve provisioning algorithm
+        return {
+            model : 2 # 2 replicas per model
+            for model in models
+        }
+
+    def _compute_inference_worker_replicas_for_trials(self, trials):
+        # TODO: Improve provisioning algorithm
+        return {
+            trial : 2 # 2 replicas per trial
+            for trial in trials
+        }
     
