@@ -30,9 +30,7 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
                     'type': 'int_cat',
                     'values': [1, 2, 4, 8, 16, 32, 64, 128]
                 }
-            },
-            'root_hyperparameters': ['hidden_layer_units', 'epochs', 'learning_rate', 'batch_size'],
-            'conditional_hyperparameters': {}
+            }
         }
 
     def init(self, hyperparameters):

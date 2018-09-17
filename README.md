@@ -85,13 +85,13 @@ bash scripts/build_query_frontend_image.sh
 
 ## Using Rafiki
 
-Use the Rafiki Client Python module on the Python CLI.
+On how to use Rafiki, build & read Rafiki's Sphinx documentation by running:
 
-Refer to the Rafiki Client guides by role:
-
-- [Rafiki Admins](./docs/admins.md)
-- [Rafiki Model Developers](./docs/model_developers.md)
-- [Rafiki App Developers](./docs/app_developers.md)
+```shell
+pip install sphinx
+sphinx-build -b html . docs
+open docs/index.html
+```
 
 ## Rafiki Admin HTTP Server REST API
 
@@ -99,7 +99,7 @@ To make calls to the HTTP endpoints, you'll need first authenticate with email &
 
 `Authorization: Bearer {{token}}`
 
-The list of available HTTP endpoints & their request formats are available as a *Postman* collection (outdated) in the root of this project.
+The list of available HTTP endpoints & their request formats are available as a *Postman* collection (OUTDATED) in the root of this project.
 
 ### Creating a Model
 
@@ -113,10 +113,6 @@ serialize_model_to_file(model_inst, out_file_path='model.pickle')
 ```
 
 Then, together with the `name` & `task` fields, upload the output serialized model file as the `model_serialized` field of a multi-part form data request.
-
-## Using Rafiki with the Admin Python module
-
-Use the Rafiki Admin Python module on the Python CLI. You'll need to install the Rafiki Admin's Python dependencies by running `pip install -r ./rafiki/admin/requirements.txt`. You'll also need to make sure `POSTGRES_HOST` and `POSTGRES_PORT` are configured right to communicate directly to the DB.
 
 ## Troubleshooting
 
@@ -158,7 +154,3 @@ docker rm $(docker ps -a -q)
 # Delete all images
 docker rmi $(docker images -q)
 ```
-
-## Credits
-
-Original Auto-Tune Models (ATM) project: https://github.com/HDI-Project/ATM
