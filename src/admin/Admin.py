@@ -22,7 +22,7 @@ class InvalidPasswordException(Exception):
     pass
 
 class Admin(object):
-    DEFAULT_MODEL_IMAGE_NAME = 'rafiki_worker'
+    DEFAULT_MODEL_IMAGE = 'rafiki_model'
 
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
         self._db = db
@@ -68,7 +68,7 @@ class Admin(object):
     # Train Job
     ####################################
 
-    def create_train_job(self, user_id, app_name,
+    def create_train_job(self, user_id, app,
         task, train_dataset_uri, test_dataset_uri,
         budget_type, budget_amount):
         
@@ -77,12 +77,12 @@ class Admin(object):
 
         with self._db:
             # Compute auto-incremented app version
-            train_jobs = self._db.get_train_jobs_by_app(app_name)
+            train_jobs = self._db.get_train_jobs_of_app(app)
             app_version = max([x.app_version for x in train_jobs], default=0) + 1
 
             train_job = self._db.create_train_job(
                 user_id=user_id,
-                app_name=app_name,
+                app=app,
                 app_version=app_version,
                 task=task,
                 train_dataset_uri=train_dataset_uri,
@@ -106,7 +106,7 @@ class Admin(object):
     def stop_train_job(self, train_job_id):
         with self._db:
             # Stop all workers for train job
-            workers = self._db.get_train_job_workers_by_train_job(train_job_id)
+            workers = self._db.get_workers_of_train_job(train_job_id)
             for worker in workers:
                 self._destroy_train_job_worker(worker)
 
@@ -117,13 +117,13 @@ class Admin(object):
     def get_train_job(self, train_job_id):
         with self._db:
             train_job = self._db.get_train_job(train_job_id)
-            workers = self._db.get_train_job_workers_by_train_job(train_job_id)
-            models = self._db.get_models_by_task(train_job.task)
+            workers = self._db.get_workers_of_train_job(train_job_id)
+            models = self._db.get_models_of_task(train_job.task)
             return [
                 {
                     'id': train_job.id,
                     'status': train_job.status,
-                    'app_name': train_job.app_name,
+                    'app': train_job.app,
                     'app_version': train_job.app_version,
                     'task': train_job.task,
                     'train_dataset_uri': train_job.train_dataset_uri,
@@ -146,16 +146,15 @@ class Admin(object):
                 }
                 
             ]
-            
 
-    def get_train_jobs(self, app_name):
+    def get_train_jobs_of_app(self, app):
         with self._db:
-            train_jobs = self._db.get_train_jobs_by_app(app_name)
+            train_jobs = self._db.get_train_jobs_of_app(app)
             return [
                 {
                     'id': x.id,
                     'status': x.status,
-                    'app_name': x.app_name,
+                    'app': x.app,
                     'app_version': x.app_version,
                     'task': x.task,
                     'train_dataset_uri': x.train_dataset_uri,
@@ -185,12 +184,12 @@ class Admin(object):
     # Inference Job
     ####################################
 
-    def create_inference_job(self, user_id, app_name, max_models=3):
+    def create_inference_job(self, user_id, app, max_models=3):
         with self._db:
-            best_trials = self._db.get_best_trials_by_app(app_name, max_count=max_models)
+            best_trials = self._db.get_best_trials_of_app(app, max_count=max_models)
             best_trials_models = [self._db.get_model(x.model_id) for x in best_trials]
 
-            inference_job = self._db.create_inference_job(user_id, app_name)
+            inference_job = self._db.create_inference_job(user_id, app)
             self._db.commit()
 
             # TODO: Deploy workers based on current deployment jobs
@@ -199,9 +198,9 @@ class Admin(object):
                 'id': inference_job.id
             }
 
-    def get_inference_jobs(self, app_name):
+    def get_inference_jobs(self, app):
         with self._db:
-            inference_jobs = self._db.get_inference_jobs_by_app(app_name)
+            inference_jobs = self._db.get_inference_jobs_of_app(app)
             return [
                 {
                     'id': x.id,
@@ -216,9 +215,9 @@ class Admin(object):
     # Trials
     ####################################
 
-    def get_best_trials_by_app(self, app_name, max_count=3):
+    def get_best_trials_of_app(self, app, max_count=3):
         with self._db:
-            best_trials = self._db.get_best_trials_by_app(app_name, max_count=max_count)
+            best_trials = self._db.get_best_trials_of_app(app, max_count=max_count)
             best_trials_models = [self._db.get_model(x.model_id) for x in best_trials]
             return [
                 {
@@ -232,9 +231,9 @@ class Admin(object):
                 for (trial, model) in zip(best_trials, best_trials_models)
             ]
 
-    def get_trials_by_app(self, app_name):
+    def get_trials_of_app(self, app):
         with self._db:
-            trials = self._db.get_trials_by_app(app_name)
+            trials = self._db.get_trials_of_app(app)
             trials_models = [self._db.get_model(x.model_id) for x in trials]
             return [
                 {
@@ -251,9 +250,9 @@ class Admin(object):
             ]
             
         
-    def get_trials_by_train_job(self, train_job_id):
+    def get_trials_of_train_job(self, train_job_id):
         with self._db:
-            trials = self._db.get_trials_by_train_job(train_job_id)
+            trials = self._db.get_trials_of_train_job(train_job_id)
             trials_models = [self._db.get_model(x.model_id) for x in trials]
             return [
                 {
@@ -286,14 +285,14 @@ class Admin(object):
     ####################################
 
     def create_model(self, user_id, name, task, 
-        model_serialized, docker_image_name=None):
+        model_serialized, docker_image=None):
         with self._db:
             model = self._db.create_model(
                 user_id=user_id,
                 name=name,
                 task=task,
                 model_serialized=model_serialized,
-                docker_image_name=(docker_image_name or self.DEFAULT_MODEL_IMAGE_NAME)
+                docker_image=(docker_image or self.DEFAULT_MODEL_IMAGE)
             )
 
             return {
@@ -309,21 +308,21 @@ class Admin(object):
                     'task': model.task,
                     'datetime_created': model.datetime_created,
                     'user_id': model.user_id,
-                    'docker_image_name': model.docker_image_name
+                    'docker_image': model.docker_image
                 }
                 for model in models
             ]
 
-    def get_models_by_task(self, task):
+    def get_models_of_task(self, task):
         with self._db:
-            models = self._db.get_models_by_task(task)
+            models = self._db.get_models_of_task(task)
             return [
                 {
                     'name': model.name,
                     'task': model.task,
                     'datetime_created': model.datetime_created,
                     'user_id': model.user_id,
-                    'docker_image_name': model.docker_image_name
+                    'docker_image': model.docker_image
                 }
                 for model in models
             ]
@@ -354,13 +353,13 @@ class Admin(object):
             logger.info('Skipping superadmin creation as it already exists...')
 
     def _deploy_train_job_workers(self, train_job):
-        workers = self._db.get_train_job_workers_by_train_job(train_job.id)
-        models = self._db.get_models_by_task(train_job.task)
+        workers = self._db.get_workers_of_train_job(train_job.id)
+        models = self._db.get_models_of_task(train_job.task)
         model_to_replicas = compute_train_worker_replicas_for_models(models)
 
         for (model, replicas) in model_to_replicas.items():
             worker = next((x for x in workers if x.model_id == model.id), None)
-            image_name = model.docker_image_name
+            image_name = model.docker_image
 
             worker = self._db.create_train_job_worker(train_job.id, model.id)
             self._db.commit()
@@ -378,7 +377,7 @@ class Admin(object):
         self._db.commit()
 
         # If all workers for the train job has have stopped, stop train job as well
-        workers = self._db.get_train_job_workers_by_train_job(worker.train_job_id)
+        workers = self._db.get_workers_of_train_job(worker.train_job_id)
         if next((
             x for x in workers 
             if x.status in [TrainJobWorkerStatus.RUNNING, TrainJobWorkerStatus.STARTED]
@@ -388,7 +387,7 @@ class Admin(object):
 
 
     def _create_service_for_worker(self, worker_id, image_name, replicas):
-        service_name = 'rafiki_worker_{}'.format(worker_id)
+        service_name = 'rafiki_train_worker_{}'.format(worker_id)
         environment_vars = {
             'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
             'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
