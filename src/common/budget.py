@@ -1,2 +1,0 @@
-class BudgetType():
-    MODEL_TRIAL_COUNT = 'MODEL_TRIAL_COUNT'

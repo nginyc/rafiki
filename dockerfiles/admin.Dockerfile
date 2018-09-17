@@ -8,13 +8,10 @@ RUN mkdir /root/app/
 WORKDIR /root/app/
 
 # Install python dependencies
-COPY src/admin/requirements.txt admin/requirements.txt
+COPY rafiki/admin/requirements.txt admin/requirements.txt
 RUN pip install -r admin/requirements.txt
 
-COPY src/db/ db/
-COPY src/common/ common/
-COPY src/model/ model/
-COPY src/admin/ admin/
+COPY rafiki/ rafiki/
 
 # Copy init script
 COPY scripts/start_admin.py start_admin.py

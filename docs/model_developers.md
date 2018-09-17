@@ -7,8 +7,7 @@
 2. Setup & configure Raifki Client by running:
 
 ```sh
-pip install -r ./src/client/requirements.txt
-export PYTHONPATH=$PWD/src
+pip install -r ./rafiki/client/requirements.txt
 ```
 
 ## Using Rafiki
@@ -18,7 +17,7 @@ Use the Rafiki Client Python module on the Python CLI:
 Logging in:
 
 ```py
-from client import Client
+from rafiki.client import Client
 client = Client()
 client.login(email='model_developer@rafiki', password='rafiki')
 ```
@@ -29,21 +28,29 @@ client.login(email='model_developer@rafiki', password='rafiki')
 
 Creating models:
 
-Most likely, you'll be using a deep learning framework e.g. Tensorflow to build your model. You might want to build a custom Docker image for the model training & inference. This Docker image has to extend `rafiki_model`.
+Most likely, you'll be using a deep learning framework e.g. Tensorflow to build your model. The base Rafiki worker image has the following python libraries pre-installed:
+
+```txt
+tensorflow==1.10.1
+h5py==2.8.0
+```
+
+You might want to build a custom Docker image for the model training & inference. This Docker image has to extend `rafiki_model`. An example is available at `./rafiki/model/dockerfiles/TensorflowModel.Dockerfile`.
+
+Run
 
 ```sh
 pip install tensorflow==1.10.1 h5py==2.8.0
-bash src/model/scripts/build_tensorflow_worker_image.sh
 ```
 
 ```python
-from model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
+from rafiki.model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
 model_inst = SingleHiddenLayerTensorflowModel()
 client.create_model(
     name='single_hidden_layer_tf',
     task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
     model_inst=model_inst,
-    docker_image='rafiki_tf_model'
+    docker_image='rafiki_model'
 )
 ```
 

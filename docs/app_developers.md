@@ -7,8 +7,7 @@
 2. Setup & configure Raifki Client by running:
 
 ```sh
-pip install -r ./src/client/requirements.txt
-export PYTHONPATH=$PWD/src
+pip install -r ./rafiki/client/requirements.txt
 ```
 
 ## Using Rafiki
@@ -18,7 +17,7 @@ Use the Rafiki Client Python module on the Python CLI:
 Logging in:
 
 ```py
-from client import Client
+from rafiki.client import Client
 client = Client()
 client.login(email='app_developer@rafiki', password='rafiki')
 ```
@@ -41,7 +40,7 @@ client.get_models_of_task(task='IMAGE_CLASSIFICATION_WITH_ARRAYS')
   'user_id': 'a8959685-6667-41d5-8f91-b195fda27f91'}]
 ```
 
-Creating train jobs:
+Creating a train job for an app:
 
 ```py
 client.create_train_job(
@@ -140,6 +139,16 @@ client.get_best_trials_of_app(app='fashion_mnist_app')
   'train_job_id': 'd6a00b3a-317d-4804-ae1f-9a7d0e57d75f'}]
 ```
 
+Creating an inference job for an app:
+
+```py
+client.create_inference_job(app='fashion_mnist_app')
+```
+
+```sh
+{'id': '3fea65bf-cc72-4d27-be52-6324432bcc13', 'query_host': '192.168.1.75:30000'}
+```
+
 Viewing all trials of an app:
 
 ```py
@@ -150,4 +159,10 @@ Stopping a train job prematurely:
 
 ```py
 client.stop_train_job(train_job_id=<train_job_id>)
+```
+
+Stopping an inference job:
+
+```py
+client.stop_inference_job(inference_job_id=<inference_job_id>)
 ```

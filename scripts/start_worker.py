@@ -1,0 +1,47 @@
+import sys
+import os
+import signal
+import traceback
+import logging
+
+from rafiki.constants import ServiceType
+from rafiki.utils.log import configure_logging
+
+service_id = os.environ['RAFIKI_SERVICE_ID']
+service_type = os.environ['RAFIKI_SERVICE_TYPE']
+container_id = os.environ.get('HOSTNAME', 'localhost')
+
+configure_logging('service-{}-{}'.format(service_id, container_id))
+
+logger = logging.getLogger(__name__)
+
+def sigterm_handler(_signo, _stack_frame):
+    print("SIGTERM received: %s, %s" % (_signo, _stack_frame))
+    exit_worker()
+
+worker = None
+def exit_worker():
+    if worker is not None:
+        worker.stop()
+        print('Worker stopped gracefully.')  
+
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, sigterm_handler)
+
+try:
+    if service_type == ServiceType.TRAIN:
+        from rafiki.train_worker import TrainWorker
+        worker = TrainWorker(service_id)
+        worker.start()
+    elif service_type == ServiceType.INFERENCE:
+        from rafiki.inference_worker import InferenceWorker
+        worker = InferenceWorker(service_id)
+        worker.start()
+    else:
+        raise Exception('Invalid service type: {}'.format(service_type))
+except Exception:
+    logger.error('Error while running worker:')
+    logger.error(traceback.format_exc())
+finally:
+    exit_worker()

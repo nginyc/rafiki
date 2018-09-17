@@ -15,7 +15,7 @@ Prerequisites: Unix-like environment
 Create a Docker Swarm e.g.:
 
 ```sh
-docker swarm init
+docker swarm init --advertise-addr <my-ip-address>
 ```
 
 Create a custom overlay Docker network for Rafiki, scoped to the Docker Swarm:
@@ -27,12 +27,12 @@ docker network create rafiki -d overlay --attachable --scope=swarm
 Create the file `.env.sh` at root of project:
 
 ```sh
+export ADMIN_PORT=8000
 export POSTGRES_HOST=rafiki_db
 export POSTGRES_PORT=5432
 export POSTGRES_USER=rafiki
 export POSTGRES_DB=rafiki
 export POSTGRES_PASSWORD=rafiki
-export PYTHONPATH=$PWD/src
 export APP_SECRET=rafiki
 export DOCKER_NETWORK=rafiki
 export LOGS_FOLDER_PATH=/var/log/rafiki
@@ -40,6 +40,11 @@ export ADMIN_HOST=rafiki_admin
 export ADMIN_PORT=8000
 export SUPERADMIN_EMAIL=superadmin@rafiki
 export SUPERADMIN_PASSWORD=rafiki
+export REDIS_HOST=rafiki_cache
+export REDIS_PORT=6379
+export REBROW_PORT=5001
+export RAFIKI_IP_ADDRESS=<your-ip-address>
+export PYTHONPATH=${PWD}
 ```
 
 Setup the Rafiki logs directory by creating the directory `/var/log/rafiki/` and ensuring Docker has the permissions to mount it onto containers:
@@ -63,11 +68,19 @@ source .env.sh
 bash scripts/start_admin.sh
 ```
 
-Additionally, build the base Rafiki worker image in Docker:
+Start the Rafiki Cache in terminal 3:
+
+```sh
+source .env.sh
+bash scripts/start_cache.sh
+```
+
+Additionally, build the base Rafiki images in Docker:
 
 ```sh
 source .env.sh
 bash scripts/build_model_image.sh
+bash scripts/build_query_frontend_image.sh
 ```
 
 ## Using Rafiki
@@ -93,8 +106,8 @@ The list of available HTTP endpoints & their request formats are available as a 
 For the `POST /models` endpoint, you'll need to first serialize the model:
 
 ```py
-from common import serialize_model_to_file
-from model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
+from rafiki.model import serialize_model_to_file
+from rafiki.model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
 model_inst = SingleHiddenLayerTensorflowModel()
 serialize_model_to_file(model_inst, out_file_path='model.pickle')
 ```
@@ -103,7 +116,7 @@ Then, together with the `name` & `task` fields, upload the output serialized mod
 
 ## Using Rafiki with the Admin Python module
 
-Use the Rafiki Admin Python module on the Python CLI. You'll need to install the Rafiki Admin's Python dependencies by running `pip install -r ./src/admin/requirements.txt`. You'll also need to make sure `POSTGRES_HOST` and `POSTGRES_PORT` are configured right to communicate directly to the DB.
+Use the Rafiki Admin Python module on the Python CLI. You'll need to install the Rafiki Admin's Python dependencies by running `pip install -r ./rafiki/admin/requirements.txt`. You'll also need to make sure `POSTGRES_HOST` and `POSTGRES_PORT` are configured right to communicate directly to the DB.
 
 ```shell
 python
@@ -130,8 +143,8 @@ user = admin.authenticate_user('admin@rafiki', 'rafiki')
 Creating & viewing models:
 
 ```py
-from common import serialize_model
-from model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
+from rafiki.constants import serialize_model
+from rafiki.model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
 model = SingleHiddenLayerTensorflowModel()
 model_serialized = serialize_model(model)
 admin.create_model(
@@ -178,6 +191,20 @@ POSTGRES_PORT=5433
 POSTGRES_USER=rafiki
 POSTGRES_DB=rafiki
 POSTGRES_PASSWORD=rafiki
+```
+
+Next, you can connect to Redis with *rebrow*:
+
+```sh
+source .env.sh
+bash scripts/start_rebrow.sh
+```
+
+...with these credentials by default:
+
+```sh
+REDIS_HOST=rafiki_cache
+REDIS_PORT=6379
 ```
 
 When running the whole stack locally, if you encounter an error like "No space left on device", you might be running out of space allocated for Docker. Try removing all containers & images:
