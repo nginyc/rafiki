@@ -59,26 +59,54 @@ def create_train_job(auth):
     with admin:
         return jsonify(admin.create_train_job(auth['user_id'], **params))
 
-@app.route('/train_jobs', methods=['GET'])
+@app.route('/train_jobs/<app>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_train_jobs_of_app(auth):
+def get_train_jobs_of_app(auth, app):
     params = get_request_params()
     with admin:
-        return jsonify(admin.get_train_jobs_of_app(**params))
+        return jsonify(admin.get_train_jobs_of_app(app, **params))
 
-@app.route('/train_jobs/<train_job_id>', methods=['GET'])
+@app.route('/train_jobs/<app>/<app_version>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_train_job(auth, train_job_id):
+def get_train_job(auth, app, app_version):
     params = get_request_params()
     with admin:
-        return jsonify(admin.get_train_job(train_job_id, **params))
+        return jsonify(admin.get_train_job(app, app_version=int(app_version), **params))
 
-@app.route('/train_jobs/<train_job_id>/stop', methods=['POST'])
+@app.route('/train_jobs/<app>/<app_version>/stop', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def stop_train_job(auth, train_job_id):
+def stop_train_job(auth, app, app_version):
     params = get_request_params()
     with admin:
-        return jsonify(admin.stop_train_job(train_job_id, **params))
+        return jsonify(admin.stop_train_job(app, app_version=int(app_version), **params))
+
+@app.route('/train_jobs/<app>/<app_version>/trials', methods=['GET'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
+def get_trials_of_train_job(auth, app, app_version):
+    params = get_request_params()
+
+    # Return best trials by train job
+    if params.get('type') == 'best':
+        del params['type']
+
+        if 'max_count' in params:
+            params['max_count'] = int(params['max_count'])
+
+        with admin:
+            return jsonify(admin.get_best_trials_of_train_job(
+                app, 
+                app_version=int(app_version),
+                **params
+            ))
+    
+    # Return all trials by train job
+    else:
+        with admin:
+            return jsonify(admin.get_trials_of_train_job(
+                app, 
+                app_version=int(app_version),
+                **params)
+            )
 
 @app.route('/train_job_workers/<service_id>/stop', methods=['POST'])
 @auth([])
@@ -95,54 +123,33 @@ def stop_train_job_worker(auth, service_id):
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def create_inference_jobs(auth):
     params = get_request_params()
+
+    if 'app_version' in params:
+        params['app_version'] = int(params['app_version'])
+
     with admin:
         return jsonify(admin.create_inference_job(auth['user_id'], **params))
 
-@app.route('/inference_jobs/<inference_job_id>/stop', methods=['POST'])
+@app.route('/inference_jobs/<app>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def stop_inference_job(auth, inference_job_id):
+def get_inference_jobs_of_app(auth, app):
     params = get_request_params()
     with admin:
-        return jsonify(admin.stop_inference_job(inference_job_id, **params))
+        return jsonify(admin.get_inference_jobs_of_app(app, **params))
 
-@app.route('/inference_jobs', methods=['GET'])
+@app.route('/inference_jobs/<app>/<app_version>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_inference_jobs(auth, app):
+def get_inference_job(auth, app, app_version):
     params = get_request_params()
     with admin:
-        return jsonify(admin.get_inference_jobs(app, **params))
+        return jsonify(admin.get_inference_job(app, app_version=int(app_version), **params))
 
-####################################
-# Trials
-####################################
-
-@app.route('/trials', methods=['GET'])
+@app.route('/inference_jobs/<app>/<app_version>/stop', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_trials_of_app(auth):
-    params = get_request_params()
-
-    # Return best trials by app
-    if params.get('type') == 'best':
-        del params['type']
-
-        if 'max_count' in params:
-            params['max_count'] = int(params['max_count'])
-
-        with admin:
-            return jsonify(admin.get_best_trials_of_app(**params))
-    
-    # Return all trials by app
-    else:
-        with admin:
-            return jsonify(admin.get_trials_of_app(**params))
-
-
-@app.route('/train_job/<train_job_id>/trials', methods=['GET'])
-@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_trials_of_train_job(auth, train_job_id):
+def stop_inference_job(auth, app, app_version=-1):
     params = get_request_params()
     with admin:
-        return jsonify(admin.get_trials_of_train_job(train_job_id, **params))
+        return jsonify(admin.stop_inference_job(app, app_version=int(app_version), **params))
 
 ####################################
 # Models

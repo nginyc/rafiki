@@ -89,57 +89,35 @@ class Client(object):
         return data
     
     def get_train_jobs_of_app(self, app):
-        data = self._get('/train_jobs', params={
-            'app': app
-        })
+        data = self._get('/train_jobs/{}'.format(app))
         return data
 
     # Returns train job with the latest app version by default
-    def get_train_job_of_app(self, app, app_version=-1):
-        train_jobs = self.get_train_jobs_of_app(app)
-
-        if app_version == -1:
-            app_version = max([x.get('app_version') for x in train_jobs], default=None)
-
-        train_job = next((x for x in train_jobs if x.get('app_version') == app_version), None)
-        
-        if train_job is None:
-            return None
-
-        return self.get_train_job(train_job.get('id'))
-
     # Additionally returns a train job's models & workers' details
-    def get_train_job(self, train_job_id):
-        data = self._get('/train_jobs/{}'.format(train_job_id))
+    def get_train_job(self, app, app_version=-1):
+        data = self._get('/train_jobs/{}/{}'.format(app, app_version))
         return data
 
-    def stop_train_job(self, train_job_id):
-        data = self._post('/train_jobs/{}/stop'.format(train_job_id))
-        return data
-
-    # Only for internal use
-    def stop_train_job_worker(self, service_id):
-        data = self._post('/train_job_workers/{}/stop'.format(service_id))
-        return data
-
-    ####################################
-    # Trials
-    ####################################
-    
     # Returns only completed trials ordered by highest scores
-    def get_best_trials_of_app(self, app, max_count=3):
-        data = self._get('/trials', params={
-            'app': app,
+    def get_best_trials_of_train_job(self, app, app_version=-1, max_count=3):
+        data = self._get('/train_jobs/{}/{}/trials'.format(app, app_version), params={
             'type': 'best',
             'max_count': max_count
         })
         return data
 
     # Returns all trials ordered from most recently started
-    def get_trials_of_app(self, app):
-        data = self._get('/trials', params={
-            'app': app
-        })
+    def get_trials_of_train_job(self, app, app_version=-1):
+        data = self._get('/train_jobs/{}/{}/trials'.format(app, app_version))
+        return data
+
+    def stop_train_job(self, app, app_version=-1):
+        data = self._post('/train_jobs/{}/{}/stop'.format(app, app_version))
+        return data
+
+    # Only for internal use
+    def stop_train_job_worker(self, service_id):
+        data = self._post('/train_job_workers/{}/stop'.format(service_id))
         return data
 
     ####################################
@@ -152,9 +130,19 @@ class Client(object):
             'app_version': app_version
         })
         return data
-    
-    def stop_inference_job(self, inference_job_id):
-        data = self._post('/inference_jobs/{}/stop'.format(inference_job_id))
+
+    def get_inference_jobs_of_app(self, app):
+        data = self._get('/inference_jobs/{}'.format(app))
+        return data
+
+    # Returns inference job with the latest app version by default
+    # Additionally returns a inference job's models & workers' details
+    def get_inference_job(self, app, app_version=-1):
+       data = self._get('/inference_jobs/{}/{}'.format(app, app_version))
+       return data
+
+    def stop_inference_job(self, app, app_version=-1):
+        data = self._post('/inference_jobs/{}/{}/stop'.format(app, app_version))
         return data
 
     ####################################

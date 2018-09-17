@@ -84,21 +84,26 @@ class Admin(object):
 
         return {
             'id': train_job.id,
+            'app': train_job.app,
             'app_version': train_job.app_version
         }
 
-    def stop_train_job(self, train_job_id):
-        self._services_manager.stop_train_job_services(train_job_id)
+    def stop_train_job(self, app, app_version=-1):
+        train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+        self._services_manager.stop_train_job_services(train_job.id)
 
         return {
-            'id': train_job_id
+            'id': train_job.id,
+            'app': train_job.app,
+            'app_version': train_job.app_version
         }
             
-    def get_train_job(self, train_job_id):
-        train_job = self._db.get_train_job(train_job_id)
-        workers = self._db.get_workers_of_train_job(train_job_id)
-        services = self._db.get_services(ids=[x.id for x in workers])
-        models = self._db.get_models_of_task(train_job.task)
+    def get_train_job(self, app, app_version=-1):
+        train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+        workers = self._db.get_workers_of_train_job(train_job.id)
+        services = [self._db.get_service(x.service_id) for x in workers]
+        worker_models = [self._db.get_model(x.model_id) for x in workers]
+
         return [
             {
                 'id': train_job.id,
@@ -114,15 +119,16 @@ class Admin(object):
                 'budget_amount': train_job.budget_amount,
                 'workers': [
                     {
-                        'service_id': x.service_id,
-                        'status': x.status,
-                        'datetime_started': x.datetime_started,
-                        'datetime_stopped': x.datetime_stopped,
-                        'replicas': x.replicas
+                        'service_id': service.id,
+                        'status': service.status,
+                        'replicas': service.replicas,
+                        'datetime_started': service.datetime_started,
+                        'datetime_stopped': service.datetime_stopped,
+                        'model_name': model.name
                     }
-                    for x in services
-                ],
-                'models': [x.name for x in models]
+                    for (worker, service, model) 
+                    in zip(workers, services, worker_models)
+                ]
             }
         ]
 
@@ -145,6 +151,38 @@ class Admin(object):
             for x in train_jobs
         ]
 
+    def get_best_trials_of_train_job(self, app, app_version=-1, max_count=3):
+        train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+        best_trials = self._db.get_best_trials_of_train_job(train_job.id, max_count=max_count)
+        best_trials_models = [self._db.get_model(x.model_id) for x in best_trials]
+        return [
+            {
+                'id': trial.id,
+                'hyperparameters': trial.hyperparameters,
+                'datetime_started': trial.datetime_started,
+                'datetime_completed': trial.datetime_completed,
+                'model_name': model.name,
+                'score': trial.score
+            }
+            for (trial, model) in zip(best_trials, best_trials_models)
+        ]
+
+    def get_trials_of_train_job(self, app, app_version=-1):
+        train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+        trials = self._db.get_trials_of_train_job(train_job.id)
+        trials_models = [self._db.get_model(x.model_id) for x in trials]
+        return [
+            {
+                'id': trial.id,
+                'hyperparameters': trial.hyperparameters,
+                'datetime_started': trial.datetime_started,
+                'datetime_completed': trial.datetime_completed,
+                'model_name': model.name,
+                'score': trial.score
+            }
+            for (trial, model) in zip(trials, trials_models)
+        ]
+
     def stop_train_job_worker(self, service_id):
         worker = self._services_manager.stop_train_job_worker(service_id)
         return {
@@ -158,10 +196,10 @@ class Admin(object):
     ####################################
 
     def create_inference_job(self, user_id, app, app_version):
+        train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
         inference_job = self._db.create_inference_job(
             user_id=user_id,
-            app=app,
-            app_version=app_version
+            train_job_id=train_job.id
         )
         self._db.commit()
 
@@ -170,77 +208,82 @@ class Admin(object):
 
         return {
             'id': inference_job.id,
-            'query_host': '{}:{}'.format(query_service.ext_hostname, query_service.ext_port)
+            'train_job_id': train_job.id,
+            'app': train_job.app,
+            'app_version': train_job.app_version,
+            'query_host': self._get_service_host(query_service)
         }
 
-    def stop_inference_job(self, inference_job_id):
-        inference_job = self._services_manager.stop_inference_job_services(inference_job_id)
+    def stop_inference_job(self, app, app_version=-1):
+        train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+        inference_job = self._db.get_inference_job_by_train_job(train_job.id)
+        inference_job = self._services_manager.stop_inference_job_services(inference_job.id)
         return {
-            'id': inference_job.id
+            'id': inference_job.id,
+            'train_job_id': train_job.id,
+            'app': train_job.app,
+            'app_version': train_job.app_version
         }
 
-    def get_inference_jobs(self, app):
-        inference_jobs = self._db.get_inference_jobs_of_app(app)
+    def get_inference_job(self, app, app_version=-1):
+        train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+        inference_job = self._db.get_inference_job_by_train_job(train_job.id)
+        workers = self._db.get_workers_of_inference_job(inference_job.id)
+        services = [self._db.get_service(x.service_id) for x in workers]
+        query_service = self._db.get_service(inference_job.query_service_id)
+        query_host = self._get_service_host(query_service)
+        worker_trials = [self._db.get_trial(x.trial_id) for x in workers]
+        worker_trial_models = [self._db.get_model(x.model_id) for x in worker_trials]
+
         return [
             {
-                'id': x.id,
-                'status': x.status,
-                'datetime_started': x.datetime_started,
-                'datetime_stopped': x.datetime_stopped,
+                'id': inference_job.id,
+                'status': inference_job.status,
+                'train_job_id': train_job.id,
+                'app': train_job.app,
+                'app_version': train_job.app_version,
+                'datetime_started': inference_job.datetime_started,
+                'datetime_stopped': inference_job.datetime_stopped,
+                'query_host': query_host,
+                'workers': [
+                    {
+                        'service_id': service.id,
+                        'status': service.status,
+                        'replicas': service.replicas,
+                        'datetime_started': service.datetime_started,
+                        'datetime_stopped': service.datetime_stopped,
+                        'trial': {
+                            'id': trial.id,
+                            'score': trial.score,
+                            'hyperparameters': trial.hyperparameters,
+                            'model_name': model.name
+                        }
+                    }
+                    for (worker, service, trial, model) 
+                    in zip(workers, services, worker_trials, worker_trial_models)
+                ]
             }
-            for x in inference_jobs
+        ]
+
+    def get_inference_jobs_of_app(self, app):
+        inference_jobs = self._db.get_inference_jobs_of_app(app)
+        train_jobs = [self._db.get_train_job(x.train_job_id) for x in inference_jobs]
+        query_services = [self._db.get_service(x.query_service_id) for x in inference_jobs]
+        query_hosts = [self._get_service_host(x) for x in query_services]
+        return [
+            {
+                'id': inference_job.id,
+                'status': inference_job.status,
+                'train_job_id': train_job.id,
+                'app': train_job.app,
+                'app_version': train_job.app_version,
+                'datetime_started': inference_job.datetime_started,
+                'datetime_stopped': inference_job.datetime_stopped,
+                'query_host': query_host
+            }
+            for (inference_job, train_job, query_host) in zip(inference_jobs, train_jobs, query_hosts)
         ]
     
-    ####################################
-    # Trials
-    ####################################
-
-    def get_best_trials_of_app(self, app, max_count=3):
-        best_trials = self._db.get_best_trials_of_app(app, max_count=max_count)
-        best_trials_models = [self._db.get_model(x.model_id) for x in best_trials]
-        return [
-            {
-                'id': trial.id,
-                'train_job_id': trial.train_job_id,
-                'hyperparameters': trial.hyperparameters,
-                'datetime_started': trial.datetime_started,
-                'model_name': model.name,
-                'score': trial.score
-            }
-            for (trial, model) in zip(best_trials, best_trials_models)
-        ]
-
-    def get_trials_of_app(self, app):
-        trials = self._db.get_trials_of_app(app)
-        trials_models = [self._db.get_model(x.model_id) for x in trials]
-        return [
-            {
-                'id': trial.id,
-                'status': trial.status,
-                'train_job_id': trial.train_job_id,
-                'hyperparameters': trial.hyperparameters,
-                'datetime_started': trial.datetime_started,
-                'datetime_completed': trial.datetime_completed,
-                'model_name': model.name,
-                'score': trial.score
-            }
-            for (trial, model) in zip(trials, trials_models)
-        ] 
-        
-    def get_trials_of_train_job(self, train_job_id):
-        trials = self._db.get_trials_of_train_job(train_job_id)
-        trials_models = [self._db.get_model(x.model_id) for x in trials]
-        return [
-            {
-                'id': trial.id,
-                'train_job_id': trial.train_job_id,
-                'hyperparameters': trial.hyperparameters,
-                'datetime_started': trial.datetime_started,
-                'model_name': model.name,
-                'score': trial.score
-            }
-            for (trial, model) in zip(trials, trials_models)
-        ]
 
     ####################################
     # Models
@@ -315,6 +358,9 @@ class Admin(object):
         user = self._db.create_user(email, password_hash, user_type)
         self._db.commit()
         return user
+
+    def _get_service_host(self, service):
+        return '{}:{}'.format(service.ext_hostname, service.ext_port)
 
     def __enter__(self):
         self.connect()

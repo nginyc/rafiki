@@ -26,6 +26,8 @@ client.login(email='app_developer@rafiki', password='rafiki')
 {'user_id': 'eb273359-c74b-492b-80af-b9ea47ca959a', 'user_type': 'APP_DEVELOPER'}
 ```
 
+### Train Jobs
+
 Getting models by task:
 
 ```py
@@ -54,7 +56,7 @@ client.create_train_job(
 ```
 
 ```sh
-{'id': 'd6a00b3a-317d-4804-ae1f-9a7d0e57d75f', 'app_version': 1}
+{'app': 'fashion_mnist_app', 'app_version': 1, 'id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58'}
 ```
 
 Viewing train jobs of an app:
@@ -66,12 +68,12 @@ client.get_train_jobs_of_app(app='fashion_mnist_app')
 ```sh
 [{'app': 'fashion_mnist_app',
   'app_version': 1,
-  'budget_amount': 10,
+  'budget_amount': 3,
   'budget_type': 'MODEL_TRIAL_COUNT',
   'datetime_completed': None,
-  'datetime_started': 'Thu, 06 Sep 2018 04:48:58 GMT',
-  'id': 'd6a00b3a-317d-4804-ae1f-9a7d0e57d75f',
-  'status': 'STARTED',
+  'datetime_started': 'Mon, 17 Sep 2018 05:00:24 GMT',
+  'id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58',
+  'status': 'RUNNING',
   'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
   'test_dataset_uri': 'tf-keras://fashion_mnist?train_or_test=test',
   'train_dataset_uri': 'tf-keras://fashion_mnist?train_or_test=train'}]
@@ -80,64 +82,78 @@ client.get_train_jobs_of_app(app='fashion_mnist_app')
 Viewing details of the latest train job of an app:
 
 ```py
-client.get_train_job_of_app(app='fashion_mnist_app')
+client.get_train_job(app='fashion_mnist_app')
 ```
 
 ```sh
 [{'app': 'fashion_mnist_app',
   'app_version': 1,
-  'budget_amount': 10,
+  'budget_amount': 3,
   'budget_type': 'MODEL_TRIAL_COUNT',
-  'datetime_completed': None,
-  'datetime_started': 'Thu, 06 Sep 2018 04:48:58 GMT',
-  'id': 'd6a00b3a-317d-4804-ae1f-9a7d0e57d75f',
-  'models': ['single_hidden_layer_tf'],
-  'status': 'STARTED',
+  'datetime_completed': 'Mon, 17 Sep 2018 05:04:26 GMT',
+  'datetime_started': 'Mon, 17 Sep 2018 05:00:24 GMT',
+  'id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58',
+  'status': 'COMPLETED',
   'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
   'test_dataset_uri': 'tf-keras://fashion_mnist?train_or_test=test',
   'train_dataset_uri': 'tf-keras://fashion_mnist?train_or_test=train',
-  'workers': [{'datetime_started': 'Thu, 06 Sep 2018 04:49:00 GMT',
-               'model': 'single_hidden_layer_tf',
+  'workers': [{'datetime_started': 'Mon, 17 Sep 2018 05:00:25 GMT',
+               'datetime_stopped': 'Mon, 17 Sep 2018 05:04:26 GMT',
+               'model_name': 'single_hidden_layer_tf',
                'replicas': 2,
-               'service_id': '23nszw0dgi956qbz29xfsiws0',
-               'status': 'RUNNING'}]}]
+               'service_id': '09c18fd9-ee7d-44bf-b658-fa9c6d0972a3',
+               'status': 'STOPPED'}]}]
 ```
 
-Viewing best trials of an app:
+Viewing best trials of a train job:
 
 ```py
-client.get_best_trials_of_app(app='fashion_mnist_app')
+client.get_best_trials_of_train_job(app='fashion_mnist_app')
 ```
 
 ```sh
-[{'datetime_started': 'Thu, 06 Sep 2018 04:50:55 GMT',
-  'hyperparameters': {'batch_size': 128,
-                      'epochs': 1,
-                      'hidden_layer_units': 85,
-                      'learning_rate': 0.003984521706625327},
-  'id': '93aae9c7-e702-4e3b-8658-ff0dab5def6e',
-  'model_name': 'single_hidden_layer_tf',
-  'score': 0.8532,
-  'train_job_id': 'd6a00b3a-317d-4804-ae1f-9a7d0e57d75f'},
- {'datetime_started': 'Thu, 06 Sep 2018 04:50:26 GMT',
-  'hyperparameters': {'batch_size': 8,
-                      'epochs': 1,
-                      'hidden_layer_units': 84,
-                      'learning_rate': 0.00042853939434250643},
-  'id': 'de586911-9ace-4d5c-a3ca-2eeda740e195',
-  'model_name': 'single_hidden_layer_tf',
-  'score': 0.8449,
-  'train_job_id': 'd6a00b3a-317d-4804-ae1f-9a7d0e57d75f'},
- {'datetime_started': 'Thu, 06 Sep 2018 04:50:15 GMT',
+[{'datetime_completed': 'Mon, 17 Sep 2018 05:00:56 GMT',
+  'datetime_started': 'Mon, 17 Sep 2018 05:00:35 GMT',
   'hyperparameters': {'batch_size': 32,
                       'epochs': 1,
-                      'hidden_layer_units': 85,
-                      'learning_rate': 0.00010346559524770284},
-  'id': 'c2440e29-c7f8-42a4-ae48-abfa9cbb7cf3',
+                      'hidden_layer_units': 10,
+                      'learning_rate': 0.0075360338999624086},
+  'id': '8d40ad88-e5a1-4b16-b188-44be920b1683',
   'model_name': 'single_hidden_layer_tf',
-  'score': 0.837,
-  'train_job_id': 'd6a00b3a-317d-4804-ae1f-9a7d0e57d75f'}]
+  'score': 0.8231},
+ {'datetime_completed': 'Mon, 17 Sep 2018 05:04:26 GMT',
+  'datetime_started': 'Mon, 17 Sep 2018 05:03:06 GMT',
+  'hyperparameters': {'batch_size': 1,
+                      'epochs': 1,
+                      'hidden_layer_units': 10,
+                      'learning_rate': 0.030337360568713518},
+  'id': '74bd9b43-9812-4930-a29c-9b765b5b46bc',
+  'model_name': 'single_hidden_layer_tf',
+  'score': 0.099},
+ {'datetime_completed': 'Mon, 17 Sep 2018 05:03:06 GMT',
+  'datetime_started': 'Mon, 17 Sep 2018 05:00:56 GMT',
+  'hyperparameters': {'batch_size': 1,
+                      'epochs': 1,
+                      'hidden_layer_units': 78,
+                      'learning_rate': 0.056356430854509774},
+  'id': '94ea26de-e4a1-45af-8907-51cc4509d410',
+  'model_name': 'single_hidden_layer_tf',
+  'score': 0.092}]
 ```
+
+Viewing all trials of a train job:
+
+```py
+client.get_trials_of_train_job(app='fashion_mnist_app')
+```
+
+Stopping the latest train job of an app prematurely:
+
+```py
+client.stop_train_job(app='fashion_mnist_app')
+```
+
+### Inference Jobs
 
 Creating an inference job for an app:
 
@@ -146,23 +162,69 @@ client.create_inference_job(app='fashion_mnist_app')
 ```
 
 ```sh
-{'id': '3fea65bf-cc72-4d27-be52-6324432bcc13', 'query_host': '192.168.1.75:30000'}
+{'app': 'fashion_mnist_app', 'app_version': 1, 'id': '25c117a0-1677-44b2-affb-c56f8f99dabf', 'query_host': '192.168.1.75:30000', 'train_job_id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58'}
 ```
 
-Viewing all trials of an app:
+Viewing inference jobs of an app:
 
 ```py
-client.get_trials_of_app(app='fashion_mnist_app')
+client.get_inference_jobs_of_app(app='fashion_mnist_app')
 ```
 
-Stopping a train job prematurely:
+```sh
+[{'app': 'fashion_mnist_app',
+  'app_version': 1,
+  'datetime_started': 'Mon, 17 Sep 2018 05:17:34 GMT',
+  'datetime_stopped': None,
+  'id': '25c117a0-1677-44b2-affb-c56f8f99dabf',
+  'query_host': '192.168.1.75:30000',
+  'status': 'RUNNING',
+  'train_job_id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58'}]
+```
+
+Viewing details of the latest inference job of an app:
 
 ```py
-client.stop_train_job(train_job_id=<train_job_id>)
+client.get_inference_job(app='fashion_mnist_app')
+```
+
+```sh
+[{'app': 'fashion_mnist_app',
+  'app_version': 1,
+  'datetime_started': 'Mon, 17 Sep 2018 05:17:34 GMT',
+  'datetime_stopped': None,
+  'id': '25c117a0-1677-44b2-affb-c56f8f99dabf',
+  'query_host': '192.168.1.75:30000',
+  'status': 'RUNNING',
+  'train_job_id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58',
+  'workers': [{'datetime_started': 'Mon, 17 Sep 2018 05:17:34 GMT',
+               'datetime_stopped': None,
+               'replicas': 2,
+               'service_id': '27d1986f-f96c-4ada-ae35-d6cd1d55f8ca',
+               'status': 'RUNNING',
+               'trial': {'hyperparameters': {'batch_size': 32,
+                                             'epochs': 1,
+                                             'hidden_layer_units': 10,
+                                             'learning_rate': 0.0075360338999624086},
+                         'id': '8d40ad88-e5a1-4b16-b188-44be920b1683',
+                         'model_name': 'single_hidden_layer_tf',
+                         'score': 0.8231}},
+              {'datetime_started': 'Mon, 17 Sep 2018 05:17:34 GMT',
+               'datetime_stopped': None,
+               'replicas': 2,
+               'service_id': '951b78c8-dbc3-470c-8d5d-55db11eca6b0',
+               'status': 'RUNNING',
+               'trial': {'hyperparameters': {'batch_size': 1,
+                                             'epochs': 1,
+                                             'hidden_layer_units': 10,
+                                             'learning_rate': 0.030337360568713518},
+                         'id': '74bd9b43-9812-4930-a29c-9b765b5b46bc',
+                         'model_name': 'single_hidden_layer_tf',
+                         'score': 0.099}}]}]
 ```
 
 Stopping an inference job:
 
 ```py
-client.stop_inference_job(inference_job_id=<inference_job_id>)
+client.stop_inference_job(app='fashion_mnist_app')
 ```

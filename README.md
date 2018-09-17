@@ -61,18 +61,18 @@ source .env.sh
 bash scripts/start_db.sh
 ```
 
-Start the Rafiki Admin HTTP server in terminal 2:
-
-```sh
-source .env.sh
-bash scripts/start_admin.sh
-```
-
-Start the Rafiki Cache in terminal 3:
+Start the Rafiki Cache in terminal 2:
 
 ```sh
 source .env.sh
 bash scripts/start_cache.sh
+```
+
+Start the Rafiki Admin HTTP server in terminal 3:
+
+```sh
+source .env.sh
+bash scripts/start_admin.sh
 ```
 
 Additionally, build the base Rafiki images in Docker:
@@ -87,7 +87,7 @@ bash scripts/build_query_frontend_image.sh
 
 Use the Rafiki Client Python module on the Python CLI.
 
-Rafiki Client guides by role:
+Refer to the Rafiki Client guides by role:
 
 - [Rafiki Admins](./docs/admins.md)
 - [Rafiki Model Developers](./docs/model_developers.md)
@@ -117,63 +117,6 @@ Then, together with the `name` & `task` fields, upload the output serialized mod
 ## Using Rafiki with the Admin Python module
 
 Use the Rafiki Admin Python module on the Python CLI. You'll need to install the Rafiki Admin's Python dependencies by running `pip install -r ./rafiki/admin/requirements.txt`. You'll also need to make sure `POSTGRES_HOST` and `POSTGRES_PORT` are configured right to communicate directly to the DB.
-
-```shell
-python
-```
-
-Creating an user:
-
-```py
-from admin import Admin
-admin = Admin()
-admin.create_user(
-    email='admin@rafiki',
-    password='rafiki',
-    user_type='ADMIN'
-)
-```
-
-Authenticating as an user:
-
-```py
-user = admin.authenticate_user('admin@rafiki', 'rafiki')
-```
-
-Creating & viewing models:
-
-```py
-from rafiki.constants import serialize_model
-from rafiki.model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
-model = SingleHiddenLayerTensorflowModel()
-model_serialized = serialize_model(model)
-admin.create_model(
-    user_id=user['id'],
-    name='single_hidden_layer_tf',
-    task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
-    model_serialized=model_serialized
-)
-admin.get_models()
-```
-
-Creating a train job:
-
-```py
-admin.create_train_job(
-    user_id=user['id'],
-    app='fashion_mnist_app',
-    task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
-    train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
-    test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test'
-)
-admin.get_train_jobs(app='fashion_mnist_app')
-```
-
-As the worker generates trials, checking on the completed trials of the train job:
-
-```sh
-admin.get_trials_of_train_job(train_job_id=<train_job_id>)
-```
 
 ## Troubleshooting
 
