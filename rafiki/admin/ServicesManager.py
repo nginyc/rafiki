@@ -35,8 +35,8 @@ class ServicesManager(object):
         # Create query frontend
         query_service = self._create_query_service(inference_job)
 
-        # Create a worker service for each trial
-        best_trials = self._db.get_best_trials_of_app(inference_job.app, max_count=2)
+        # Create a worker service for each best trial of associated train job
+        best_trials = self._db.get_best_trials_of_train_job(inference_job.train_job_id, max_count=2)
         trial_to_replicas = self._compute_inference_worker_replicas_for_trials(best_trials)
         for (trial, replicas) in trial_to_replicas.items():
             self._create_inference_job_worker(inference_job, trial, replicas)

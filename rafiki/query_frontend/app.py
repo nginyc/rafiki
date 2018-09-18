@@ -16,7 +16,6 @@ def index():
 def predict():
     params = request.get_json()
     query = params['query']
-    query_type = params['type']
     
     #TODO: check input type
     result = query_frontend.predict(query)

@@ -5,12 +5,29 @@ from rafiki.constants import BudgetType
 from rafiki.model import serialize_model
 
 class Client(object):
+
+    '''
+    Initializes the Client to connect to a running 
+    Rafiki Admin instance that the Client connects to.
+
+    :param str admin_host: Host of Rafiki Admin
+    :param int admin_port: Port of Rafiki Admin
+    '''
     def __init__(self, admin_host='localhost', admin_port=8000):
         self._admin_host = admin_host
         self._admin_port = admin_port
         self._token = None
 
     def login(self, email, password):
+        '''
+        Creates a login session as a Rafiki user. You will have to be logged in to perform any actions.
+
+        App developers can create, list and stop train and inference jobs, as well as list models.
+        Model developers can create and list models.
+
+        :param str email: User's email
+        :param str password: User's password
+        '''
         data = self._post('/tokens', form_data={
             'email': email,
             'password': password
@@ -23,6 +40,9 @@ class Client(object):
         return data
 
     def logout(self):
+        '''
+        Clears the current login session.
+        '''
         self._token = None
 
     ####################################
@@ -30,6 +50,14 @@ class Client(object):
     ####################################
 
     def create_user(self, email, password, user_type):
+        '''
+        Creates a Rafiki user. You have to be an admin.
+
+        :param str email: The new user's email
+        :param str password: The new user's password
+        :param user_type: The new user's type
+        :type user_type: :class:`rafiki.constants.UserType` 
+        '''
         data = self._post('/users', form_data={
             'email': email,
             'password': password,
@@ -42,6 +70,15 @@ class Client(object):
     ####################################
 
     def create_model(self, name, task, model_inst, docker_image=None):
+        '''
+        Creates a model on Rafiki.
+
+        :param str name: Name of the model, must be unique on Rafiki
+        :param str task: Task associated with the model, 
+            the model must adhere to the specification of the task
+        :param obj model_inst: A Python object that implements :class:`rafiki.model.BaseModel`
+        :param str docker_image: A custom docker image name that extends `rafiki_model`
+        '''
         model_serialized = serialize_model(model_inst)
         data = self._post(
             '/models', 
@@ -57,10 +94,18 @@ class Client(object):
         return data
 
     def get_models(self):
+        '''
+        Lists all models on Rafiki.
+        '''
         data = self._get('/models')
         return data
 
     def get_models_of_task(self, task):
+        '''
+        Lists all models associated to a task on Rafiki.
+
+        :param str task: Task name
+        '''
         data = self._get('/models', params={
             'task': task
         })
@@ -77,6 +122,18 @@ class Client(object):
                         test_dataset_uri, 
                         budget_type=BudgetType.MODEL_TRIAL_COUNT, 
                         budget_amount=10):
+        '''
+        Creates and starts running a train job on Rafiki.
+
+        :param str app: Name of the app associated with the train job
+        :param str task: Task associated with the train job, 
+            the train job will train models associated with the task
+        :param str train_dataset_uri: URI of the train dataset in a format specified by the task
+        :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task
+        :param budget_type: Type of budget for the train job
+        :type budget_type: :class:`rafiki.constants.BudgetType`
+        :param int budget_amount: Budget amount in units specific to the budget type
+        '''
 
         data = self._post('/train_jobs', form_data={
             'app': app,
@@ -89,57 +146,67 @@ class Client(object):
         return data
     
     def get_train_jobs_of_app(self, app):
-        data = self._get('/train_jobs', params={
-            'app': app
-        })
+        '''
+        Lists all train jobs associated to an app on Rafiki.
+
+        :param str app: Name of the app
+        '''
+        data = self._get('/train_jobs/{}'.format(app))
         return data
 
-    # Returns train job with the latest app version by default
-    def get_train_job_of_app(self, app, app_version=-1):
-        train_jobs = self.get_train_jobs_of_app(app)
+    def get_train_job(self, app, app_version=-1):
+        '''
+        Retrieves details of the train job identified by an app and an app version, 
+        including workers' details.
 
-        if app_version == -1:
-            app_version = max([x.get('app_version') for x in train_jobs], default=None)
-
-        train_job = next((x for x in train_jobs if x.get('app_version') == app_version), None)
-        
-        if train_job is None:
-            return None
-
-        return self.get_train_job(train_job.get('id'))
-
-    # Additionally returns a train job's models & workers' details
-    def get_train_job(self, train_job_id):
-        data = self._get('/train_jobs/{}'.format(train_job_id))
+        :param str app: Name of the app
+        :param int app_version: Version of the app (-1 for latest version)
+        '''
+        data = self._get('/train_jobs/{}/{}'.format(app, app_version))
         return data
 
-    def stop_train_job(self, train_job_id):
-        data = self._post('/train_jobs/{}/stop'.format(train_job_id))
-        return data
+    def get_best_trials_of_train_job(self, app, app_version=-1, max_count=3):
+        '''
+        Lists the best scoring trials of the train job identified by an app and an app version,
+        ordered by descending score.
 
-    # Only for internal use
-    def stop_train_job_worker(self, service_id):
-        data = self._post('/train_job_workers/{}/stop'.format(service_id))
-        return data
-
-    ####################################
-    # Trials
-    ####################################
-    
-    # Returns only completed trials ordered by highest scores
-    def get_best_trials_of_app(self, app, max_count=3):
-        data = self._get('/trials', params={
-            'app': app,
+        :param str app: Name of the app
+        :param int app_version: Version of the app (-1 for latest version)
+        :param int max_count: Maximum number of trials to return
+        '''
+        data = self._get('/train_jobs/{}/{}/trials'.format(app, app_version), params={
             'type': 'best',
             'max_count': max_count
         })
         return data
 
-    # Returns all trials ordered from most recently started
-    def get_trials_of_app(self, app):
-        data = self._get('/trials', params={
-            'app': app
-        })
+    def get_trials_of_train_job(self, app, app_version=-1):
+        '''
+        Lists all trials of the train job identified by an app and an app version,
+        ordered by when the trial started.
+
+        :param str app: Name of the app
+        :param int app_version: Version of the app (-1 for latest version)
+        '''
+        data = self._get('/train_jobs/{}/{}/trials'.format(app, app_version))
+        return data
+
+    def stop_train_job(self, app, app_version=-1):
+        '''
+        Prematurely stops the train job identified by an app and an app version.
+        Otherwise, the train job should stop by itself when its budget is reached.
+
+        :param str app: Name of the app
+        :param int app_version: Version of the app (-1 for latest version)
+        '''
+        data = self._post('/train_jobs/{}/{}/stop'.format(app, app_version))
+        return data
+
+    def stop_train_job_worker(self, service_id):
+        '''
+        Only for internal use within Rafiki.
+        '''
+        data = self._post('/train_job_workers/{}/stop'.format(service_id))
         return data
 
     ####################################
@@ -147,14 +214,49 @@ class Client(object):
     ####################################
 
     def create_inference_job(self, app, app_version=-1):
+        '''
+        Creates and starts running a inference job on Rafiki with the 2 best trials of an associated train job. 
+        The inference job is tagged with the train job's app and app version.
+
+        In this method's response, `query_host` is this inference job's query front-end's host. 
+
+        :param str app: Name of the app identifying the train job to use
+        :param str app_version: Version of the app identifying the train job to use
+        '''
         data = self._post('/inference_jobs', form_data={
             'app': app,
             'app_version': app_version
         })
         return data
-    
-    def stop_inference_job(self, inference_job_id):
-        data = self._post('/inference_jobs/{}/stop'.format(inference_job_id))
+
+    def get_inference_jobs_of_app(self, app):
+        '''
+        Lists all inference jobs associated to an app on Rafiki.
+
+        :param str app: Name of the app
+        '''
+        data = self._get('/inference_jobs/{}'.format(app))
+        return data
+
+    def get_inference_job(self, app, app_version=-1):
+        '''
+        Retrieves details of the inference job identified by an app and an app version,
+        including workers' details.
+
+        :param str app: Name of the app 
+        :param int app_version: Version of the app (-1 for latest version)
+        '''
+        data = self._get('/inference_jobs/{}/{}'.format(app, app_version))
+        return data
+
+    def stop_inference_job(self, app, app_version=-1):
+        '''
+        Stops the inference job identified by an app and an app version.
+
+        :param str app: Name of the app
+        :param int app_version: Version of the app (-1 for latest version)
+        '''
+        data = self._post('/inference_jobs/{}/{}/stop'.format(app, app_version))
         return data
 
     ####################################

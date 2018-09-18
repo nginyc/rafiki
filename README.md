@@ -4,9 +4,9 @@ This example uses the [Fashion MNIST dataset](https://github.com/zalandoresearch
 
 ## Installation
 
-Prerequisites: Unix-like environment
+Prerequisites: MacOS or Linux environment
 
-1. Install Docker
+1. Install Docker 18
 
 2. Install Python 3.6
 
@@ -17,6 +17,8 @@ Create a Docker Swarm e.g.:
 ```sh
 docker swarm init --advertise-addr <my-ip-address>
 ```
+
+...replacing `<your-ip-address>` with your machine's IP address in the network you intend to expose Rafiki.
 
 Create a custom overlay Docker network for Rafiki, scoped to the Docker Swarm:
 
@@ -61,18 +63,18 @@ source .env.sh
 bash scripts/start_db.sh
 ```
 
-Start the Rafiki Admin HTTP server in terminal 2:
-
-```sh
-source .env.sh
-bash scripts/start_admin.sh
-```
-
-Start the Rafiki Cache in terminal 3:
+Start the Rafiki Cache in terminal 2:
 
 ```sh
 source .env.sh
 bash scripts/start_cache.sh
+```
+
+Start the Rafiki Admin HTTP server in terminal 3:
+
+```sh
+source .env.sh
+bash scripts/start_admin.sh
 ```
 
 Additionally, build the base Rafiki images in Docker:
@@ -83,15 +85,21 @@ bash scripts/build_model_image.sh
 bash scripts/build_query_frontend_image.sh
 ```
 
+    > If you are using multiple nodes, build these images on ALL nodes.
+
 ## Using Rafiki
 
-Use the Rafiki Client Python module on the Python CLI.
+Visit Rafiki's documentation at https://nginyc.github.io/rafiki2/docs/.
 
-Rafiki Client guides by role:
+## Building Rafiki's Documentation
 
-- [Rafiki Admins](./docs/admins.md)
-- [Rafiki Model Developers](./docs/model_developers.md)
-- [Rafiki App Developers](./docs/app_developers.md)
+Rafiki uses [Sphinx documentation](http://www.sphinx-doc.org) and hosts the documentation with [Github Pages](https://pages.github.com/) on the [`/gh-pages` branch](https://github.com/nginyc/rafiki2/tree/gh-pages). Build & view Rafiki's Sphinx documentation on your machine with the following commands:
+
+```shell
+pip install sphinx
+sphinx-build -b html . docs
+open docs/index.html
+```
 
 ## Rafiki Admin HTTP Server REST API
 
@@ -99,7 +107,7 @@ To make calls to the HTTP endpoints, you'll need first authenticate with email &
 
 `Authorization: Bearer {{token}}`
 
-The list of available HTTP endpoints & their request formats are available as a *Postman* collection (outdated) in the root of this project.
+The list of available HTTP endpoints & their request formats are available as a *Postman* collection (OUTDATED) in the root of this project.
 
 ### Creating a Model
 
@@ -113,67 +121,6 @@ serialize_model_to_file(model_inst, out_file_path='model.pickle')
 ```
 
 Then, together with the `name` & `task` fields, upload the output serialized model file as the `model_serialized` field of a multi-part form data request.
-
-## Using Rafiki with the Admin Python module
-
-Use the Rafiki Admin Python module on the Python CLI. You'll need to install the Rafiki Admin's Python dependencies by running `pip install -r ./rafiki/admin/requirements.txt`. You'll also need to make sure `POSTGRES_HOST` and `POSTGRES_PORT` are configured right to communicate directly to the DB.
-
-```shell
-python
-```
-
-Creating an user:
-
-```py
-from admin import Admin
-admin = Admin()
-admin.create_user(
-    email='admin@rafiki',
-    password='rafiki',
-    user_type='ADMIN'
-)
-```
-
-Authenticating as an user:
-
-```py
-user = admin.authenticate_user('admin@rafiki', 'rafiki')
-```
-
-Creating & viewing models:
-
-```py
-from rafiki.constants import serialize_model
-from rafiki.model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
-model = SingleHiddenLayerTensorflowModel()
-model_serialized = serialize_model(model)
-admin.create_model(
-    user_id=user['id'],
-    name='single_hidden_layer_tf',
-    task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
-    model_serialized=model_serialized
-)
-admin.get_models()
-```
-
-Creating a train job:
-
-```py
-admin.create_train_job(
-    user_id=user['id'],
-    app='fashion_mnist_app',
-    task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
-    train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
-    test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test'
-)
-admin.get_train_jobs(app='fashion_mnist_app')
-```
-
-As the worker generates trials, checking on the completed trials of the train job:
-
-```sh
-admin.get_trials_of_train_job(train_job_id=<train_job_id>)
-```
 
 ## Troubleshooting
 
@@ -215,7 +162,3 @@ docker rm $(docker ps -a -q)
 # Delete all images
 docker rmi $(docker images -q)
 ```
-
-## Credits
-
-Original Auto-Tune Models (ATM) project: https://github.com/HDI-Project/ATM

@@ -66,6 +66,50 @@ class Database(object):
         self._session.add(train_job)
         return train_job
 
+    def get_uncompleted_train_jobs(self):
+        train_jobs = self._session.query(TrainJob) \
+            .filter(TrainJob.status == TrainJobStatus.STARTED).all()
+
+        return train_jobs
+
+    def get_train_jobs_of_app(self, app):
+        train_jobs = self._session.query(TrainJob) \
+            .filter(TrainJob.app == app) \
+            .order_by(TrainJob.app_version.desc()).all()
+
+        return train_jobs
+
+    def get_train_job(self, id):
+        train_job = self._session.query(TrainJob).get(id)
+        return train_job
+
+    # Returns for the latest app version unless specified
+    def get_train_job_by_app_version(self, app, app_version=-1):
+        query = self._session.query(TrainJob) \
+            .filter(TrainJob.app == app)
+
+        if app_version == -1:
+            query = query.order_by(TrainJob.app_version.desc())
+        else:
+            query = query.filter(TrainJob.app_version == app_version)
+
+        return query.first()
+
+    def mark_train_job_as_running(self, train_job):
+        train_job.status = TrainJobStatus.RUNNING
+        self._session.add(train_job)
+        return train_job
+
+    def mark_train_job_as_complete(self, train_job):
+        train_job.status = TrainJobStatus.COMPLETED
+        train_job.datetime_completed = datetime.datetime.utcnow()
+        self._session.add(train_job)
+        return train_job
+
+    ####################################
+    # Train Job Workers
+    ####################################
+
     def create_train_job_worker(self, service_id, train_job_id, model_id):
         train_job_worker = TrainJobWorker(
             train_job_id=train_job_id,
@@ -84,46 +128,51 @@ class Database(object):
             .filter(TrainJobWorker.train_job_id == train_job_id).all()
         return workers
 
-    def get_uncompleted_train_jobs(self):
-        train_jobs = self._session.query(TrainJob) \
-            .filter(TrainJob.status == TrainJobStatus.STARTED).all()
-
-        return train_jobs
-
-    def get_train_jobs_of_app(self, app):
-        train_jobs = self._session.query(TrainJob) \
-            .filter(TrainJob.app == app) \
-            .order_by(TrainJob.app_version.desc()).all()
-
-        return train_jobs
-
-    def get_train_job(self, id):
-        train_job = self._session.query(TrainJob).get(id)
-        return train_job
-
-    def mark_train_job_as_running(self, train_job):
-        train_job.status = TrainJobStatus.RUNNING
-        self._session.add(train_job)
-        return train_job
-
-    def mark_train_job_as_complete(self, train_job):
-        train_job.status = TrainJobStatus.COMPLETED
-        train_job.datetime_completed = datetime.datetime.utcnow()
-        self._session.add(train_job)
-        return train_job
-
     ####################################
     # Inference Jobs
     ####################################
     
-    def create_inference_job(self, user_id, app, app_version):
+    def create_inference_job(self, user_id, train_job_id):
         inference_job = InferenceJob(
             user_id=user_id,
-            app=app,
-            app_version=app_version
+            train_job_id=train_job_id
         )
         self._session.add(inference_job)
         return inference_job
+
+    def get_inference_job(self, id):
+        inference_job = self._session.query(InferenceJob).get(id)
+        return inference_job
+
+    def get_inference_job_by_train_job(self, train_job_id):
+        inference_job = self._session.query(InferenceJob) \
+            .filter(InferenceJob.train_job_id == train_job_id).first()
+        return inference_job
+
+    def mark_inference_job_as_running(self, inference_job, 
+                                    query_service_id):
+        inference_job.status = InferenceJobStatus.RUNNING
+        inference_job.query_service_id = query_service_id
+        self._session.add(inference_job)
+        return inference_job
+
+    def mark_inference_job_as_stopped(self, inference_job):
+        inference_job.status = InferenceJobStatus.STOPPED
+        inference_job.datetime_stopped = datetime.datetime.utcnow()
+        self._session.add(inference_job)
+        return inference_job
+
+    def get_inference_jobs_of_app(self, app):
+        inference_jobs = self._session.query(InferenceJob) \
+            .join(TrainJob, InferenceJob.train_job_id == TrainJob.id) \
+            .filter(TrainJob.app == app) \
+            .order_by(InferenceJob.datetime_started.desc()).all()
+
+        return inference_jobs
+
+    ####################################
+    # Inference Job Workers
+    ####################################
 
     def create_inference_job_worker(self, service_id, inference_job_id, trial_id):
         inference_job_worker = InferenceJobWorker(
@@ -142,30 +191,6 @@ class Database(object):
         workers = self._session.query(InferenceJobWorker) \
             .filter(InferenceJobWorker.inference_job_id == inference_job_id).all()
         return workers
-
-    def get_inference_job(self, id):
-        inference_job = self._session.query(InferenceJob).get(id)
-        return inference_job
-
-    def mark_inference_job_as_running(self, inference_job, 
-                                    query_service_id):
-        inference_job.status = InferenceJobStatus.RUNNING
-        inference_job.query_service_id = query_service_id
-        self._session.add(inference_job)
-        return inference_job
-
-    def mark_inference_job_as_stopped(self, inference_job):
-        inference_job.status = InferenceJobStatus.STOPPED
-        inference_job.datetime_stopped = datetime.datetime.utcnow()
-        self._session.add(inference_job)
-        return inference_job
-
-    def get_inference_jobs_of_app(self, app):
-        inference_jobs = self._session.query(InferenceJob) \
-            .filter(InferenceJob.app == app) \
-            .order_by(InferenceJob.datetime_started.desc()).all()
-
-        return inference_jobs
 
     ####################################
     # Services
@@ -207,14 +232,11 @@ class Database(object):
         service = self._session.query(Service).get(service_id)
         return service
 
-    def get_services(self, status=None, ids=None):
+    def get_services(self, status=None):
         query = self._session.query(Service)
 
-        if ids is not None:
-            query.filter(Service.id.in_(ids))
-
         if status is not None:
-            query.filter(Service.status == status)
+            query = query.filter(Service.status == status)
 
         services = query.all()
 
@@ -244,10 +266,9 @@ class Database(object):
     def get_model(self, id):
         model = self._session.query(Model).get(id)
         return model
-    
+
     def get_models(self):
-        models = self._session.query(Model).all()
-        return models
+        return self._session.query(Model).all()
 
     ####################################
     # Trials
@@ -271,10 +292,9 @@ class Database(object):
 
         return trial
 
-    def get_best_trials_of_app(self, app, max_count=3):
+    def get_best_trials_of_train_job(self, train_job_id, max_count=3):
         trials = self._session.query(Trial) \
-            .join(TrainJob, Trial.train_job_id == TrainJob.id) \
-            .filter(TrainJob.app == app) \
+            .filter(Trial.train_job_id == train_job_id) \
             .filter(Trial.status == TrainJobStatus.COMPLETED) \
             .order_by(Trial.score.desc()) \
             .limit(max_count).all()

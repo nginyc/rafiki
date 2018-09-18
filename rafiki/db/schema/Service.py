@@ -12,7 +12,7 @@ class Service(Base):
     service_type = Column(String, nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     datetime_stopped = Column(DateTime, default=None)
-    status = Column(String, nullable=False, default=ServiceStatus.RUNNING)
+    status = Column(String, nullable=False, default=ServiceStatus.STARTED)
     docker_image = Column(String, nullable=False)
     container_manager_type = Column(String, nullable=False)
     replicas = Column(Integer, default=0)
