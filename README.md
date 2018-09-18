@@ -83,6 +83,8 @@ bash scripts/build_model_image.sh
 bash scripts/build_query_frontend_image.sh
 ```
 
+    > If you are using multiple nodes, build these images on ALL nodes.
+
 ## Using Rafiki
 
 On how to use Rafiki, build & read Rafiki's Sphinx documentation by running:
