@@ -24,8 +24,3 @@ __pycache__/
 
 # Serialized models
 rafiki/model/*.pickle
-
-# Sphinx documentation
-_build/
-_static/
-_templates/
