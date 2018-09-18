@@ -89,7 +89,11 @@ bash scripts/build_query_frontend_image.sh
 
 ## Using Rafiki
 
-On how to use Rafiki, build & read Rafiki's Sphinx documentation by running:
+Visit Rafiki's documentation at https://nginyc.github.io/rafiki2/docs/.
+
+## Building Rafiki's Documentation
+
+Rafiki uses [Sphinx documentation](http://www.sphinx-doc.org) and hosts the documentation with [Github Pages](https://pages.github.com/) on the [`/gh-pages` branch](https://github.com/nginyc/rafiki2/tree/gh-pages). Build & view Rafiki's Sphinx documentation on your machine with the following commands:
 
 ```shell
 pip install sphinx
