@@ -4,9 +4,9 @@ This example uses the [Fashion MNIST dataset](https://github.com/zalandoresearch
 
 ## Installation
 
-Prerequisites: Unix-like environment
+Prerequisites: MacOS or Linux environment
 
-1. Install Docker
+1. Install Docker 18
 
 2. Install Python 3.6
 
@@ -17,6 +17,8 @@ Create a Docker Swarm e.g.:
 ```sh
 docker swarm init --advertise-addr <my-ip-address>
 ```
+
+...replacing `<your-ip-address>` with your machine's IP address in the network you intend to expose Rafiki.
 
 Create a custom overlay Docker network for Rafiki, scoped to the Docker Swarm:
 
