@@ -1,0 +1,379 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>rafiki.client.Client &#8212; Rafiki  documentation</title>
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Rafiki  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for rafiki.client.Client</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">pprint</span>
+
+<span class="kn">from</span> <span class="nn">rafiki.constants</span> <span class="k">import</span> <span class="n">BudgetType</span>
+<span class="kn">from</span> <span class="nn">rafiki.model</span> <span class="k">import</span> <span class="n">serialize_model</span>
+
+<div class="viewcode-block" id="Client"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client">[docs]</a><span class="k">class</span> <span class="nc">Client</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Initializes the Client to connect to a running </span>
+<span class="sd">    Rafiki Admin instance that the Client connects to.</span>
+
+<span class="sd">    :param str admin_host: Host of Rafiki Admin</span>
+<span class="sd">    :param int admin_port: Port of Rafiki Admin</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">admin_host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">admin_port</span><span class="o">=</span><span class="mi">8000</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_admin_host</span> <span class="o">=</span> <span class="n">admin_host</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_admin_port</span> <span class="o">=</span> <span class="n">admin_port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_token</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="Client.login"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.login">[docs]</a>    <span class="k">def</span> <span class="nf">login</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">password</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Creates a login session as a Rafiki user. You will have to be logged in to perform any actions.</span>
+
+<span class="sd">        App developers can create, list and stop train and inference jobs, as well as list models.</span>
+<span class="sd">        Model developers can create and list models.</span>
+
+<span class="sd">        :param str email: User&#39;s email</span>
+<span class="sd">        :param str password: User&#39;s password</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/tokens&#39;</span><span class="p">,</span> <span class="n">form_data</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;email&#39;</span><span class="p">:</span> <span class="n">email</span><span class="p">,</span>
+            <span class="s1">&#39;password&#39;</span><span class="p">:</span> <span class="n">password</span>
+        <span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_token</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;token&#39;</span><span class="p">]</span>
+
+        <span class="c1"># Abstract token from user</span>
+        <span class="k">del</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;token&#39;</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.logout"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.logout">[docs]</a>    <span class="k">def</span> <span class="nf">logout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Clears the current login session.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_token</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+    <span class="c1">####################################</span>
+    <span class="c1"># User</span>
+    <span class="c1">####################################</span>
+
+<div class="viewcode-block" id="Client.create_user"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.create_user">[docs]</a>    <span class="k">def</span> <span class="nf">create_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">user_type</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Creates a Rafiki user. You have to be an admin.</span>
+
+<span class="sd">        :param str email: The new user&#39;s email</span>
+<span class="sd">        :param str password: The new user&#39;s password</span>
+<span class="sd">        :param user_type: The new user&#39;s type</span>
+<span class="sd">        :type user_type: :class:`rafiki.constants.UserType` </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/users&#39;</span><span class="p">,</span> <span class="n">form_data</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;email&#39;</span><span class="p">:</span> <span class="n">email</span><span class="p">,</span>
+            <span class="s1">&#39;password&#39;</span><span class="p">:</span> <span class="n">password</span><span class="p">,</span>
+            <span class="s1">&#39;user_type&#39;</span><span class="p">:</span> <span class="n">user_type</span>
+        <span class="p">})</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+    <span class="c1">####################################</span>
+    <span class="c1"># Models</span>
+    <span class="c1">####################################</span>
+
+<div class="viewcode-block" id="Client.create_model"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.create_model">[docs]</a>    <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">model_inst</span><span class="p">,</span> <span class="n">docker_image</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Creates a model on Rafiki.</span>
+
+<span class="sd">        :param str name: Name of the model, must be unique on Rafiki</span>
+<span class="sd">        :param str task: Task associated with the model, </span>
+<span class="sd">            the model must adhere to the specification of the task</span>
+<span class="sd">        :param obj model_inst: A Python object that implements :class:`rafiki.model.BaseModel`</span>
+<span class="sd">        :param str docker_image: A custom docker image name that extends `rafiki_model`</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">model_serialized</span> <span class="o">=</span> <span class="n">serialize_model</span><span class="p">(</span><span class="n">model_inst</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span>
+            <span class="s1">&#39;/models&#39;</span><span class="p">,</span> 
+            <span class="n">files</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;model_serialized&#39;</span><span class="p">:</span> <span class="n">model_serialized</span>
+            <span class="p">},</span>
+            <span class="n">form_data</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+                <span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="n">task</span><span class="p">,</span>
+                <span class="s1">&#39;docker_image&#39;</span><span class="p">:</span> <span class="n">docker_image</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.get_models"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.get_models">[docs]</a>    <span class="k">def</span> <span class="nf">get_models</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Lists all models on Rafiki.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/models&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.get_models_of_task"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.get_models_of_task">[docs]</a>    <span class="k">def</span> <span class="nf">get_models_of_task</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Lists all models associated to a task on Rafiki.</span>
+
+<span class="sd">        :param str task: Task name</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/models&#39;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="n">task</span>
+        <span class="p">})</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+    <span class="c1">####################################</span>
+    <span class="c1"># Train Jobs</span>
+    <span class="c1">####################################</span>
+    
+<div class="viewcode-block" id="Client.create_train_job"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.create_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">create_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                        <span class="n">app</span><span class="p">,</span> 
+                        <span class="n">task</span><span class="p">,</span> 
+                        <span class="n">train_dataset_uri</span><span class="p">,</span>
+                        <span class="n">test_dataset_uri</span><span class="p">,</span> 
+                        <span class="n">budget_type</span><span class="o">=</span><span class="n">BudgetType</span><span class="o">.</span><span class="n">MODEL_TRIAL_COUNT</span><span class="p">,</span> 
+                        <span class="n">budget_amount</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Creates and starts running a train job on Rafiki.</span>
+
+<span class="sd">        :param str app: Name of the app associated with the train job</span>
+<span class="sd">        :param str task: Task associated with the train job, </span>
+<span class="sd">            the train job will train models associated with the task</span>
+<span class="sd">        :param str train_dataset_uri: URI of the train dataset in a format specified by the task</span>
+<span class="sd">        :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task</span>
+<span class="sd">        :param budget_type: Type of budget for the train job</span>
+<span class="sd">        :type budget_type: :class:`rafiki.constants.BudgetType`</span>
+<span class="sd">        :param int budget_amount: Budget amount in units specific to the budget type</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/train_jobs&#39;</span><span class="p">,</span> <span class="n">form_data</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;app&#39;</span><span class="p">:</span> <span class="n">app</span><span class="p">,</span>
+            <span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="n">task</span><span class="p">,</span>
+            <span class="s1">&#39;train_dataset_uri&#39;</span><span class="p">:</span> <span class="n">train_dataset_uri</span><span class="p">,</span>
+            <span class="s1">&#39;test_dataset_uri&#39;</span><span class="p">:</span> <span class="n">test_dataset_uri</span><span class="p">,</span>
+            <span class="s1">&#39;budget_type&#39;</span><span class="p">:</span> <span class="n">budget_type</span><span class="p">,</span>
+            <span class="s1">&#39;budget_amount&#39;</span><span class="p">:</span> <span class="n">budget_amount</span>
+        <span class="p">})</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+    
+<div class="viewcode-block" id="Client.get_train_jobs_of_app"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.get_train_jobs_of_app">[docs]</a>    <span class="k">def</span> <span class="nf">get_train_jobs_of_app</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Lists all train jobs associated to an app on Rafiki.</span>
+
+<span class="sd">        :param str app: Name of the app</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/train_jobs/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.get_train_job"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.get_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">get_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Retrieves details of the train job identified by an app and an app version, </span>
+<span class="sd">        including workers&#39; details.</span>
+
+<span class="sd">        :param str app: Name of the app</span>
+<span class="sd">        :param int app_version: Version of the app (-1 for latest version)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/train_jobs/</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.get_best_trials_of_train_job"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.get_best_trials_of_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">get_best_trials_of_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_count</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Lists the best scoring trials of the train job identified by an app and an app version,</span>
+<span class="sd">        ordered by descending score.</span>
+
+<span class="sd">        :param str app: Name of the app</span>
+<span class="sd">        :param int app_version: Version of the app (-1 for latest version)</span>
+<span class="sd">        :param int max_count: Maximum number of trials to return</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/train_jobs/</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">/trials&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="p">),</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;best&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;max_count&#39;</span><span class="p">:</span> <span class="n">max_count</span>
+        <span class="p">})</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.get_trials_of_train_job"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.get_trials_of_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">get_trials_of_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Lists all trials of the train job identified by an app and an app version,</span>
+<span class="sd">        ordered by when the trial started.</span>
+
+<span class="sd">        :param str app: Name of the app</span>
+<span class="sd">        :param int app_version: Version of the app (-1 for latest version)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/train_jobs/</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">/trials&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.stop_train_job"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.stop_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">stop_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Prematurely stops the train job identified by an app and an app version.</span>
+<span class="sd">        Otherwise, the train job should stop by itself when its budget is reached.</span>
+
+<span class="sd">        :param str app: Name of the app</span>
+<span class="sd">        :param int app_version: Version of the app (-1 for latest version)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/train_jobs/</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">/stop&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.stop_train_job_worker"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.stop_train_job_worker">[docs]</a>    <span class="k">def</span> <span class="nf">stop_train_job_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_id</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Only for internal use within Rafiki.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/train_job_workers/</span><span class="si">{}</span><span class="s1">/stop&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">service_id</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+    <span class="c1">####################################</span>
+    <span class="c1"># Inference Jobs</span>
+    <span class="c1">####################################</span>
+
+<div class="viewcode-block" id="Client.create_inference_job"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.create_inference_job">[docs]</a>    <span class="k">def</span> <span class="nf">create_inference_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Creates and starts running a inference job on Rafiki with the 2 best trials of an associated train job. </span>
+<span class="sd">        The inference job is tagged with the train job&#39;s app and app version.</span>
+
+<span class="sd">        In this method&#39;s response, `query_host` is this inference job&#39;s query front-end&#39;s host. </span>
+
+<span class="sd">        :param str app: Name of the app identifying the train job to use</span>
+<span class="sd">        :param str app_version: Version of the app identifying the train job to use</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/inference_jobs&#39;</span><span class="p">,</span> <span class="n">form_data</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;app&#39;</span><span class="p">:</span> <span class="n">app</span><span class="p">,</span>
+            <span class="s1">&#39;app_version&#39;</span><span class="p">:</span> <span class="n">app_version</span>
+        <span class="p">})</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.get_inference_jobs_of_app"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.get_inference_jobs_of_app">[docs]</a>    <span class="k">def</span> <span class="nf">get_inference_jobs_of_app</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Lists all inference jobs associated to an app on Rafiki.</span>
+
+<span class="sd">        :param str app: Name of the app</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/inference_jobs/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.get_inference_job"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.get_inference_job">[docs]</a>    <span class="k">def</span> <span class="nf">get_inference_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Retrieves details of the inference job identified by an app and an app version,</span>
+<span class="sd">        including workers&#39; details.</span>
+
+<span class="sd">        :param str app: Name of the app </span>
+<span class="sd">        :param int app_version: Version of the app (-1 for latest version)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/inference_jobs/</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.stop_inference_job"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.stop_inference_job">[docs]</a>    <span class="k">def</span> <span class="nf">stop_inference_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Stops the inference job identified by an app and an app version.</span>
+
+<span class="sd">        :param str app: Name of the app</span>
+<span class="sd">        :param int app_version: Version of the app (-1 for latest version)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/inference_jobs/</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">/stop&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+    <span class="c1">####################################</span>
+    <span class="c1"># Private</span>
+    <span class="c1">####################################</span>
+
+    <span class="k">def</span> <span class="nf">_get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{}):</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;http://</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_admin_host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_admin_port</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_headers</span><span class="p">()</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="n">url</span><span class="p">,</span>
+            <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">=</span><span class="n">params</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_response</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{},</span> <span class="n">files</span><span class="o">=</span><span class="p">{},</span> <span class="n">form_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;http://</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_admin_host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_admin_port</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_headers</span><span class="p">()</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+            <span class="n">url</span><span class="p">,</span> 
+            <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span> 
+            <span class="n">data</span><span class="o">=</span><span class="n">form_data</span><span class="p">,</span>
+            <span class="n">json</span><span class="o">=</span><span class="n">json</span><span class="p">,</span>
+            <span class="n">files</span><span class="o">=</span><span class="n">files</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_response</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_parse_response</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">res</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">res</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+    <span class="k">def</span> <span class="nf">_get_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s1">&#39;Authorization&#39;</span><span class="p">:</span> <span class="s1">&#39;Bearer &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_token</span>
+            <span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{}</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Rafiki  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, nginyc, cadmusthefounder, nudles.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.0.
+    </div>
+  </body>
+</html>

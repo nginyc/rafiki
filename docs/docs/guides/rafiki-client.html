@@ -1,0 +1,533 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Rafiki Client Quickstart &#8212; Rafiki  documentation</title>
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Rafiki Task Specification" href="rafiki-tasks.html" />
+    <link rel="prev" title="Rafiki Guide" href="index.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="rafiki-tasks.html" title="Rafiki Task Specification"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Rafiki Guide"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Rafiki  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Rafiki Guide</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="rafiki-client-quickstart">
+<span id="rafiki-client"></span><h1><a class="toc-backref" href="#id1">Rafiki Client Quickstart</a><a class="headerlink" href="#rafiki-client-quickstart" title="Permalink to this headline">¶</a></h1>
+<div class="contents topic" id="table-of-contents">
+<p class="topic-title first">Table of Contents</p>
+<ul class="simple">
+<li><a class="reference internal" href="#rafiki-client-quickstart" id="id1">Rafiki Client Quickstart</a><ul>
+<li><a class="reference internal" href="#installation" id="id2">Installation</a></li>
+<li><a class="reference internal" href="#initializing-the-client" id="id3">Initializing the Client</a></li>
+<li><a class="reference internal" href="#logging-in" id="id4">Logging in</a></li>
+<li><a class="reference internal" href="#creating-users" id="id5">Creating users</a></li>
+<li><a class="reference internal" href="#creating-models" id="id6">Creating models</a></li>
+<li><a class="reference internal" href="#listing-models-by-task" id="id7">Listing models by task</a></li>
+<li><a class="reference internal" href="#creating-a-train-job" id="id8">Creating a train job</a></li>
+<li><a class="reference internal" href="#listing-train-jobs-of-an-app" id="id9">Listing train jobs of an app</a></li>
+<li><a class="reference internal" href="#retrieving-the-latest-train-job-s-details-for-an-app" id="id10">Retrieving the latest train job’s details for an app</a></li>
+<li><a class="reference internal" href="#listing-best-trials-of-the-latest-train-job-for-an-app" id="id11">Listing best trials of the latest train job for an app</a></li>
+<li><a class="reference internal" href="#creating-an-inference-job-with-the-latest-train-job-for-an-app" id="id12">Creating an inference job with the latest train job for an app</a></li>
+<li><a class="reference internal" href="#making-predictions-with-a-running-inference-job" id="id13">Making predictions with a running inference job</a></li>
+<li><a class="reference internal" href="#listing-inference-jobs-of-an-app" id="id14">Listing inference jobs of an app</a></li>
+<li><a class="reference internal" href="#retrieving-the-latest-inference-job-s-details-for-an-app" id="id15">Retrieving the latest inference job’s details for an app</a></li>
+<li><a class="reference internal" href="#stopping-a-running-inference-job" id="id16">Stopping a running inference job</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="installation">
+<h2><a class="toc-backref" href="#id2">Installation</a><a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">Install Python 3.6</p>
+</li>
+<li><dl class="first docutils">
+<dt>Install Raifki Client’s Python dependencies by running:</dt>
+<dd><div class="first last highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install -r ./rafiki/client/requirements.txt
+</pre></div>
+</div>
+</dd>
+</dl>
+</li>
+</ol>
+</div>
+<div class="section" id="initializing-the-client">
+<h2><a class="toc-backref" href="#id3">Initializing the Client</a><a class="headerlink" href="#initializing-the-client" title="Permalink to this headline">¶</a></h2>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../classes/rafiki.client.Client.html#rafiki.client.Client" title="rafiki.client.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.client.Client</span></code></a></p>
+</div>
+<p>Example:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">rafiki.client</span> <span class="kn">import</span> <span class="n">Client</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">()</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="logging-in">
+<h2><a class="toc-backref" href="#id4">Logging in</a><a class="headerlink" href="#logging-in" title="Permalink to this headline">¶</a></h2>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../classes/rafiki.client.Client.html#rafiki.client.Client.login" title="rafiki.client.Client.login"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.login()</span></code></a></p>
+</div>
+<p>Example:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">login</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;superadmin@rafiki&#39;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;rafiki&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="creating-users">
+<h2><a class="toc-backref" href="#id5">Creating users</a><a class="headerlink" href="#creating-users" title="Permalink to this headline">¶</a></h2>
+<p>Only admins can create users.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../classes/rafiki.client.Client.html#rafiki.client.Client.create_user" title="rafiki.client.Client.create_user"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_user()</span></code></a></p>
+</div>
+<p>Examples:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">create_user</span><span class="p">(</span>
+    <span class="n">email</span><span class="o">=</span><span class="s1">&#39;app_developer@rafiki&#39;</span><span class="p">,</span>
+    <span class="n">password</span><span class="o">=</span><span class="s1">&#39;rafiki&#39;</span><span class="p">,</span>
+    <span class="n">user_type</span><span class="o">=</span><span class="s1">&#39;APP_DEVELOPER&#39;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">create_user</span><span class="p">(</span>
+    <span class="n">email</span><span class="o">=</span><span class="s1">&#39;model_developer@rafiki&#39;</span><span class="p">,</span>
+    <span class="n">password</span><span class="o">=</span><span class="s1">&#39;rafiki&#39;</span><span class="p">,</span>
+    <span class="n">user_type</span><span class="o">=</span><span class="s1">&#39;MODEL_DEVELOPER&#39;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="creating-models">
+<h2><a class="toc-backref" href="#id6">Creating models</a><a class="headerlink" href="#creating-models" title="Permalink to this headline">¶</a></h2>
+<p>Only admins &amp; model developers can create models.</p>
+<p>Most likely, you’ll be using a deep learning framework e.g. Tensorflow to build your model.
+The base Rafiki worker image has the following Python libraries pre-installed:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>tensorflow==1.10.1
+h5py==2.8.0
+</pre></div>
+</div>
+<p>You can optionally build a custom Docker image for the model training &amp; inference and pass the argument for <cite>docker_image</cite>.
+This Docker image has to extend <cite>rafiki_model</cite>. An example is available at <cite>./rafiki/model/dockerfiles/TensorflowModel.Dockerfile</cite>.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../classes/rafiki.client.Client.html#rafiki.client.Client.create_model" title="rafiki.client.Client.create_model"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_model()</span></code></a></p>
+</div>
+<p>Example:</p>
+<blockquote>
+<div><p>Run the following to install Tensorflow:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install <span class="nv">tensorflow</span><span class="o">==</span><span class="m">1</span>.10.1 <span class="nv">h5py</span><span class="o">==</span><span class="m">2</span>.8.0
+</pre></div>
+</div>
+<p>Then, import the sample Tensorflow model and pass in an instance of the model:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">rafiki.model.SingleHiddenLayerTensorflowModel</span> <span class="kn">import</span> <span class="n">SingleHiddenLayerTensorflowModel</span>
+<span class="n">model_inst</span> <span class="o">=</span> <span class="n">SingleHiddenLayerTensorflowModel</span><span class="p">()</span>
+<span class="n">client</span><span class="o">.</span><span class="n">create_model</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;single_hidden_layer_tf&#39;</span><span class="p">,</span>
+    <span class="n">task</span><span class="o">=</span><span class="s1">&#39;IMAGE_CLASSIFICATION_WITH_ARRAYS&#39;</span><span class="p">,</span>
+    <span class="n">model_inst</span><span class="o">=</span><span class="n">model_inst</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="listing-models-by-task">
+<h2><a class="toc-backref" href="#id7">Listing models by task</a><a class="headerlink" href="#listing-models-by-task" title="Permalink to this headline">¶</a></h2>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../classes/rafiki.client.Client.html#rafiki.client.Client.get_models_of_task" title="rafiki.client.Client.get_models_of_task"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_models_of_task()</span></code></a></p>
+</div>
+<p>Example:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">get_models_of_task</span><span class="p">(</span><span class="n">task</span><span class="o">=</span><span class="s1">&#39;IMAGE_CLASSIFICATION_WITH_ARRAYS&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Output:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;datetime_created&#39;</span><span class="p">:</span> <span class="s1">&#39;Thu, 06 Sep 2018 04:38:48 GMT&#39;</span><span class="p">,</span>
+<span class="s1">&#39;docker_image&#39;</span><span class="p">:</span> <span class="s1">&#39;rafiki_model&#39;</span><span class="p">,</span>
+<span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;single_hidden_layer_tf&#39;</span><span class="p">,</span>
+<span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="s1">&#39;IMAGE_CLASSIFICATION_WITH_ARRAYS&#39;</span><span class="p">,</span>
+<span class="s1">&#39;user_id&#39;</span><span class="p">:</span> <span class="s1">&#39;a8959685-6667-41d5-8f91-b195fda27f91&#39;</span><span class="p">}]</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="creating-a-train-job">
+<h2><a class="toc-backref" href="#id8">Creating a train job</a><a class="headerlink" href="#creating-a-train-job" title="Permalink to this headline">¶</a></h2>
+<p>Only admins &amp; app developers can create train jobs.
+A train job is uniquely identified by its associated app and the app version (returned in output).</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../classes/rafiki.client.Client.html#rafiki.client.Client.create_train_job" title="rafiki.client.Client.create_train_job"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_train_job()</span></code></a></p>
+</div>
+<p>Example:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">create_train_job</span><span class="p">(</span>
+    <span class="n">app</span><span class="o">=</span><span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">,</span>
+    <span class="n">task</span><span class="o">=</span><span class="s1">&#39;IMAGE_CLASSIFICATION_WITH_ARRAYS&#39;</span><span class="p">,</span>
+    <span class="n">train_dataset_uri</span><span class="o">=</span><span class="s1">&#39;tf-keras://fashion_mnist?train_or_test=train&#39;</span><span class="p">,</span>
+    <span class="n">test_dataset_uri</span><span class="o">=</span><span class="s1">&#39;tf-keras://fashion_mnist?train_or_test=test&#39;</span><span class="p">,</span>
+    <span class="n">budget_type</span><span class="o">=</span><span class="s1">&#39;MODEL_TRIAL_COUNT&#39;</span><span class="p">,</span>
+    <span class="n">budget_amount</span><span class="o">=</span><span class="mi">3</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Output:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s1">&#39;app&#39;</span><span class="p">:</span> <span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">,</span>
+<span class="s1">&#39;app_version&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+<span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;99b6a250-d0d0-431f-8fa7-eeedcd9bed58&#39;</span><span class="p">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="listing-train-jobs-of-an-app">
+<h2><a class="toc-backref" href="#id9">Listing train jobs of an app</a><a class="headerlink" href="#listing-train-jobs-of-an-app" title="Permalink to this headline">¶</a></h2>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../classes/rafiki.client.Client.html#rafiki.client.Client.get_train_jobs_of_app" title="rafiki.client.Client.get_train_jobs_of_app"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_train_jobs_of_app()</span></code></a></p>
+</div>
+<p>Example:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">get_train_jobs_of_app</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Output:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;app&#39;</span><span class="p">:</span> <span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">,</span>
+<span class="s1">&#39;app_version&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+<span class="s1">&#39;budget_amount&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+<span class="s1">&#39;budget_type&#39;</span><span class="p">:</span> <span class="s1">&#39;MODEL_TRIAL_COUNT&#39;</span><span class="p">,</span>
+<span class="s1">&#39;datetime_completed&#39;</span><span class="p">:</span> <span class="bp">None</span><span class="p">,</span>
+<span class="s1">&#39;datetime_started&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:00:24 GMT&#39;</span><span class="p">,</span>
+<span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;99b6a250-d0d0-431f-8fa7-eeedcd9bed58&#39;</span><span class="p">,</span>
+<span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="s1">&#39;RUNNING&#39;</span><span class="p">,</span>
+<span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="s1">&#39;IMAGE_CLASSIFICATION_WITH_ARRAYS&#39;</span><span class="p">,</span>
+<span class="s1">&#39;test_dataset_uri&#39;</span><span class="p">:</span> <span class="s1">&#39;tf-keras://fashion_mnist?train_or_test=test&#39;</span><span class="p">,</span>
+<span class="s1">&#39;train_dataset_uri&#39;</span><span class="p">:</span> <span class="s1">&#39;tf-keras://fashion_mnist?train_or_test=train&#39;</span><span class="p">}]</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="retrieving-the-latest-train-job-s-details-for-an-app">
+<h2><a class="toc-backref" href="#id10">Retrieving the latest train job’s details for an app</a><a class="headerlink" href="#retrieving-the-latest-train-job-s-details-for-an-app" title="Permalink to this headline">¶</a></h2>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../classes/rafiki.client.Client.html#rafiki.client.Client.get_train_job" title="rafiki.client.Client.get_train_job"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_train_job()</span></code></a></p>
+</div>
+<p>Example:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">get_train_job</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Output:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;app&#39;</span><span class="p">:</span> <span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">,</span>
+<span class="s1">&#39;app_version&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+<span class="s1">&#39;budget_amount&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+<span class="s1">&#39;budget_type&#39;</span><span class="p">:</span> <span class="s1">&#39;MODEL_TRIAL_COUNT&#39;</span><span class="p">,</span>
+<span class="s1">&#39;datetime_completed&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:04:26 GMT&#39;</span><span class="p">,</span>
+<span class="s1">&#39;datetime_started&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:00:24 GMT&#39;</span><span class="p">,</span>
+<span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;99b6a250-d0d0-431f-8fa7-eeedcd9bed58&#39;</span><span class="p">,</span>
+<span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="s1">&#39;COMPLETED&#39;</span><span class="p">,</span>
+<span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="s1">&#39;IMAGE_CLASSIFICATION_WITH_ARRAYS&#39;</span><span class="p">,</span>
+<span class="s1">&#39;test_dataset_uri&#39;</span><span class="p">:</span> <span class="s1">&#39;tf-keras://fashion_mnist?train_or_test=test&#39;</span><span class="p">,</span>
+<span class="s1">&#39;train_dataset_uri&#39;</span><span class="p">:</span> <span class="s1">&#39;tf-keras://fashion_mnist?train_or_test=train&#39;</span><span class="p">,</span>
+<span class="s1">&#39;workers&#39;</span><span class="p">:</span> <span class="p">[{</span><span class="s1">&#39;datetime_started&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:00:25 GMT&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;datetime_stopped&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:04:26 GMT&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;model_name&#39;</span><span class="p">:</span> <span class="s1">&#39;single_hidden_layer_tf&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;replicas&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="s1">&#39;service_id&#39;</span><span class="p">:</span> <span class="s1">&#39;09c18fd9-ee7d-44bf-b658-fa9c6d0972a3&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="s1">&#39;STOPPED&#39;</span><span class="p">}]}]</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="listing-best-trials-of-the-latest-train-job-for-an-app">
+<h2><a class="toc-backref" href="#id11">Listing best trials of the latest train job for an app</a><a class="headerlink" href="#listing-best-trials-of-the-latest-train-job-for-an-app" title="Permalink to this headline">¶</a></h2>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../classes/rafiki.client.Client.html#rafiki.client.Client.get_best_trials_of_train_job" title="rafiki.client.Client.get_best_trials_of_train_job"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_best_trials_of_train_job()</span></code></a></p>
+</div>
+<p>Example:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">get_best_trials_of_train_job</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Output:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;datetime_completed&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:00:56 GMT&#39;</span><span class="p">,</span>
+<span class="s1">&#39;datetime_started&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:00:35 GMT&#39;</span><span class="p">,</span>
+<span class="s1">&#39;hyperparameters&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;batch_size&#39;</span><span class="p">:</span> <span class="mi">32</span><span class="p">,</span>
+                    <span class="s1">&#39;epochs&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                    <span class="s1">&#39;hidden_layer_units&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+                    <span class="s1">&#39;learning_rate&#39;</span><span class="p">:</span> <span class="mf">0.0075360338999624086</span><span class="p">},</span>
+<span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;8d40ad88-e5a1-4b16-b188-44be920b1683&#39;</span><span class="p">,</span>
+<span class="s1">&#39;model_name&#39;</span><span class="p">:</span> <span class="s1">&#39;single_hidden_layer_tf&#39;</span><span class="p">,</span>
+<span class="s1">&#39;score&#39;</span><span class="p">:</span> <span class="mf">0.8231</span><span class="p">},</span>
+<span class="p">{</span><span class="s1">&#39;datetime_completed&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:04:26 GMT&#39;</span><span class="p">,</span>
+<span class="s1">&#39;datetime_started&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:03:06 GMT&#39;</span><span class="p">,</span>
+<span class="s1">&#39;hyperparameters&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;batch_size&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                    <span class="s1">&#39;epochs&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                    <span class="s1">&#39;hidden_layer_units&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+                    <span class="s1">&#39;learning_rate&#39;</span><span class="p">:</span> <span class="mf">0.030337360568713518</span><span class="p">},</span>
+<span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;74bd9b43-9812-4930-a29c-9b765b5b46bc&#39;</span><span class="p">,</span>
+<span class="s1">&#39;model_name&#39;</span><span class="p">:</span> <span class="s1">&#39;single_hidden_layer_tf&#39;</span><span class="p">,</span>
+<span class="s1">&#39;score&#39;</span><span class="p">:</span> <span class="mf">0.099</span><span class="p">},</span>
+<span class="p">{</span><span class="s1">&#39;datetime_completed&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:03:06 GMT&#39;</span><span class="p">,</span>
+<span class="s1">&#39;datetime_started&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:00:56 GMT&#39;</span><span class="p">,</span>
+<span class="s1">&#39;hyperparameters&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;batch_size&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                    <span class="s1">&#39;epochs&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                    <span class="s1">&#39;hidden_layer_units&#39;</span><span class="p">:</span> <span class="mi">78</span><span class="p">,</span>
+                    <span class="s1">&#39;learning_rate&#39;</span><span class="p">:</span> <span class="mf">0.056356430854509774</span><span class="p">},</span>
+<span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;94ea26de-e4a1-45af-8907-51cc4509d410&#39;</span><span class="p">,</span>
+<span class="s1">&#39;model_name&#39;</span><span class="p">:</span> <span class="s1">&#39;single_hidden_layer_tf&#39;</span><span class="p">,</span>
+<span class="s1">&#39;score&#39;</span><span class="p">:</span> <span class="mf">0.092</span><span class="p">}]</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="creating-an-inference-job-with-the-latest-train-job-for-an-app">
+<h2><a class="toc-backref" href="#id12">Creating an inference job with the latest train job for an app</a><a class="headerlink" href="#creating-an-inference-job-with-the-latest-train-job-for-an-app" title="Permalink to this headline">¶</a></h2>
+<p>Only admins &amp; app developers can create inference jobs.
+An inference job is created from the trials of an associated train job,
+and uniquely identified by that train job’s associated app and the app version.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../classes/rafiki.client.Client.html#rafiki.client.Client.create_inference_job" title="rafiki.client.Client.create_inference_job"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_inference_job()</span></code></a></p>
+</div>
+<p>Example:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">create_inference_job</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Output:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s1">&#39;app&#39;</span><span class="p">:</span> <span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">,</span>
+<span class="s1">&#39;app_version&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+<span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;25c117a0-1677-44b2-affb-c56f8f99dabf&#39;</span><span class="p">,</span>
+<span class="s1">&#39;query_host&#39;</span><span class="p">:</span> <span class="s1">&#39;192.168.1.75:30000&#39;</span><span class="p">,</span>
+<span class="s1">&#39;train_job_id&#39;</span><span class="p">:</span> <span class="s1">&#39;99b6a250-d0d0-431f-8fa7-eeedcd9bed58&#39;</span><span class="p">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="making-predictions-with-a-running-inference-job">
+<h2><a class="toc-backref" href="#id13">Making predictions with a running inference job</a><a class="headerlink" href="#making-predictions-with-a-running-inference-job" title="Permalink to this headline">¶</a></h2>
+<p>Example:</p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/predict</span></code> to the inference job’s query frontend at <em>query_host</em> 192.168.1.75:30000. E.g. in shell,</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nv">body</span><span class="o">=</span><span class="s1">&#39;{&quot;query&quot;: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 7, 0, 37, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 27, 84, 11, 0, 0, 0, 0, 0, 0, 119, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 88, 143, 110, 0, 0, 0, 0, 22, 93, 106, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 53, 129, 120, 147, 175, 157, 166, 135, 154, 168, 140, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 11, 137, 130, 128, 160, 176, 159, 167, 178, 149, 151, 144, 0, 0], [0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 0, 3, 0, 0, 115, 114, 106, 137, 168, 153, 156, 165, 167, 143, 157, 158, 11, 0], [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 89, 139, 90, 94, 153, 149, 131, 151, 169, 172, 143, 159, 169, 48, 0], [0, 0, 0, 0, 0, 0, 2, 4, 1, 0, 0, 0, 98, 136, 110, 109, 110, 162, 135, 144, 149, 159, 167, 144, 158, 169, 119, 0], [0, 0, 2, 2, 1, 2, 0, 0, 0, 0, 26, 108, 117, 99, 111, 117, 136, 156, 134, 154, 154, 156, 160, 141, 147, 156, 178, 0], [3, 0, 0, 0, 0, 0, 0, 21, 53, 92, 117, 111, 103, 115, 129, 134, 143, 154, 165, 170, 154, 151, 154, 143, 138, 150, 165, 43], [0, 0, 23, 54, 65, 76, 85, 118, 128, 123, 111, 113, 118, 127, 125, 139, 133, 136, 160, 140, 155, 161, 144, 155, 172, 161, 189, 62], [0, 68, 94, 90, 111, 114, 111, 114, 115, 127, 135, 136, 143, 126, 127, 151, 154, 143, 148, 125, 162, 162, 144, 138, 153, 162, 196, 58], [70, 169, 129, 104, 98, 100, 94, 97, 98, 102, 108, 106, 119, 120, 129, 149, 156, 167, 190, 190, 196, 198, 198, 187, 197, 189, 184, 36], [16, 126, 171, 188, 188, 184, 171, 153, 135, 120, 126, 127, 146, 185, 195, 209, 208, 255, 209, 177, 245, 252, 251, 251, 247, 220, 206, 49], [0, 0, 0, 12, 67, 106, 164, 185, 199, 210, 211, 210, 208, 190, 150, 82, 8, 0, 0, 0, 178, 208, 188, 175, 162, 158, 151, 11], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]}&#39;</span>
+curl -H <span class="s2">&quot;Content-Type: application/json&quot;</span> -X POST -d <span class="s2">&quot;</span><span class="nv">$body</span><span class="s2">&quot;</span> <span class="m">192</span>.168.1.75:30000/predict
+</pre></div>
+</div>
+<p>Output:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">{</span>
+    <span class="s2">&quot;responses&quot;</span>: <span class="o">[</span>
+        <span class="m">9</span>,
+        <span class="m">9</span>
+    <span class="o">]</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="listing-inference-jobs-of-an-app">
+<h2><a class="toc-backref" href="#id14">Listing inference jobs of an app</a><a class="headerlink" href="#listing-inference-jobs-of-an-app" title="Permalink to this headline">¶</a></h2>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../classes/rafiki.client.Client.html#rafiki.client.Client.get_inference_jobs_of_app" title="rafiki.client.Client.get_inference_jobs_of_app"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_inference_jobs_of_app()</span></code></a></p>
+</div>
+<p>Example:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">get_inference_jobs_of_app</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Output:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;app&#39;</span><span class="p">:</span> <span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">,</span>
+<span class="s1">&#39;app_version&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+<span class="s1">&#39;datetime_started&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:17:34 GMT&#39;</span><span class="p">,</span>
+<span class="s1">&#39;datetime_stopped&#39;</span><span class="p">:</span> <span class="bp">None</span><span class="p">,</span>
+<span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;25c117a0-1677-44b2-affb-c56f8f99dabf&#39;</span><span class="p">,</span>
+<span class="s1">&#39;query_host&#39;</span><span class="p">:</span> <span class="s1">&#39;192.168.1.75:30000&#39;</span><span class="p">,</span>
+<span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="s1">&#39;RUNNING&#39;</span><span class="p">,</span>
+<span class="s1">&#39;train_job_id&#39;</span><span class="p">:</span> <span class="s1">&#39;99b6a250-d0d0-431f-8fa7-eeedcd9bed58&#39;</span><span class="p">}]</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="retrieving-the-latest-inference-job-s-details-for-an-app">
+<h2><a class="toc-backref" href="#id15">Retrieving the latest inference job’s details for an app</a><a class="headerlink" href="#retrieving-the-latest-inference-job-s-details-for-an-app" title="Permalink to this headline">¶</a></h2>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../classes/rafiki.client.Client.html#rafiki.client.Client.get_inference_job" title="rafiki.client.Client.get_inference_job"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_inference_job()</span></code></a></p>
+</div>
+<p>Example:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">get_inference_job</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Output:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;app&#39;</span><span class="p">:</span> <span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">,</span>
+<span class="s1">&#39;app_version&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+<span class="s1">&#39;datetime_started&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:17:34 GMT&#39;</span><span class="p">,</span>
+<span class="s1">&#39;datetime_stopped&#39;</span><span class="p">:</span> <span class="bp">None</span><span class="p">,</span>
+<span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;25c117a0-1677-44b2-affb-c56f8f99dabf&#39;</span><span class="p">,</span>
+<span class="s1">&#39;query_host&#39;</span><span class="p">:</span> <span class="s1">&#39;192.168.1.75:30000&#39;</span><span class="p">,</span>
+<span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="s1">&#39;RUNNING&#39;</span><span class="p">,</span>
+<span class="s1">&#39;train_job_id&#39;</span><span class="p">:</span> <span class="s1">&#39;99b6a250-d0d0-431f-8fa7-eeedcd9bed58&#39;</span><span class="p">,</span>
+<span class="s1">&#39;workers&#39;</span><span class="p">:</span> <span class="p">[{</span><span class="s1">&#39;datetime_started&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:17:34 GMT&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;datetime_stopped&#39;</span><span class="p">:</span> <span class="bp">None</span><span class="p">,</span>
+            <span class="s1">&#39;replicas&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="s1">&#39;service_id&#39;</span><span class="p">:</span> <span class="s1">&#39;27d1986f-f96c-4ada-ae35-d6cd1d55f8ca&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="s1">&#39;RUNNING&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;trial&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;hyperparameters&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;batch_size&#39;</span><span class="p">:</span> <span class="mi">32</span><span class="p">,</span>
+                                            <span class="s1">&#39;epochs&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                                            <span class="s1">&#39;hidden_layer_units&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+                                            <span class="s1">&#39;learning_rate&#39;</span><span class="p">:</span> <span class="mf">0.0075360338999624086</span><span class="p">},</span>
+                        <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;8d40ad88-e5a1-4b16-b188-44be920b1683&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;model_name&#39;</span><span class="p">:</span> <span class="s1">&#39;single_hidden_layer_tf&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;score&#39;</span><span class="p">:</span> <span class="mf">0.8231</span><span class="p">}},</span>
+            <span class="p">{</span><span class="s1">&#39;datetime_started&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Sep 2018 05:17:34 GMT&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;datetime_stopped&#39;</span><span class="p">:</span> <span class="bp">None</span><span class="p">,</span>
+            <span class="s1">&#39;replicas&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="s1">&#39;service_id&#39;</span><span class="p">:</span> <span class="s1">&#39;951b78c8-dbc3-470c-8d5d-55db11eca6b0&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="s1">&#39;RUNNING&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;trial&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;hyperparameters&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;batch_size&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                                            <span class="s1">&#39;epochs&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                                            <span class="s1">&#39;hidden_layer_units&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+                                            <span class="s1">&#39;learning_rate&#39;</span><span class="p">:</span> <span class="mf">0.030337360568713518</span><span class="p">},</span>
+                        <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;74bd9b43-9812-4930-a29c-9b765b5b46bc&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;model_name&#39;</span><span class="p">:</span> <span class="s1">&#39;single_hidden_layer_tf&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;score&#39;</span><span class="p">:</span> <span class="mf">0.099</span><span class="p">}}]}]</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="stopping-a-running-inference-job">
+<h2><a class="toc-backref" href="#id16">Stopping a running inference job</a><a class="headerlink" href="#stopping-a-running-inference-job" title="Permalink to this headline">¶</a></h2>
+<p>Only admins &amp; app developers can stop inference jobs.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../classes/rafiki.client.Client.html#rafiki.client.Client.stop_inference_job" title="rafiki.client.Client.stop_inference_job"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.stop_inference_job()</span></code></a></p>
+</div>
+<p>Example:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">stop_inference_job</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Rafiki Client Quickstart</a><ul>
+<li><a class="reference internal" href="#installation">Installation</a></li>
+<li><a class="reference internal" href="#initializing-the-client">Initializing the Client</a></li>
+<li><a class="reference internal" href="#logging-in">Logging in</a></li>
+<li><a class="reference internal" href="#creating-users">Creating users</a></li>
+<li><a class="reference internal" href="#creating-models">Creating models</a></li>
+<li><a class="reference internal" href="#listing-models-by-task">Listing models by task</a></li>
+<li><a class="reference internal" href="#creating-a-train-job">Creating a train job</a></li>
+<li><a class="reference internal" href="#listing-train-jobs-of-an-app">Listing train jobs of an app</a></li>
+<li><a class="reference internal" href="#retrieving-the-latest-train-job-s-details-for-an-app">Retrieving the latest train job’s details for an app</a></li>
+<li><a class="reference internal" href="#listing-best-trials-of-the-latest-train-job-for-an-app">Listing best trials of the latest train job for an app</a></li>
+<li><a class="reference internal" href="#creating-an-inference-job-with-the-latest-train-job-for-an-app">Creating an inference job with the latest train job for an app</a></li>
+<li><a class="reference internal" href="#making-predictions-with-a-running-inference-job">Making predictions with a running inference job</a></li>
+<li><a class="reference internal" href="#listing-inference-jobs-of-an-app">Listing inference jobs of an app</a></li>
+<li><a class="reference internal" href="#retrieving-the-latest-inference-job-s-details-for-an-app">Retrieving the latest inference job’s details for an app</a></li>
+<li><a class="reference internal" href="#stopping-a-running-inference-job">Stopping a running inference job</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Rafiki Guide</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="rafiki-tasks.html"
+                        title="next chapter">Rafiki Task Specification</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/docs/guides/rafiki-client.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="rafiki-tasks.html" title="Rafiki Task Specification"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Rafiki Guide"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Rafiki  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Rafiki Guide</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, nginyc, cadmusthefounder, nudles.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.0.
+    </div>
+  </body>
+</html>
