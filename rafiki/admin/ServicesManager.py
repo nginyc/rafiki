@@ -11,7 +11,6 @@ from rafiki.config import BASE_MODEL_IMAGE, QUERY_FRONTEND_IMAGE, \
     MIN_SERVICE_PORT, MAX_SERVICE_PORT, QUERY_FRONTEND_PORT
 
 from .containers import DockerSwarmContainerManager 
-from .auth import hash_password, if_hash_matches_password
 
 logger = logging.getLogger(__name__)
 

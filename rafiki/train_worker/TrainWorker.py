@@ -63,16 +63,16 @@ class TrainWorker(object):
     def _do_new_trial(self, train_job_id, model_id):
         self._db.connect()
         (train_dataset_uri, test_dataset_uri,
-            model_serialized, hyperparameters, trial_id) = \
+            model_serialized, knobs, trial_id) = \
                 self._create_new_trial(train_job_id, model_id)
         self._db.disconnect()
 
-        logger.info('Starting trial of ID {} with hyperparameters:'.format(trial_id))
-        logger.info(pprint.pformat(hyperparameters))
+        logger.info('Starting trial of ID {} with knobs:'.format(trial_id))
+        logger.info(pprint.pformat(knobs))
 
         try:
             model_inst = unserialize_model(model_serialized)
-            model_inst.init(hyperparameters)
+            model_inst.init(knobs)
 
             # Train model
             logger.info('Training model...')
@@ -127,12 +127,12 @@ class TrainWorker(object):
         if model is None:
             raise InvalidModelException('ID: {}'.format(model_id))
     
-        hyperparameters = self._do_hyperparameter_selection(train_job, model)
+        knobs = self._do_knob_selection(train_job, model)
 
         trial = self._db.create_trial(
             model_id=model.id, 
             train_job_id=train_job.id, 
-            hyperparameters=hyperparameters
+            knobs=knobs
         )
         self._db.commit()
 
@@ -140,31 +140,31 @@ class TrainWorker(object):
             train_job.train_dataset_uri,
             train_job.test_dataset_uri,
             model.model_serialized,
-            hyperparameters,
+            knobs,
             trial.id
         )
 
-    # Returns a set of hyperparameter values
-    def _do_hyperparameter_selection(self, train_job, model):
-        # Pick hyperparameter values
+    # Returns a set of knob values
+    def _do_knob_selection(self, train_job, model):
+        # Pick knob values
         tuner = self._get_tuner_for_model(train_job, model)
-        hyperparameters = propose_with_tuner(tuner)
+        knobs = propose_with_tuner(tuner)
 
-        return hyperparameters
+        return knobs
         
     # Retrieves/creates a tuner for the model for the associated train job
     def _get_tuner_for_model(self, train_job, model):
         # Instantiate tuner
         model_inst = unserialize_model(model.model_serialized)
-        hyperparameters_config = model_inst.get_hyperparameter_config()
-        tuner = create_tuner(hyperparameters_config)
+        knobs_config = model_inst.get_knob_config()
+        tuner = create_tuner(knobs_config)
 
         # Train tuner with previous trials' scores
         trials = self._db.get_completed_trials_of_train_job(train_job.id)
-        model_trial_history = [(x.hyperparameters, x.score) for x in trials if x.model_id == model.id]
-        (hyperparameters_list, scores) = [list(x) for x in zip(*model_trial_history)] \
+        model_trial_history = [(x.knobs, x.score) for x in trials if x.model_id == model.id]
+        (knobs_list, scores) = [list(x) for x in zip(*model_trial_history)] \
             if len(model_trial_history) > 0 else ([], [])
-        tuner = train_tuner(tuner, hyperparameters_list, scores)
+        tuner = train_tuner(tuner, knobs_list, scores)
 
         return tuner
 

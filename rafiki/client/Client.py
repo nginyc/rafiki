@@ -12,10 +12,15 @@ class Client(object):
 
     :param str admin_host: Host of Rafiki Admin
     :param int admin_port: Port of Rafiki Admin
+    :param str advisor_host: Host of Rafiki Advisor
+    :param int advisor_port: Port of Rafiki Advisor
     '''
-    def __init__(self, admin_host='localhost', admin_port=8000):
+    def __init__(self, admin_host='localhost', admin_port=8000,
+                advisor_host='localhost', advisor_port=8001):
         self._admin_host = admin_host
         self._admin_port = admin_port
+        self._advisor_host = advisor_host
+        self._advisor_port = advisor_port
         self._token = None
 
     def login(self, email, password):
@@ -28,7 +33,7 @@ class Client(object):
         :param str email: User's email
         :param str password: User's password
         '''
-        data = self._post('/tokens', form_data={
+        data = self._post('/tokens', json={
             'email': email,
             'password': password
         })
@@ -58,7 +63,7 @@ class Client(object):
         :param user_type: The new user's type
         :type user_type: :class:`rafiki.constants.UserType` 
         '''
-        data = self._post('/users', form_data={
+        data = self._post('/users', json={
             'email': email,
             'password': password,
             'user_type': user_type
@@ -135,7 +140,7 @@ class Client(object):
         :param int budget_amount: Budget amount in units specific to the budget type
         '''
 
-        data = self._post('/train_jobs', form_data={
+        data = self._post('/train_jobs', json={
             'app': app,
             'task': task,
             'train_dataset_uri': train_dataset_uri,
@@ -223,7 +228,7 @@ class Client(object):
         :param str app: Name of the app identifying the train job to use
         :param str app_version: Version of the app identifying the train job to use
         '''
-        data = self._post('/inference_jobs', form_data={
+        data = self._post('/inference_jobs', json={
             'app': app,
             'app_version': app_version
         })
@@ -260,11 +265,60 @@ class Client(object):
         return data
 
     ####################################
+    # Advisors
+    ####################################
+
+    def create_advisor(self, knob_config):
+        '''
+        Creates a Rafiki advisor.
+
+        :param knob_config: Knob configuration for advisor session
+        :type knob_config: dict[str, any]
+        '''
+        data = self._post('/advisors', target='advisor',
+                            json={
+                                'knob_config': knob_config
+                            })
+        return data
+
+    def generate_proposal(self, advisor_id):
+        '''
+        Generate a proposal of knobs from an advisor.
+
+        :param str advisor_id: ID of target advisor
+        '''
+        data = self._post('/advisors/{}/propose'.format(advisor_id), target='advisor')
+        return data
+
+    def set_result_of_proposal(self, advisor_id, proposal_id, score):
+        '''
+        Informs the advisor the result of a proposal of knobs.
+
+        :param str advisor_id: ID of target advisor
+        :param str proposal_id: ID of target proposal
+        :param float score: Score of the proposal, the higher the number, the better the proposal
+        '''
+        data = self._post('/advisors/{}/proposals/{}'.format(advisor_id, proposal_id), 
+                        target='advisor', json={
+                            'score': score
+                        })
+        return data
+
+    def delete_advisor(self, advisor_id):
+        '''
+        Deletes a Rafiki advisor.
+
+        :param str advisor_id: ID of target advisor
+        '''
+        data = self._delete('/advisors/{}'.format(advisor_id), target='advisor')
+        return data
+
+    ####################################
     # Private
     ####################################
 
-    def _get(self, path, params={}):
-        url = 'http://{}:{}{}'.format(self._admin_host, self._admin_port, path)
+    def _get(self, path, params={}, target='admin'):
+        url = self._make_url(path, target=target)
         headers = self._get_headers()
         res = requests.get(
             url,
@@ -273,8 +327,8 @@ class Client(object):
         )
         return self._parse_response(res)
 
-    def _post(self, path, params={}, files={}, form_data=None, json=None):
-        url = 'http://{}:{}{}'.format(self._admin_host, self._admin_port, path)
+    def _post(self, path, params={}, files={}, form_data=None, json=None, target='admin'):
+        url = self._make_url(path, target=target)
         headers = self._get_headers()
         res = requests.post(
             url, 
@@ -285,6 +339,29 @@ class Client(object):
             files=files
         )
         return self._parse_response(res)
+
+    def _delete(self, path, params={}, files={}, form_data=None, json=None, target='admin'):
+        url = self._make_url(path, target=target)
+        headers = self._get_headers()
+        res = requests.delete(
+            url, 
+            headers=headers,
+            params=params, 
+            data=form_data,
+            json=json,
+            files=files
+        )
+        return self._parse_response(res)
+
+    def _make_url(self, path, target='admin'):
+        if target == 'admin':
+            url = 'http://{}:{}{}'.format(self._admin_host, self._admin_port, path)
+        elif target == 'advisor':
+            url = 'http://{}:{}{}'.format(self._advisor_host, self._advisor_port, path)
+        else:
+            raise Exception('Invalid URL target: {}'.format(target))
+
+        return url
 
     def _parse_response(self, res):
         if res.status_code != 200:

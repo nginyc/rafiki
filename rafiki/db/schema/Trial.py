@@ -11,7 +11,7 @@ class Trial(Base):
     __tablename__ = 'trial'
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    hyperparameters = Column(JSON, nullable=False)
+    knobs = Column(JSON, nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     train_job_id = Column(String, ForeignKey('train_job.id'), nullable=False)
     model_id = Column(String, ForeignKey('model.id'), nullable=False)

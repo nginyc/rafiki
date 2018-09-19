@@ -275,11 +275,11 @@ class Database(object):
     ####################################
 
     def create_trial(self, model_id, train_job_id, 
-                    hyperparameters):
+                    knobs):
         trial = Trial(
             model_id=model_id,
             train_job_id=train_job_id,
-            hyperparameters=hyperparameters
+            knobs=knobs
         )
         self._session.add(trial)
         return trial
