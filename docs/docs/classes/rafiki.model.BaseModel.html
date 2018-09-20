@@ -95,18 +95,18 @@ This will be called only when model is <em>trained</em>.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="rafiki.model.BaseModel.get_hyperparameter_config">
-<code class="descname">get_hyperparameter_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/BaseModel.html#BaseModel.get_hyperparameter_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.get_hyperparameter_config" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return a dictionary defining this model’s hyperparameter configuration 
-(i.e. list of hyperparameter names, their data types and their ranges).</p>
+<dt id="rafiki.model.BaseModel.get_knob_config">
+<code class="descname">get_knob_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/BaseModel.html#BaseModel.get_knob_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.get_knob_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a dictionary defining this model’s knob configuration 
+(i.e. list of knob names, their data types and their ranges).</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Dictionary defining this model’s hyperparameter configuration</td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Dictionary defining this model’s knob configuration</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-    <span class="s1">&#39;hyperparameters&#39;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s1">&#39;knobs&#39;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s1">&#39;hidden_layer_units&#39;</span><span class="p">:</span> <span class="p">{</span>
             <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
             <span class="s1">&#39;range&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">128</span><span class="p">]</span>
@@ -135,14 +135,14 @@ This will be called only when model is <em>trained</em>.</p>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.init">
-<code class="descname">init</code><span class="sig-paren">(</span><em>hyperparameters</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/BaseModel.html#BaseModel.init"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.init" title="Permalink to this definition">¶</a></dt>
-<dd><p>Initialize the model with a dictionary of hyperparameter values. 
-These hyperparameter values will be chosen by Rafiki based on the model’s hyperparameter config.</p>
+<code class="descname">init</code><span class="sig-paren">(</span><em>knobs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/BaseModel.html#BaseModel.init"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.init" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize the model with a dictionary of knob values. 
+These knob values will be chosen by Rafiki based on the model’s knob config.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>hyperparameters</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>any</em><em>]</em>) – Dictionary of hyperparameter values for this model instance</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>knobs</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>any</em><em>]</em>) – Dictionary of knob values for this model instance</td>
 </tr>
 </tbody>
 </table>
@@ -186,7 +186,7 @@ This will be called only when model is <em>trained</em>.</p>
 <dl class="method">
 <dt id="rafiki.model.BaseModel.train">
 <code class="descname">train</code><span class="sig-paren">(</span><em>dataset_uri</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/BaseModel.html#BaseModel.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.train" title="Permalink to this definition">¶</a></dt>
-<dd><p>Train this model instance with given dataset and initialized hyperparameter values.</p>
+<dd><p>Train this model instance with given dataset and initialized knob values.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />

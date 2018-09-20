@@ -50,10 +50,15 @@
 
 <span class="sd">    :param str admin_host: Host of Rafiki Admin</span>
 <span class="sd">    :param int admin_port: Port of Rafiki Admin</span>
+<span class="sd">    :param str advisor_host: Host of Rafiki Advisor</span>
+<span class="sd">    :param int advisor_port: Port of Rafiki Advisor</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">admin_host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">admin_port</span><span class="o">=</span><span class="mi">8000</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">admin_host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">admin_port</span><span class="o">=</span><span class="mi">8000</span><span class="p">,</span>
+                <span class="n">advisor_host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">advisor_port</span><span class="o">=</span><span class="mi">8001</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_admin_host</span> <span class="o">=</span> <span class="n">admin_host</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_admin_port</span> <span class="o">=</span> <span class="n">admin_port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_advisor_host</span> <span class="o">=</span> <span class="n">advisor_host</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_advisor_port</span> <span class="o">=</span> <span class="n">advisor_port</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_token</span> <span class="o">=</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="Client.login"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.login">[docs]</a>    <span class="k">def</span> <span class="nf">login</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">password</span><span class="p">):</span>
@@ -66,7 +71,7 @@
 <span class="sd">        :param str email: User&#39;s email</span>
 <span class="sd">        :param str password: User&#39;s password</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/tokens&#39;</span><span class="p">,</span> <span class="n">form_data</span><span class="o">=</span><span class="p">{</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/tokens&#39;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span>
             <span class="s1">&#39;email&#39;</span><span class="p">:</span> <span class="n">email</span><span class="p">,</span>
             <span class="s1">&#39;password&#39;</span><span class="p">:</span> <span class="n">password</span>
         <span class="p">})</span>
@@ -96,7 +101,7 @@
 <span class="sd">        :param user_type: The new user&#39;s type</span>
 <span class="sd">        :type user_type: :class:`rafiki.constants.UserType` </span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/users&#39;</span><span class="p">,</span> <span class="n">form_data</span><span class="o">=</span><span class="p">{</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/users&#39;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span>
             <span class="s1">&#39;email&#39;</span><span class="p">:</span> <span class="n">email</span><span class="p">,</span>
             <span class="s1">&#39;password&#39;</span><span class="p">:</span> <span class="n">password</span><span class="p">,</span>
             <span class="s1">&#39;user_type&#39;</span><span class="p">:</span> <span class="n">user_type</span>
@@ -173,7 +178,7 @@
 <span class="sd">        :param int budget_amount: Budget amount in units specific to the budget type</span>
 <span class="sd">        &#39;&#39;&#39;</span>
 
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/train_jobs&#39;</span><span class="p">,</span> <span class="n">form_data</span><span class="o">=</span><span class="p">{</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/train_jobs&#39;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span>
             <span class="s1">&#39;app&#39;</span><span class="p">:</span> <span class="n">app</span><span class="p">,</span>
             <span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="n">task</span><span class="p">,</span>
             <span class="s1">&#39;train_dataset_uri&#39;</span><span class="p">:</span> <span class="n">train_dataset_uri</span><span class="p">,</span>
@@ -261,7 +266,7 @@
 <span class="sd">        :param str app: Name of the app identifying the train job to use</span>
 <span class="sd">        :param str app_version: Version of the app identifying the train job to use</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/inference_jobs&#39;</span><span class="p">,</span> <span class="n">form_data</span><span class="o">=</span><span class="p">{</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/inference_jobs&#39;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span>
             <span class="s1">&#39;app&#39;</span><span class="p">:</span> <span class="n">app</span><span class="p">,</span>
             <span class="s1">&#39;app_version&#39;</span><span class="p">:</span> <span class="n">app_version</span>
         <span class="p">})</span>
@@ -298,11 +303,63 @@
         <span class="k">return</span> <span class="n">data</span></div>
 
     <span class="c1">####################################</span>
+    <span class="c1"># Advisors</span>
+    <span class="c1">####################################</span>
+
+<div class="viewcode-block" id="Client.create_advisor"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.create_advisor">[docs]</a>    <span class="k">def</span> <span class="nf">create_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">knob_config</span><span class="p">,</span> <span class="n">advisor_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Creates a Rafiki advisor. If `advisor_id` is passed, it will create an advisor</span>
+<span class="sd">        of that ID, or do nothing if an advisor of that ID has already been created.</span>
+
+<span class="sd">        :param knob_config: Knob configuration for advisor session</span>
+<span class="sd">        :type knob_config: dict[str, any]</span>
+<span class="sd">        :param str advisor_id: ID of advisor to create</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/advisors&#39;</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="s1">&#39;advisor&#39;</span><span class="p">,</span>
+                            <span class="n">json</span><span class="o">=</span><span class="p">{</span>
+                                <span class="s1">&#39;advisor_id&#39;</span><span class="p">:</span> <span class="n">advisor_id</span><span class="p">,</span>
+                                <span class="s1">&#39;knob_config&#39;</span><span class="p">:</span> <span class="n">knob_config</span>
+                            <span class="p">})</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.generate_proposal"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.generate_proposal">[docs]</a>    <span class="k">def</span> <span class="nf">generate_proposal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Generate a proposal of knobs from an advisor.</span>
+
+<span class="sd">        :param str advisor_id: ID of target advisor</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/advisors/</span><span class="si">{}</span><span class="s1">/propose&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">advisor_id</span><span class="p">),</span> <span class="n">target</span><span class="o">=</span><span class="s1">&#39;advisor&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.set_result_of_proposal"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.set_result_of_proposal">[docs]</a>    <span class="k">def</span> <span class="nf">set_result_of_proposal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">,</span> <span class="n">proposal_id</span><span class="p">,</span> <span class="n">score</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Informs the advisor the result of a proposal of knobs.</span>
+
+<span class="sd">        :param str advisor_id: ID of target advisor</span>
+<span class="sd">        :param str proposal_id: ID of target proposal</span>
+<span class="sd">        :param float score: Score of the proposal, the higher the number, the better the proposal</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/advisors/</span><span class="si">{}</span><span class="s1">/proposals/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">advisor_id</span><span class="p">,</span> <span class="n">proposal_id</span><span class="p">),</span> 
+                        <span class="n">target</span><span class="o">=</span><span class="s1">&#39;advisor&#39;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span>
+                            <span class="s1">&#39;score&#39;</span><span class="p">:</span> <span class="n">score</span>
+                        <span class="p">})</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.delete_advisor"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.delete_advisor">[docs]</a>    <span class="k">def</span> <span class="nf">delete_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Deletes a Rafiki advisor.</span>
+
+<span class="sd">        :param str advisor_id: ID of target advisor</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delete</span><span class="p">(</span><span class="s1">&#39;/advisors/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">advisor_id</span><span class="p">),</span> <span class="n">target</span><span class="o">=</span><span class="s1">&#39;advisor&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+    <span class="c1">####################################</span>
     <span class="c1"># Private</span>
     <span class="c1">####################################</span>
 
-    <span class="k">def</span> <span class="nf">_get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{}):</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;http://</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_admin_host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_admin_port</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{},</span> <span class="n">target</span><span class="o">=</span><span class="s1">&#39;admin&#39;</span><span class="p">):</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_url</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="n">target</span><span class="p">)</span>
         <span class="n">headers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_headers</span><span class="p">()</span>
         <span class="n">res</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">url</span><span class="p">,</span>
@@ -311,8 +368,8 @@
         <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_response</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{},</span> <span class="n">files</span><span class="o">=</span><span class="p">{},</span> <span class="n">form_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;http://</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_admin_host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_admin_port</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{},</span> <span class="n">files</span><span class="o">=</span><span class="p">{},</span> <span class="n">form_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="s1">&#39;admin&#39;</span><span class="p">):</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_url</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="n">target</span><span class="p">)</span>
         <span class="n">headers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_headers</span><span class="p">()</span>
         <span class="n">res</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="n">url</span><span class="p">,</span> 
@@ -323,6 +380,29 @@
             <span class="n">files</span><span class="o">=</span><span class="n">files</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_response</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{},</span> <span class="n">files</span><span class="o">=</span><span class="p">{},</span> <span class="n">form_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="s1">&#39;admin&#39;</span><span class="p">):</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_url</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="n">target</span><span class="p">)</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_headers</span><span class="p">()</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
+            <span class="n">url</span><span class="p">,</span> 
+            <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span> 
+            <span class="n">data</span><span class="o">=</span><span class="n">form_data</span><span class="p">,</span>
+            <span class="n">json</span><span class="o">=</span><span class="n">json</span><span class="p">,</span>
+            <span class="n">files</span><span class="o">=</span><span class="n">files</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_response</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_make_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="s1">&#39;admin&#39;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">target</span> <span class="o">==</span> <span class="s1">&#39;admin&#39;</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;http://</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_admin_host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_admin_port</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">target</span> <span class="o">==</span> <span class="s1">&#39;advisor&#39;</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;http://</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_advisor_host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_advisor_port</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Invalid URL target: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">url</span>
 
     <span class="k">def</span> <span class="nf">_parse_response</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">res</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">res</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>

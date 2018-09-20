@@ -49,18 +49,18 @@
 <span class="sd">    Rafiki models should implement all abstract methods according to their associated tasks&#39; specifications.</span>
 <span class="sd">    &#39;&#39;&#39;</span>   
 
-<div class="viewcode-block" id="BaseModel.get_hyperparameter_config"><a class="viewcode-back" href="../../../docs/classes/rafiki.model.BaseModel.html#rafiki.model.BaseModel.get_hyperparameter_config">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
-    <span class="k">def</span> <span class="nf">get_hyperparameter_config</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="BaseModel.get_knob_config"><a class="viewcode-back" href="../../../docs/classes/rafiki.model.BaseModel.html#rafiki.model.BaseModel.get_knob_config">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_knob_config</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Return a dictionary defining this model&#39;s hyperparameter configuration </span>
-<span class="sd">        (i.e. list of hyperparameter names, their data types and their ranges).</span>
+<span class="sd">        Return a dictionary defining this model&#39;s knob configuration </span>
+<span class="sd">        (i.e. list of knob names, their data types and their ranges).</span>
 
-<span class="sd">        :returns: Dictionary defining this model&#39;s hyperparameter configuration </span>
+<span class="sd">        :returns: Dictionary defining this model&#39;s knob configuration </span>
 <span class="sd">        :rtype:</span>
 <span class="sd">            ::</span>
 
 <span class="sd">                {</span>
-<span class="sd">                    &#39;hyperparameters&#39;: {</span>
+<span class="sd">                    &#39;knobs&#39;: {</span>
 <span class="sd">                        &#39;hidden_layer_units&#39;: {</span>
 <span class="sd">                            &#39;type&#39;: &#39;int&#39;,</span>
 <span class="sd">                            &#39;range&#39;: [2, 128]</span>
@@ -83,19 +83,19 @@
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="BaseModel.init"><a class="viewcode-back" href="../../../docs/classes/rafiki.model.BaseModel.html#rafiki.model.BaseModel.init">[docs]</a>    <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hyperparameters</span><span class="p">):</span>
+<div class="viewcode-block" id="BaseModel.init"><a class="viewcode-back" href="../../../docs/classes/rafiki.model.BaseModel.html#rafiki.model.BaseModel.init">[docs]</a>    <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">knobs</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Initialize the model with a dictionary of hyperparameter values. </span>
-<span class="sd">        These hyperparameter values will be chosen by Rafiki based on the model&#39;s hyperparameter config.</span>
+<span class="sd">        Initialize the model with a dictionary of knob values. </span>
+<span class="sd">        These knob values will be chosen by Rafiki based on the model&#39;s knob config.</span>
 
-<span class="sd">        :param hyperparameters: Dictionary of hyperparameter values for this model instance</span>
-<span class="sd">        :type hyperparameters: dict[str, any]</span>
+<span class="sd">        :param knobs: Dictionary of knob values for this model instance</span>
+<span class="sd">        :type knobs: dict[str, any]</span>
 <span class="sd">        &#39;&#39;&#39;</span></div>
 
 <div class="viewcode-block" id="BaseModel.train"><a class="viewcode-back" href="../../../docs/classes/rafiki.model.BaseModel.html#rafiki.model.BaseModel.train">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
     <span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Train this model instance with given dataset and initialized hyperparameter values.</span>
+<span class="sd">        Train this model instance with given dataset and initialized knob values.</span>
 
 <span class="sd">        :param str dataset_uri: URI of the train dataset in a format specified by the task</span>
 <span class="sd">        &#39;&#39;&#39;</span>

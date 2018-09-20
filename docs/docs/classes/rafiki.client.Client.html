@@ -47,7 +47,7 @@
 <h1>Rafiki Client<a class="headerlink" href="#rafiki-client" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
 <dt id="rafiki.client.Client">
-<em class="property">class </em><code class="descclassname">rafiki.client.</code><code class="descname">Client</code><span class="sig-paren">(</span><em>admin_host='localhost'</em>, <em>admin_port=8000</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">rafiki.client.</code><code class="descname">Client</code><span class="sig-paren">(</span><em>admin_host='localhost'</em>, <em>admin_port=8000</em>, <em>advisor_host='localhost'</em>, <em>advisor_port=8001</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initializes the Client to connect to a running 
 Rafiki Admin instance that the Client connects to.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -57,11 +57,32 @@ Rafiki Admin instance that the Client connects to.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>admin_host</strong> (<em>str</em>) – Host of Rafiki Admin</li>
 <li><strong>admin_port</strong> (<em>int</em>) – Port of Rafiki Admin</li>
+<li><strong>advisor_host</strong> (<em>str</em>) – Host of Rafiki Advisor</li>
+<li><strong>advisor_port</strong> (<em>int</em>) – Port of Rafiki Advisor</li>
 </ul>
 </td>
 </tr>
 </tbody>
 </table>
+<dl class="method">
+<dt id="rafiki.client.Client.create_advisor">
+<code class="descname">create_advisor</code><span class="sig-paren">(</span><em>knob_config</em>, <em>advisor_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.create_advisor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_advisor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a Rafiki advisor. If <cite>advisor_id</cite> is passed, it will create an advisor
+of that ID, or do nothing if an advisor of that ID has already been created.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>knob_config</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>any</em><em>]</em>) – Knob configuration for advisor session</li>
+<li><strong>advisor_id</strong> (<em>str</em>) – ID of advisor to create</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 <dl class="method">
 <dt id="rafiki.client.Client.create_inference_job">
 <code class="descname">create_inference_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.create_inference_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_inference_job" title="Permalink to this definition">¶</a></dt>
@@ -140,6 +161,34 @@ the train job will train models associated with the task</li>
 <li><strong>user_type</strong> (<a class="reference internal" href="rafiki.constants.html#rafiki.constants.UserType" title="rafiki.constants.UserType"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.constants.UserType</span></code></a>) – The new user’s type</li>
 </ul>
 </td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.delete_advisor">
+<code class="descname">delete_advisor</code><span class="sig-paren">(</span><em>advisor_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.delete_advisor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.delete_advisor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deletes a Rafiki advisor.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>advisor_id</strong> (<em>str</em>) – ID of target advisor</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.generate_proposal">
+<code class="descname">generate_proposal</code><span class="sig-paren">(</span><em>advisor_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.generate_proposal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.generate_proposal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a proposal of knobs from an advisor.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>advisor_id</strong> (<em>str</em>) – ID of target advisor</td>
 </tr>
 </tbody>
 </table>
@@ -294,6 +343,25 @@ Model developers can create and list models.</p>
 <dt id="rafiki.client.Client.logout">
 <code class="descname">logout</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.logout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.logout" title="Permalink to this definition">¶</a></dt>
 <dd><p>Clears the current login session.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.set_result_of_proposal">
+<code class="descname">set_result_of_proposal</code><span class="sig-paren">(</span><em>advisor_id</em>, <em>proposal_id</em>, <em>score</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.set_result_of_proposal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.set_result_of_proposal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Informs the advisor the result of a proposal of knobs.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>advisor_id</strong> (<em>str</em>) – ID of target advisor</li>
+<li><strong>proposal_id</strong> (<em>str</em>) – ID of target proposal</li>
+<li><strong>score</strong> (<em>float</em>) – Score of the proposal, the higher the number, the better the proposal</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
