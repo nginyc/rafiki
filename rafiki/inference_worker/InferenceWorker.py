@@ -84,7 +84,7 @@ class InferenceWorker(object):
 
             # Load model based on trial
             model_inst = unserialize_model(model.model_serialized)
-            model_inst.init(trial.hyperparameters)
+            model_inst.init(trial.knobs)
             model_inst.load_parameters(trial.parameters)
 
         return model_inst

@@ -16,9 +16,9 @@ from urllib.parse import urlparse, parse_qs
 
 class VGG16(BaseModel):
 
-    def get_hyperparameter_config(self):
+    def get_knob_config(self):
         return {
-            'hyperparameters': {
+            'knobs': {
                 'epochs': {
                     'type': 'int',
                     'range': [1, 1]
@@ -32,14 +32,14 @@ class VGG16(BaseModel):
                     'values': [1, 2, 4, 8, 16, 32, 64, 128]
                 }
             },
-            'root_hyperparameters': ['hidden_layer_units', 'epochs', 'learning_rate', 'batch_size'],
-            'conditional_hyperparameters': {}
+            'root_knobs': ['hidden_layer_units', 'epochs', 'learning_rate', 'batch_size'],
+            'conditional_knobs': {}
         }
 
-    def init(self, hyperparameters):
-        self._batch_size = hyperparameters.get('batch_size')
-        self._epochs = hyperparameters.get('epochs')
-        self._learning_rate = hyperparameters.get('learning_rate')
+    def init(self, knobs):
+        self._batch_size = knobs.get('batch_size')
+        self._epochs = knobs.get('epochs')
+        self._learning_rate = knobs.get('learning_rate')
 
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
@@ -166,14 +166,14 @@ class VGG16(BaseModel):
         return model
 
 # if __name__ == '__main__':
-#     hyperparameters = {
+#     knobs = {
 #         'batch_size': 8,
 #         'epochs': 1,
 #         'learning_rate': 1e-5
 #     }
 
 #     model = VGG16()
-#     model.init(hyperparameters)
+#     model.init(knobs)
 #     model.train('tf-keras://fashion_mnist?train_or_test=train')
 #     accuracy = model.evaluate('tf-keras://fashion_mnist?train_or_test=test') 
 #     print(accuracy)

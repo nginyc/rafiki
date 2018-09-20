@@ -3,7 +3,6 @@ import os
 import logging
 import traceback
 
-
 from rafiki.db import Database
 from rafiki.model import unserialize_model, serialize_model
 from rafiki.constants import ServiceStatus, UserType, ServiceType
@@ -11,18 +10,8 @@ from rafiki.config import BASE_MODEL_IMAGE, QUERY_FRONTEND_IMAGE, \
     MIN_SERVICE_PORT, MAX_SERVICE_PORT, QUERY_FRONTEND_PORT
 
 from .containers import DockerSwarmContainerManager 
-from .auth import hash_password, if_hash_matches_password
 
 logger = logging.getLogger(__name__)
-
-class UserExistsException(Exception):
-    pass
-
-class NoSuchUserException(Exception): 
-    pass
-
-class InvalidPasswordException(Exception):
-    pass
 
 class ServicesManager(object):
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
@@ -159,6 +148,8 @@ class ServicesManager(object):
             'LOGS_FOLDER_PATH': os.environ['LOGS_FOLDER_PATH'],
             'ADMIN_HOST': os.environ['ADMIN_HOST'],
             'ADMIN_PORT': os.environ['ADMIN_PORT'],
+            'ADVISOR_HOST': os.environ['ADVISOR_HOST'],
+            'ADVISOR_PORT': os.environ['ADVISOR_PORT'],
             'SUPERADMIN_EMAIL': os.environ['SUPERADMIN_EMAIL'],
             'SUPERADMIN_PASSWORD': os.environ['SUPERADMIN_PASSWORD']
         }
