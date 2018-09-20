@@ -2,6 +2,7 @@ import numpy as np
 import os
 import logging
 import traceback
+import bcrypt
 
 from rafiki.db import Database
 from rafiki.model import unserialize_model, serialize_model
@@ -10,7 +11,6 @@ from rafiki.config import BASE_MODEL_IMAGE, QUERY_FRONTEND_IMAGE, \
     MIN_SERVICE_PORT, MAX_SERVICE_PORT, QUERY_FRONTEND_PORT
 
 from .containers import DockerSwarmContainerManager 
-from .auth import hash_password, if_hash_matches_password
 from .ServicesManager import ServicesManager
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ class Admin(object):
         if not user: 
             raise NoSuchUserException()
         
-        if not if_hash_matches_password(password, user.password_hash):
+        if not self._if_hash_matches_password(password, user.password_hash):
             raise InvalidPasswordException()
 
         return {
@@ -158,9 +158,9 @@ class Admin(object):
         return [
             {
                 'id': trial.id,
-                'hyperparameters': trial.hyperparameters,
+                'knobs': trial.knobs,
                 'datetime_started': trial.datetime_started,
-                'datetime_completed': trial.datetime_completed,
+                'datetime_stopped': trial.datetime_stopped,
                 'model_name': model.name,
                 'score': trial.score
             }
@@ -174,9 +174,9 @@ class Admin(object):
         return [
             {
                 'id': trial.id,
-                'hyperparameters': trial.hyperparameters,
+                'knobs': trial.knobs,
                 'datetime_started': trial.datetime_started,
-                'datetime_completed': trial.datetime_completed,
+                'datetime_stopped': trial.datetime_stopped,
                 'model_name': model.name,
                 'score': trial.score
             }
@@ -255,7 +255,7 @@ class Admin(object):
                         'trial': {
                             'id': trial.id,
                             'score': trial.score,
-                            'hyperparameters': trial.hyperparameters,
+                            'knobs': trial.knobs,
                             'model_name': model.name
                         }
                     }
@@ -348,8 +348,15 @@ class Admin(object):
         except UserExistsException:
             logger.info('Skipping superadmin creation as it already exists...')
 
+    def _hash_password(self, password):
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        return password_hash
+
+    def _if_hash_matches_password(self, password, password_hash):
+        return bcrypt.checkpw(password.encode('utf-8'), password_hash)
+
     def _create_user(self, email, password, user_type):
-        password_hash = hash_password(password)
+        password_hash = self._hash_password(password)
         user = self._db.get_user_by_email(email)
 
         if user is not None:
@@ -373,3 +380,4 @@ class Admin(object):
 
     def disconnect(self):
         self._db.disconnect()
+        

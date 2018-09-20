@@ -14,8 +14,9 @@ class TrainJobStatus():
     COMPLETED = 'COMPLETED'
 
 class TrialStatus():
-    STARTED = 'STARTED'
+    RUNNING = 'RUNNING'
     ERRORED = 'ERRORED'
+    TERMINATED = 'TERMINATED'
     COMPLETED = 'COMPLETED'
 
 class ServiceStatus():

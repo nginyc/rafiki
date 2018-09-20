@@ -8,6 +8,10 @@ RUN mkdir /root/app/
 WORKDIR /root/app/
 
 # Install python dependencies
+COPY rafiki/utils/requirements.txt utils/requirements.txt
+RUN pip install -r utils/requirements.txt
+COPY rafiki/db/requirements.txt db/requirements.txt
+RUN pip install -r db/requirements.txt
 COPY rafiki/client/requirements.txt client/requirements.txt
 RUN pip install -r client/requirements.txt
 COPY rafiki/train_worker/requirements.txt train_worker/requirements.txt

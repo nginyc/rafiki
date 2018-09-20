@@ -11,9 +11,9 @@ from .BaseModel import BaseModel, InvalidModelParamsException
 
 class SingleHiddenLayerTensorflowModel(BaseModel):
 
-    def get_hyperparameter_config(self):
+    def get_knob_config(self):
         return {
-            'hyperparameters': {
+            'knobs': {
                 'hidden_layer_units': {
                     'type': 'int',
                     'range': [2, 128]
@@ -33,11 +33,11 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
             }
         }
 
-    def init(self, hyperparameters):
-        self._batch_size = hyperparameters.get('batch_size')
-        self._epochs = hyperparameters.get('epochs')
-        self._hidden_layer_units = hyperparameters.get('hidden_layer_units')
-        self._learning_rate = hyperparameters.get('learning_rate')
+    def init(self, knobs):
+        self._batch_size = knobs.get('batch_size')
+        self._epochs = knobs.get('epochs')
+        self._hidden_layer_units = knobs.get('hidden_layer_units')
+        self._learning_rate = knobs.get('learning_rate')
 
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
