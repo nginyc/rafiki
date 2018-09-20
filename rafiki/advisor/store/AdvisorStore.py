@@ -7,12 +7,6 @@ import pprint
 from .Advisor import Advisor
 from .Proposal import Proposal
 
-class InvalidAdvisorException(Exception):
-    pass
-
-class InvalidProposalException(Exception):
-    pass
-
 logger = logging.getLogger(__name__)
 
 class AdvisorStore(object):
@@ -20,16 +14,14 @@ class AdvisorStore(object):
         self._advisors = {}
         self._proposals = {}
 
-    def create_advisor(self, advisor_inst, knob_config):
-        advisor = Advisor(advisor_inst, knob_config)
+    def create_advisor(self, advisor_inst, knob_config, advisor_id=None):
+        advisor = Advisor(advisor_inst, knob_config, advisor_id)
         self._advisors[advisor.id] = advisor
         return advisor
 
     def get_advisor(self, advisor_id):
-        print(advisor_id)
-        print(self._advisors)
         if advisor_id not in self._advisors:
-            raise InvalidAdvisorException()
+            return None
 
         advisor = self._advisors[advisor_id]
         return advisor
@@ -51,22 +43,22 @@ class AdvisorStore(object):
 
     def get_proposal(self, advisor_id, proposal_id):
         if advisor_id not in self._advisors:
-            raise InvalidAdvisorException()
+            return None
 
         advisor = self._advisors[advisor_id]
 
         if proposal_id not in advisor.proposal_ids:
-            raise InvalidProposalException()
+            return None
 
         if proposal_id not in self._proposals:
-            raise InvalidProposalException()
+            return None
 
         proposal = self._proposals[proposal_id]
         return proposal
 
     def get_proposals(self, advisor_id):
         if advisor_id not in self._advisors:
-            raise InvalidAdvisorException()
+            return None
 
         advisor = self._advisors[advisor_id]
         proposals = [self._proposals[x] for x in advisor.proposal_ids]

@@ -160,7 +160,7 @@ class Admin(object):
                 'id': trial.id,
                 'knobs': trial.knobs,
                 'datetime_started': trial.datetime_started,
-                'datetime_completed': trial.datetime_completed,
+                'datetime_stopped': trial.datetime_stopped,
                 'model_name': model.name,
                 'score': trial.score
             }
@@ -176,7 +176,7 @@ class Admin(object):
                 'id': trial.id,
                 'knobs': trial.knobs,
                 'datetime_started': trial.datetime_started,
-                'datetime_completed': trial.datetime_completed,
+                'datetime_stopped': trial.datetime_stopped,
                 'model_name': model.name,
                 'score': trial.score
             }

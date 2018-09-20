@@ -326,14 +326,21 @@ class Database(object):
 
     def mark_trial_as_errored(self, trial):
         trial.status = TrialStatus.ERRORED
+        trial.datetime_stopped = datetime.datetime.utcnow()
         self._session.add(trial)
         return trial
 
     def mark_trial_as_complete(self, trial, score, parameters):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
-        trial.datetime_completed = datetime.datetime.utcnow()
+        trial.datetime_stopped = datetime.datetime.utcnow()
         trial.parameters = parameters
+        self._session.add(trial)
+        return trial
+
+    def mark_trial_as_terminated(self, trial):
+        trial.status = TrialStatus.TERMINATED
+        trial.datetime_stopped = datetime.datetime.utcnow()
         self._session.add(trial)
         return trial
 

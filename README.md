@@ -77,6 +77,13 @@ source .env.sh
 bash scripts/start_admin.sh
 ```
 
+Start the Rafiki Advisor HTTP server in terminal 4:
+
+```sh
+source .env.sh
+bash scripts/start_advisor.sh
+```
+
 Additionally, build the base Rafiki images in Docker:
 
 ```sh
@@ -85,7 +92,7 @@ bash scripts/build_model_image.sh
 bash scripts/build_query_frontend_image.sh
 ```
 
-    > If you are using multiple nodes, build these images on ALL nodes.
+> If you are using multiple nodes, build these images on ALL nodes.
 
 ## Using Rafiki
 

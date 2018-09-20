@@ -235,7 +235,7 @@ Example:
 
     .. code-block:: python
 
-        [{'datetime_completed': 'Mon, 17 Sep 2018 05:00:56 GMT',
+        [{'datetime_stopped': 'Mon, 17 Sep 2018 05:00:56 GMT',
         'datetime_started': 'Mon, 17 Sep 2018 05:00:35 GMT',
         'knobs': {'batch_size': 32,
                             'epochs': 1,
@@ -244,7 +244,7 @@ Example:
         'id': '8d40ad88-e5a1-4b16-b188-44be920b1683',
         'model_name': 'single_hidden_layer_tf',
         'score': 0.8231},
-        {'datetime_completed': 'Mon, 17 Sep 2018 05:04:26 GMT',
+        {'datetime_stopped': 'Mon, 17 Sep 2018 05:04:26 GMT',
         'datetime_started': 'Mon, 17 Sep 2018 05:03:06 GMT',
         'knobs': {'batch_size': 1,
                             'epochs': 1,
@@ -253,7 +253,7 @@ Example:
         'id': '74bd9b43-9812-4930-a29c-9b765b5b46bc',
         'model_name': 'single_hidden_layer_tf',
         'score': 0.099},
-        {'datetime_completed': 'Mon, 17 Sep 2018 05:03:06 GMT',
+        {'datetime_stopped': 'Mon, 17 Sep 2018 05:03:06 GMT',
         'datetime_started': 'Mon, 17 Sep 2018 05:00:56 GMT',
         'knobs': {'batch_size': 1,
                             'epochs': 1,
