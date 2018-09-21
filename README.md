@@ -27,7 +27,14 @@ Prerequisites: MacOS or Linux environment
     ```sh
     bash scripts/start.sh
     ```
+
+4. To destroy Rafiki's complete stack:
+
+    ```sh
+    bash scripts/stop.sh
+    ```
     
+        
 If you are using multiple nodes, build these images on other nodes:
 
     ```sh
@@ -35,11 +42,6 @@ If you are using multiple nodes, build these images on other nodes:
     bash scripts/build_query_frontend.sh
     ```
 
-4. To destroy Rafiki's complete stack:
-
-    ```sh
-    bash scripts/stop.sh
-    ```
 
 ## Manual Setup
 
