@@ -33,19 +33,17 @@ Prerequisites: MacOS or Linux environment
     ```sh
     bash scripts/stop.sh
     ```
-    
+
+## Manual Setup
+
+Shell scripts in the `./scripts/` folder build & run parts of Rafiki's stack. Refer to the commands in `./scripts/start.sh`.
         
-If you are using multiple nodes, build these images on other nodes:
+If you are using multiple nodes, also build these images on other nodes:
 
 ```sh
 bash scripts/build_image_model.sh
 bash scripts/build_query_frontend.sh
 ```
-
-
-## Manual Setup
-
-Shell scripts in the `./scripts/` folder build & run parts of Rafiki's stack. Refer to the commands in `./scripts/start.sh`.
 
 ## Using Rafiki
 
