@@ -29,7 +29,6 @@ docker network create rafiki -d overlay --attachable --scope=swarm
 Create the file `.env.sh` at root of project:
 
 ```sh
-export ADMIN_PORT=8000
 export POSTGRES_HOST=rafiki_db
 export POSTGRES_PORT=5432
 export POSTGRES_USER=rafiki
