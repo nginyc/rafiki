@@ -1,5 +1,4 @@
 from flask import request
-import bcrypt
 import os
 import jwt
 from functools import wraps
@@ -13,13 +12,6 @@ class UnauthorizedException(Exception):
 
 class InvalidAuthorizationHeaderException(Exception):
     pass
-
-def hash_password(password):
-    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-    return password_hash
-
-def if_hash_matches_password(password, password_hash):
-    return bcrypt.checkpw(password.encode('utf-8'), password_hash)
     
 def generate_token(payload):
     token = jwt.encode(payload, APP_SECRET, algorithm='HS256')

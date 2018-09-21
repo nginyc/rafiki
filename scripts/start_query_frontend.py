@@ -10,6 +10,6 @@ configure_logging('service-{}-{}'.format(service_id, container_id))
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', 
-            port=os.getenv('QUERY_FRONTEND_PORT', 8001), 
+            port=os.getenv('QUERY_FRONTEND_PORT', 8002), 
             debug=True, 
             threaded=True)

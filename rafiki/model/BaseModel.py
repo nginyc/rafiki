@@ -12,17 +12,17 @@ class BaseModel(abc.ABC):
     '''   
 
     @abc.abstractmethod
-    def get_hyperparameter_config(self):
+    def get_knob_config(self):
         '''
-        Return a dictionary defining this model's hyperparameter configuration 
-        (i.e. list of hyperparameter names, their data types and their ranges).
+        Return a dictionary defining this model's knob configuration 
+        (i.e. list of knob names, their data types and their ranges).
 
-        :returns: Dictionary defining this model's hyperparameter configuration 
+        :returns: Dictionary defining this model's knob configuration 
         :rtype:
             ::
 
                 {
-                    'hyperparameters': {
+                    'knobs': {
                         'hidden_layer_units': {
                             'type': 'int',
                             'range': [2, 128]
@@ -45,19 +45,19 @@ class BaseModel(abc.ABC):
         '''
         raise NotImplementedError()
 
-    def init(self, hyperparameters):
+    def init(self, knobs):
         '''
-        Initialize the model with a dictionary of hyperparameter values. 
-        These hyperparameter values will be chosen by Rafiki based on the model's hyperparameter config.
+        Initialize the model with a dictionary of knob values. 
+        These knob values will be chosen by Rafiki based on the model's knob config.
 
-        :param hyperparameters: Dictionary of hyperparameter values for this model instance
-        :type hyperparameters: dict[str, any]
+        :param knobs: Dictionary of knob values for this model instance
+        :type knobs: dict[str, any]
         '''
 
     @abc.abstractmethod
     def train(self, dataset_uri):
         '''
-        Train this model instance with given dataset and initialized hyperparameter values.
+        Train this model instance with given dataset and initialized knob values.
 
         :param str dataset_uri: URI of the train dataset in a format specified by the task
         '''

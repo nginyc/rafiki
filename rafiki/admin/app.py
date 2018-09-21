@@ -3,9 +3,9 @@ import os
 import traceback
 
 from rafiki.constants import UserType
+from rafiki.utils.auth import generate_token, decode_token, UnauthorizedException, auth
+from rafiki.utils.parse import get_request_params
 
-from .auth import generate_token, decode_token, UnauthorizedException, auth
-from .parse import get_request_params
 from .Admin import Admin
 
 admin = Admin()

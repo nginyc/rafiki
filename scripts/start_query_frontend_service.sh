@@ -22,6 +22,6 @@ docker service create --name $1 \
   -e LOGS_FOLDER_PATH=$LOGS_FOLDER_PATH \
   -e RAFIKI_SERVICE_TYPE=$3 \
   -e RAFIKI_SERVICE_ID=$2 \
-  -p $4:8001 \
+  -p $4:8002 \
   --mount type=bind,src=$LOGS_FOLDER_PATH,dst=$LOGS_FOLDER_PATH \
   $IMAGE_NAME $2

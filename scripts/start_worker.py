@@ -25,8 +25,6 @@ def exit_worker():
         worker.stop()
         print('Worker stopped gracefully.')  
 
-    sys.exit(0)
-
 signal.signal(signal.SIGTERM, sigterm_handler)
 
 try:
@@ -40,8 +38,10 @@ try:
         worker.start()
     else:
         raise Exception('Invalid service type: {}'.format(service_type))
-except Exception:
+    exit_worker()
+except Exception as e:
     logger.error('Error while running worker:')
     logger.error(traceback.format_exc())
-finally:
     exit_worker()
+    raise e
+    
