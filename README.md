@@ -28,13 +28,12 @@ Prerequisites: MacOS or Linux environment
     bash scripts/start.sh
     ```
     
-    
-    If you are using multiple nodes, build these images on other nodes:
+If you are using multiple nodes, build these images on other nodes:
 
-        ```sh
-        bash scripts/build_image_model.sh
-        bash scripts/build_query_frontend.sh
-        ```
+    ```sh
+    bash scripts/build_image_model.sh
+    bash scripts/build_query_frontend.sh
+    ```
 
 4. To destroy Rafiki's complete stack:
 
