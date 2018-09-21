@@ -5,6 +5,10 @@ Rafiki Client Quickstart
 
 .. contents:: Table of Contents
 
+This example uses the `Fashion MNIST dataset`_.
+
+.. _Fashion MNIST dataset: https://github.com/zalandoresearch/fashion-mnist
+
 Installation
 --------------------------------------------------------------------
 

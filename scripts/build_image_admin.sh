@@ -1,0 +1,1 @@
+docker build -t $RAFIKI_IMAGE_ADMIN -f ./dockerfiles/admin.Dockerfile $PWD
