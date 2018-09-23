@@ -6,8 +6,7 @@ import traceback
 from rafiki.db import Database
 from rafiki.model import unserialize_model, serialize_model
 from rafiki.constants import ServiceStatus, UserType, ServiceType
-from rafiki.config import BASE_MODEL_IMAGE, QUERY_FRONTEND_IMAGE, \
-    MIN_SERVICE_PORT, MAX_SERVICE_PORT, QUERY_FRONTEND_PORT
+from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT
 
 from .containers import DockerSwarmContainerManager 
 
@@ -15,6 +14,9 @@ logger = logging.getLogger(__name__)
 
 class ServicesManager(object):
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
+        self._query_frontend_image = os.environ['RAFIKI_IMAGE_QUERY_FRONTEND']
+        self._query_frontend_port = os.environ['QUERY_FRONTEND_PORT']
+
         self._db = db
         self._container_manager = container_manager
 
@@ -129,10 +131,10 @@ class ServicesManager(object):
 
         service = self._create_service(
             service_type=service_type,
-            docker_image=QUERY_FRONTEND_IMAGE,
+            docker_image=self._query_frontend_image,
             replicas=1,
             environment_vars=environment_vars,
-            container_port=QUERY_FRONTEND_PORT
+            container_port=self._query_frontend_port
         )
 
         return service

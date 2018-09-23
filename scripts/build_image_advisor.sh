@@ -1,1 +1,0 @@
-docker build -t $RAFIKI_IMAGE_ADVISOR -f ./dockerfiles/advisor.Dockerfile $PWD

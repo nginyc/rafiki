@@ -1,3 +1,5 @@
+source ./.env.sh
+
 LOG_FILEPATH=$LOGS_FOLDER_PATH/stop.log
 
 # Echo title with border
