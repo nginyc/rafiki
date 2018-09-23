@@ -1,3 +1,5 @@
+source ./.env.sh
+
 LOG_FILEPATH=$LOGS_FOLDER_PATH/start.log
 FILE_DIR=$(dirname "$0")
 

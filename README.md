@@ -16,13 +16,7 @@ Prerequisites: MacOS or Linux environment
     bash scripts/create_env_file.sh
     ```
 
-2. Source the created `./.env.sh`:
-
-    ```sh
-    source ./.env.sh
-    ```
-
-3. Setup Rafiki's complete stack with the init script:
+2. Setup Rafiki's complete stack with the init script:
 
     ```sh
     bash scripts/start.sh
@@ -35,7 +29,7 @@ Prerequisites: MacOS or Linux environment
     bash scripts/build_query_frontend.sh
     ```
 
-4. To destroy Rafiki's complete stack:
+3. To destroy Rafiki's complete stack:
 
     ```sh
     bash scripts/stop.sh
