@@ -28,22 +28,31 @@ Prerequisites: MacOS or Linux environment
     bash scripts/stop.sh
     ```
 
-## Manual Setup
-
-Shell scripts in the `./scripts/` folder build & run parts of Rafiki's stack. Refer to the commands in `./scripts/start.sh`.
-        
-If you are using multiple nodes, also build these images on other nodes:
-
-```sh
-bash scripts/build_image_model.sh
-bash scripts/build_query_frontend.sh
-```
-
 ## Using Rafiki
 
 Visit Rafiki's documentation at https://nginyc.github.io/rafiki2/docs/.
 
-## Building Rafiki's Documentation
+## Development
+
+### Building Images Locally
+
+The quickstart instructions pull pre-built [Rafiki's images](https://hub.docker.com/r/rafikiai/) from Docker Hub. To build Rafiki's images locally (e.g. to reflect latest code changes):
+
+```sh
+bash scripts/build_images.sh
+```
+
+> If you're testing latest code changes on multiple nodes, you'll need to build Rafiki's images on those nodes as well.
+
+### Pushing Images to Docker Hub
+
+To push the Rafiki's latest images to Docker Hub (e.g. to reflect the latest code changes):
+
+```sh
+bash scripts/push_images.sh
+```
+
+### Building Rafiki's Documentation
 
 Rafiki uses [Sphinx documentation](http://www.sphinx-doc.org) and hosts the documentation with [Github Pages](https://pages.github.com/) on the [`/gh-pages` branch](https://github.com/nginyc/rafiki2/tree/gh-pages). Build & view Rafiki's Sphinx documentation on your machine with the following commands:
 
@@ -51,6 +60,47 @@ Rafiki uses [Sphinx documentation](http://www.sphinx-doc.org) and hosts the docu
 pip install sphinx
 sphinx-build -b html . docs
 open docs/index.html
+```
+
+### Starting Parts of the Stack
+
+The quickstart instructions set up a single node Docker Swarm on your machine. Separate shell scripts in the `./scripts/` folder configure and start parts of Rafiki's stack. Refer to the commands in
+`./scripts/start.sh`.
+
+### Reading Rafiki's logs
+
+You can read logs of Rafiki Admin, Rafiki Advisor & Rafiki's services in the logs directory:
+
+```sh
+open /var/log/rafiki
+```
+
+### Connecting to Rafiki's DB
+
+By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g [Postico](https://eggerapps.at/postico/)) with these credentials:
+
+```sh
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5433
+POSTGRES_USER=rafiki
+POSTGRES_DB=rafiki
+POSTGRES_PASSWORD=rafiki
+```
+
+### Connecting to Rafiki's Cache
+
+You can connect to Redis DB with *rebrow*:
+
+```sh
+source .env.sh
+bash scripts/start_rebrow.sh
+```
+
+...with these credentials by default:
+
+```sh
+REDIS_HOST=rafiki_cache
+REDIS_PORT=6379
 ```
 
 ## Rafiki Admin HTTP Server REST API
@@ -76,37 +126,7 @@ Then, together with the `name` & `task` fields, upload the output serialized mod
 
 ## Troubleshooting
 
-You can read all logs in the logs directory:
-
-```sh
-open /var/log/rafiki
-```
-
-By default, you can connect to the PostgreSQL using a PostgreSQL client (e.g [Postico](https://eggerapps.at/postico/)) with these credentials:
-
-```sh
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5433
-POSTGRES_USER=rafiki
-POSTGRES_DB=rafiki
-POSTGRES_PASSWORD=rafiki
-```
-
-Next, you can connect to Redis with *rebrow*:
-
-```sh
-source .env.sh
-bash scripts/start_rebrow.sh
-```
-
-...with these credentials by default:
-
-```sh
-REDIS_HOST=rafiki_cache
-REDIS_PORT=6379
-```
-
-When running the whole stack locally, if you encounter an error like "No space left on device", you might be running out of space allocated for Docker. Try removing all containers & images:
+While building Rafiki's images locally, if you encounter an error like "No space left on device", you might be running out of space allocated for Docker. Try removing all containers & images:
 
 ```sh
 # Delete all containers

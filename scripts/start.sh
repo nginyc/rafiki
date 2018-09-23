@@ -37,21 +37,15 @@ bash $FILE_DIR/create_docker_swarm.sh
 title "Creating Rafiki's logs folder..."
 bash $FILE_DIR/create_logs_folder.sh
 
-# Build Rafiki's images
+# Pulling Rafiki's images from Docker Hub
 
-title "Building Rafiki DB's image..."
-bash $FILE_DIR/build_image_db.sh || exit 1 
-title "Building Rafiki Cache's image..."
-bash $FILE_DIR/build_image_cache.sh || exit 1 
-title "Building Rafiki Admin's image..."
-bash $FILE_DIR/build_image_admin.sh || exit 1 
-title "Building Rafiki Advisor's image..."
-bash $FILE_DIR/build_image_advisor.sh || exit 1 
-title "Building Rafiki Model's image..."
-bash $FILE_DIR/build_image_model.sh || exit 1 
-title "Building Rafiki Query Frontend's image..."
-bash $FILE_DIR/build_image_query_frontend.sh || exit 1 
-echo "Finished building all Rafiki's images successfully!"
+title "Pulling Rafiki's images from Docker Hub..."
+docker pull $RAFIKI_IMAGE_DB || exit 1 
+docker pull $RAFIKI_IMAGE_CACHE || exit 1 
+docker pull $RAFIKI_IMAGE_ADMIN || exit 1 
+docker pull $RAFIKI_IMAGE_ADVISOR || exit 1 
+docker pull $RAFIKI_IMAGE_MODEL || exit 1 
+docker pull $RAFIKI_IMAGE_QUERY_FRONTEND || exit 1 
 
 # Start whole Rafiki stack
 

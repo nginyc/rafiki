@@ -7,8 +7,7 @@ import bcrypt
 from rafiki.db import Database
 from rafiki.model import unserialize_model, serialize_model
 from rafiki.constants import ServiceStatus, UserType, ServiceType
-from rafiki.config import BASE_MODEL_IMAGE, QUERY_FRONTEND_IMAGE, \
-    MIN_SERVICE_PORT, MAX_SERVICE_PORT, QUERY_FRONTEND_PORT
+from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT
 
 from .containers import DockerSwarmContainerManager 
 from .ServicesManager import ServicesManager
@@ -26,6 +25,10 @@ class InvalidPasswordException(Exception):
 
 class Admin(object):
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
+        self._superadmin_email = os.environ['SUPERADMIN_EMAIL']
+        self._superadmin_password = os.environ['SUPERADMIN_PASSWORD']
+        self._base_model_image = os.environ['RAFIKI_IMAGE_MODEL']
+
         self._db = db
         self._services_manager = ServicesManager(db, container_manager)
         
@@ -296,7 +299,7 @@ class Admin(object):
             name=name,
             task=task,
             model_serialized=model_serialized,
-            docker_image=(docker_image or BASE_MODEL_IMAGE)
+            docker_image=(docker_image or self._base_model_image)
         )
 
         return {
@@ -338,11 +341,9 @@ class Admin(object):
 
         # Seed superadmin
         try:
-            superadmin_email = os.environ['SUPERADMIN_EMAIL']
-            superadmin_password = os.environ['SUPERADMIN_PASSWORD']
             self._create_user(
-                email=superadmin_email,
-                password=superadmin_password,
+                email=self._superadmin_email,
+                password=self._superadmin_password,
                 user_type=UserType.SUPERADMIN
             )
         except UserExistsException:

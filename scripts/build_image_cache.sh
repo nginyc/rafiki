@@ -1,1 +1,0 @@
-docker build -t $RAFIKI_IMAGE_CACHE -f ./dockerfiles/cache.Dockerfile $PWD
