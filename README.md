@@ -22,13 +22,6 @@ Prerequisites: MacOS or Linux environment
     bash scripts/start.sh
     ```
 
-    If you are using multiple nodes, build these images on other nodes:
-
-    ```sh
-    bash scripts/build_image_model.sh
-    bash scripts/build_query_frontend.sh
-    ```
-
 3. To destroy Rafiki's complete stack:
 
     ```sh
@@ -38,6 +31,13 @@ Prerequisites: MacOS or Linux environment
 ## Manual Setup
 
 Shell scripts in the `./scripts/` folder build & run parts of Rafiki's stack. Refer to the commands in `./scripts/start.sh`.
+        
+If you are using multiple nodes, also build these images on other nodes:
+
+```sh
+bash scripts/build_image_model.sh
+bash scripts/build_query_frontend.sh
+```
 
 ## Using Rafiki
 
