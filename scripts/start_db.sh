@@ -1,7 +1,4 @@
-MODULE_NAME=rafiki_db
-
-docker build -t $MODULE_NAME -f ./dockerfiles/db.Dockerfile $PWD
-docker run --name $MODULE_NAME \
+docker run --name rafiki_db \
   --network $DOCKER_NETWORK \
   -e POSTGRES_HOST=$POSTGRES_HOST \
   -e POSTGRES_PORT=$POSTGRES_PORT \
@@ -9,6 +6,6 @@ docker run --name $MODULE_NAME \
   -e POSTGRES_DB=$POSTGRES_DB \
   -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
   -p 5433:$POSTGRES_PORT \
-  $MODULE_NAME
+  $RAFIKI_IMAGE_DB
  
 # DB available on localhost at port 5433

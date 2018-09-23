@@ -1,5 +1,3 @@
-IMAGE_NAME=rafiki_query_frontend
-
 usage()  {
   echo "Usage: $0 <service_name> <rafiki_service_id> <rafiki_service_type> <published_port>"
   exit 1
@@ -24,4 +22,4 @@ docker service create --name $1 \
   -e RAFIKI_SERVICE_ID=$2 \
   -p $4:8002 \
   --mount type=bind,src=$LOGS_FOLDER_PATH,dst=$LOGS_FOLDER_PATH \
-  $IMAGE_NAME $2
+  $RAFIKI_IMAGE_QUERY_FRONTEND $2

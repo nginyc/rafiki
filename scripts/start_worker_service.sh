@@ -1,5 +1,3 @@
-IMAGE_NAME=rafiki_model
-
 usage()  {
   echo "Usage: $0 <service_name> <rafiki_service_id> <rafiki_service_type>"
   exit 1
@@ -26,4 +24,4 @@ docker service create --name $1 \
   -e RAFIKI_SERVICE_ID=$2 \
   -e LOGS_FOLDER_PATH=$LOGS_FOLDER_PATH \
   --mount type=bind,src=$LOGS_FOLDER_PATH,dst=$LOGS_FOLDER_PATH \
-  $IMAGE_NAME $2
+  $RAFIKI_IMAGE_MODEL $2

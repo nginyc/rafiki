@@ -1,6 +1,4 @@
-# Rafiki2
-
-This example uses the [Fashion MNIST dataset](https://github.com/zalandoresearch/fashion-mnist).
+# Rafiki
 
 ## Installation
 
@@ -10,88 +8,36 @@ Prerequisites: MacOS or Linux environment
 
 2. Install Python 3.6
 
-## Setting Up the Stack
+## Quickstart
 
-Create a Docker Swarm e.g.:
+1. Create the configuration file `./.env.sh` for Rafiki:
 
-```sh
-docker swarm init --advertise-addr <my-ip-address>
-```
+    ```sh
+    bash scripts/create_env_file.sh
+    ```
 
-...replacing `<your-ip-address>` with your machine's IP address in the network you intend to expose Rafiki.
+2. Setup Rafiki's complete stack with the init script:
 
-Create a custom overlay Docker network for Rafiki, scoped to the Docker Swarm:
+    ```sh
+    bash scripts/start.sh
+    ```
 
-```sh
-docker network create rafiki -d overlay --attachable --scope=swarm
-```
+3. To destroy Rafiki's complete stack:
 
-Create the file `.env.sh` at root of project:
+    ```sh
+    bash scripts/stop.sh
+    ```
 
-```sh
-export POSTGRES_HOST=rafiki_db
-export POSTGRES_PORT=5432
-export POSTGRES_USER=rafiki
-export POSTGRES_DB=rafiki
-export POSTGRES_PASSWORD=rafiki
-export APP_SECRET=rafiki
-export DOCKER_NETWORK=rafiki
-export LOGS_FOLDER_PATH=/var/log/rafiki
-export ADMIN_HOST=rafiki_admin
-export ADMIN_PORT=8000
-export SUPERADMIN_EMAIL=superadmin@rafiki
-export SUPERADMIN_PASSWORD=rafiki
-export REDIS_HOST=rafiki_cache
-export REDIS_PORT=6379
-export REBROW_PORT=5001
-export RAFIKI_IP_ADDRESS=<your-ip-address>
-export PYTHONPATH=${PWD}
-```
+## Manual Setup
 
-Setup the Rafiki logs directory by creating the directory `/var/log/rafiki/` and ensuring Docker has the permissions to mount it onto containers:
+Shell scripts in the `./scripts/` folder build & run parts of Rafiki's stack. Refer to the commands in `./scripts/start.sh`.
+        
+If you are using multiple nodes, also build these images on other nodes:
 
 ```sh
-sudo mkdir /var/log/rafiki
-sudo chmod 777 /var/log/rafiki
+bash scripts/build_image_model.sh
+bash scripts/build_query_frontend.sh
 ```
-
-Start the database in terminal 1:
-
-```sh
-source .env.sh
-bash scripts/start_db.sh
-```
-
-Start the Rafiki Cache in terminal 2:
-
-```sh
-source .env.sh
-bash scripts/start_cache.sh
-```
-
-Start the Rafiki Admin HTTP server in terminal 3:
-
-```sh
-source .env.sh
-bash scripts/start_admin.sh
-```
-
-Start the Rafiki Advisor HTTP server in terminal 4:
-
-```sh
-source .env.sh
-bash scripts/start_advisor.sh
-```
-
-Additionally, build the base Rafiki images in Docker:
-
-```sh
-source .env.sh
-bash scripts/build_model_image.sh
-bash scripts/build_query_frontend_image.sh
-```
-
-> If you are using multiple nodes, build these images on ALL nodes.
 
 ## Using Rafiki
 

@@ -1,7 +1,4 @@
-MODULE_NAME=rafiki_admin
-
-docker build -t $MODULE_NAME -f ./dockerfiles/admin.Dockerfile $PWD
-docker run --rm --name $MODULE_NAME \
+docker run --rm --name rafiki_admin \
   --network $DOCKER_NETWORK \
   -e POSTGRES_HOST=$POSTGRES_HOST \
   -e POSTGRES_PORT=$POSTGRES_PORT \
@@ -22,4 +19,4 @@ docker run --rm --name $MODULE_NAME \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $LOGS_FOLDER_PATH:$LOGS_FOLDER_PATH \
   -p 8000:$ADMIN_PORT \
-  $MODULE_NAME
+  $RAFIKI_IMAGE_ADMIN
