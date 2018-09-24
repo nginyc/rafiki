@@ -1,3 +1,5 @@
+DB_IMAGE=postgres:10.5
+
 docker run --name rafiki_db \
   --network $DOCKER_NETWORK \
   -e POSTGRES_HOST=$POSTGRES_HOST \
@@ -6,6 +8,6 @@ docker run --name rafiki_db \
   -e POSTGRES_DB=$POSTGRES_DB \
   -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
   -p 5433:$POSTGRES_PORT \
-  $RAFIKI_IMAGE_DB
+  $DB_IMAGE
  
 # DB available on localhost at port 5433

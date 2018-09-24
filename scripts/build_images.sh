@@ -12,10 +12,6 @@ title()
 
 # Build Rafiki's images
 
-title "Building Rafiki DB's image..."
-docker build -t $RAFIKI_IMAGE_DB -f ./dockerfiles/db.Dockerfile $PWD || exit 1 
-title "Building Rafiki Cache's image..."
-docker build -t $RAFIKI_IMAGE_CACHE -f ./dockerfiles/cache.Dockerfile $PWD || exit 1 
 title "Building Rafiki Admin's image..."
 docker build -t $RAFIKI_IMAGE_ADMIN -f ./dockerfiles/admin.Dockerfile $PWD || exit 1 
 title "Building Rafiki Advisor's image..."

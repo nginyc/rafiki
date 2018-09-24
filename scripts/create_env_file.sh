@@ -23,8 +23,6 @@ export RAFIKI_IP_ADDRESS=$RAFIKI_IP_ADDRESS
 export PYTHONPATH=$PWD
 export RAFIKI_IMAGE_ADMIN=rafikiai/rafiki_admin
 export RAFIKI_IMAGE_ADVISOR=rafikiai/rafiki_advisor
-export RAFIKI_IMAGE_DB=rafikiai/rafiki_db
-export RAFIKI_IMAGE_CACHE=rafikiai/rafiki_cache
 export RAFIKI_IMAGE_MODEL=rafikiai/rafiki_model
 export RAFIKI_IMAGE_QUERY_FRONTEND=rafikiai/rafiki_query_frontend
 EOF
