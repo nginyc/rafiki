@@ -26,14 +26,9 @@ __pycache__/
 rafiki/model/*.pickle
 
 # Sphinx documentation
-_build/
-_static/
-_templates/
+_*/
 .doctrees/
 docs/docs/
-docs/_static/
-docs/_modules/
-docs/_sources/
 docs/.buildinfo
 docs/genindex.html
 docs/index.html

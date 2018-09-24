@@ -1,4 +1,4 @@
-Rafiki Task Specification
+Task Specification
 ====================================================================
 
 .. contents:: Table of Contents

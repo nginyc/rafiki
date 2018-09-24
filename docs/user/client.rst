@@ -1,6 +1,6 @@
 .. _rafiki-client:
 
-Rafiki Client Quickstart
+Client Quickstart
 ====================================================================
 
 .. contents:: Table of Contents

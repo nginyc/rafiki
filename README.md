@@ -1,5 +1,9 @@
 # Rafiki
 
+*Rafiki* is a distributed, scalable system that trains machine learning (ML) models and deploys trained models, built with ease-of-use in mind. To do so, it leverages on automated machine learning (AutoML).
+
+Visit Rafiki's documentation at https://nginyc.github.io/rafiki2/docs/.
+
 ## Installation
 
 Prerequisites: MacOS or Linux environment
@@ -28,10 +32,6 @@ Prerequisites: MacOS or Linux environment
     bash scripts/stop.sh
     ```
 
-## Using Rafiki
-
-Visit Rafiki's documentation at https://nginyc.github.io/rafiki2/docs/.
-
 ## Development
 
 ### Building Images Locally
@@ -57,7 +57,7 @@ bash scripts/push_images.sh
 Rafiki uses [Sphinx documentation](http://www.sphinx-doc.org) and hosts the documentation with [Github Pages](https://pages.github.com/) on the [`/gh-pages` branch](https://github.com/nginyc/rafiki2/tree/gh-pages). Build & view Rafiki's Sphinx documentation on your machine with the following commands:
 
 ```shell
-pip install sphinx
+pip install sphinx sphinx_rtd_theme
 sphinx-build -b html . docs
 open docs/index.html
 ```
