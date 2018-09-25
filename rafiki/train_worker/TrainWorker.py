@@ -5,7 +5,7 @@ import traceback
 import pprint
 
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
-from rafiki.model import unserialize_model
+from rafiki.utils.model import unserialize_model
 from rafiki.db import Database
 from rafiki.client import Client
 

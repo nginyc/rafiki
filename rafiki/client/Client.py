@@ -2,7 +2,11 @@ import requests
 import pprint
 
 from rafiki.constants import BudgetType
-from rafiki.model import serialize_model
+from rafiki.utils.model import serialize_model
+from rafiki.model import BaseModel
+
+class InvalidModelException(Exception):
+    pass
 
 class Client(object):
 
@@ -84,6 +88,10 @@ class Client(object):
         :param obj model_inst: A Python object that implements :class:`rafiki.model.BaseModel`
         :param str docker_image: A custom docker image name that extends `rafikiai/rafiki_worker`
         '''
+        # TODO: Validate class definition
+        if not isinstance(model_inst, BaseModel):
+            raise InvalidModelException()
+
         model_serialized = serialize_model(model_inst)
         data = self._post(
             '/models', 

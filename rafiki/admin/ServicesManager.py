@@ -4,7 +4,6 @@ import logging
 import traceback
 
 from rafiki.db import Database
-from rafiki.model import unserialize_model, serialize_model
 from rafiki.constants import ServiceStatus, UserType, ServiceType
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT
 

@@ -1,16 +1,7 @@
 import dill
 import os
 
-from .BaseModel import BaseModel
-
-class InvalidModelException(Exception):
-    pass
-
 def serialize_model(model_inst):
-    # TODO: Validate class definition
-    if not isinstance(model_inst, BaseModel):
-        raise InvalidModelException()
-
     model_bytes = dill.dumps(model_inst)
     return model_bytes
 
