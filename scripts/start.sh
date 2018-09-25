@@ -1,3 +1,4 @@
+# Read from shell configuration file
 source ./.env.sh
 
 LOG_FILEPATH=$LOGS_FOLDER_PATH/start.log

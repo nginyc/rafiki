@@ -150,9 +150,7 @@ class ServicesManager(object):
             'ADMIN_HOST': os.environ['ADMIN_HOST'],
             'ADMIN_PORT': os.environ['ADMIN_PORT'],
             'ADVISOR_HOST': os.environ['ADVISOR_HOST'],
-            'ADVISOR_PORT': os.environ['ADVISOR_PORT'],
-            'SUPERADMIN_EMAIL': os.environ['SUPERADMIN_EMAIL'],
-            'SUPERADMIN_PASSWORD': os.environ['SUPERADMIN_PASSWORD']
+            'ADVISOR_PORT': os.environ['ADVISOR_PORT']
         }
 
         service = self._create_service(

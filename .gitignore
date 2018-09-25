@@ -1,6 +1,3 @@
-# Environment variables file
-.env*
-
 # Python virtualenv environments
 env/
 envs/

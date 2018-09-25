@@ -4,6 +4,7 @@ import os
 import traceback
 import pprint
 
+from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
 from rafiki.utils.model import unserialize_model
 from rafiki.db import Database
@@ -231,8 +232,8 @@ class TrainWorker(object):
         admin_port = os.environ['ADMIN_PORT']
         advisor_host = os.environ['ADVISOR_HOST']
         advisor_port = os.environ['ADVISOR_PORT']
-        superadmin_email = os.environ['SUPERADMIN_EMAIL']
-        superadmin_password = os.environ['SUPERADMIN_PASSWORD']
+        superadmin_email = SUPERADMIN_EMAIL
+        superadmin_password = SUPERADMIN_PASSWORD
         client = Client(admin_host=admin_host, 
                         admin_port=admin_port, 
                         advisor_host=advisor_host,

@@ -1,3 +1,8 @@
+# Global
+APP_SECRET = 'rafiki'
+SUPERADMIN_EMAIL = 'superadmin@rafiki'
+SUPERADMIN_PASSWORD = 'rafiki'
+
 # Admin
 MIN_SERVICE_PORT = 30000
 MAX_SERVICE_PORT = 32767

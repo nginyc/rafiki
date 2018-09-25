@@ -1,6 +1,6 @@
 DB_IMAGE=postgres:10.5
 
-docker run --name rafiki_db \
+docker run --name $POSTGRES_HOST \
   --network $DOCKER_NETWORK \
   -e POSTGRES_HOST=$POSTGRES_HOST \
   -e POSTGRES_PORT=$POSTGRES_PORT \

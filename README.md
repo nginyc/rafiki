@@ -14,19 +14,13 @@ Prerequisites: MacOS or Linux environment
 
 ## Quickstart
 
-1. Create the configuration file `./.env.sh` for Rafiki:
-
-    ```sh
-    bash scripts/create_env_file.sh
-    ```
-
-2. Setup Rafiki's complete stack with the init script:
+1. Setup Rafiki's complete stack with the init script:
 
     ```sh
     bash scripts/start.sh
     ```
 
-3. To destroy Rafiki's complete stack:
+2. To destroy Rafiki's complete stack:
 
     ```sh
     bash scripts/stop.sh
