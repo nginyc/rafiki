@@ -104,7 +104,7 @@
 						},
 						{
 							"key": "docker_image",
-							"value": "rafiki_model",
+							"value": "rafikiai/rafiki_worker",
 							"description": "",
 							"type": "text"
 						}

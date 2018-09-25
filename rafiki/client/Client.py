@@ -82,7 +82,7 @@ class Client(object):
         :param str task: Task associated with the model, 
             the model must adhere to the specification of the task
         :param obj model_inst: A Python object that implements :class:`rafiki.model.BaseModel`
-        :param str docker_image: A custom docker image name that extends `rafikiai/rafiki_model`
+        :param str docker_image: A custom docker image name that extends `rafikiai/rafiki_worker`
         '''
         model_serialized = serialize_model(model_inst)
         data = self._post(

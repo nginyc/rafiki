@@ -84,7 +84,7 @@ The base Rafiki worker image has the following Python libraries pre-installed:
     h5py==2.8.0
 
 You can optionally build a custom Docker image for the model training & inference and pass the argument for `docker_image`. 
-This Docker image has to extend `rafiki_model`. An example is available at `./rafiki/model/dockerfiles/TensorflowModel.Dockerfile`.
+This Docker image has to extend `rafikiai/rafiki_worker`. An example is available at `./rafiki/model/dockerfiles/TensorflowModel.Dockerfile`.
 
 .. seealso:: :meth:`rafiki.client.Client.create_model`
 
@@ -126,7 +126,7 @@ Example:
     .. code-block:: python
 
         [{'datetime_created': 'Thu, 06 Sep 2018 04:38:48 GMT',
-        'docker_image': 'rafiki_model',
+        'docker_image': 'rafikiai/rafiki_worker',
         'name': 'single_hidden_layer_tf',
         'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
         'user_id': 'a8959685-6667-41d5-8f91-b195fda27f91'}]

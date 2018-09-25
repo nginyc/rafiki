@@ -42,7 +42,7 @@ bash $FILE_DIR/create_logs_folder.sh
 title "Pulling Rafiki's images from Docker Hub..."
 docker pull $RAFIKI_IMAGE_ADMIN || exit 1 
 docker pull $RAFIKI_IMAGE_ADVISOR || exit 1 
-docker pull $RAFIKI_IMAGE_MODEL || exit 1 
+docker pull $RAFIKI_IMAGE_WORKER || exit 1 
 docker pull $RAFIKI_IMAGE_QUERY_FRONTEND || exit 1 
 
 # Start whole Rafiki stack

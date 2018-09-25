@@ -27,7 +27,7 @@ class Admin(object):
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
         self._superadmin_email = os.environ['SUPERADMIN_EMAIL']
         self._superadmin_password = os.environ['SUPERADMIN_PASSWORD']
-        self._base_model_image = os.environ['RAFIKI_IMAGE_MODEL']
+        self._base_worker_image = os.environ['RAFIKI_IMAGE_WORKER']
 
         self._db = db
         self._services_manager = ServicesManager(db, container_manager)
@@ -299,7 +299,7 @@ class Admin(object):
             name=name,
             task=task,
             model_serialized=model_serialized,
-            docker_image=(docker_image or self._base_model_image)
+            docker_image=(docker_image or self._base_worker_image)
         )
 
         return {
