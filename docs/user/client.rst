@@ -101,7 +101,7 @@ Example:
 
     .. code-block:: python
 
-        from rafiki.model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
+        from examples.models.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
         model_inst = SingleHiddenLayerTensorflowModel()
         client.create_model(
             name='single_hidden_layer_tf',
