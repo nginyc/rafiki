@@ -19,9 +19,6 @@ __pycache__/
 # MacOS
 .DS_Store
 
-# Serialized models
-rafiki/model/*.pickle
-
 # Sphinx documentation
 _*/
 .doctrees/
