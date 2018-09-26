@@ -1,6 +1,8 @@
-# Rafiki2
+# Rafiki
 
-This example uses the [Fashion MNIST dataset](https://github.com/zalandoresearch/fashion-mnist).
+*Rafiki* is a distributed, scalable system that trains machine learning (ML) models and deploys trained models, built with ease-of-use in mind. To do so, it leverages on automated machine learning (AutoML).
+
+Visit Rafiki's documentation at https://nginyc.github.io/rafiki2/docs/.
 
 ## Installation
 
@@ -10,134 +12,71 @@ Prerequisites: MacOS or Linux environment
 
 2. Install Python 3.6
 
-## Setting Up the Stack
+## Quickstart
 
-Create a Docker Swarm e.g.:
+1. Setup Rafiki's complete stack with the init script:
 
-```sh
-docker swarm init --advertise-addr <my-ip-address>
-```
+    ```sh
+    bash scripts/start.sh
+    ```
 
-...replacing `<your-ip-address>` with your machine's IP address in the network you intend to expose Rafiki.
+2. To destroy Rafiki's complete stack:
 
-Create a custom overlay Docker network for Rafiki, scoped to the Docker Swarm:
+    ```sh
+    bash scripts/stop.sh
+    ```
 
-```sh
-docker network create rafiki -d overlay --attachable --scope=swarm
-```
+## Development
 
-Create the file `.env.sh` at root of project:
-
-```sh
-export ADMIN_PORT=8000
-export POSTGRES_HOST=rafiki_db
-export POSTGRES_PORT=5432
-export POSTGRES_USER=rafiki
-export POSTGRES_DB=rafiki
-export POSTGRES_PASSWORD=rafiki
-export APP_SECRET=rafiki
-export DOCKER_NETWORK=rafiki
-export LOGS_FOLDER_PATH=/var/log/rafiki
-export ADMIN_HOST=rafiki_admin
-export ADMIN_PORT=8000
-export SUPERADMIN_EMAIL=superadmin@rafiki
-export SUPERADMIN_PASSWORD=rafiki
-export REDIS_HOST=rafiki_cache
-export REDIS_PORT=6379
-export REBROW_PORT=5001
-export RAFIKI_IP_ADDRESS=<your-ip-address>
-export PYTHONPATH=${PWD}
-```
-
-Setup the Rafiki logs directory by creating the directory `/var/log/rafiki/` and ensuring Docker has the permissions to mount it onto containers:
-
-```sh
-sudo mkdir /var/log/rafiki
-sudo chmod 777 /var/log/rafiki
-```
-
-Start the database in terminal 1:
+Before running any individual scripts, make sure to run the shell configuration script:
 
 ```sh
 source .env.sh
-bash scripts/start_db.sh
 ```
 
-Start the Rafiki Cache in terminal 2:
+### Building Images Locally
+
+The quickstart instructions pull pre-built [Rafiki's images](https://hub.docker.com/r/rafikiai/) from Docker Hub. To build Rafiki's images locally (e.g. to reflect latest code changes):
 
 ```sh
-source .env.sh
-bash scripts/start_cache.sh
+bash scripts/build_images.sh
 ```
 
-Start the Rafiki Admin HTTP server in terminal 3:
+> If you're testing latest code changes on multiple nodes, you'll need to build Rafiki's images on those nodes as well.
+
+### Pushing Images to Docker Hub
+
+To push the Rafiki's latest images to Docker Hub (e.g. to reflect the latest code changes):
 
 ```sh
-source .env.sh
-bash scripts/start_admin.sh
+bash scripts/push_images.sh
 ```
 
-Start the Rafiki Advisor HTTP server in terminal 4:
-
-```sh
-source .env.sh
-bash scripts/start_advisor.sh
-```
-
-Additionally, build the base Rafiki images in Docker:
-
-```sh
-source .env.sh
-bash scripts/build_model_image.sh
-bash scripts/build_query_frontend_image.sh
-```
-
-> If you are using multiple nodes, build these images on ALL nodes.
-
-## Using Rafiki
-
-Visit Rafiki's documentation at https://nginyc.github.io/rafiki2/docs/.
-
-## Building Rafiki's Documentation
+### Building Rafiki's Documentation
 
 Rafiki uses [Sphinx documentation](http://www.sphinx-doc.org) and hosts the documentation with [Github Pages](https://pages.github.com/) on the [`/gh-pages` branch](https://github.com/nginyc/rafiki2/tree/gh-pages). Build & view Rafiki's Sphinx documentation on your machine with the following commands:
 
-```shell
-pip install sphinx
-sphinx-build -b html . docs
+```sh
+bash scripts/build_docs.sh
 open docs/index.html
 ```
 
-## Rafiki Admin HTTP Server REST API
+### Starting Parts of the Stack
 
-To make calls to the HTTP endpoints, you'll need first authenticate with email & password against the `POST /tokens` endpoint to obtain an authentication token `token`, and subsequently add the `Authorization` header for every other call:
+The quickstart instructions set up a single node Docker Swarm on your machine. Separate shell scripts in the `./scripts/` folder configure and start parts of Rafiki's stack. Refer to the commands in
+`./scripts/start.sh`.
 
-`Authorization: Bearer {{token}}`
+### Reading Rafiki's logs
 
-The list of available HTTP endpoints & their request formats are available as a *Postman* collection (OUTDATED) in the root of this project.
-
-### Creating a Model
-
-For the `POST /models` endpoint, you'll need to first serialize the model:
-
-```py
-from rafiki.model import serialize_model_to_file
-from rafiki.model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
-model_inst = SingleHiddenLayerTensorflowModel()
-serialize_model_to_file(model_inst, out_file_path='model.pickle')
-```
-
-Then, together with the `name` & `task` fields, upload the output serialized model file as the `model_serialized` field of a multi-part form data request.
-
-## Troubleshooting
-
-You can read all logs in the logs directory:
+You can read logs of Rafiki Admin, Rafiki Advisor & Rafiki's services in the logs directory:
 
 ```sh
 open /var/log/rafiki
 ```
 
-By default, you can connect to the PostgreSQL using a PostgreSQL client (e.g [Postico](https://eggerapps.at/postico/)) with these credentials:
+### Connecting to Rafiki's DB
+
+By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g [Postico](https://eggerapps.at/postico/)) with these credentials:
 
 ```sh
 POSTGRES_HOST=localhost
@@ -147,10 +86,11 @@ POSTGRES_DB=rafiki
 POSTGRES_PASSWORD=rafiki
 ```
 
-Next, you can connect to Redis with *rebrow*:
+### Connecting to Rafiki's Cache
+
+You can connect to Redis DB with *rebrow*:
 
 ```sh
-source .env.sh
 bash scripts/start_rebrow.sh
 ```
 
@@ -161,7 +101,17 @@ REDIS_HOST=rafiki_cache
 REDIS_PORT=6379
 ```
 
-When running the whole stack locally, if you encounter an error like "No space left on device", you might be running out of space allocated for Docker. Try removing all containers & images:
+## Rafiki Admin HTTP Server REST API
+
+To make calls to the HTTP endpoints, you'll need first authenticate with email & password against the `POST /tokens` endpoint to obtain an authentication token `token`, and subsequently add the `Authorization` header for every other call:
+
+`Authorization: Bearer {{token}}`
+
+The list of available HTTP endpoints & their request formats are available as a *Postman* collection (OUTDATED) in the root of this project.
+
+## Troubleshooting
+
+While building Rafiki's images locally, if you encounter an error like "No space left on device", you might be running out of space allocated for Docker. Try removing all containers & images:
 
 ```sh
 # Delete all containers

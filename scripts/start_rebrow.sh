@@ -1,6 +1,6 @@
-MODULE_NAME=rafiki_rebrow
+REBROW_PORT=5001
 
-docker run --rm --name $MODULE_NAME \
+docker run --rm --name rafiki_rebrow \
   --network $DOCKER_NETWORK \
   -e REBROW_PORT=$REBROW_PORT \
   -p $REBROW_PORT:$REBROW_PORT \

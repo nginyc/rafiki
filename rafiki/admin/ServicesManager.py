@@ -4,10 +4,8 @@ import logging
 import traceback
 
 from rafiki.db import Database
-from rafiki.model import unserialize_model, serialize_model
 from rafiki.constants import ServiceStatus, UserType, ServiceType
-from rafiki.config import BASE_MODEL_IMAGE, QUERY_FRONTEND_IMAGE, \
-    MIN_SERVICE_PORT, MAX_SERVICE_PORT, QUERY_FRONTEND_PORT
+from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT
 
 from .containers import DockerSwarmContainerManager 
 
@@ -15,10 +13,14 @@ logger = logging.getLogger(__name__)
 
 class ServicesManager(object):
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
+        self._query_frontend_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_QUERY_FRONTEND'],
+                                                os.environ['RAFIKI_VERSION'])
+        self._query_frontend_port = os.environ['QUERY_FRONTEND_PORT']
+
         self._db = db
         self._container_manager = container_manager
 
-    def create_inference_job_services(self, inference_job_id):
+    def create_inference_services(self, inference_job_id):
         inference_job = self._db.get_inference_job(inference_job_id)
         
         # Create query frontend
@@ -35,7 +37,7 @@ class ServicesManager(object):
 
         return (inference_job, query_service)
 
-    def stop_inference_job_services(self, inference_job_id):
+    def stop_inference_services(self, inference_job_id):
         inference_job = self._db.get_inference_job(inference_job_id)
         
         # Stop query frontend
@@ -53,7 +55,7 @@ class ServicesManager(object):
 
         return inference_job
 
-    def create_train_job_services(self, train_job_id):
+    def create_train_services(self, train_job_id):
         train_job = self._db.get_train_job(train_job_id)
         models = self._db.get_models_of_task(train_job.task)
         model_to_replicas = self._compute_train_worker_replicas_for_models(models)
@@ -65,7 +67,7 @@ class ServicesManager(object):
         self._update_train_job_status(train_job)
         return train_job
 
-    def stop_train_job_services(self, train_job_id):
+    def stop_train_services(self, train_job_id):
         train_job = self._db.get_train_job(train_job_id)
 
         # Stop all workers for train job
@@ -129,10 +131,10 @@ class ServicesManager(object):
 
         service = self._create_service(
             service_type=service_type,
-            docker_image=QUERY_FRONTEND_IMAGE,
+            docker_image=self._query_frontend_image,
             replicas=1,
             environment_vars=environment_vars,
-            container_port=QUERY_FRONTEND_PORT
+            container_port=self._query_frontend_port
         )
 
         return service
@@ -149,9 +151,7 @@ class ServicesManager(object):
             'ADMIN_HOST': os.environ['ADMIN_HOST'],
             'ADMIN_PORT': os.environ['ADMIN_PORT'],
             'ADVISOR_HOST': os.environ['ADVISOR_HOST'],
-            'ADVISOR_PORT': os.environ['ADVISOR_PORT'],
-            'SUPERADMIN_EMAIL': os.environ['SUPERADMIN_EMAIL'],
-            'SUPERADMIN_PASSWORD': os.environ['SUPERADMIN_PASSWORD']
+            'ADVISOR_PORT': os.environ['ADVISOR_PORT']
         }
 
         service = self._create_service(

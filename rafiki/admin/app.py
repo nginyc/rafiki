@@ -159,8 +159,8 @@ def stop_inference_job(auth, app, app_version=-1):
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER])
 def create_model(auth):
     params = get_request_params()
-    model_serialized = request.files['model_serialized'].read()
-    params['model_serialized'] = model_serialized
+    model_file_bytes = request.files['model_file_bytes'].read()
+    params['model_file_bytes'] = model_file_bytes
 
     with admin:
         return jsonify(admin.create_model(auth['user_id'], **params))

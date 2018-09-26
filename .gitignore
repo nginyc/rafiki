@@ -1,6 +1,3 @@
-# Environment variables file
-.env*
-
 # Python virtualenv environments
 env/
 envs/
@@ -21,6 +18,3 @@ __pycache__/
 
 # MacOS
 .DS_Store
-
-# Serialized models
-rafiki/model/*.pickle

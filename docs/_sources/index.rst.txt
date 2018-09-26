@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Rafiki's documentation!
+Welcome to Rafiki's Documentation!
 ====================================================================
 
 Index
@@ -12,11 +12,24 @@ Index
 .. toctree::
    :maxdepth: 2
    
-   docs/guides/index.rst
+   docs/user/index.rst
+   docs/dev/index.rst
    docs/classes/index.rst
 
-Overview
+What is Rafiki?
 --------------------------------------------------------------------
 
-To use Rafiki, use the Rafiki Client Python module on the Python CLI. 
-Refer to :ref:`rafiki-client`.
+*Rafiki* is a distributed, scalable system that trains machine learning (ML) models and deploys trained models, built with ease-of-use in mind.
+To do so, it leverages on automated machine learning (AutoML).
+
+For *app developers*, without any ML expertise, they can:
+
+- Create a model training job for supported tasks, with their own datasets
+- Deploy an ensemble of trained models for inference
+- Integrate model predictions in their apps over HTTP
+
+For *model developers*, they can:
+
+- Contribute to Rafiki's pool of model templates
+
+To use Rafiki, use the :ref:`rafiki-client` on the Python CLI.

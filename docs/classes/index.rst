@@ -1,4 +1,4 @@
-Rafiki Class Documentation
+Class Documentation
 ====================================================================
 
 .. toctree::

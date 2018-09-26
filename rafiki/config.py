@@ -1,7 +1,9 @@
+# Global
+APP_SECRET = 'rafiki'
+SUPERADMIN_EMAIL = 'superadmin@rafiki'
+SUPERADMIN_PASSWORD = 'rafiki'
+
 # Admin
-BASE_MODEL_IMAGE = 'rafiki_model'
-QUERY_FRONTEND_IMAGE = 'rafiki_query_frontend'
-QUERY_FRONTEND_PORT = 8002
 MIN_SERVICE_PORT = 30000
 MAX_SERVICE_PORT = 32767
 
