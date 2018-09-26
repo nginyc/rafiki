@@ -246,12 +246,13 @@ class Database(object):
     # Models
     ####################################
 
-    def create_model(self, user_id, name, task, model_serialized, docker_image):
+    def create_model(self, user_id, name, task, model_file_bytes, model_class, docker_image):
         model = Model(
             user_id=user_id,
             name=name,
             task=task,
-            model_serialized=model_serialized,
+            model_file_bytes=model_file_bytes,
+            model_class=model_class,
             docker_image=docker_image
         )
         self._session.add(model)

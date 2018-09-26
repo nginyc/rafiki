@@ -6,7 +6,7 @@ import pprint
 
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
-from rafiki.utils.model import unserialize_model
+from rafiki.utils.model import load_model_class
 from rafiki.db import Database
 from rafiki.client import Client
 
@@ -39,8 +39,11 @@ class TrainWorker(object):
         while True:
             self._db.connect()
             (budget_type, budget_amount, model_id,
-            model_serialized, train_job_id, 
-            train_dataset_uri, test_dataset_uri) = self._read_worker_info()
+                model_file_bytes, model_class, train_job_id, 
+                train_dataset_uri, test_dataset_uri) = self._read_worker_info()
+
+            # Load model class from bytes
+            clazz = load_model_class(model_file_bytes, model_class)
 
             if self._if_budget_reached(budget_type, budget_amount, train_job_id, model_id):
                 # If budget reached
@@ -56,7 +59,7 @@ class TrainWorker(object):
             if advisor_id is None:
                 logger.info('Creating Rafiki advisor...')
                 try: 
-                    advisor_id = self._create_advisor(model_serialized)
+                    advisor_id = self._create_advisor(clazz)
                     logger.info('Created advisor of ID "{}"'.format(advisor_id))
                 except Exception as e:
                     # Throw just a warning - likely that another worker has stopped the service
@@ -84,7 +87,7 @@ class TrainWorker(object):
                 logger.info('Starting trial...')
                 logger.info('Training & evaluating model...')
                 self._db.mark_trial_as_errored
-                (score, parameters) = self._train_and_evaluate_model(model_serialized, 
+                (score, parameters) = self._train_and_evaluate_model(clazz, 
                                                                     knobs,
                                                                     train_dataset_uri, 
                                                                     test_dataset_uri)
@@ -129,9 +132,9 @@ class TrainWorker(object):
             logger.error('Error marking trial as terminated:')
             logger.error(traceback.format_exc())
 
-    def _train_and_evaluate_model(self, model_serialized, knobs, train_dataset_uri, 
+    def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, 
                                 test_dataset_uri):
-        model_inst = unserialize_model(model_serialized)
+        model_inst = clazz()
         model_inst.init(knobs)
 
         # Train model
@@ -173,9 +176,9 @@ class TrainWorker(object):
             logger.warning('Error while stopping train job worker service:')
             logger.warning(traceback.format_exc())
         
-    def _create_advisor(self, model_serialized):
+    def _create_advisor(self, clazz):
         # Retrieve knob config for model of worker 
-        model_inst = unserialize_model(model_serialized)
+        model_inst = clazz()
         knob_config = model_inst.get_knob_config()
 
         # Create advisor associated with worker
@@ -221,7 +224,8 @@ class TrainWorker(object):
             train_job.budget_type, 
             train_job.budget_amount, 
             worker.model_id,
-            model.model_serialized,
+            model.model_file_bytes,
+            model.model_class,
             train_job.id,
             train_job.train_dataset_uri,
             train_job.test_dataset_uri

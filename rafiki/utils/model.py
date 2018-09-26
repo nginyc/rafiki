@@ -1,19 +1,21 @@
-import dill
 import os
+from importlib import import_module
 
-def serialize_model(model_inst):
-    model_bytes = dill.dumps(model_inst)
-    return model_bytes
+TEMP_MODEL_FILE_NAME = 'temp'
 
-def serialize_model_to_file(model_inst, out_file_path):
-    model_serialized = serialize_model(model_inst)
+def load_model_class(model_file_bytes, model_class):
+    # Save the model file to disk
+    f = open('{}.py'.format(TEMP_MODEL_FILE_NAME), 'wb')
+    f.write(model_file_bytes)
+    f.close()
 
-    with open(out_file_path, 'wb') as f:
-        f.write(model_serialized)
+    # Import model file as module
+    mod = import_module(TEMP_MODEL_FILE_NAME)
 
-    print('Serialized model file saved at {}'.format(out_file_path))
+    # Extract model class from module
+    clazz = getattr(mod, model_class)
 
-def unserialize_model(model_class_bytes):
-    model_inst = dill.loads(model_class_bytes)
+    # Remove temporary file
+    os.remove(f.name)
 
-    return model_inst
+    return clazz

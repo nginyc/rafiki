@@ -3,7 +3,7 @@ usage()  {
   exit 1
 }
 
-if [ $# -ne 4 ] ; then
+if [ $# -ne 3 ] ; then
     usage
 fi
 
@@ -22,4 +22,4 @@ docker service create --name $1 \
   -e RAFIKI_SERVICE_ID=$2 \
   -e LOGS_FOLDER_PATH=$LOGS_FOLDER_PATH \
   --mount type=bind,src=$LOGS_FOLDER_PATH,dst=$LOGS_FOLDER_PATH \
-  $RAFIKI_IMAGE_WORKER $2
+  $RAFIKI_IMAGE_WORKER:$RAFIKI_VERSION $2

@@ -28,6 +28,12 @@ Prerequisites: MacOS or Linux environment
 
 ## Development
 
+Before running any individual scripts, make sure to run the shell configuration script:
+
+```sh
+source .env.sh
+```
+
 ### Building Images Locally
 
 The quickstart instructions pull pre-built [Rafiki's images](https://hub.docker.com/r/rafikiai/) from Docker Hub. To build Rafiki's images locally (e.g. to reflect latest code changes):
@@ -86,7 +92,6 @@ POSTGRES_PASSWORD=rafiki
 You can connect to Redis DB with *rebrow*:
 
 ```sh
-source .env.sh
 bash scripts/start_rebrow.sh
 ```
 
@@ -104,19 +109,6 @@ To make calls to the HTTP endpoints, you'll need first authenticate with email &
 `Authorization: Bearer {{token}}`
 
 The list of available HTTP endpoints & their request formats are available as a *Postman* collection (OUTDATED) in the root of this project.
-
-### Creating a Model
-
-For the `POST /models` endpoint, you'll need to first serialize the model:
-
-```py
-from rafiki.model import serialize_model_to_file
-from rafiki.model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
-model_inst = SingleHiddenLayerTensorflowModel()
-serialize_model_to_file(model_inst, out_file_path='model.pickle')
-```
-
-Then, together with the `name` & `task` fields, upload the output serialized model file as the `model_serialized` field of a multi-part form data request.
 
 ## Troubleshooting
 

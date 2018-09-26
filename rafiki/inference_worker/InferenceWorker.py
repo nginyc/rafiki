@@ -8,7 +8,7 @@ import logging
 import traceback
 import json
 
-from rafiki.utils.model import unserialize_model
+from rafiki.utils.model import load_model_class
 from rafiki.db import Database
 from rafiki.cache import Cache
 from rafiki.config import RUNNING_INFERENCE_WORKERS, REQUEST_QUEUE, INFERENCE_WORKER_SLEEP, BATCH_SIZE
@@ -83,7 +83,8 @@ class InferenceWorker(object):
             model = self._db.get_model(trial.model_id)
 
             # Load model based on trial
-            model_inst = unserialize_model(model.model_serialized)
+            clazz = load_model_class(model.model_file_bytes, model.model_class)
+            model_inst = clazz()
             model_inst.init(trial.knobs)
             model_inst.load_parameters(trial.parameters)
 

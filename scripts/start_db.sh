@@ -1,5 +1,3 @@
-DB_IMAGE=postgres:10.5
-
 docker run --name $POSTGRES_HOST \
   --network $DOCKER_NETWORK \
   -e POSTGRES_HOST=$POSTGRES_HOST \
@@ -8,6 +6,6 @@ docker run --name $POSTGRES_HOST \
   -e POSTGRES_DB=$POSTGRES_DB \
   -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
   -p 5433:$POSTGRES_PORT \
-  $DB_IMAGE
+  $IMAGE_POSTGRES
  
 # DB available on localhost at port 5433

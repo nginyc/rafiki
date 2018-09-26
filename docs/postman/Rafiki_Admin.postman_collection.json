@@ -89,9 +89,13 @@
 					"mode": "formdata",
 					"formdata": [
 						{
-							"key": "model_serialized",
+							"key": "model_file_bytes",
 							"type": "file"
 						},
+						{
+							"key": "model_class",
+							"type": "text"
+						}
 						{
 							"key": "name",
 							"value": "single_hidden_layer_tf",
@@ -104,7 +108,7 @@
 						},
 						{
 							"key": "docker_image",
-							"value": "rafikiai/rafiki_worker",
+							"value": "rafikiai/rafiki_worker:latest",
 							"description": "",
 							"type": "text"
 						}

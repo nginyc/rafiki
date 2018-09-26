@@ -21,6 +21,6 @@ COPY scripts/start_advisor.py start_advisor.py
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONPATH /root/rafiki/
 
-EXPOSE 8000
+EXPOSE 8001
 
 CMD ["python", "start_advisor.py"]

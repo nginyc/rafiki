@@ -17,3 +17,7 @@ export RAFIKI_IMAGE_ADMIN=rafikiai/rafiki_admin
 export RAFIKI_IMAGE_ADVISOR=rafikiai/rafiki_advisor
 export RAFIKI_IMAGE_WORKER=rafikiai/rafiki_worker
 export RAFIKI_IMAGE_QUERY_FRONTEND=rafikiai/rafiki_query_frontend
+export IMAGE_POSTGRES=postgres:10.5
+export IMAGE_REDIS=redis:5.0-rc
+export RAFIKI_VERSION=0.0.1
+export PYTHONPATH=$PWD
