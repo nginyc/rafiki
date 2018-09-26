@@ -24,7 +24,7 @@ copyright = '2018, nginyc, cadmusthefounder, nudles'
 author = 'nginyc, cadmusthefounder, nudles'
 
 # The short X.Y version
-version = ''
+version = os.environ['RAFIKI_VERSION']
 # The full version, including alpha/beta/rc tags
 release = ''
 
