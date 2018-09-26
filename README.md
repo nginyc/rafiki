@@ -57,8 +57,7 @@ bash scripts/push_images.sh
 Rafiki uses [Sphinx documentation](http://www.sphinx-doc.org) and hosts the documentation with [Github Pages](https://pages.github.com/) on the [`/gh-pages` branch](https://github.com/nginyc/rafiki2/tree/gh-pages). Build & view Rafiki's Sphinx documentation on your machine with the following commands:
 
 ```shell
-pip install sphinx sphinx_rtd_theme
-sphinx-build -b html . docs
+bash scripts/build_docs.sh
 open docs/index.html
 ```
 
