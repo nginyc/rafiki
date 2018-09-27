@@ -1,5 +1,9 @@
 # Rafiki
 
+*Rafiki* is a distributed, scalable system that trains machine learning (ML) models and deploys trained models, built with ease-of-use in mind. To do so, it leverages on automated machine learning (AutoML).
+
+Visit Rafiki's documentation at https://nginyc.github.io/rafiki2/docs/.
+
 ## Installation
 
 Prerequisites: MacOS or Linux environment
@@ -10,29 +14,25 @@ Prerequisites: MacOS or Linux environment
 
 ## Quickstart
 
-1. Create the configuration file `./.env.sh` for Rafiki:
-
-    ```sh
-    bash scripts/create_env_file.sh
-    ```
-
-2. Setup Rafiki's complete stack with the init script:
+1. Setup Rafiki's complete stack with the init script:
 
     ```sh
     bash scripts/start.sh
     ```
 
-3. To destroy Rafiki's complete stack:
+2. To destroy Rafiki's complete stack:
 
     ```sh
     bash scripts/stop.sh
     ```
 
-## Using Rafiki
-
-Visit Rafiki's documentation at https://nginyc.github.io/rafiki2/docs/.
-
 ## Development
+
+Before running any individual scripts, make sure to run the shell configuration script:
+
+```sh
+source .env.sh
+```
 
 ### Building Images Locally
 
@@ -56,9 +56,8 @@ bash scripts/push_images.sh
 
 Rafiki uses [Sphinx documentation](http://www.sphinx-doc.org) and hosts the documentation with [Github Pages](https://pages.github.com/) on the [`/gh-pages` branch](https://github.com/nginyc/rafiki2/tree/gh-pages). Build & view Rafiki's Sphinx documentation on your machine with the following commands:
 
-```shell
-pip install sphinx
-sphinx-build -b html . docs
+```sh
+bash scripts/build_docs.sh
 open docs/index.html
 ```
 
@@ -92,7 +91,6 @@ POSTGRES_PASSWORD=rafiki
 You can connect to Redis DB with *rebrow*:
 
 ```sh
-source .env.sh
 bash scripts/start_rebrow.sh
 ```
 
@@ -110,19 +108,6 @@ To make calls to the HTTP endpoints, you'll need first authenticate with email &
 `Authorization: Bearer {{token}}`
 
 The list of available HTTP endpoints & their request formats are available as a *Postman* collection (OUTDATED) in the root of this project.
-
-### Creating a Model
-
-For the `POST /models` endpoint, you'll need to first serialize the model:
-
-```py
-from rafiki.model import serialize_model_to_file
-from rafiki.model.SingleHiddenLayerTensorflowModel import SingleHiddenLayerTensorflowModel
-model_inst = SingleHiddenLayerTensorflowModel()
-serialize_model_to_file(model_inst, out_file_path='model.pickle')
-```
-
-Then, together with the `name` & `task` fields, upload the output serialized model file as the `model_serialized` field of a multi-part form data request.
 
 ## Troubleshooting
 

@@ -1,4 +1,4 @@
-Rafiki Constants
+rafiki.constants
 ====================================================================
 
 .. autoclass:: rafiki.constants.UserType

@@ -1,4 +1,4 @@
-Rafiki Base Model
+rafiki.model.BaseModel
 ====================================================================
 
 .. autoclass:: rafiki.model.BaseModel

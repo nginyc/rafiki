@@ -2,7 +2,6 @@ import requests
 import pprint
 
 from rafiki.constants import BudgetType
-from rafiki.model import serialize_model
 
 class Client(object):
 
@@ -74,26 +73,32 @@ class Client(object):
     # Models
     ####################################
 
-    def create_model(self, name, task, model_inst, docker_image=None):
+    def create_model(self, name, task, model_file_path, model_class, docker_image=None):
         '''
         Creates a model on Rafiki.
 
         :param str name: Name of the model, must be unique on Rafiki
         :param str task: Task associated with the model, 
             the model must adhere to the specification of the task
-        :param obj model_inst: A Python object that implements :class:`rafiki.model.BaseModel`
-        :param str docker_image: A custom docker image name that extends `rafikiai/rafiki_model`
+        :param obj model_file_path: Path to a single Python file that contains the definition for the model class.
+            Note this file should contain all necessary Python code for the model's implementation. 
+            If the Python file imports any external Python modules, it should be installed in the model's Docker image.
+        :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
+        :param str docker_image: A custom docker image name that extends `rafikiai/rafiki_worker`
         '''
-        model_serialized = serialize_model(model_inst)
+        f = open(model_file_path, 'rb')
+        model_file_bytes = f.read()
+        
         data = self._post(
             '/models', 
             files={
-                'model_serialized': model_serialized
+                'model_file_bytes': model_file_bytes
             },
             form_data={
                 'name': name,
                 'task': task,
-                'docker_image': docker_image
+                'docker_image': docker_image,
+                'model_class':  model_class
             }
         )
         return data
@@ -128,7 +133,7 @@ class Client(object):
                         budget_type=BudgetType.MODEL_TRIAL_COUNT, 
                         budget_amount=10):
         '''
-        Creates and starts running a train job on Rafiki.
+        Creates and starts a train job on Rafiki.
 
         :param str app: Name of the app associated with the train job
         :param str task: Task associated with the train job, 
@@ -220,7 +225,7 @@ class Client(object):
 
     def create_inference_job(self, app, app_version=-1):
         '''
-        Creates and starts running a inference job on Rafiki with the 2 best trials of an associated train job. 
+        Creates and starts a inference job on Rafiki with the 2 best trials of an associated train job. 
         The inference job is tagged with the train job's app and app version.
 
         In this method's response, `query_host` is this inference job's query front-end's host. 

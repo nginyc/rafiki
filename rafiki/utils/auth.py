@@ -4,8 +4,7 @@ import jwt
 from functools import wraps
 
 from rafiki.constants import UserType
-
-APP_SECRET = os.environ['APP_SECRET']
+from rafiki.config import APP_SECRET
 
 class UnauthorizedException(Exception): 
     pass

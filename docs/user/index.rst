@@ -1,8 +1,8 @@
-Rafiki Guide
+User Guide
 ====================================================================
 
 .. toctree::
    :maxdepth: 2
    
-   rafiki-client
-   rafiki-tasks
+   client
+   tasks

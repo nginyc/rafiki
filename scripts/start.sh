@@ -1,3 +1,4 @@
+# Read from shell configuration file
 source ./.env.sh
 
 LOG_FILEPATH=$LOGS_FOLDER_PATH/start.log
@@ -15,8 +16,8 @@ title()
 
 ensure_stable()
 {
-    echo "Waiting for 5s for $1 to stablize..."
-    sleep 5
+    echo "Waiting for 10s for $1 to stablize..."
+    sleep 10
     if ps -p $! > /dev/null
     then
         echo "$1 is running"
@@ -37,15 +38,10 @@ bash $FILE_DIR/create_docker_swarm.sh
 title "Creating Rafiki's logs folder..."
 bash $FILE_DIR/create_logs_folder.sh
 
-# Pulling Rafiki's images from Docker Hub
+# Pull images from Docker Hub
 
-title "Pulling Rafiki's images from Docker Hub..."
-docker pull $RAFIKI_IMAGE_DB || exit 1 
-docker pull $RAFIKI_IMAGE_CACHE || exit 1 
-docker pull $RAFIKI_IMAGE_ADMIN || exit 1 
-docker pull $RAFIKI_IMAGE_ADVISOR || exit 1 
-docker pull $RAFIKI_IMAGE_MODEL || exit 1 
-docker pull $RAFIKI_IMAGE_QUERY_FRONTEND || exit 1 
+title "Pulling images for Rafiki from Docker Hub..."
+bash $FILE_DIR/pull_images.sh
 
 # Start whole Rafiki stack
 

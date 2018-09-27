@@ -6,8 +6,8 @@ import tempfile
 import numpy as np
 import base64
 
-from .dataset import load_dataset
-from .BaseModel import BaseModel, InvalidModelParamsException
+from rafiki.model.dataset import load_dataset
+from rafiki.model.BaseModel import BaseModel, InvalidModelParamsException
 
 class SingleHiddenLayerTensorflowModel(BaseModel):
 

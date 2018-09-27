@@ -2,8 +2,8 @@ FROM python:3.6
 
 RUN apt-get update
 
-RUN mkdir /root/app/
-WORKDIR /root/app/
+RUN mkdir /root/rafiki/
+WORKDIR /root/rafiki/
 
 # Install python dependencies
 COPY rafiki/utils/requirements.txt utils/requirements.txt
@@ -19,7 +19,7 @@ COPY rafiki/ rafiki/
 COPY scripts/start_query_frontend.py start_query_frontend.py
 
 ENV PYTHONUNBUFFERED 1
-ENV PYTHONPATH /root/app/
+ENV PYTHONPATH /root/rafiki/
 
 EXPOSE 8002
 

@@ -1,9 +1,8 @@
-Class Documentation
+Developer Guide
 ====================================================================
 
 .. toctree::
    :maxdepth: 2
    
-   rafiki.client.Client
-   rafiki.model.BaseModel
-   rafiki.constants
+   architecture
+   folder-structure

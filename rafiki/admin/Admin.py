@@ -5,9 +5,8 @@ import traceback
 import bcrypt
 
 from rafiki.db import Database
-from rafiki.model import unserialize_model, serialize_model
 from rafiki.constants import ServiceStatus, UserType, ServiceType
-from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT
+from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 
 from .containers import DockerSwarmContainerManager 
 from .ServicesManager import ServicesManager
@@ -17,17 +16,19 @@ logger = logging.getLogger(__name__)
 class UserExistsException(Exception):
     pass
 
-class NoSuchUserException(Exception): 
+class InvalidUserException(Exception): 
     pass
 
 class InvalidPasswordException(Exception):
     pass
 
+class InferenceJobExistsException(Exception):
+    pass
+
 class Admin(object):
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
-        self._superadmin_email = os.environ['SUPERADMIN_EMAIL']
-        self._superadmin_password = os.environ['SUPERADMIN_PASSWORD']
-        self._base_model_image = os.environ['RAFIKI_IMAGE_MODEL']
+        self._base_worker_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_WORKER'],
+                                                os.environ['RAFIKI_VERSION'])
 
         self._db = db
         self._services_manager = ServicesManager(db, container_manager)
@@ -43,7 +44,7 @@ class Admin(object):
         user = self._db.get_user_by_email(email)
 
         if not user: 
-            raise NoSuchUserException()
+            raise InvalidUserException()
         
         if not self._if_hash_matches_password(password, user.password_hash):
             raise InvalidPasswordException()
@@ -83,7 +84,7 @@ class Admin(object):
         )
         self._db.commit()
 
-        train_job = self._services_manager.create_train_job_services(train_job.id)
+        train_job = self._services_manager.create_train_services(train_job.id)
 
         return {
             'id': train_job.id,
@@ -93,7 +94,7 @@ class Admin(object):
 
     def stop_train_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
-        self._services_manager.stop_train_job_services(train_job.id)
+        self._services_manager.stop_train_services(train_job.id)
 
         return {
             'id': train_job.id,
@@ -200,6 +201,12 @@ class Admin(object):
 
     def create_inference_job(self, user_id, app, app_version):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+
+        # Ensure only 1 inference job can be created for 1 train job
+        inference_job = self._db.get_inference_job_by_train_job(train_job.id)
+        if inference_job is not None:
+            raise InferenceJobExistsException()
+
         inference_job = self._db.create_inference_job(
             user_id=user_id,
             train_job_id=train_job.id
@@ -207,7 +214,7 @@ class Admin(object):
         self._db.commit()
 
         (inference_job, query_service) = \
-            self._services_manager.create_inference_job_services(inference_job.id)
+            self._services_manager.create_inference_services(inference_job.id)
 
         return {
             'id': inference_job.id,
@@ -220,7 +227,7 @@ class Admin(object):
     def stop_inference_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
         inference_job = self._db.get_inference_job_by_train_job(train_job.id)
-        inference_job = self._services_manager.stop_inference_job_services(inference_job.id)
+        inference_job = self._services_manager.stop_inference_services(inference_job.id)
         return {
             'id': inference_job.id,
             'train_job_id': train_job.id,
@@ -293,13 +300,14 @@ class Admin(object):
     ####################################
 
     def create_model(self, user_id, name, task, 
-        model_serialized, docker_image=None):
+                    model_file_bytes, model_class, docker_image=None):
         model = self._db.create_model(
             user_id=user_id,
             name=name,
             task=task,
-            model_serialized=model_serialized,
-            docker_image=(docker_image or self._base_model_image)
+            model_file_bytes=model_file_bytes,
+            model_class=model_class,
+            docker_image=(docker_image or self._base_worker_image)
         )
 
         return {
@@ -312,6 +320,7 @@ class Admin(object):
             {
                 'name': model.name,
                 'task': model.task,
+                'model_class': model.model_class,
                 'datetime_created': model.datetime_created,
                 'user_id': model.user_id,
                 'docker_image': model.docker_image
@@ -325,6 +334,7 @@ class Admin(object):
             {
                 'name': model.name,
                 'task': model.task,
+                'model_class': model.model_class,
                 'datetime_created': model.datetime_created,
                 'user_id': model.user_id,
                 'docker_image': model.docker_image
@@ -342,8 +352,8 @@ class Admin(object):
         # Seed superadmin
         try:
             self._create_user(
-                email=self._superadmin_email,
-                password=self._superadmin_password,
+                email=SUPERADMIN_EMAIL,
+                password=SUPERADMIN_PASSWORD,
                 user_type=UserType.SUPERADMIN
             )
         except UserExistsException:

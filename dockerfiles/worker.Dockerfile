@@ -4,8 +4,8 @@ FROM python:3.6
 RUN apt-get update
 RUN apt-get install -y postgresql postgresql-contrib
 
-RUN mkdir /root/app/
-WORKDIR /root/app/
+RUN mkdir /root/rafiki/
+WORKDIR /root/rafiki/
 
 # Install python dependencies
 COPY rafiki/utils/requirements.txt utils/requirements.txt
@@ -25,6 +25,6 @@ COPY rafiki/ rafiki/
 COPY scripts/start_worker.py start_worker.py
 
 ENV PYTHONUNBUFFERED 1
-ENV PYTHONPATH /root/app/
+ENV PYTHONPATH /root/rafiki/
 
 ENTRYPOINT [ "python", "start_worker.py" ]

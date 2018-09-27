@@ -1,6 +1,6 @@
-docker run --rm --name rafiki_cache \
+docker run --rm --name $REDIS_HOST \
   --network $DOCKER_NETWORK \
   -e REDIS_HOST=$REDIS_HOST \
   -e REDIS_PORT=$REDIS_PORT \
   -p $REDIS_PORT:$REDIS_PORT \
-  $RAFIKI_IMAGE_CACHE
+  $IMAGE_REDIS

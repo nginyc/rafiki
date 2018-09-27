@@ -7,12 +7,11 @@ import os
 import tempfile
 import numpy as np
 import base64
-
-from .dataset import load_dataset
-from .BaseModel import BaseModel, InvalidModelParamsException
-
 import abc
 from urllib.parse import urlparse, parse_qs 
+
+from rafiki.model.dataset import load_dataset
+from rafiki.model.BaseModel import BaseModel, InvalidModelParamsException
 
 class VGG16(BaseModel):
 

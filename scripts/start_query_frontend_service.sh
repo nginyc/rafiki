@@ -22,4 +22,4 @@ docker service create --name $1 \
   -e RAFIKI_SERVICE_ID=$2 \
   -p $4:8002 \
   --mount type=bind,src=$LOGS_FOLDER_PATH,dst=$LOGS_FOLDER_PATH \
-  $RAFIKI_IMAGE_QUERY_FRONTEND $2
+  $RAFIKI_IMAGE_QUERY_FRONTEND:$RAFIKI_VERSION $2

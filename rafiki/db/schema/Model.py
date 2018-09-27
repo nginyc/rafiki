@@ -11,6 +11,7 @@ class Model(Base):
     datetime_created = Column(DateTime, nullable=False, default=generate_datetime)
     name = Column(String, unique=True, nullable=False)
     task = Column(String, nullable=False)
-    model_serialized = Column(Binary, nullable=False)
+    model_file_bytes = Column(Binary, nullable=False)
+    model_class = Column(String, nullable=False)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
     docker_image = Column(String, nullable=False)
