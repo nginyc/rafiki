@@ -16,7 +16,9 @@ from .parse import to_json_serializable
 
 logger = logging.getLogger(__name__)
 
-# TODO: Namespace request queue by inference job
+class InvalidWorkerException(Exception):
+    pass
+
 class InferenceWorker(object):
     def __init__(self, service_id, cache=Cache(), db=Database()):
         self._cache = cache
@@ -27,9 +29,12 @@ class InferenceWorker(object):
     def start(self):
         logger.info('Starting inference worker for service of id {}...' \
             .format(self._service_id))
+        
+        with self._db:
+            (predictor_service_id, trial_id) = self._read_worker_info()
+            self._model = self._load_model(trial_id)
 
-        self._register_worker()
-        self._model = self._load_model()
+        self._register_worker(predictor_service_id)
             
         queue_key = self._get_queue_key()
         while True:
@@ -67,7 +72,11 @@ class InferenceWorker(object):
             time.sleep(INFERENCE_WORKER_SLEEP)
 
     def stop(self):
-        self._unregister_worker()
+        with self._db:
+            (predictor_service_id, _) = self._read_worker_info()
+
+        self._unregister_worker(predictor_service_id)
+
         if self._model is not None:
             self._model.destroy()
             self._model = None
@@ -75,24 +84,40 @@ class InferenceWorker(object):
     def _get_queue_key(self):
         return '{}_{}'.format(REQUEST_QUEUE, self._service_id)
 
-    def _load_model(self):
-        with self._db:
-            worker = self._db.get_inference_job_worker(self._service_id)
-            trial = self._db.get_trial(worker.trial_id)
-            model = self._db.get_model(trial.model_id)
+    def _load_model(self, trial_id):
+        trial = self._db.get_trial(trial_id)
+        model = self._db.get_model(trial.model_id)
 
-            # Load model based on trial
-            clazz = load_model_class(model.model_file_bytes, model.model_class)
-            model_inst = clazz()
-            model_inst.init(trial.knobs)
-            model_inst.load_parameters(trial.parameters)
+        # Load model based on trial
+        clazz = load_model_class(model.model_file_bytes, model.model_class)
+        model_inst = clazz()
+        model_inst.init(trial.knobs)
+        model_inst.load_parameters(trial.parameters)
 
         return model_inst
 
-    def _unregister_worker(self):
-        self._cache.remove_from_set(RUNNING_INFERENCE_WORKERS, self._service_id)
+    def _unregister_worker(self, predictor_service_id):
+        # Remove from predictor's set of running workers
+        inference_workers_key = '{}_{}'.format(RUNNING_INFERENCE_WORKERS, predictor_service_id)
+        self._cache.remove_from_set(inference_workers_key, self._service_id)
+
+        # Remove own queries queue
         queue_key = self._get_queue_key()
         self._cache.delete(queue_key)
 
-    def _register_worker(self):
-        self._cache.add_to_set(RUNNING_INFERENCE_WORKERS, self._service_id)
+    def _register_worker(self, predictor_service_id):
+        # Add to predictor's set of running workers
+        inference_workers_key = '{}_{}'.format(RUNNING_INFERENCE_WORKERS, predictor_service_id)
+        self._cache.add_to_set(inference_workers_key, self._service_id)
+
+    def _read_worker_info(self):
+        worker = self._db.get_inference_job_worker(self._service_id)
+        inference_job = self._db.get_inference_job(worker.inference_job_id)
+
+        if worker is None:
+            raise InvalidWorkerException()
+
+        return (
+            inference_job.predictor_service_id,
+            worker.trial_id
+        )

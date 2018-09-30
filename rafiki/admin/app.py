@@ -139,10 +139,10 @@ def get_inference_jobs_of_app(auth, app):
 
 @app.route('/inference_jobs/<app>/<app_version>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_inference_job(auth, app, app_version):
+def get_running_inference_job(auth, app, app_version):
     params = get_request_params()
     with admin:
-        return jsonify(admin.get_inference_job(app, app_version=int(app_version), **params))
+        return jsonify(admin.get_running_inference_job(app, app_version=int(app_version), **params))
 
 @app.route('/inference_jobs/<app>/<app_version>/stop', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])

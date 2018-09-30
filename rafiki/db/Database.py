@@ -145,9 +145,10 @@ class Database(object):
         inference_job = self._session.query(InferenceJob).get(id)
         return inference_job
 
-    def get_inference_job_by_train_job(self, train_job_id):
+    def get_running_inference_job_by_train_job(self, train_job_id):
         inference_job = self._session.query(InferenceJob) \
-            .filter(InferenceJob.train_job_id == train_job_id).first()
+            .filter(InferenceJob.train_job_id == train_job_id) \
+            .filter(InferenceJob.status == InferenceJobStatus.RUNNING).first()
         return inference_job
 
     def mark_inference_job_as_running(self, inference_job, 
