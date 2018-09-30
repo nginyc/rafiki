@@ -5,10 +5,15 @@ import traceback
 import pprint
 import numpy as np
 
-from .store import AdvisorStore
-from .advisors import BtbGpAdvisor
+from rafiki.constants import AdvisorType
+
+from .store import Store
+from .btb_gp_advisor import BtbGpAdvisor
 
 logger = logging.getLogger(__name__)
+
+class InvalidAdvisorTypeException(Exception):
+    pass
 
 class InvalidAdvisorException(Exception):
     pass
@@ -18,7 +23,7 @@ class InvalidProposalException(Exception):
 
 class AdvisorService(object):
     def __init__(self):
-        self._store = AdvisorStore()
+        self._store = Store()
 
     def create_advisor(self, knob_config, advisor_id=None):
         is_created = False
@@ -28,7 +33,7 @@ class AdvisorService(object):
             advisor = self._store.get_advisor(advisor_id)
             
         if advisor is None:
-            advisor_inst = BtbGpAdvisor(knob_config)
+            advisor_inst = self._make_advisor(knob_config)
             advisor = self._store.create_advisor(advisor_inst, knob_config, advisor_id)
             is_created = True
 
@@ -48,13 +53,36 @@ class AdvisorService(object):
 
         return {
             'id': advisor_id,
-            'is_deleted': is_deleted # Whether the advisor has been deleted (maybe it already has been deleted)
+            # Whether the advisor has been deleted (maybe it already has been deleted)
+            'is_deleted': is_deleted 
         }
 
     def generate_proposal(self, advisor_id):
         advisor = self._store.get_advisor(advisor_id)
+        knobs = self._generate_proposal(advisor)
+
+        return {
+            'knobs': knobs
+        }
+
+    # Feedbacks to the advisor on the score of a set of knobs
+    # Additionally, returns another proposal of knobs after ingesting feedback
+    def feedback(self, advisor_id, knobs, score):
+        advisor = self._store.get_advisor(advisor_id)
+
+        if advisor is None:
+            raise InvalidAdvisorException()
+
         advisor_inst = advisor.advisor_inst
-        knobs = advisor_inst.propose()
+        advisor_inst.feedback(knobs, score)
+        knobs = self._generate_proposal(advisor)
+
+        return {
+            'knobs': knobs
+        }
+
+    def _generate_proposal(self, advisor):
+        knobs = advisor.advisor_inst.propose()
 
         # Simplify knobs to use JSON serializable values
         knobs = {
@@ -63,31 +91,7 @@ class AdvisorService(object):
                 in knobs.items()
         }
 
-        proposal = self._store.add_proposal(advisor, knobs)
-        
-        return {
-            'knobs': knobs,
-            'id': proposal.id
-        }
-
-    def set_result_of_proposal(self, advisor_id, proposal_id, score):
-        advisor = self._store.get_advisor(advisor_id)
-
-        if advisor is None:
-            raise InvalidAdvisorException()
-
-        proposal = self._store.get_proposal(advisor_id, proposal_id)
-
-        if proposal is None:
-            raise InvalidProposalException()
-
-        advisor_inst = advisor.advisor_inst
-        advisor_inst.set_result_of_proposal(proposal.knobs, score)
-
-        proposal = self._store.update_proposal(proposal, score)
-        return {
-            'proposal_id': proposal.id
-        }
+        return knobs
 
     def _simplify_value(self, value):
         # TODO: Support int64 & other non-serializable data formats
@@ -95,4 +99,9 @@ class AdvisorService(object):
             return int(value)
 
         return value
-    
+
+    def _make_advisor(self, knob_config, advisor_type=AdvisorType.BTB_GP):
+        if advisor_type == AdvisorType.BTB_GP:
+            return BtbGpAdvisor(knob_config)
+        else:
+            raise InvalidAdvisorTypeException()

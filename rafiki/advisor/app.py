@@ -3,10 +3,11 @@ import os
 import traceback
 
 from rafiki.constants import UserType
+from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.utils.auth import generate_token, decode_token, UnauthorizedException, auth
 from rafiki.utils.parse import get_request_params
 
-from .advisor import AdvisorService
+from .service import AdvisorService
 
 service = AdvisorService()
 
@@ -15,6 +16,26 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     return 'Rafiki Advisor is up.'
+
+@app.route('/tokens', methods=['POST'])
+def generate_user_token():
+    params = get_request_params()
+
+    # Only superadmin can authenticate (other users must use Rafiki Admin)
+    if not (params['email'] == SUPERADMIN_EMAIL and \
+            params['password'] == SUPERADMIN_PASSWORD):
+        raise UnauthorizedException()
+    
+    auth = {
+        'user_type': UserType.SUPERADMIN
+    }
+    
+    token = generate_token(auth)
+
+    return jsonify({
+        'user_type': auth['user_type'],
+        'token': token
+    })
 
 @app.route('/advisors', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
@@ -28,11 +49,11 @@ def generate_proposal(auth, advisor_id):
     params = get_request_params()
     return jsonify(service.generate_proposal(advisor_id, **params))
 
-@app.route('/advisors/<advisor_id>/proposals/<proposal_id>', methods=['POST'])
+@app.route('/advisors/<advisor_id>/feedback', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def set_result_of_proposal(auth, advisor_id, proposal_id):
+def feedback(auth, advisor_id):
     params = get_request_params()
-    return jsonify(service.set_result_of_proposal(advisor_id, proposal_id, **params))
+    return jsonify(service.feedback(advisor_id, **params))
 
 @app.route('/advisors/<advisor_id>', methods=['DELETE'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])

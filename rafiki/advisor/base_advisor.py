@@ -14,7 +14,5 @@ class BaseAdvisor(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def set_result_of_proposal(self, knobs, score):
+    def feedback(self, knobs, score):
         raise NotImplementedError()
-
-    

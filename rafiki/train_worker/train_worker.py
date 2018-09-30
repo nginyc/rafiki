@@ -70,8 +70,8 @@ class TrainWorker(object):
             # Create a new trial
             logger.info('Starting trial...')
             logger.info('Requesting for knobs proposal from advisor...')
-            (proposal_id, knobs) = self._get_proposal_from_advisor(advisor_id)
-            logger.info('Received proposal of ID "{}" from advisor:'.format(proposal_id))
+            knobs = self._get_proposal_from_advisor(advisor_id)
+            logger.info('Received proposal of knobs from advisor:')
             logger.info(pprint.pformat(knobs))
             logger.info('Creating new trial in DB...')
             trial = self._create_new_trial(model_id, train_job_id, knobs)
@@ -113,8 +113,8 @@ class TrainWorker(object):
 
             # Report results of trial to advisor
             try:
-                logger.info('Sending result of proposal to advisor...')
-                self._set_result_of_proposal(advisor_id, proposal_id, score)
+                logger.info('Sending result of trials\' knobs to advisor...')
+                self._feedback_to_advisor(advisor_id, knobs, score)
             except Exception:
                 logger.error('Error while sending result of proposal to advisor:')
                 logger.error(traceback.format_exc())
@@ -157,16 +157,15 @@ class TrainWorker(object):
         self._db.commit()
         return trial
 
-    # Returns a set of knob values
+    # Gets proposal of a set of knob values from advisor
     def _get_proposal_from_advisor(self, advisor_id):
         res = self._client.generate_proposal(advisor_id)
-        proposal_id = res['id']
         knobs = res['knobs']
-        return (proposal_id, knobs)
+        return knobs
 
-    # Send result of proposal to advisor
-    def _set_result_of_proposal(self, advisor_id, proposal_id, score):
-        self._client.set_result_of_proposal(advisor_id, proposal_id, score)
+    # Feedback result of knobs to advisor
+    def _feedback_to_advisor(self, advisor_id, knobs, score):
+        self._client.feedback_to_advisor(advisor_id, knobs, score)
 
     def _stop_worker(self):
         try:

@@ -294,21 +294,26 @@ class Client(object):
         Generate a proposal of knobs from an advisor.
 
         :param str advisor_id: ID of target advisor
+        :returns: Knobs as `dict[<knob_name>, <knob_value>]`
         '''
         data = self._post('/advisors/{}/propose'.format(advisor_id), target='advisor')
         return data
 
-    def set_result_of_proposal(self, advisor_id, proposal_id, score):
+    def feedback_to_advisor(self, advisor_id, knobs, score):
         '''
-        Informs the advisor the result of a proposal of knobs.
+        Feedbacks to the advisor on the score of a set of knobs.
+        Additionally returns another proposal of knobs after ingesting feedback.
 
         :param str advisor_id: ID of target advisor
-        :param str proposal_id: ID of target proposal
-        :param float score: Score of the proposal, the higher the number, the better the proposal
+        :param str knobs: Knobs to give feedback on
+        :rtype: dict[<knob_name>, <knob_value>]
+        :param float score: Score of the knobs, the higher the number, the better the set of knobs
+        :returns: Knobs as `dict[<knob_name>, <knob_value>]`
         '''
-        data = self._post('/advisors/{}/proposals/{}'.format(advisor_id, proposal_id), 
+        data = self._post('/advisors/{}/feedback'.format(advisor_id), 
                         target='advisor', json={
-                            'score': score
+                            'score': score,
+                            'knobs': knobs
                         })
         return data
 

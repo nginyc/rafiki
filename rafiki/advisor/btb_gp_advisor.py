@@ -19,7 +19,7 @@ class BtbGpAdvisor(BaseAdvisor):
         knobs = self._tuner.propose()
         return knobs
 
-    def set_result_of_proposal(self, knobs, score):
+    def feedback(self, knobs, score):
         self._tuner.add(knobs, score)
 
     def _get_tunables(self, knobs):
