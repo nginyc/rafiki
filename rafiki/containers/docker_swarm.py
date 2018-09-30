@@ -4,7 +4,7 @@ import time
 import docker
 import logging
 
-from .ContainerManager import ContainerManager
+from .container_manager import ContainerManager
 
 logger = logging.getLogger(__name__)
 

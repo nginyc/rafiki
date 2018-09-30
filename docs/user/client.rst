@@ -281,7 +281,7 @@ Example:
         {'app': 'fashion_mnist_app',
         'app_version': 1,
         'id': '25c117a0-1677-44b2-affb-c56f8f99dabf',
-        'query_host': '127.0.0.1:30000',
+        'predictor_host': '127.0.0.1:30000',
         'train_job_id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58'}
     
 
@@ -290,7 +290,7 @@ Making predictions with a running inference job
 
 Example:
 
-    ``POST /predict`` to the inference job's query frontend at *query_host* 127.0.0.1:30000. E.g. in shell,
+    ``POST /predict`` to the inference job's predictor at *predictor_host* 127.0.0.1:30000. E.g. in shell,
 
     .. code-block:: shell
 
@@ -328,7 +328,7 @@ Example:
         'datetime_started': 'Mon, 17 Sep 2018 05:17:34 GMT',
         'datetime_stopped': None,
         'id': '25c117a0-1677-44b2-affb-c56f8f99dabf',
-        'query_host': '127.0.0.1:30000',
+        'predictor_host': '127.0.0.1:30000',
         'status': 'RUNNING',
         'train_job_id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58'}]
 
@@ -353,7 +353,7 @@ Example:
         'datetime_started': 'Mon, 17 Sep 2018 05:17:34 GMT',
         'datetime_stopped': None,
         'id': '25c117a0-1677-44b2-affb-c56f8f99dabf',
-        'query_host': '127.0.0.1:30000',
+        'predictor_host': '127.0.0.1:30000',
         'status': 'RUNNING',
         'train_job_id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58',
         'workers': [{'datetime_started': 'Mon, 17 Sep 2018 05:17:34 GMT',

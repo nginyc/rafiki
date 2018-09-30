@@ -12,6 +12,8 @@ COPY rafiki/utils/requirements.txt utils/requirements.txt
 RUN pip install -r utils/requirements.txt
 COPY rafiki/db/requirements.txt db/requirements.txt
 RUN pip install -r db/requirements.txt
+COPY rafiki/containers/requirements.txt containers/requirements.txt
+RUN pip install -r containers/requirements.txt
 COPY rafiki/admin/requirements.txt admin/requirements.txt
 RUN pip install -r admin/requirements.txt
 

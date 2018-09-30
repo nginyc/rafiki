@@ -1,1 +1,1 @@
-from .InferenceWorker import InferenceWorker
+from .inference_worker import InferenceWorker

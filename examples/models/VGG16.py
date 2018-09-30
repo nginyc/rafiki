@@ -1,7 +1,6 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.preprocessing.image import img_to_array, array_to_img
-from PIL import Image
 import json
 import os
 import tempfile
@@ -10,8 +9,7 @@ import base64
 import abc
 from urllib.parse import urlparse, parse_qs 
 
-from rafiki.model.dataset import load_dataset
-from rafiki.model.BaseModel import BaseModel, InvalidModelParamsException
+from rafiki.model import load_dataset, BaseModel, InvalidModelParamsException
 
 class VGG16(BaseModel):
 

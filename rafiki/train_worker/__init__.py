@@ -1,1 +1,1 @@
-from .TrainWorker import TrainWorker
+from .train_worker import TrainWorker

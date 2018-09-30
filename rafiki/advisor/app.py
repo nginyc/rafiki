@@ -6,7 +6,7 @@ from rafiki.constants import UserType
 from rafiki.utils.auth import generate_token, decode_token, UnauthorizedException, auth
 from rafiki.utils.parse import get_request_params
 
-from .AdvisorService import AdvisorService
+from .advisor import AdvisorService
 
 service = AdvisorService()
 

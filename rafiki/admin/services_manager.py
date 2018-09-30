@@ -1,4 +1,3 @@
-import numpy as np
 import os
 import logging
 import traceback
@@ -6,16 +5,15 @@ import traceback
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT
-
-from .containers import DockerSwarmContainerManager 
+from rafiki.containers import DockerSwarmContainerManager 
 
 logger = logging.getLogger(__name__)
 
 class ServicesManager(object):
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
-        self._query_frontend_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_QUERY_FRONTEND'],
+        self._predictor_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_PREDICTOR'],
                                                 os.environ['RAFIKI_VERSION'])
-        self._query_frontend_port = os.environ['QUERY_FRONTEND_PORT']
+        self._predictor_port = os.environ['PREDICTOR_PORT']
 
         self._db = db
         self._container_manager = container_manager
@@ -23,8 +21,8 @@ class ServicesManager(object):
     def create_inference_services(self, inference_job_id):
         inference_job = self._db.get_inference_job(inference_job_id)
         
-        # Create query frontend
-        query_service = self._create_query_service(inference_job)
+        # Create predictor
+        predictor_service = self._create_predictor_service(inference_job)
 
         # Create a worker service for each best trial of associated train job
         best_trials = self._db.get_best_trials_of_train_job(inference_job.train_job_id, max_count=2)
@@ -32,16 +30,16 @@ class ServicesManager(object):
         for (trial, replicas) in trial_to_replicas.items():
             self._create_inference_job_worker(inference_job, trial, replicas)
 
-        self._db.mark_inference_job_as_running(inference_job, query_service_id=query_service.id)
+        self._db.mark_inference_job_as_running(inference_job, predictor_service_id=predictor_service.id)
         self._db.commit()
 
-        return (inference_job, query_service)
+        return (inference_job, predictor_service)
 
     def stop_inference_services(self, inference_job_id):
         inference_job = self._db.get_inference_job(inference_job_id)
         
-        # Stop query frontend
-        service = self._db.get_service(inference_job.query_service_id)
+        # Stop predictor
+        service = self._db.get_service(inference_job.predictor_service_id)
         self._stop_service(service)
 
         # Stop all workers for inference job
@@ -116,8 +114,8 @@ class ServicesManager(object):
 
         return service
 
-    def _create_query_service(self, inference_job):
-        service_type = ServiceType.QUERY
+    def _create_predictor_service(self, inference_job):
+        service_type = ServiceType.PREDICT
         environment_vars = {
             'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
             'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
@@ -131,10 +129,10 @@ class ServicesManager(object):
 
         service = self._create_service(
             service_type=service_type,
-            docker_image=self._query_frontend_image,
+            docker_image=self._predictor_image,
             replicas=1,
             environment_vars=environment_vars,
-            container_port=self._query_frontend_port
+            container_port=self._predictor_port
         )
 
         return service

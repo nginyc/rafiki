@@ -9,7 +9,7 @@ from rafiki.config import RUNNING_INFERENCE_WORKERS, REQUEST_QUEUE, QFE_SLEEP
 
 logger = logging.getLogger(__name__)
  
-class QueryFrontend(object):
+class Predictor(object):
 
     def __init__(self, service_id, db=Database(), cache=Cache()):
         self._service_id = service_id

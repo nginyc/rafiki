@@ -1,2 +1,2 @@
-from .AdvisorService import AdvisorService
+from .advisor import AdvisorService
 from .app import app

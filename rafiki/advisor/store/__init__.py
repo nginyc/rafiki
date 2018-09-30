@@ -1,1 +1,1 @@
-from .AdvisorStore import AdvisorStore
+from .advisor_store import AdvisorStore

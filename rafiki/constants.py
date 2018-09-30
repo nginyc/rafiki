@@ -27,7 +27,7 @@ class ServiceStatus():
 
 class ServiceType():
     TRAIN = 'TRAIN'
-    QUERY = 'QUERY'
+    PREDICT = 'PREDICT'
     INFERENCE = 'INFERENCE'
 
 class UserType():

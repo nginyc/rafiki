@@ -27,9 +27,9 @@ Rafiki's Folder Structure
 
         Code for Rafiki's `Inference Worker` component
     
-    - `query_frontend/`
+    - `predictor/`
 
-        Code for Rafiki's `Query Frontend` component
+        Code for Rafiki's `Predictor` component
 
     - `db/`
 

@@ -1,16 +1,16 @@
 import os
 from flask import Flask, jsonify, request
 
-from .QueryFrontend import QueryFrontend
+from .predictor import Predictor
 
 service_id = os.environ['RAFIKI_SERVICE_ID']
 
 app = Flask(__name__)
-query_frontend = QueryFrontend(service_id)
+predictor = Predictor(service_id)
 
 @app.route('/')
 def index():
-    return 'Query Frontend is up.'
+    return 'Predictor is up.'
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -18,5 +18,5 @@ def predict():
     query = params['query']
     
     #TODO: check input type
-    result = query_frontend.predict(query)
+    result = predictor.predict(query)
     return jsonify(result)

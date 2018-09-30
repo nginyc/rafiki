@@ -4,8 +4,8 @@ import os
 import traceback
 import pprint
 
-from .Advisor import Advisor
-from .Proposal import Proposal
+from .advisor import Advisor
+from .proposal import Proposal
 
 logger = logging.getLogger(__name__)
 
