@@ -1,4 +1,4 @@
-Rafiki's Architecture
+Architecture
 ====================================================================
 
 .. contents:: Table of Contents

@@ -5,9 +5,7 @@ Client Quickstart
 
 .. contents:: Table of Contents
 
-This example uses the `Fashion MNIST dataset`_.
-
-.. _Fashion MNIST dataset: https://github.com/zalandoresearch/fashion-mnist
+This example uses the _`Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`.
 
 Installation
 --------------------------------------------------------------------

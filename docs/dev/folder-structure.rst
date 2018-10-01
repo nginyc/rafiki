@@ -1,4 +1,4 @@
-Rafiki's Folder Structure
+Folder Structure
 ====================================================================
 
 - `rafiki/`
@@ -33,15 +33,19 @@ Rafiki's Folder Structure
 
     - `db/`
 
-        Code for an abstract access layer for Rafiki's *Database*
+        Code for Rafiki's *Database* as an abstract data access layer
 
     - `cache/`
 
-        Code for an abstract access layer for Rafiki's *Cache*
+        Code for Rafiki's *Cache* as an abstract data access layer
 
     - `model/`
 
         Code for the definition of abstract :class:`rafiki.model.BaseModel` that all models should extend, as well as utility methods for the implementation of models (e.g. reading from datasets).
+
+    - `containers/`
+
+        Code for the deployment of Rafiki's dynamic stack (e.g. workers) as *services*
 
     - `utils/`
 
