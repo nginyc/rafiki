@@ -1,4 +1,2 @@
 bcrypt>=3.1.4
-numpy==1.14.5
-scipy>=0.19.1
-docker==3.5.0
+Flask==1.0.2

@@ -27,7 +27,7 @@ class ServiceStatus():
 
 class ServiceType():
     TRAIN = 'TRAIN'
-    QUERY = 'QUERY'
+    PREDICT = 'PREDICT'
     INFERENCE = 'INFERENCE'
 
 class UserType():
@@ -36,3 +36,6 @@ class UserType():
     MODEL_DEVELOPER = 'MODEL_DEVELOPER'
     APP_DEVELOPER = 'APP_DEVELOPER'
     USER = 'USER'
+
+class AdvisorType():
+    BTB_GP = 'BTB_GP'

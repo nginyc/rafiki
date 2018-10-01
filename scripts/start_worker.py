@@ -29,11 +29,11 @@ signal.signal(signal.SIGTERM, sigterm_handler)
 
 try:
     if service_type == ServiceType.TRAIN:
-        from rafiki.train_worker import TrainWorker
+        from rafiki.worker import TrainWorker
         worker = TrainWorker(service_id)
         worker.start()
     elif service_type == ServiceType.INFERENCE:
-        from rafiki.inference_worker import InferenceWorker
+        from rafiki.worker import InferenceWorker
         worker = InferenceWorker(service_id)
         worker.start()
     else:

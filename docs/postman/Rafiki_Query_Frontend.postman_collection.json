@@ -1,13 +1,13 @@
 {
 	"info": {
-		"name": "Rafiki Query Frontend",
+		"name": "Rafiki Predictor",
 		"_postman_id": "7832b44d-f551-a1bf-d6ea-4e8e46aa6042",
 		"description": "",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "Predict with QFE",
+			"name": "Predict",
 			"request": {
 				"method": "POST",
 				"header": [
