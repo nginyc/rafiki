@@ -5,7 +5,6 @@ import traceback
 from rafiki.constants import UserType
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.utils.auth import generate_token, decode_token, UnauthorizedException, auth
-from rafiki.utils.parse import get_request_params
 
 from .service import AdvisorService
 
@@ -65,3 +64,21 @@ def delete_advisor(auth, advisor_id):
 @app.errorhandler(Exception)
 def handle_error(error):
     return traceback.format_exc(), 500
+
+# Extract request params from Flask request
+def get_request_params():
+    # Get params from body as JSON
+    params = request.get_json()
+
+    # If the above fails, get params from body as form data
+    if params is None:
+        params = request.form.to_dict()
+
+    # Merge in query params
+    query_params = {
+        k: v
+        for k, v in request.args.items()
+    }
+    params = {**params, **query_params}
+
+    return params
