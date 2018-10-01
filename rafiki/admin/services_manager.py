@@ -5,7 +5,7 @@ import traceback
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT
-from rafiki.containers import DockerSwarmContainerManager 
+from rafiki.container import DockerSwarmContainerManager 
 
 logger = logging.getLogger(__name__)
 

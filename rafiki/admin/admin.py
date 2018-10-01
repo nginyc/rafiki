@@ -6,7 +6,7 @@ import bcrypt
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
-from rafiki.containers import DockerSwarmContainerManager 
+from rafiki.container import DockerSwarmContainerManager 
 
 from .services_manager import ServicesManager
 
