@@ -58,7 +58,7 @@
             
             
               <div class="version">
-                0.0.1
+                0.0.2
               </div>
             
           
@@ -161,7 +161,7 @@
 <h1>rafiki.client.Client<a class="headerlink" href="#rafiki-client-client" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
 <dt id="rafiki.client.Client">
-<em class="property">class </em><code class="descclassname">rafiki.client.</code><code class="descname">Client</code><span class="sig-paren">(</span><em>admin_host='localhost'</em>, <em>admin_port=8000</em>, <em>advisor_host='localhost'</em>, <em>advisor_port=8001</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">rafiki.client.</code><code class="descname">Client</code><span class="sig-paren">(</span><em>admin_host='localhost'</em>, <em>admin_port=8000</em>, <em>advisor_host='localhost'</em>, <em>advisor_port=8001</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initializes the Client to connect to a running 
 Rafiki Admin instance that the Client connects to.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -180,7 +180,7 @@ Rafiki Admin instance that the Client connects to.</p>
 </table>
 <dl class="method">
 <dt id="rafiki.client.Client.create_advisor">
-<code class="descname">create_advisor</code><span class="sig-paren">(</span><em>knob_config</em>, <em>advisor_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.create_advisor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_advisor" title="Permalink to this definition">¶</a></dt>
+<code class="descname">create_advisor</code><span class="sig-paren">(</span><em>knob_config</em>, <em>advisor_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.create_advisor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_advisor" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates a Rafiki advisor. If <cite>advisor_id</cite> is passed, it will create an advisor
 of that ID, or do nothing if an advisor of that ID has already been created.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -199,10 +199,12 @@ of that ID, or do nothing if an advisor of that ID has already been created.</p>
 
 <dl class="method">
 <dt id="rafiki.client.Client.create_inference_job">
-<code class="descname">create_inference_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.create_inference_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_inference_job" title="Permalink to this definition">¶</a></dt>
+<code class="descname">create_inference_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.create_inference_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_inference_job" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates and starts a inference job on Rafiki with the 2 best trials of an associated train job. 
-The inference job is tagged with the train job’s app and app version.</p>
-<p>In this method’s response, <cite>query_host</cite> is this inference job’s query front-end’s host.</p>
+The inference job is tagged with the train job’s app and app version. Throws an error if an 
+inference job of the same train job is already running.</p>
+<p>In this method’s response, <cite>predictor_host</cite> is this inference job’s predictor’s host.</p>
+<p>Only admins &amp; app developers can manage inference jobs.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -219,8 +221,9 @@ The inference job is tagged with the train job’s app and app version.</p>
 
 <dl class="method">
 <dt id="rafiki.client.Client.create_model">
-<code class="descname">create_model</code><span class="sig-paren">(</span><em>name</em>, <em>task</em>, <em>model_file_path</em>, <em>model_class</em>, <em>docker_image=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.create_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_model" title="Permalink to this definition">¶</a></dt>
+<code class="descname">create_model</code><span class="sig-paren">(</span><em>name</em>, <em>task</em>, <em>model_file_path</em>, <em>model_class</em>, <em>docker_image=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.create_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_model" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates a model on Rafiki.</p>
+<p>Only admins &amp; model developers can manage models.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -243,8 +246,9 @@ If the Python file imports any external Python modules, it should be installed i
 
 <dl class="method">
 <dt id="rafiki.client.Client.create_train_job">
-<code class="descname">create_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>task</em>, <em>train_dataset_uri</em>, <em>test_dataset_uri</em>, <em>budget_type='MODEL_TRIAL_COUNT'</em>, <em>budget_amount=10</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.create_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_train_job" title="Permalink to this definition">¶</a></dt>
+<code class="descname">create_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>task</em>, <em>train_dataset_uri</em>, <em>test_dataset_uri</em>, <em>budget_type='MODEL_TRIAL_COUNT'</em>, <em>budget_amount=10</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.create_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_train_job" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates and starts a train job on Rafiki.</p>
+<p>Only admins &amp; app developers can manage train jobs.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -266,8 +270,9 @@ the train job will train models associated with the task</li>
 
 <dl class="method">
 <dt id="rafiki.client.Client.create_user">
-<code class="descname">create_user</code><span class="sig-paren">(</span><em>email</em>, <em>password</em>, <em>user_type</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.create_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_user" title="Permalink to this definition">¶</a></dt>
-<dd><p>Creates a Rafiki user. You have to be an admin.</p>
+<code class="descname">create_user</code><span class="sig-paren">(</span><em>email</em>, <em>password</em>, <em>user_type</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.create_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a Rafiki user.</p>
+<p>Only admins can manage users.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -285,7 +290,7 @@ the train job will train models associated with the task</li>
 
 <dl class="method">
 <dt id="rafiki.client.Client.delete_advisor">
-<code class="descname">delete_advisor</code><span class="sig-paren">(</span><em>advisor_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.delete_advisor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.delete_advisor" title="Permalink to this definition">¶</a></dt>
+<code class="descname">delete_advisor</code><span class="sig-paren">(</span><em>advisor_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.delete_advisor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.delete_advisor" title="Permalink to this definition">¶</a></dt>
 <dd><p>Deletes a Rafiki advisor.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -298,8 +303,34 @@ the train job will train models associated with the task</li>
 </dd></dl>
 
 <dl class="method">
+<dt id="rafiki.client.Client.feedback_to_advisor">
+<code class="descname">feedback_to_advisor</code><span class="sig-paren">(</span><em>advisor_id</em>, <em>knobs</em>, <em>score</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.feedback_to_advisor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.feedback_to_advisor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Feedbacks to the advisor on the score of a set of knobs.
+Additionally returns another proposal of knobs after ingesting feedback.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>advisor_id</strong> (<em>str</em>) – ID of target advisor</li>
+<li><strong>knobs</strong> (<em>str</em>) – Knobs to give feedback on</li>
+<li><strong>score</strong> (<em>float</em>) – Score of the knobs, the higher the number, the better the set of knobs</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first">dict[&lt;knob_name&gt;, &lt;knob_value&gt;]</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Knobs as <cite>dict[&lt;knob_name&gt;, &lt;knob_value&gt;]</cite></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="rafiki.client.Client.generate_proposal">
-<code class="descname">generate_proposal</code><span class="sig-paren">(</span><em>advisor_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.generate_proposal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.generate_proposal" title="Permalink to this definition">¶</a></dt>
+<code class="descname">generate_proposal</code><span class="sig-paren">(</span><em>advisor_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.generate_proposal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.generate_proposal" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generate a proposal of knobs from an advisor.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -307,13 +338,15 @@ the train job will train models associated with the task</li>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>advisor_id</strong> (<em>str</em>) – ID of target advisor</td>
 </tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Knobs as <cite>dict[&lt;knob_name&gt;, &lt;knob_value&gt;]</cite></td>
+</tr>
 </tbody>
 </table>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.client.Client.get_best_trials_of_train_job">
-<code class="descname">get_best_trials_of_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em>, <em>max_count=3</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.get_best_trials_of_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_best_trials_of_train_job" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_best_trials_of_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em>, <em>max_count=3</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.get_best_trials_of_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_best_trials_of_train_job" title="Permalink to this definition">¶</a></dt>
 <dd><p>Lists the best scoring trials of the train job identified by an app and an app version,
 ordered by descending score.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -332,9 +365,43 @@ ordered by descending score.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="rafiki.client.Client.get_inference_job">
-<code class="descname">get_inference_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.get_inference_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_inference_job" title="Permalink to this definition">¶</a></dt>
-<dd><p>Retrieves details of the inference job identified by an app and an app version,
+<dt id="rafiki.client.Client.get_inference_jobs_of_app">
+<code class="descname">get_inference_jobs_of_app</code><span class="sig-paren">(</span><em>app</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.get_inference_jobs_of_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_inference_jobs_of_app" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists all inference jobs associated to an app on Rafiki.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>app</strong> (<em>str</em>) – Name of the app</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_models">
+<code class="descname">get_models</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.get_models"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_models" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists all models on Rafiki.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_models_of_task">
+<code class="descname">get_models_of_task</code><span class="sig-paren">(</span><em>task</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.get_models_of_task"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_models_of_task" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists all models associated to a task on Rafiki.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>task</strong> (<em>str</em>) – Task name</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_running_inference_job">
+<code class="descname">get_running_inference_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.get_running_inference_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_running_inference_job" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves details of the <em>running</em> inference job identified by an app and an app version,
 including workers’ details.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -351,42 +418,8 @@ including workers’ details.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="rafiki.client.Client.get_inference_jobs_of_app">
-<code class="descname">get_inference_jobs_of_app</code><span class="sig-paren">(</span><em>app</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.get_inference_jobs_of_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_inference_jobs_of_app" title="Permalink to this definition">¶</a></dt>
-<dd><p>Lists all inference jobs associated to an app on Rafiki.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>app</strong> (<em>str</em>) – Name of the app</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="rafiki.client.Client.get_models">
-<code class="descname">get_models</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.get_models"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_models" title="Permalink to this definition">¶</a></dt>
-<dd><p>Lists all models on Rafiki.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="rafiki.client.Client.get_models_of_task">
-<code class="descname">get_models_of_task</code><span class="sig-paren">(</span><em>task</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.get_models_of_task"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_models_of_task" title="Permalink to this definition">¶</a></dt>
-<dd><p>Lists all models associated to a task on Rafiki.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>task</strong> (<em>str</em>) – Task name</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
 <dt id="rafiki.client.Client.get_train_job">
-<code class="descname">get_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.get_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_train_job" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.get_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_train_job" title="Permalink to this definition">¶</a></dt>
 <dd><p>Retrieves details of the train job identified by an app and an app version, 
 including workers’ details.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -405,7 +438,7 @@ including workers’ details.</p>
 
 <dl class="method">
 <dt id="rafiki.client.Client.get_train_jobs_of_app">
-<code class="descname">get_train_jobs_of_app</code><span class="sig-paren">(</span><em>app</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.get_train_jobs_of_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_train_jobs_of_app" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_train_jobs_of_app</code><span class="sig-paren">(</span><em>app</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.get_train_jobs_of_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_train_jobs_of_app" title="Permalink to this definition">¶</a></dt>
 <dd><p>Lists all train jobs associated to an app on Rafiki.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -419,7 +452,7 @@ including workers’ details.</p>
 
 <dl class="method">
 <dt id="rafiki.client.Client.get_trials_of_train_job">
-<code class="descname">get_trials_of_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.get_trials_of_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_trials_of_train_job" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_trials_of_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.get_trials_of_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_trials_of_train_job" title="Permalink to this definition">¶</a></dt>
 <dd><p>Lists all trials of the train job identified by an app and an app version,
 ordered by when the trial started.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -438,7 +471,7 @@ ordered by when the trial started.</p>
 
 <dl class="method">
 <dt id="rafiki.client.Client.login">
-<code class="descname">login</code><span class="sig-paren">(</span><em>email</em>, <em>password</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.login"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.login" title="Permalink to this definition">¶</a></dt>
+<code class="descname">login</code><span class="sig-paren">(</span><em>email</em>, <em>password</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.login"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.login" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates a login session as a Rafiki user. You will have to be logged in to perform any actions.</p>
 <p>App developers can create, list and stop train and inference jobs, as well as list models.
 Model developers can create and list models.</p>
@@ -458,32 +491,13 @@ Model developers can create and list models.</p>
 
 <dl class="method">
 <dt id="rafiki.client.Client.logout">
-<code class="descname">logout</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.logout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.logout" title="Permalink to this definition">¶</a></dt>
+<code class="descname">logout</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.logout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.logout" title="Permalink to this definition">¶</a></dt>
 <dd><p>Clears the current login session.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="rafiki.client.Client.set_result_of_proposal">
-<code class="descname">set_result_of_proposal</code><span class="sig-paren">(</span><em>advisor_id</em>, <em>proposal_id</em>, <em>score</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.set_result_of_proposal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.set_result_of_proposal" title="Permalink to this definition">¶</a></dt>
-<dd><p>Informs the advisor the result of a proposal of knobs.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>advisor_id</strong> (<em>str</em>) – ID of target advisor</li>
-<li><strong>proposal_id</strong> (<em>str</em>) – ID of target proposal</li>
-<li><strong>score</strong> (<em>float</em>) – Score of the proposal, the higher the number, the better the proposal</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
 <dt id="rafiki.client.Client.stop_inference_job">
-<code class="descname">stop_inference_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.stop_inference_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.stop_inference_job" title="Permalink to this definition">¶</a></dt>
+<code class="descname">stop_inference_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.stop_inference_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.stop_inference_job" title="Permalink to this definition">¶</a></dt>
 <dd><p>Stops the inference job identified by an app and an app version.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -501,7 +515,7 @@ Model developers can create and list models.</p>
 
 <dl class="method">
 <dt id="rafiki.client.Client.stop_train_job">
-<code class="descname">stop_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.stop_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.stop_train_job" title="Permalink to this definition">¶</a></dt>
+<code class="descname">stop_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.stop_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.stop_train_job" title="Permalink to this definition">¶</a></dt>
 <dd><p>Prematurely stops the train job identified by an app and an app version.
 Otherwise, the train job should stop by itself when its budget is reached.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -520,8 +534,8 @@ Otherwise, the train job should stop by itself when its budget is reached.</p>
 
 <dl class="method">
 <dt id="rafiki.client.Client.stop_train_job_worker">
-<code class="descname">stop_train_job_worker</code><span class="sig-paren">(</span><em>service_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/Client.html#Client.stop_train_job_worker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.stop_train_job_worker" title="Permalink to this definition">¶</a></dt>
-<dd><p>Only for internal use within Rafiki.</p>
+<code class="descname">stop_train_job_worker</code><span class="sig-paren">(</span><em>service_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.stop_train_job_worker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.stop_train_job_worker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rafiki-internal method</p>
 </dd></dl>
 
 </dd></dl>

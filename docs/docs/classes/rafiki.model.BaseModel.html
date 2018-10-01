@@ -58,7 +58,7 @@
             
             
               <div class="version">
-                0.0.1
+                0.0.2
               </div>
             
           
@@ -161,19 +161,19 @@
 <h1>rafiki.model.BaseModel<a class="headerlink" href="#rafiki-model-basemodel" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
 <dt id="rafiki.model.BaseModel">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">BaseModel</code><a class="reference internal" href="../../_modules/rafiki/model/BaseModel.html#BaseModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">BaseModel</code><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Rafiki’s base model class that Rafiki models should extend. 
 Rafiki models should implement all abstract methods according to their associated tasks’ specifications.</p>
 <dl class="method">
 <dt id="rafiki.model.BaseModel.destroy">
-<code class="descname">destroy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/BaseModel.html#BaseModel.destroy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.destroy" title="Permalink to this definition">¶</a></dt>
+<code class="descname">destroy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.destroy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.destroy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Destroy this model instance, closing any sessions or freeing any connections.
 No other methods will be called subsequently.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.dump_parameters">
-<code class="descname">dump_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/BaseModel.html#BaseModel.dump_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.dump_parameters" title="Permalink to this definition">¶</a></dt>
+<code class="descname">dump_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.dump_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.dump_parameters" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a dictionary of model parameters that fully define this model instance’s trained state.
 This will be used for trained model serialization within Rafiki.
 This will be called only when model is <em>trained</em>.</p>
@@ -191,7 +191,7 @@ This will be called only when model is <em>trained</em>.</p>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.evaluate">
-<code class="descname">evaluate</code><span class="sig-paren">(</span><em>dataset_uri</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/BaseModel.html#BaseModel.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.evaluate" title="Permalink to this definition">¶</a></dt>
+<code class="descname">evaluate</code><span class="sig-paren">(</span><em>dataset_uri</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.evaluate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate this model instance with given dataset after training. 
 This will be called only when model is <em>trained</em>.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -210,7 +210,7 @@ This will be called only when model is <em>trained</em>.</p>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.get_knob_config">
-<code class="descname">get_knob_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/BaseModel.html#BaseModel.get_knob_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.get_knob_config" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_knob_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.get_knob_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.get_knob_config" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a dictionary defining this model’s knob configuration 
 (i.e. list of knob names, their data types and their ranges).</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -249,7 +249,7 @@ This will be called only when model is <em>trained</em>.</p>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.init">
-<code class="descname">init</code><span class="sig-paren">(</span><em>knobs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/BaseModel.html#BaseModel.init"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.init" title="Permalink to this definition">¶</a></dt>
+<code class="descname">init</code><span class="sig-paren">(</span><em>knobs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.init"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.init" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialize the model with a dictionary of knob values. 
 These knob values will be chosen by Rafiki based on the model’s knob config.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -264,7 +264,7 @@ These knob values will be chosen by Rafiki based on the model’s knob config.</
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.load_parameters">
-<code class="descname">load_parameters</code><span class="sig-paren">(</span><em>params</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/BaseModel.html#BaseModel.load_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.load_parameters" title="Permalink to this definition">¶</a></dt>
+<code class="descname">load_parameters</code><span class="sig-paren">(</span><em>params</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.load_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.load_parameters" title="Permalink to this definition">¶</a></dt>
 <dd><p>Load a dictionary of model parameters into this model instance.
 This will be used for trained model deserialization within Rafiki.
 The model will be considered <em>trained</em> subsequently.</p>
@@ -280,7 +280,7 @@ The model will be considered <em>trained</em> subsequently.</p>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.predict">
-<code class="descname">predict</code><span class="sig-paren">(</span><em>queries</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/BaseModel.html#BaseModel.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.predict" title="Permalink to this definition">¶</a></dt>
+<code class="descname">predict</code><span class="sig-paren">(</span><em>queries</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.predict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Make predictions on a batch of queries with this model instance after training. 
 This will be called only when model is <em>trained</em>.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -299,7 +299,7 @@ This will be called only when model is <em>trained</em>.</p>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.train">
-<code class="descname">train</code><span class="sig-paren">(</span><em>dataset_uri</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/BaseModel.html#BaseModel.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.train" title="Permalink to this definition">¶</a></dt>
+<code class="descname">train</code><span class="sig-paren">(</span><em>dataset_uri</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.train" title="Permalink to this definition">¶</a></dt>
 <dd><p>Train this model instance with given dataset and initialized knob values.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Rafiki’s Folder Structure &mdash; Rafiki  documentation</title>
+  <title>Folder Structure &mdash; Rafiki  documentation</title>
   
 
   
@@ -29,7 +29,7 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Class Documentation" href="../classes/index.html" />
-    <link rel="prev" title="Rafiki’s Architecture" href="architecture.html" /> 
+    <link rel="prev" title="Architecture" href="architecture.html" /> 
 
   
   <script src="../../_static/js/modernizr.min.js"></script>
@@ -58,7 +58,7 @@
             
             
               <div class="version">
-                0.0.1
+                0.0.2
               </div>
             
           
@@ -85,8 +85,9 @@
               <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../user/index.html">User Guide</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Developer Guide</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="architecture.html">Rafiki’s Architecture</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Rafiki’s Folder Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="setup.html">Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html">Architecture</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Folder Structure</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../classes/index.html">Class Documentation</a></li>
@@ -137,7 +138,7 @@
         
           <li><a href="index.html">Developer Guide</a> &raquo;</li>
         
-      <li>Rafiki’s Folder Structure</li>
+      <li>Folder Structure</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -156,8 +157,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="rafiki-s-folder-structure">
-<h1>Rafiki’s Folder Structure<a class="headerlink" href="#rafiki-s-folder-structure" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="folder-structure">
+<h1>Folder Structure<a class="headerlink" href="#folder-structure" title="Permalink to this headline">¶</a></h1>
 <ul>
 <li><p class="first"><cite>rafiki/</cite></p>
 <blockquote>
@@ -182,39 +183,34 @@
 </div>
 </div></blockquote>
 </li>
-<li><p class="first"><cite>train_worker/</cite></p>
+<li><p class="first"><cite>worker/</cite></p>
 <blockquote>
-<div><p>Code for Rafiki’s <cite>Train Worker</cite> component</p>
+<div><p>Code for Rafiki’s <cite>Train Worker</cite> component and <cite>Inference Worker</cite> component</p>
 </div></blockquote>
 </li>
-<li><p class="first"><cite>inference_worker/</cite></p>
+<li><p class="first"><cite>predictor/</cite></p>
 <blockquote>
-<div><p>Code for Rafiki’s <cite>Inference Worker</cite> component</p>
-</div></blockquote>
-</li>
-<li><p class="first"><cite>query_frontend/</cite></p>
-<blockquote>
-<div><p>Code for Rafiki’s <cite>Query Frontend</cite> component</p>
+<div><p>Code for Rafiki’s <cite>Predictor</cite> component</p>
 </div></blockquote>
 </li>
 <li><p class="first"><cite>db/</cite></p>
 <blockquote>
-<div><p>Code for an abstract access layer for Rafiki’s <em>Database</em></p>
+<div><p>Code for Rafiki’s <em>Database</em> as an abstract data access layer</p>
 </div></blockquote>
 </li>
 <li><p class="first"><cite>cache/</cite></p>
 <blockquote>
-<div><p>Code for an abstract access layer for Rafiki’s <em>Cache</em></p>
+<div><p>Code for Rafiki’s <em>Cache</em> as an abstract data access layer</p>
 </div></blockquote>
 </li>
-<li><p class="first"><cite>model/</cite></p>
+<li><p class="first"><cite>container/</cite></p>
 <blockquote>
-<div><p>Code for the definition of abstract <a class="reference internal" href="../classes/rafiki.model.BaseModel.html#rafiki.model.BaseModel" title="rafiki.model.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.BaseModel</span></code></a> that all models should extend, as well as utility methods for the implementation of models (e.g. reading from datasets).</p>
+<div><p>Code for the deployment of Rafiki’s dynamic stack (e.g. workers) as <em>services</em></p>
 </div></blockquote>
 </li>
 <li><p class="first"><cite>utils/</cite></p>
 <blockquote>
-<div><p>Collection of Rafiki-internal utility methods (e.g. for logging, serialization of models, authentication)</p>
+<div><p>Collection of Rafiki-internal utility methods (e.g. for logging, authentication)</p>
 </div></blockquote>
 </li>
 <li><p class="first"><cite>config.py</cite></p>
@@ -225,6 +221,11 @@
 <li><p class="first"><cite>constants.py</cite></p>
 <blockquote>
 <div><p>Stores Rafiki’s constants used internally &amp; externally (e.g. valid values for user type, budget type, train job status)</p>
+</div></blockquote>
+</li>
+<li><p class="first"><cite>model.py</cite></p>
+<blockquote>
+<div><p>Stores definition of abstract <a class="reference internal" href="../classes/rafiki.model.BaseModel.html#rafiki.model.BaseModel" title="rafiki.model.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.BaseModel</span></code></a> that all Rafiki models should extend, as well as Rafiki-internal methods for managing models.</p>
 </div></blockquote>
 </li>
 </ul>
@@ -274,7 +275,7 @@
         <a href="../classes/index.html" class="btn btn-neutral float-right" title="Class Documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="architecture.html" class="btn btn-neutral" title="Rafiki’s Architecture" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="architecture.html" class="btn btn-neutral" title="Architecture" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

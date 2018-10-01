@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>rafiki.client.Client &mdash; Rafiki  documentation</title>
+  <title>rafiki.client.client &mdash; Rafiki  documentation</title>
   
 
   
@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.0.1
+                0.0.2
               </div>
             
           
@@ -131,7 +131,7 @@
         
           <li><a href="../../index.html">Module code</a> &raquo;</li>
         
-      <li>rafiki.client.Client</li>
+      <li>rafiki.client.client</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -146,7 +146,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <h1>Source code for rafiki.client.Client</h1><div class="highlight"><pre>
+  <h1>Source code for rafiki.client.client</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">requests</span>
 <span class="kn">import</span> <span class="nn">pprint</span>
 
@@ -204,7 +204,9 @@
 
 <div class="viewcode-block" id="Client.create_user"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.create_user">[docs]</a>    <span class="k">def</span> <span class="nf">create_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">user_type</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Creates a Rafiki user. You have to be an admin.</span>
+<span class="sd">        Creates a Rafiki user. </span>
+<span class="sd">        </span>
+<span class="sd">        Only admins can manage users.</span>
 
 <span class="sd">        :param str email: The new user&#39;s email</span>
 <span class="sd">        :param str password: The new user&#39;s password</span>
@@ -225,6 +227,8 @@
 <div class="viewcode-block" id="Client.create_model"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.create_model">[docs]</a>    <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">model_file_path</span><span class="p">,</span> <span class="n">model_class</span><span class="p">,</span> <span class="n">docker_image</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Creates a model on Rafiki.</span>
+
+<span class="sd">        Only admins &amp; model developers can manage models.</span>
 
 <span class="sd">        :param str name: Name of the model, must be unique on Rafiki</span>
 <span class="sd">        :param str task: Task associated with the model, </span>
@@ -282,7 +286,9 @@
                         <span class="n">budget_type</span><span class="o">=</span><span class="n">BudgetType</span><span class="o">.</span><span class="n">MODEL_TRIAL_COUNT</span><span class="p">,</span> 
                         <span class="n">budget_amount</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Creates and starts a train job on Rafiki.</span>
+<span class="sd">        Creates and starts a train job on Rafiki. </span>
+<span class="sd">        </span>
+<span class="sd">        Only admins &amp; app developers can manage train jobs.</span>
 
 <span class="sd">        :param str app: Name of the app associated with the train job</span>
 <span class="sd">        :param str task: Task associated with the train job, </span>
@@ -363,7 +369,7 @@
 
 <div class="viewcode-block" id="Client.stop_train_job_worker"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.stop_train_job_worker">[docs]</a>    <span class="k">def</span> <span class="nf">stop_train_job_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_id</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Only for internal use within Rafiki.</span>
+<span class="sd">        Rafiki-internal method</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/train_job_workers/</span><span class="si">{}</span><span class="s1">/stop&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">service_id</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">data</span></div>
@@ -375,9 +381,12 @@
 <div class="viewcode-block" id="Client.create_inference_job"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.create_inference_job">[docs]</a>    <span class="k">def</span> <span class="nf">create_inference_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Creates and starts a inference job on Rafiki with the 2 best trials of an associated train job. </span>
-<span class="sd">        The inference job is tagged with the train job&#39;s app and app version.</span>
+<span class="sd">        The inference job is tagged with the train job&#39;s app and app version. Throws an error if an </span>
+<span class="sd">        inference job of the same train job is already running.</span>
 
-<span class="sd">        In this method&#39;s response, `query_host` is this inference job&#39;s query front-end&#39;s host. </span>
+<span class="sd">        In this method&#39;s response, `predictor_host` is this inference job&#39;s predictor&#39;s host. </span>
+
+<span class="sd">        Only admins &amp; app developers can manage inference jobs.</span>
 
 <span class="sd">        :param str app: Name of the app identifying the train job to use</span>
 <span class="sd">        :param str app_version: Version of the app identifying the train job to use</span>
@@ -397,9 +406,9 @@
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/inference_jobs/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.get_inference_job"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.get_inference_job">[docs]</a>    <span class="k">def</span> <span class="nf">get_inference_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.get_running_inference_job"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.get_running_inference_job">[docs]</a>    <span class="k">def</span> <span class="nf">get_running_inference_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Retrieves details of the inference job identified by an app and an app version,</span>
+<span class="sd">        Retrieves details of the *running* inference job identified by an app and an app version,</span>
 <span class="sd">        including workers&#39; details.</span>
 
 <span class="sd">        :param str app: Name of the app </span>
@@ -443,21 +452,26 @@
 <span class="sd">        Generate a proposal of knobs from an advisor.</span>
 
 <span class="sd">        :param str advisor_id: ID of target advisor</span>
+<span class="sd">        :returns: Knobs as `dict[&lt;knob_name&gt;, &lt;knob_value&gt;]`</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/advisors/</span><span class="si">{}</span><span class="s1">/propose&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">advisor_id</span><span class="p">),</span> <span class="n">target</span><span class="o">=</span><span class="s1">&#39;advisor&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.set_result_of_proposal"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.set_result_of_proposal">[docs]</a>    <span class="k">def</span> <span class="nf">set_result_of_proposal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">,</span> <span class="n">proposal_id</span><span class="p">,</span> <span class="n">score</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.feedback_to_advisor"><a class="viewcode-back" href="../../../docs/classes/rafiki.client.Client.html#rafiki.client.Client.feedback_to_advisor">[docs]</a>    <span class="k">def</span> <span class="nf">feedback_to_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">,</span> <span class="n">knobs</span><span class="p">,</span> <span class="n">score</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Informs the advisor the result of a proposal of knobs.</span>
+<span class="sd">        Feedbacks to the advisor on the score of a set of knobs.</span>
+<span class="sd">        Additionally returns another proposal of knobs after ingesting feedback.</span>
 
 <span class="sd">        :param str advisor_id: ID of target advisor</span>
-<span class="sd">        :param str proposal_id: ID of target proposal</span>
-<span class="sd">        :param float score: Score of the proposal, the higher the number, the better the proposal</span>
+<span class="sd">        :param str knobs: Knobs to give feedback on</span>
+<span class="sd">        :rtype: dict[&lt;knob_name&gt;, &lt;knob_value&gt;]</span>
+<span class="sd">        :param float score: Score of the knobs, the higher the number, the better the set of knobs</span>
+<span class="sd">        :returns: Knobs as `dict[&lt;knob_name&gt;, &lt;knob_value&gt;]`</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/advisors/</span><span class="si">{}</span><span class="s1">/proposals/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">advisor_id</span><span class="p">,</span> <span class="n">proposal_id</span><span class="p">),</span> 
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/advisors/</span><span class="si">{}</span><span class="s1">/feedback&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">advisor_id</span><span class="p">),</span> 
                         <span class="n">target</span><span class="o">=</span><span class="s1">&#39;advisor&#39;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span>
-                            <span class="s1">&#39;score&#39;</span><span class="p">:</span> <span class="n">score</span>
+                            <span class="s1">&#39;score&#39;</span><span class="p">:</span> <span class="n">score</span><span class="p">,</span>
+                            <span class="s1">&#39;knobs&#39;</span><span class="p">:</span> <span class="n">knobs</span>
                         <span class="p">})</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
