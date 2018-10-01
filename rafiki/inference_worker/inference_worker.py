@@ -2,6 +2,7 @@ import time
 import uuid
 import random
 import os
+import numpy as np
 import ast
 import logging
 import traceback
@@ -11,8 +12,6 @@ from rafiki.utils.model import load_model_class
 from rafiki.db import Database
 from rafiki.cache import Cache
 from rafiki.config import RUNNING_INFERENCE_WORKERS, REQUEST_QUEUE, INFERENCE_WORKER_SLEEP, BATCH_SIZE
-
-from .parse import to_json_serializable
 
 logger = logging.getLogger(__name__)
 
@@ -96,3 +95,10 @@ class InferenceWorker(object):
 
     def _register_worker(self):
         self._cache.add_to_set(RUNNING_INFERENCE_WORKERS, self._service_id)
+
+
+def to_json_serializable(data):
+    if isinstance(data, np.int64):
+        return int(data)
+
+    return data
