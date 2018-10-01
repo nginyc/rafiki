@@ -8,7 +8,7 @@ import logging
 import traceback
 import json
 
-from rafiki.utils.model import load_model_class
+from rafiki.model import load_model_class
 from rafiki.db import Database
 from rafiki.cache import Cache
 from rafiki.config import RUNNING_INFERENCE_WORKERS, REQUEST_QUEUE, INFERENCE_WORKER_SLEEP, BATCH_SIZE
