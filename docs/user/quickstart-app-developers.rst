@@ -1,38 +1,19 @@
-.. _rafiki-client:
+.. _`quickstart-app-developers`:
 
-Client Quickstart
+Quickstart (Application Developers)
 ====================================================================
 
 .. contents:: Table of Contents
 
-This example uses the _`Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`.
+This quickstart submits the `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference.
 
 Installation
 --------------------------------------------------------------------
 
-1. Install Python 3.6
-
-2. Install Raifki Client's Python dependencies by running:
-
-    .. code-block:: shell
-
-        pip install -r ./rafiki/client/requirements.txt
+.. include:: ./client-installation.include.rst
 
 
 Initializing the Client
---------------------------------------------------------------------
-
-.. seealso:: :class:`rafiki.client.Client`
-
-Example:
-
-    .. code-block:: python
-
-        from rafiki.client import Client
-        client = Client()
-
-
-Logging in
 --------------------------------------------------------------------
 
 .. seealso:: :meth:`rafiki.client.Client.login`
@@ -40,69 +21,16 @@ Logging in
 Example:
 
     .. code-block:: python
+
+        from rafiki.client import Client
+        client = Client()
+        client.login(email='app_developer@rafiki', password='rafiki')
         
-        client.login(email='superadmin@rafiki', password='rafiki')
-        
-Creating users
---------------------------------------------------------------------
-
-Only admins can create users.
-
-.. seealso:: :meth:`rafiki.client.Client.create_user`
-
-Examples:
-
-    .. code-block:: python
-
-        client.create_user(
-            email='app_developer@rafiki',
-            password='rafiki',
-            user_type='APP_DEVELOPER'
-        )
-
-    .. code-block:: python
-
-        client.create_user(
-            email='model_developer@rafiki',
-            password='rafiki',
-            user_type='MODEL_DEVELOPER'
-        )
-
-
-Creating models
---------------------------------------------------------------------
-
-Only admins & model developers can create models.
-
-Most likely, you'll be using a deep learning framework e.g. Tensorflow to build your model. 
-The base Rafiki worker image has the following Python libraries pre-installed:
-
-.. code-block:: text
-
-    tensorflow==1.10.1
-    h5py==2.8.0
-
-You can optionally build a custom Docker image for the model training & inference and pass the argument for `docker_image`. 
-This Docker image has to extend `rafikiai/rafiki_worker`.
-
-.. seealso:: :meth:`rafiki.client.Client.create_model`
-
-Example:
-
-    .. code-block:: python
-
-        client.create_model(
-            name='single_hidden_layer_tf',
-            task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
-            model_file_path='examples/models/SingleHiddenLayerTensorflowModel.py',
-            model_class='SingleHiddenLayerTensorflowModel'
-        )
 
 Listing models by task
 --------------------------------------------------------------------
 
 .. seealso:: :meth:`rafiki.client.Client.get_models_of_task`
-
 
 Example:
 
@@ -125,7 +53,6 @@ Example:
 Creating a train job
 --------------------------------------------------------------------
 
-Only admins & app developers can create train jobs.
 A train job is uniquely identified by its associated app and the app version (returned in output).
 
 .. seealso:: :meth:`rafiki.client.Client.create_train_job`
@@ -257,14 +184,18 @@ Example:
         'model_name': 'single_hidden_layer_tf',
         'score': 0.092}]
 
+.. _`creating-inference-job`:
+
 Creating an inference job with the latest train job for an app
 --------------------------------------------------------------------
 
-Only admins & app developers can create inference jobs.
-An inference job is created from the trials of an associated train job,
+An inference job is created from the trials of an associated train job, 
 and uniquely identified by that train job's associated app and the app version.
 
+Your app's users will make queries to the `/predict` endpoint of *predictor_host* over HTTP.
+
 .. seealso:: :meth:`rafiki.client.Client.create_inference_job`
+.. seealso:: :ref:`making-predictions` 
 
 Example:
 
@@ -282,29 +213,6 @@ Example:
         'predictor_host': '127.0.0.1:30000',
         'train_job_id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58'}
     
-
-Making predictions with a running inference job
---------------------------------------------------------------------
-
-Example:
-
-    ``POST /predict`` to the inference job's predictor at *predictor_host* 127.0.0.1:30000. E.g. in shell,
-
-    .. code-block:: shell
-
-        body='{"query": [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 7, 0, 37, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 27, 84, 11, 0, 0, 0, 0, 0, 0, 119, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 88, 143, 110, 0, 0, 0, 0, 22, 93, 106, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 53, 129, 120, 147, 175, 157, 166, 135, 154, 168, 140, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 11, 137, 130, 128, 160, 176, 159, 167, 178, 149, 151, 144, 0, 0], [0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 0, 3, 0, 0, 115, 114, 106, 137, 168, 153, 156, 165, 167, 143, 157, 158, 11, 0], [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 89, 139, 90, 94, 153, 149, 131, 151, 169, 172, 143, 159, 169, 48, 0], [0, 0, 0, 0, 0, 0, 2, 4, 1, 0, 0, 0, 98, 136, 110, 109, 110, 162, 135, 144, 149, 159, 167, 144, 158, 169, 119, 0], [0, 0, 2, 2, 1, 2, 0, 0, 0, 0, 26, 108, 117, 99, 111, 117, 136, 156, 134, 154, 154, 156, 160, 141, 147, 156, 178, 0], [3, 0, 0, 0, 0, 0, 0, 21, 53, 92, 117, 111, 103, 115, 129, 134, 143, 154, 165, 170, 154, 151, 154, 143, 138, 150, 165, 43], [0, 0, 23, 54, 65, 76, 85, 118, 128, 123, 111, 113, 118, 127, 125, 139, 133, 136, 160, 140, 155, 161, 144, 155, 172, 161, 189, 62], [0, 68, 94, 90, 111, 114, 111, 114, 115, 127, 135, 136, 143, 126, 127, 151, 154, 143, 148, 125, 162, 162, 144, 138, 153, 162, 196, 58], [70, 169, 129, 104, 98, 100, 94, 97, 98, 102, 108, 106, 119, 120, 129, 149, 156, 167, 190, 190, 196, 198, 198, 187, 197, 189, 184, 36], [16, 126, 171, 188, 188, 184, 171, 153, 135, 120, 126, 127, 146, 185, 195, 209, 208, 255, 209, 177, 245, 252, 251, 251, 247, 220, 206, 49], [0, 0, 0, 12, 67, 106, 164, 185, 199, 210, 211, 210, 208, 190, 150, 82, 8, 0, 0, 0, 178, 208, 188, 175, 162, 158, 151, 11], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]}'
-        curl -H "Content-Type: application/json" -X POST -d "$body" 127.0.0.1:30000/predict
-
-    Output:
-
-    .. code-block:: shell
-
-        {
-            "responses": [
-                9,
-                9
-            ]
-        }
 
 Listing inference jobs of an app
 --------------------------------------------------------------------
@@ -382,8 +290,6 @@ Example:
 
 Stopping a running inference job
 --------------------------------------------------------------------
-
-Only admins & app developers can stop inference jobs.
 
 .. seealso:: :meth:`rafiki.client.Client.stop_inference_job`
 

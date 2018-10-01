@@ -55,7 +55,9 @@ class Client(object):
 
     def create_user(self, email, password, user_type):
         '''
-        Creates a Rafiki user. You have to be an admin.
+        Creates a Rafiki user. 
+        
+        Only admins can manage users.
 
         :param str email: The new user's email
         :param str password: The new user's password
@@ -76,6 +78,8 @@ class Client(object):
     def create_model(self, name, task, model_file_path, model_class, docker_image=None):
         '''
         Creates a model on Rafiki.
+
+        Only admins & model developers can manage models.
 
         :param str name: Name of the model, must be unique on Rafiki
         :param str task: Task associated with the model, 
@@ -133,7 +137,9 @@ class Client(object):
                         budget_type=BudgetType.MODEL_TRIAL_COUNT, 
                         budget_amount=10):
         '''
-        Creates and starts a train job on Rafiki.
+        Creates and starts a train job on Rafiki. 
+        
+        Only admins & app developers can manage train jobs.
 
         :param str app: Name of the app associated with the train job
         :param str task: Task associated with the train job, 
@@ -214,7 +220,7 @@ class Client(object):
 
     def stop_train_job_worker(self, service_id):
         '''
-        Only for internal use within Rafiki.
+        Rafiki-internal method
         '''
         data = self._post('/train_job_workers/{}/stop'.format(service_id))
         return data
@@ -230,6 +236,8 @@ class Client(object):
         inference job of the same train job is already running.
 
         In this method's response, `predictor_host` is this inference job's predictor's host. 
+
+        Only admins & app developers can manage inference jobs.
 
         :param str app: Name of the app identifying the train job to use
         :param str app_version: Version of the app identifying the train job to use
