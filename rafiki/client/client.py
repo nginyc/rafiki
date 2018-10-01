@@ -226,7 +226,8 @@ class Client(object):
     def create_inference_job(self, app, app_version=-1):
         '''
         Creates and starts a inference job on Rafiki with the 2 best trials of an associated train job. 
-        The inference job is tagged with the train job's app and app version.
+        The inference job is tagged with the train job's app and app version. Throws an error if an 
+        inference job of the same train job is already running.
 
         In this method's response, `predictor_host` is this inference job's predictor's host. 
 
@@ -248,9 +249,9 @@ class Client(object):
         data = self._get('/inference_jobs/{}'.format(app))
         return data
 
-    def get_inference_job(self, app, app_version=-1):
+    def get_running_inference_job(self, app, app_version=-1):
         '''
-        Retrieves details of the inference job identified by an app and an app version,
+        Retrieves details of the *running* inference job identified by an app and an app version,
         including workers' details.
 
         :param str app: Name of the app 

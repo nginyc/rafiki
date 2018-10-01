@@ -5,9 +5,7 @@ Client Quickstart
 
 .. contents:: Table of Contents
 
-This example uses the `Fashion MNIST dataset`_.
-
-.. _Fashion MNIST dataset: https://github.com/zalandoresearch/fashion-mnist
+This example uses the _`Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`.
 
 Installation
 --------------------------------------------------------------------
@@ -333,16 +331,16 @@ Example:
         'train_job_id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58'}]
 
 
-Retrieving the latest inference job's details for an app
+Retrieving details of running inference job for an app 
 --------------------------------------------------------------------
 
-.. seealso:: :meth:`rafiki.client.Client.get_inference_job`
+.. seealso:: :meth:`rafiki.client.Client.get_running_inference_job`
 
 Example:
 
     .. code-block:: python
 
-        client.get_inference_job(app='fashion_mnist_app')
+        client.get_running_inference_job(app='fashion_mnist_app')
 
     Output:
 

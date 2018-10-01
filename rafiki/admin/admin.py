@@ -21,7 +21,10 @@ class InvalidUserException(Exception):
 class InvalidPasswordException(Exception):
     pass
 
-class InferenceJobExistsException(Exception):
+class RunningInferenceJobExistsException(Exception):
+    pass
+
+class InvalidRunningInferenceJobException(Exception):
     pass
 
 class Admin(object):
@@ -201,10 +204,10 @@ class Admin(object):
     def create_inference_job(self, user_id, app, app_version):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
 
-        # Ensure only 1 inference job can be created for 1 train job
-        inference_job = self._db.get_inference_job_by_train_job(train_job.id)
+        # Ensure only 1 running inference job for 1 train job
+        inference_job = self._db.get_running_inference_job_by_train_job(train_job.id)
         if inference_job is not None:
-            raise InferenceJobExistsException()
+            raise RunningInferenceJobExistsException()
 
         inference_job = self._db.create_inference_job(
             user_id=user_id,
@@ -225,7 +228,11 @@ class Admin(object):
 
     def stop_inference_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
-        inference_job = self._db.get_inference_job_by_train_job(train_job.id)
+        inference_job = self._db.get_running_inference_job_by_train_job(train_job.id)
+
+        if inference_job is None:
+            raise InvalidRunningInferenceJobException()
+
         inference_job = self._services_manager.stop_inference_services(inference_job.id)
         return {
             'id': inference_job.id,
@@ -234,9 +241,13 @@ class Admin(object):
             'app_version': train_job.app_version
         }
 
-    def get_inference_job(self, app, app_version=-1):
+    def get_running_inference_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
-        inference_job = self._db.get_inference_job_by_train_job(train_job.id)
+        inference_job = self._db.get_running_inference_job_by_train_job(train_job.id)
+
+        if inference_job is None:
+            raise InvalidRunningInferenceJobException()
+            
         workers = self._db.get_workers_of_inference_job(inference_job.id)
         services = [self._db.get_service(x.service_id) for x in workers]
         predictor_service = self._db.get_service(inference_job.predictor_service_id)

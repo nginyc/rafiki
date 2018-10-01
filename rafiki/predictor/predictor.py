@@ -26,7 +26,7 @@ class Predictor(object):
             'query': query
         }
 
-        running_inference_workers = self._cache.get_set(RUNNING_INFERENCE_WORKERS)
+        running_inference_workers = self._get_inference_workers()
         request_ids = set()
         for running_inference_worker in running_inference_workers:
             queue_key = '{}_{}'.format(REQUEST_QUEUE, running_inference_worker.decode())
@@ -58,8 +58,9 @@ class Predictor(object):
 
         return responses
 
-    def get_queue_key(self):
-        return '{}_{}'.format(REQUEST_QUEUE, self._service_id)
+    def _get_inference_workers(self):
+        inference_workers_key = '{}_{}'.format(RUNNING_INFERENCE_WORKERS, self._service_id)
+        return self._cache.get_set(inference_workers_key)
 
     def predict_batch(self, queries):
         #TODO: implement method

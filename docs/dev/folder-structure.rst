@@ -1,4 +1,4 @@
-Rafiki's Folder Structure
+Folder Structure
 ====================================================================
 
 - `rafiki/`
@@ -29,16 +29,19 @@ Rafiki's Folder Structure
 
     - `db/`
 
-        Code for an abstract access layer for Rafiki's *Database*
+        Code for Rafiki's *Database* as an abstract data access layer
 
     - `cache/`
 
-        Code for an abstract access layer for Rafiki's *Cache*
+        Code for Rafiki's *Cache* as an abstract data access layer
+
+    - `container/`
+
+        Code for the deployment of Rafiki's dynamic stack (e.g. workers) as *services*
 
     - `utils/`
 
         Collection of Rafiki-internal utility methods (e.g. for logging, authentication)
-
     - `config.py`
 
         Stores Rafiki-internal application-level configuration variables
