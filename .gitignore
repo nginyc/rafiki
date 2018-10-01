@@ -18,14 +18,3 @@ __pycache__/
 
 # MacOS
 .DS_Store
-
-# Sphinx documentation
-_*/
-.doctrees/
-docs/docs/
-docs/.buildinfo
-docs/genindex.html
-docs/index.html
-docs/objects.inv
-docs/search.html
-docs/searchindex.js
