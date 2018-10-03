@@ -1,7 +1,12 @@
 import os
+import json
 import abc
+import traceback
 
 from rafiki.advisor import make_advisor
+
+class InvalidModelClassException(Exception):
+    pass
 
 class InvalidModelParamsException(Exception):
     pass
@@ -93,7 +98,8 @@ class BaseModel(abc.ABC):
     @abc.abstractmethod
     def dump_parameters(self):
         '''
-        Return a dictionary of model parameters that fully define this model instance's trained state.
+        Return a dictionary of model parameters that fully define this model instance's trained state. 
+        This dictionary must be JSON serializable.
         This will be used for trained model serialization within Rafiki.
         This will be called only when model is *trained*.
 
@@ -124,7 +130,7 @@ class BaseModel(abc.ABC):
         pass
 
 
-def test_model(model_class, train_dataset_uri, test_dataset_uri, 
+def test_model_class(model_class, train_dataset_uri, test_dataset_uri, 
                 queries=[], knobs=None):
 
     '''
@@ -144,6 +150,13 @@ def test_model(model_class, train_dataset_uri, test_dataset_uri,
 
     print('Testing getting of model\'s knob config...')
     knob_config = model_inst.get_knob_config()
+
+    if not isinstance(knob_config, dict):
+        raise InvalidModelClassException('`get_knob_config()` should return a dict[str, any]')
+
+    if 'knobs' not in knob_config:
+        raise InvalidModelClassException('`knob_config` should have a \'knobs\' key')
+    
     advisor = make_advisor(knob_config)
 
     if knobs is None:
@@ -158,10 +171,23 @@ def test_model(model_class, train_dataset_uri, test_dataset_uri,
 
     print('Testing evaluation of model...')
     score = model_inst.evaluate(test_dataset_uri)
+
+    if not isinstance(score, float):
+        raise InvalidModelClassException('`evaluate()` should return a float!')
+
     print('Score: {}'.format(score))
 
     print('Testing dumping of parameters of model...')
     parameters = model_inst.dump_parameters()
+
+    if not isinstance(parameters, dict):
+        raise InvalidModelClassException('`dump_parameters()` should return a dict[str, any]')
+
+    try:
+        json.dumps(parameters)
+    except Exception:
+        traceback.print_stack()
+        raise InvalidModelClassException('`parameters` should be JSON serializable')
 
     print('Testing destroying of model...')
     model_inst.destroy()

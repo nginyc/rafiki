@@ -31,7 +31,7 @@ Creating models
 --------------------------------------------------------------------
 
 To create a model, you will need to write a model class that extends :class:`rafiki.model.BaseModel` in a single Python file.
-You can validate your model definition with :meth:`rafiki.model.test_model`.
+You can validate your model definition with :meth:`rafiki.model.test_model_class`.
 
 The base Rafiki worker image has the following Python libraries pre-installed:
 

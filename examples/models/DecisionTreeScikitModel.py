@@ -1,20 +1,36 @@
 from sklearn import tree
 import json
+import pickle
 import os
+import base64
 import numpy as np
 
 from rafiki.dataset import load_dataset
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model
+from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
 
 class DecisionTreeScikitModel(BaseModel):
 
     def get_knob_config(self):
         return {
-            'knobs': {}
+            'knobs': {
+                'max_depth': {
+                    'type': 'int',
+                    'range': [2, 8]
+                },
+                'criterion': {
+                    'type': 'string',
+                    'values': ['gini', 'entropy']
+                },
+            }
         }
 
     def init(self, knobs):
-        self._clf = tree.DecisionTreeClassifier() 
+        self._max_depth = knobs.get('max_depth') 
+        self._criterion = knobs.get('criterion') 
+        self._clf = self._build_classifier(
+            self._max_depth,
+            self._criterion
+        )
         
     def train(self, dataset_uri):
         (images, labels) = self._load_dataset(dataset_uri)
@@ -39,10 +55,16 @@ class DecisionTreeScikitModel(BaseModel):
         pass
 
     def dump_parameters(self):
-        return {}
+        clf_bytes = pickle.dumps(self._clf)
+        clf_base64 = base64.b64encode(clf_bytes).decode('utf-8')
+        return {
+            'clf_base64': clf_base64
+        }
 
     def load_parameters(self, params):
-        pass
+        if 'clf_base64' in params:
+            clf_bytes = base64.b64decode(params['clf_base64'].encode('utf-8'))
+            self._clf = pickle.loads(clf_bytes)
 
     def _prepare_X(self, images):
         return [np.array(image).flatten() for image in images]
@@ -51,9 +73,16 @@ class DecisionTreeScikitModel(BaseModel):
         # Here, we use Rafiki's in-built dataset loader
         return load_dataset(dataset_uri) 
 
+    def _build_classifier(self, max_depth, criterion):
+        clf = tree.DecisionTreeClassifier(
+            max_depth=max_depth,
+            criterion=criterion
+        ) 
+        return clf
+
 
 if __name__ == '__main__':
-    test_model(
+    test_model_class(
         model_class=DecisionTreeScikitModel,
         train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
         test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test',

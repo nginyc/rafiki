@@ -7,7 +7,7 @@ import numpy as np
 import base64
 
 from rafiki.dataset import load_dataset
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model
+from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
 
 class SingleHiddenLayerTensorflowModel(BaseModel):
 
@@ -167,7 +167,7 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
 
 
 if __name__ == '__main__':
-    test_model(
+    test_model_class(
         model_class=SingleHiddenLayerTensorflowModel,
         train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
         test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test',

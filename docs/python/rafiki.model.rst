@@ -4,4 +4,4 @@ rafiki.model
 .. autoclass:: rafiki.model.BaseModel
     :members:
 
-.. automethod:: rafiki.model.test_model
+.. automethod:: rafiki.model.test_model_class
