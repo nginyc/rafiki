@@ -1,9 +1,7 @@
 import os
 import abc
-import pickle
-from importlib import import_module
 
-TEMP_MODEL_FILE_NAME = 'temp'
+from rafiki.advisor import make_advisor
 
 class InvalidModelParamsException(Exception):
     pass
@@ -125,19 +123,62 @@ class BaseModel(abc.ABC):
         '''
         pass
 
-def load_model_class(model_file_bytes, model_class):
-    # Save the model file to disk
-    f = open('{}.py'.format(TEMP_MODEL_FILE_NAME), 'wb')
-    f.write(model_file_bytes)
-    f.close()
 
-    # Import model file as module
-    mod = import_module(TEMP_MODEL_FILE_NAME)
+def test_model(model_class, train_dataset_uri, test_dataset_uri, 
+                queries=[], knobs=None):
 
-    # Extract model class from module
-    clazz = getattr(mod, model_class)
+    '''
+    Validates whether a model class is properly defined. 
+    The model instance's methods will be called in an order similar to that in Rafiki.
 
-    # Remove temporary file
-    os.remove(f.name)
+    :param str train_dataset_uri: URI of the train dataset for testing the training of model
+    :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model
+    :param list[any] queries: List of queries for testing predictions with the trained model
+    :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used
+    :type knobs: dict[str, any]
+    :returns: The trained model
+    '''
+    
+    print('Testing instantiation of model...')
+    model_inst = model_class()
 
-    return clazz
+    print('Testing getting of model\'s knob config...')
+    knob_config = model_inst.get_knob_config()
+    advisor = make_advisor(knob_config)
+
+    if knobs is None:
+        knobs = advisor.propose()
+
+    print('Testing initialization of model...')
+    print('Using knobs: {}'.format(knobs))
+    model_inst.init(knobs)
+
+    print('Testing training of model...')
+    model_inst.train(train_dataset_uri)
+
+    print('Testing evaluation of model...')
+    score = model_inst.evaluate(test_dataset_uri)
+    print('Score: {}'.format(score))
+
+    print('Testing dumping of parameters of model...')
+    parameters = model_inst.dump_parameters()
+
+    print('Testing destroying of model...')
+    model_inst.destroy()
+
+    print('Testing loading of parameters of model...')
+    model_inst = model_class()
+    model_inst.init(knobs)
+    model_inst.load_parameters(parameters)
+
+    print('Testing predictions with model...')
+    print('Using queries: {}'.format(queries))
+    predictions = model_inst.predict(queries)
+    print('Predictions: {}'.format(predictions))
+    
+    print('The model definition is valid!')
+
+    return model_inst
+
+
+

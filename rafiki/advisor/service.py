@@ -5,15 +5,10 @@ import traceback
 import pprint
 import numpy as np
 
-from rafiki.constants import AdvisorType
-
 from .store import Store
-from .btb_gp_advisor import BtbGpAdvisor
+from .advisor import make_advisor
 
 logger = logging.getLogger(__name__)
-
-class InvalidAdvisorTypeException(Exception):
-    pass
 
 class InvalidAdvisorException(Exception):
     pass
@@ -33,7 +28,7 @@ class AdvisorService(object):
             advisor = self._store.get_advisor(advisor_id)
             
         if advisor is None:
-            advisor_inst = self._make_advisor(knob_config)
+            advisor_inst = make_advisor(knob_config)
             advisor = self._store.create_advisor(advisor_inst, knob_config, advisor_id)
             is_created = True
 
@@ -99,9 +94,3 @@ class AdvisorService(object):
             return int(value)
 
         return value
-
-    def _make_advisor(self, knob_config, advisor_type=AdvisorType.BTB_GP):
-        if advisor_type == AdvisorType.BTB_GP:
-            return BtbGpAdvisor(knob_config)
-        else:
-            raise InvalidAdvisorTypeException()

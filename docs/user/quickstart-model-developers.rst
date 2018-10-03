@@ -30,7 +30,9 @@ Example:
 Creating models
 --------------------------------------------------------------------
 
-Most likely, you'll be using a deep learning framework e.g. Tensorflow to build your model. 
+To create a model, you will need to write a model class that extends :class:`rafiki.model.BaseModel` in a single Python file.
+You can validate your model definition with :meth:`rafiki.model.test_model`.
+
 The base Rafiki worker image has the following Python libraries pre-installed:
 
 ::

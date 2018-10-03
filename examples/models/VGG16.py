@@ -9,7 +9,7 @@ import base64
 import abc
 from urllib.parse import urlparse, parse_qs 
 
-from rafiki.utils.dataset import load_dataset
+from rafiki.dataset import load_dataset
 from rafiki.model import BaseModel, InvalidModelParamsException
 
 class VGG16(BaseModel):
