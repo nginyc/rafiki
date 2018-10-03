@@ -1,23 +1,25 @@
 import tensorflow as tf
 from tensorflow import keras
+from tensorflow.keras.preprocessing.image import img_to_array, array_to_img
 import json
 import os
 import tempfile
 import numpy as np
 import base64
+import abc
+from urllib.parse import urlparse, parse_qs 
 
 from rafiki.dataset import load_dataset
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
 
-class SingleHiddenLayerTensorflowModel(BaseModel):
+class TfVgg16(BaseModel):
+    '''
+    Implements VGG16 on Tensorflow
+    '''
 
     def get_knob_config(self):
         return {
             'knobs': {
-                'hidden_layer_units': {
-                    'type': 'int',
-                    'range': [2, 128]
-                },
                 'epochs': {
                     'type': 'int',
                     'range': [1, 1]
@@ -30,25 +32,29 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
                     'type': 'int_cat',
                     'values': [1, 2, 4, 8, 16, 32, 64, 128]
                 }
-            }
+            },
+            'root_knobs': ['hidden_layer_units', 'epochs', 'learning_rate', 'batch_size'],
+            'conditional_knobs': {}
         }
 
     def init(self, knobs):
         self._batch_size = knobs.get('batch_size')
         self._epochs = knobs.get('epochs')
-        self._hidden_layer_units = knobs.get('hidden_layer_units')
         self._learning_rate = knobs.get('learning_rate')
 
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
-        
-        
+
     def train(self, dataset_uri):
         (images, labels) = self._load_dataset(dataset_uri)
+        images = images.reshape(-1, 784)
+        images = np.dstack([images] * 3)
+        images = images.reshape(-1, 28, 28, 3)
+        images = np.asarray([img_to_array(array_to_img(im, scale=False).resize((48,48))) for im in images])
 
         num_classes = len(np.unique(labels))
 
-        X = images
+        X = [images]
         y = keras.utils.to_categorical(
             labels, 
             num_classes=num_classes
@@ -66,10 +72,14 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
 
     def evaluate(self, dataset_uri):
         (images, labels) = self._load_dataset(dataset_uri)
+        images = images.reshape(-1, 784)
+        images = np.dstack([images] * 3)
+        images = images.reshape(-1, 28, 28, 3)
+        images = np.asarray([img_to_array(array_to_img(im, scale=False).resize((48,48))) for im in images])
 
         num_classes = len(np.unique(labels))
 
-        X = images
+        X = [images]
         y = keras.utils.to_categorical(
             labels, 
             num_classes=num_classes
@@ -80,7 +90,6 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
         accuracy = sum(labels == preds) / len(y)
         return accuracy
 
-
     def predict(self, queries):
         X = np.array(queries)
         with self._graph.as_default():
@@ -89,7 +98,7 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
                 preds = np.argmax(probs, axis=1)
 
         return preds
-
+    
     def destroy(self):
         self._sess.close()
 
@@ -137,27 +146,19 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
         # Remove temp file
         os.remove(tmp.name)
 
-
     def _load_dataset(self, dataset_uri):
         # Here, we use Rafiki's in-built dataset loader
         return load_dataset(dataset_uri) 
 
     def _build_model(self, num_classes):
-        hidden_layer_units = self._hidden_layer_units
         learning_rate = self._learning_rate
+        model = keras.applications.VGG16(
+            include_top=True,
+            input_shape=(48, 48, 3),
+            weights=None, 
+            classes=num_classes
+        )
 
-        model = keras.Sequential()
-        model.add(keras.layers.Flatten())
-        model.add(keras.layers.BatchNormalization())
-        model.add(keras.layers.Dense(
-            hidden_layer_units,
-            activation=tf.nn.relu
-        ))
-        model.add(keras.layers.Dense(
-            num_classes, 
-            activation=tf.nn.softmax
-        ))
-        
         model.compile(
             optimizer=keras.optimizers.Adam(lr=learning_rate),
             loss='categorical_crossentropy',
@@ -165,10 +166,9 @@ class SingleHiddenLayerTensorflowModel(BaseModel):
         )
         return model
 
-
 if __name__ == '__main__':
     test_model_class(
-        model_class=SingleHiddenLayerTensorflowModel,
+        model_class=TfVgg16,
         train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
         test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test',
         queries=[

@@ -1,89 +1,177 @@
-from sklearn import tree
+import tensorflow as tf
+from tensorflow import keras
 import json
-import pickle
 import os
-import base64
+import tempfile
 import numpy as np
+import base64
 
 from rafiki.dataset import load_dataset
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
 
-class DecisionTreeScikitModel(BaseModel):
+class TfSingleHiddenLayer(BaseModel):
+    '''
+    Implements a fully-connected neural network with a single hidden layer on Tensorflow
+    '''
 
     def get_knob_config(self):
         return {
             'knobs': {
-                'max_depth': {
+                'hidden_layer_units': {
                     'type': 'int',
-                    'range': [2, 8]
+                    'range': [2, 128]
                 },
-                'criterion': {
-                    'type': 'string',
-                    'values': ['gini', 'entropy']
+                'epochs': {
+                    'type': 'int',
+                    'range': [1, 1]
                 },
+                'learning_rate': {
+                    'type': 'float_exp',
+                    'range': [1e-5, 1e-1]
+                },
+                'batch_size': {
+                    'type': 'int_cat',
+                    'values': [1, 2, 4, 8, 16, 32, 64, 128]
+                }
             }
         }
 
     def init(self, knobs):
-        self._max_depth = knobs.get('max_depth') 
-        self._criterion = knobs.get('criterion') 
-        self._clf = self._build_classifier(
-            self._max_depth,
-            self._criterion
-        )
+        self._batch_size = knobs.get('batch_size')
+        self._epochs = knobs.get('epochs')
+        self._hidden_layer_units = knobs.get('hidden_layer_units')
+        self._learning_rate = knobs.get('learning_rate')
+
+        self._graph = tf.Graph()
+        self._sess = tf.Session(graph=self._graph)
+        
         
     def train(self, dataset_uri):
         (images, labels) = self._load_dataset(dataset_uri)
-        X = self._prepare_X(images)
-        y = labels
-        self._clf.fit(X, y)
+
+        num_classes = len(np.unique(labels))
+
+        X = images
+        y = keras.utils.to_categorical(
+            labels, 
+            num_classes=num_classes
+        )
+
+        with self._graph.as_default():
+            self._model = self._build_model(num_classes)
+            with self._sess.as_default():
+                self._model.fit(
+                    X, 
+                    y, 
+                    epochs=self._epochs, 
+                    batch_size=self._batch_size
+                )
 
     def evaluate(self, dataset_uri):
         (images, labels) = self._load_dataset(dataset_uri)
-        X = self._prepare_X(images)
-        y = labels
-        preds = self._clf.predict(X)
-        accuracy = sum(y == preds) / len(y)
+
+        num_classes = len(np.unique(labels))
+
+        X = images
+        y = keras.utils.to_categorical(
+            labels, 
+            num_classes=num_classes
+        )
+
+        preds = self.predict(X)
+
+        accuracy = sum(labels == preds) / len(y)
         return accuracy
 
+
     def predict(self, queries):
-        X = self._prepare_X(queries)
-        preds = self._clf.predict(X)
+        X = np.array(queries)
+        with self._graph.as_default():
+            with self._sess.as_default():
+                probs = self._model.predict(X)
+                preds = np.argmax(probs, axis=1)
+
         return preds
 
     def destroy(self):
-        pass
+        self._sess.close()
 
     def dump_parameters(self):
-        clf_bytes = pickle.dumps(self._clf)
-        clf_base64 = base64.b64encode(clf_bytes).decode('utf-8')
+        # TODO: Not save to & read from a file 
+
+        # Save whole model to temp h5 file
+        tmp = tempfile.NamedTemporaryFile(delete=False)
+        with self._graph.as_default():
+            with self._sess.as_default():
+                self._model.save(tmp.name)
+        
+        # Read from temp h5 file & encode it to base64 string
+        with open(tmp.name, 'rb') as f:
+            h5_model_bytes = f.read()
+
+        h5_model_base64 = base64.b64encode(h5_model_bytes).decode('utf-8')
+
+        # Remove temp file
+        os.remove(tmp.name)
+
         return {
-            'clf_base64': clf_base64
+            'h5_model_base64': h5_model_base64
         }
 
     def load_parameters(self, params):
-        if 'clf_base64' in params:
-            clf_bytes = base64.b64decode(params['clf_base64'].encode('utf-8'))
-            self._clf = pickle.loads(clf_bytes)
+        h5_model_base64 = params.get('h5_model_base64', None)
 
-    def _prepare_X(self, images):
-        return [np.array(image).flatten() for image in images]
+        if h5_model_base64 is None:
+            raise InvalidModelParamsException()
+
+        # TODO: Not save to & read from a file 
+
+        # Convert back to bytes & write to temp file
+        tmp = tempfile.NamedTemporaryFile(delete=False)
+        h5_model_bytes = base64.b64decode(h5_model_base64.encode('utf-8'))
+        with open(tmp.name, 'wb') as f:
+            f.write(h5_model_bytes)
+
+        # Load model from temp file
+        with self._graph.as_default():
+            with self._sess.as_default():
+                self._model = keras.models.load_model(tmp.name)
+        
+        # Remove temp file
+        os.remove(tmp.name)
+
 
     def _load_dataset(self, dataset_uri):
         # Here, we use Rafiki's in-built dataset loader
         return load_dataset(dataset_uri) 
 
-    def _build_classifier(self, max_depth, criterion):
-        clf = tree.DecisionTreeClassifier(
-            max_depth=max_depth,
-            criterion=criterion
-        ) 
-        return clf
+    def _build_model(self, num_classes):
+        hidden_layer_units = self._hidden_layer_units
+        learning_rate = self._learning_rate
+
+        model = keras.Sequential()
+        model.add(keras.layers.Flatten())
+        model.add(keras.layers.BatchNormalization())
+        model.add(keras.layers.Dense(
+            hidden_layer_units,
+            activation=tf.nn.relu
+        ))
+        model.add(keras.layers.Dense(
+            num_classes, 
+            activation=tf.nn.softmax
+        ))
+        
+        model.compile(
+            optimizer=keras.optimizers.Adam(lr=learning_rate),
+            loss='categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        return model
 
 
 if __name__ == '__main__':
     test_model_class(
-        model_class=DecisionTreeScikitModel,
+        model_class=TfSingleHiddenLayer,
         train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
         test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test',
         queries=[

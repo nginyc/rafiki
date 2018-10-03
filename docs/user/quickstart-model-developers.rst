@@ -5,8 +5,6 @@ Quickstart (Model Developers)
 
 .. contents:: Table of Contents
 
-This quickstart submits the example model of a fully-connected neural network with a single hidden layer, written in Tensorflow (``examples/models/SingleHiddenLayerTensorflowModel.py``).
-
 Installation
 --------------------------------------------------------------------
 
@@ -44,15 +42,29 @@ This Docker image has to extend `rafikiai/rafiki_worker`.
 
 .. seealso:: :meth:`rafiki.client.Client.create_model`
 
-Example:
+Examples:
 
     .. code-block:: python
 
         client.create_model(
-            name='single_hidden_layer_tf',
+            name='TfSingleHiddenLayer',
             task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
-            model_file_path='examples/models/SingleHiddenLayerTensorflowModel.py',
-            model_class='SingleHiddenLayerTensorflowModel'
+            model_file_path='examples/models/image_classification/TfSingleHiddenLayer.py',
+            model_class='TfSingleHiddenLayer'
+        )
+
+        client.create_model(
+            name='SkDt',
+            task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
+            model_file_path='examples/models/image_classification/SkDt.py',
+            model_class='SkDt'
+        )
+
+        client.create_model(
+            name='SkSvm',
+            task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
+            model_file_path='examples/models/image_classification/SkSvm.py',
+            model_class='SkSvm'
         )
 
 Listing models by task
