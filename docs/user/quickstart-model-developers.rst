@@ -35,7 +35,7 @@ The base Rafiki worker image has the following Python libraries pre-installed:
 
 ::
 
-    numpy==1.14.5 tensorflow==1.10.1 h5py==2.8.0 torch==0.4.1 Keras==2.2.2
+    numpy==1.14.5 tensorflow==1.10.1 h5py==2.8.0 torch==0.4.1 Keras==2.2.2 scikit-learn==0.20.0
 
 You can optionally build a custom Docker image for the model training & inference and pass the argument for `docker_image`. 
 This Docker image has to extend `rafikiai/rafiki_worker`.
