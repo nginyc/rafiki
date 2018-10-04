@@ -27,7 +27,7 @@ class ServicesManager(object):
         predictor_service = self._create_predictor_service(inference_job)
 
         # Create a worker service for each best trial of associated train job
-        best_trials = self._get_best_trials_for_inference()
+        best_trials = self._get_best_trials_for_inference(inference_job)
         trial_to_replicas = self._compute_inference_worker_replicas_for_trials(best_trials)
         for (trial, replicas) in trial_to_replicas.items():
             self._create_inference_job_worker(inference_job, trial, replicas)
@@ -287,7 +287,7 @@ class ServicesManager(object):
 
         return port
 
-    def _get_best_trials_for_inference(self):
+    def _get_best_trials_for_inference(self, inference_job):
         best_trials = self._db.get_best_trials_of_train_job(
             inference_job.train_job_id, 
             max_count=INFERENCE_MAX_BEST_TRIALS
