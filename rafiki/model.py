@@ -48,6 +48,28 @@ class BaseModel(abc.ABC):
         '''
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def get_train_and_evaluate_label_mapping(self):
+        '''
+        Return a dictionary mapping from class labels to index. 
+        This method is only called after training.
+
+        :returns: Dictionary mapping from class labels to index.
+        :rtype: dict[str, int]
+        '''
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_predict_label_mapping(self):
+        '''
+        Return a dictionary mapping from index to class labels. 
+        This method is only called after training.
+
+        :returns: Dictionary mapping from index to class labels. 
+        :rtype: dict[int, str]
+        '''
+        raise NotImplementedError()
+
     def init(self, knobs):
         '''
         Initialize the model with a dictionary of knob values. 
@@ -56,24 +78,27 @@ class BaseModel(abc.ABC):
         :param knobs: Dictionary of knob values for this model instance
         :type knobs: dict[str, any]
         '''
+        pass
 
     @abc.abstractmethod
-    def train(self, dataset_uri):
+    def train(self, dataset_uri, task):
         '''
         Train this model instance with given dataset and initialized knob values.
 
         :param str dataset_uri: URI of the train dataset in a format specified by the task
+        :param str task: Task type
         '''
         raise NotImplementedError()
 
     # TODO: Allow configuration of other metrics
     @abc.abstractmethod
-    def evaluate(self, dataset_uri):
+    def evaluate(self, dataset_uri, task):
         '''
         Evaluate this model instance with given dataset after training. 
         This will be called only when model is *trained*.
 
         :param str dataset_uri: URI of the test dataset in a format specified by the task
+        :param str task: Task type
         :returns: Accuracy as float from 0-1 on the test dataset
         :rtype: float
         '''

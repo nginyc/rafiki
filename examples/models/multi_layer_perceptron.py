@@ -1,22 +1,23 @@
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.preprocessing.image import img_to_array, array_to_img
 import json
 import os
 import tempfile
 import numpy as np
 import base64
-import abc
-from urllib.parse import urlparse, parse_qs 
 
 from rafiki.utils.dataset import load_dataset
 from rafiki.model import BaseModel, InvalidModelParamsException
 
-class VGG16(BaseModel):
+class MultiLayerPerceptron(BaseModel):
 
     def get_knob_config(self):
         return {
             'knobs': {
+                'hidden_layer_units': {
+                    'type': 'int',
+                    'range': [2, 128]
+                },
                 'epochs': {
                     'type': 'int',
                     'range': [1, 1]
@@ -29,73 +30,61 @@ class VGG16(BaseModel):
                     'type': 'int_cat',
                     'values': [1, 2, 4, 8, 16, 32, 64, 128]
                 }
-            },
-            'root_knobs': ['hidden_layer_units', 'epochs', 'learning_rate', 'batch_size'],
-            'conditional_knobs': {}
+            }
         }
+    
+    def get_train_and_evaluate_label_mapping(self):
+        return self._train_and_evaluate_label_mapping
+
+    def get_predict_label_mapping(self):
+        return self._predict_label_mapping
 
     def init(self, knobs):
         self._batch_size = knobs.get('batch_size')
         self._epochs = knobs.get('epochs')
+        self._hidden_layer_units = knobs.get('hidden_layer_units')
         self._learning_rate = knobs.get('learning_rate')
 
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
+        
+        
+    def train(self, dataset_uri, task):
+        (images, labels) = load_dataset(dataset_uri, task)
 
-    def train(self, dataset_uri):
-        (images, labels) = self._load_dataset(dataset_uri)
-        images = images.reshape(-1, 784)
-        images = np.dstack([images] * 3)
-        images = images.reshape(-1, 28, 28, 3)
-        images = np.asarray([img_to_array(array_to_img(im, scale=False).resize((48,48))) for im in images])
+        class_names = np.unique(labels)
+        num_classes = len(class_names)
+        self._train_and_evaluate_label_mapping = dict(zip(class_names, range(num_classes)))
+        self._predict_label_mapping = {v: k for k, v in  self._train_and_evaluate_label_mapping.items()}
 
-        num_classes = len(np.unique(labels))
-
-        X = [images]
-        y = keras.utils.to_categorical(
-            labels, 
-            num_classes=num_classes
-        )
+        labels = np.array([self.get_train_and_evaluate_label_mapping()[label] for label in labels])
 
         with self._graph.as_default():
             self._model = self._build_model(num_classes)
             with self._sess.as_default():
                 self._model.fit(
-                    X, 
-                    y, 
+                    images, 
+                    labels, 
                     epochs=self._epochs, 
                     batch_size=self._batch_size
                 )
 
-    def evaluate(self, dataset_uri):
-        (images, labels) = self._load_dataset(dataset_uri)
-        images = images.reshape(-1, 784)
-        images = np.dstack([images] * 3)
-        images = images.reshape(-1, 28, 28, 3)
-        images = np.asarray([img_to_array(array_to_img(im, scale=False).resize((48,48))) for im in images])
+    def evaluate(self, dataset_uri, task):
+        (images, labels) = load_dataset(dataset_uri, task)
+        labels = np.array([self.get_train_and_evaluate_label_mapping()[label] for label in labels])
 
-        num_classes = len(np.unique(labels))
-
-        X = [images]
-        y = keras.utils.to_categorical(
-            labels, 
-            num_classes=num_classes
-        )
-
-        preds = self.predict(X)
-
-        accuracy = sum(labels == preds) / len(y)
+        with self._graph.as_default():
+            with self._sess.as_default():
+                (loss, accuracy) = self._model.evaluate(images, labels)
         return accuracy
 
     def predict(self, queries):
         X = np.array(queries)
         with self._graph.as_default():
             with self._sess.as_default():
-                probs = self._model.predict(X)
-                preds = np.argmax(probs, axis=1)
+                probabilities = self._model.predict(X)
+        return probabilities
 
-        return preds
-    
     def destroy(self):
         self._sess.close()
 
@@ -143,35 +132,31 @@ class VGG16(BaseModel):
         # Remove temp file
         os.remove(tmp.name)
 
+
     def _load_dataset(self, dataset_uri):
         # Here, we use Rafiki's in-built dataset loader
         return load_dataset(dataset_uri) 
 
     def _build_model(self, num_classes):
+        hidden_layer_units = self._hidden_layer_units
         learning_rate = self._learning_rate
-        model = keras.applications.VGG16(
-            include_top=True,
-            input_shape=(48, 48, 3),
-            weights=None, 
-            classes=num_classes
-        )
 
+        model = keras.Sequential()
+        model.add(keras.layers.Flatten())
+        model.add(keras.layers.BatchNormalization())
+        model.add(keras.layers.Dense(
+            hidden_layer_units,
+            activation=tf.nn.relu
+        ))
+        model.add(keras.layers.Dense(
+            num_classes, 
+            activation=tf.nn.softmax
+        ))
+        
         model.compile(
             optimizer=keras.optimizers.Adam(lr=learning_rate),
-            loss='categorical_crossentropy',
+            loss='sparse_categorical_crossentropy',
             metrics=['accuracy']
         )
         return model
 
-# if __name__ == '__main__':
-#     knobs = {
-#         'batch_size': 8,
-#         'epochs': 1,
-#         'learning_rate': 1e-5
-#     }
-
-#     model = VGG16()
-#     model.init(knobs)
-#     model.train('tf-keras://fashion_mnist?train_or_test=train')
-#     accuracy = model.evaluate('tf-keras://fashion_mnist?train_or_test=test') 
-#     print(accuracy)

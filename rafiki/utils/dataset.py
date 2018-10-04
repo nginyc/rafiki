@@ -1,30 +1,40 @@
-import os
-import abc
-from urllib.parse import urlparse, parse_qs
-from tensorflow import keras
+from PIL import Image
+import numpy as np
+import requests
 
-def load_dataset(dataset_uri):
-    parse_result = urlparse(dataset_uri)
+from urllib.parse import urlparse
+import zipfile
+import io
 
-    if parse_result.scheme == 'tf-keras':
-        dataset_name = parse_result.netloc
-        query = parse_qs(parse_result.query)
-        train_or_test = query.get('train_or_test', ['train'])[0]
-        return load_tf_keras_dataset(dataset_name, train_or_test)
+from rafiki.constants import *
+
+def load_dataset(uri, task):
+    parsed_uri = urlparse(uri)
+    protocol = '{uri.scheme}'.format(uri=parsed_uri)
+    if _is_http(protocol) or _is_https(protocol):
+        if _is_image_classification(task):
+            r = requests.get(uri)
+            images = []
+            labels = []
+            with zipfile.ZipFile(io.BytesIO(r.content)) as dataset:
+                for entry in dataset.namelist():
+                    if entry.endswith('.png') or entry.endswith('.jpg'):
+                        label = entry.split('/')[-2]
+                        labels.append(label)
+                        encoded = io.BytesIO(dataset.read(entry))
+                        image = np.array(Image.open(encoded))
+                        images.append(image)
+            return (np.array(images), np.array(labels))
+        else:
+            raise Exception('{} task not supported'.format(task))
     else:
-        raise Exception('Dataset URI scheme not supported: {}'.format(parse_result.scheme))
+        raise Exception('Dataset URI scheme not supported: {}'.format(protocol))
 
+def _is_http(protocol):
+    return protocol == DatasetProtocol.HTTP
 
-def load_tf_keras_dataset(dataset_name, train_or_test):
-    keras_dataset = getattr(keras.datasets, dataset_name)
+def _is_https(protocol):
+    return protocol == DatasetProtocol.HTTPS
 
-    (train_images, train_labels), (test_images, test_labels) = \
-        keras_dataset.load_data()
-
-    if train_or_test == 'train':
-        return (train_images, train_labels)
-    elif train_or_test == 'test':
-        return (test_images, test_labels)
-    else:
-        raise Exception('Invalid `train_or_test` value: {}'.format(train_or_test))
-        
+def _is_image_classification(task):
+    return task == DatasetTask.IMAGE_CLASSIFICATION
