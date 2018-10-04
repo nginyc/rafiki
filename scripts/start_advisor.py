@@ -1,7 +1,7 @@
 import os
 
 from rafiki.utils.log import configure_logging
-from rafiki.advisor import app
+from rafiki.advisor.app import app
 
 configure_logging('advisor')
 
