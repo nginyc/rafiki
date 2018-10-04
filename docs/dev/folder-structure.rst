@@ -1,4 +1,4 @@
-Rafiki's Folder Structure
+Folder Structure
 ====================================================================
 
 - `rafiki/`
@@ -19,34 +19,29 @@ Rafiki's Folder Structure
 
         .. seealso:: :class:`rafiki.client.Client`
 
-    - `train_worker/`
+    - `worker/`
 
-        Code for Rafiki's `Train Worker` component
-
-    - `inference_worker/`
-
-        Code for Rafiki's `Inference Worker` component
+        Code for Rafiki's `Train Worker` component and `Inference Worker` component
     
-    - `query_frontend/`
+    - `predictor/`
 
-        Code for Rafiki's `Query Frontend` component
+        Code for Rafiki's `Predictor` component
 
     - `db/`
 
-        Code for an abstract access layer for Rafiki's *Database*
+        Code for Rafiki's *Database* as an abstract data access layer
 
     - `cache/`
 
-        Code for an abstract access layer for Rafiki's *Cache*
+        Code for Rafiki's *Cache* as an abstract data access layer
 
-    - `model/`
+    - `container/`
 
-        Code for the definition of abstract :class:`rafiki.model.BaseModel` that all models should extend, as well as utility methods for the implementation of models (e.g. reading from datasets).
+        Code for the deployment of Rafiki's dynamic stack (e.g. workers) as *services*
 
     - `utils/`
 
-        Collection of Rafiki-internal utility methods (e.g. for logging, serialization of models, authentication)
-
+        Collection of Rafiki-internal utility methods (e.g. for logging, authentication)
     - `config.py`
 
         Stores Rafiki-internal application-level configuration variables
@@ -54,6 +49,10 @@ Rafiki's Folder Structure
     - `constants.py`
 
         Stores Rafiki's constants used internally & externally (e.g. valid values for user type, budget type, train job status)
+
+    - `model.py`
+
+        Stores definition of abstract :class:`rafiki.model.BaseModel` that all Rafiki models should extend, as well as Rafiki-internal methods for managing models.
 
 - `dockerfiles/`
     

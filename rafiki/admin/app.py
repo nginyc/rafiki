@@ -4,9 +4,8 @@ import traceback
 
 from rafiki.constants import UserType
 from rafiki.utils.auth import generate_token, decode_token, UnauthorizedException, auth
-from rafiki.utils.parse import get_request_params
 
-from .Admin import Admin
+from .admin import Admin
 
 admin = Admin()
 
@@ -139,10 +138,10 @@ def get_inference_jobs_of_app(auth, app):
 
 @app.route('/inference_jobs/<app>/<app_version>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def get_inference_job(auth, app, app_version):
+def get_running_inference_job(auth, app, app_version):
     params = get_request_params()
     with admin:
-        return jsonify(admin.get_inference_job(app, app_version=int(app_version), **params))
+        return jsonify(admin.get_running_inference_job(app, app_version=int(app_version), **params))
 
 @app.route('/inference_jobs/<app>/<app_version>/stop', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
@@ -184,3 +183,21 @@ def get_models(auth):
 @app.errorhandler(Exception)
 def handle_error(error):
     return traceback.format_exc(), 500
+
+# Extract request params from Flask request
+def get_request_params():
+    # Get params from body as JSON
+    params = request.get_json()
+
+    # If the above fails, get params from body as form data
+    if params is None:
+        params = request.form.to_dict()
+
+    # Merge in query params
+    query_params = {
+        k: v
+        for k, v in request.args.items()
+    }
+    params = {**params, **query_params}
+
+    return params
