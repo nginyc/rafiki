@@ -4,7 +4,9 @@ import traceback
 
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType
-from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT
+from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, \
+    TRAIN_WORKER_REPLICAS_PER_MODEL, INFERENCE_WORKER_REPLICAS_PER_TRIAL, \
+    INFERENCE_MAX_BEST_TRIALS
 from rafiki.container import DockerSwarmContainerManager 
 
 logger = logging.getLogger(__name__)
@@ -25,7 +27,7 @@ class ServicesManager(object):
         predictor_service = self._create_predictor_service(inference_job)
 
         # Create a worker service for each best trial of associated train job
-        best_trials = self._db.get_best_trials_of_train_job(inference_job.train_job_id, max_count=2)
+        best_trials = self._get_best_trials_for_inference()
         trial_to_replicas = self._compute_inference_worker_replicas_for_trials(best_trials)
         for (trial, replicas) in trial_to_replicas.items():
             self._create_inference_job_worker(inference_job, trial, replicas)
@@ -285,17 +287,24 @@ class ServicesManager(object):
 
         return port
 
+    def _get_best_trials_for_inference(self):
+        best_trials = self._db.get_best_trials_of_train_job(
+            inference_job.train_job_id, 
+            max_count=INFERENCE_MAX_BEST_TRIALS
+        )
+        return best_trials
+
     def _compute_train_worker_replicas_for_models(self, models):
         # TODO: Improve provisioning algorithm
         return {
-            model : 2 # 2 replicas per model
+            model : TRAIN_WORKER_REPLICAS_PER_MODEL
             for model in models
         }
 
     def _compute_inference_worker_replicas_for_trials(self, trials):
         # TODO: Improve provisioning algorithm
         return {
-            trial : 2 # 2 replicas per trial
+            trial : INFERENCE_WORKER_REPLICAS_PER_TRIAL
             for trial in trials
         }
     
