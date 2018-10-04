@@ -60,12 +60,6 @@ Examples:
             model_class='SkDt'
         )
 
-        client.create_model(
-            name='SkSvm',
-            task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
-            model_file_path='examples/models/image_classification/SkSvm.py',
-            model_class='SkSvm'
-        )
 
 Listing models by task
 --------------------------------------------------------------------
@@ -83,11 +77,17 @@ Example:
 
     .. code-block:: python
 
-        [{'datetime_created': 'Tue, 25 Sep 2018 09:28:44 GMT',
-        'docker_image': 'rafikiai/rafiki_worker',
-        'model_class': 'SingleHiddenLayerTensorflowModel',
-        'name': 'single_hidden_layer_tf',
+        [{'datetime_created': 'Thu, 04 Oct 2018 03:24:58 GMT',
+        'docker_image': 'rafikiai/rafiki_worker:0.0.3',
+        'model_class': 'TfSingleHiddenLayer',
+        'name': 'TfSingleHiddenLayer',
         'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
-        'user_id': '695a23b0-a488-4110-aa50-6476e53a0e4d'}]
+        'user_id': '23f3526a-35d1-46ba-be68-af8f4992a0f9'},
+        {'datetime_created': 'Thu, 04 Oct 2018 03:24:59 GMT',
+        'docker_image': 'rafikiai/rafiki_worker:0.0.3',
+        'model_class': 'SkDt',
+        'name': 'SkDt',
+        'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
+        'user_id': '23f3526a-35d1-46ba-be68-af8f4992a0f9'}]
     
 

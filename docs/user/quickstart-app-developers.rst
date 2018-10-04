@@ -42,12 +42,18 @@ Example:
 
     .. code-block:: python
 
-        [{'datetime_created': 'Tue, 25 Sep 2018 09:28:44 GMT',
-        'docker_image': 'rafikiai/rafiki_worker',
-        'model_class': 'SingleHiddenLayerTensorflowModel',
-        'name': 'single_hidden_layer_tf',
+        [{'datetime_created': 'Thu, 04 Oct 2018 03:24:58 GMT',
+        'docker_image': 'rafikiai/rafiki_worker:0.0.3',
+        'model_class': 'TfSingleHiddenLayer',
+        'name': 'TfSingleHiddenLayer',
         'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
-        'user_id': '695a23b0-a488-4110-aa50-6476e53a0e4d'}]
+        'user_id': '23f3526a-35d1-46ba-be68-af8f4992a0f9'},
+        {'datetime_created': 'Thu, 04 Oct 2018 03:24:59 GMT',
+        'docker_image': 'rafikiai/rafiki_worker:0.0.3',
+        'model_class': 'SkDt',
+        'name': 'SkDt',
+        'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
+        'user_id': '23f3526a-35d1-46ba-be68-af8f4992a0f9'}]
     
 
 Creating a train job
@@ -76,7 +82,7 @@ Example:
 
         {'app': 'fashion_mnist_app',
         'app_version': 1,
-        'id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58'}
+        'id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76'}
 
 
 Listing train jobs of an app
@@ -98,10 +104,10 @@ Example:
         'app_version': 1,
         'budget_amount': 3,
         'budget_type': 'MODEL_TRIAL_COUNT',
-        'datetime_completed': None,
-        'datetime_started': 'Mon, 17 Sep 2018 05:00:24 GMT',
-        'id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58',
-        'status': 'RUNNING',
+        'datetime_completed': 'Thu, 04 Oct 2018 03:27:51 GMT',
+        'datetime_started': 'Thu, 04 Oct 2018 03:25:06 GMT',
+        'id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76',
+        'status': 'COMPLETED',
         'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
         'test_dataset_uri': 'tf-keras://fashion_mnist?train_or_test=test',
         'train_dataset_uri': 'tf-keras://fashion_mnist?train_or_test=train'}]
@@ -126,18 +132,24 @@ Example:
         'app_version': 1,
         'budget_amount': 3,
         'budget_type': 'MODEL_TRIAL_COUNT',
-        'datetime_completed': 'Mon, 17 Sep 2018 05:04:26 GMT',
-        'datetime_started': 'Mon, 17 Sep 2018 05:00:24 GMT',
-        'id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58',
+        'datetime_completed': 'Thu, 04 Oct 2018 03:27:51 GMT',
+        'datetime_started': 'Thu, 04 Oct 2018 03:25:06 GMT',
+        'id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76',
         'status': 'COMPLETED',
         'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
         'test_dataset_uri': 'tf-keras://fashion_mnist?train_or_test=test',
         'train_dataset_uri': 'tf-keras://fashion_mnist?train_or_test=train',
-        'workers': [{'datetime_started': 'Mon, 17 Sep 2018 05:00:25 GMT',
-                    'datetime_stopped': 'Mon, 17 Sep 2018 05:04:26 GMT',
-                    'model_name': 'single_hidden_layer_tf',
+        'workers': [{'datetime_started': 'Thu, 04 Oct 2018 03:25:06 GMT',
+                    'datetime_stopped': 'Thu, 04 Oct 2018 03:27:15 GMT',
+                    'model_name': 'TfSingleHiddenLayer',
                     'replicas': 2,
-                    'service_id': '09c18fd9-ee7d-44bf-b658-fa9c6d0972a3',
+                    'service_id': '584ec59d-99ab-4e93-ab3a-af844d325a37',
+                    'status': 'STOPPED'},
+                    {'datetime_started': 'Thu, 04 Oct 2018 03:25:06 GMT',
+                    'datetime_stopped': 'Thu, 04 Oct 2018 03:27:51 GMT',
+                    'model_name': 'SkDt',
+                    'replicas': 2,
+                    'service_id': '6898ed0a-d39c-49fe-bbad-1ce5b01fd2dd',
                     'status': 'STOPPED'}]}]
 
 
@@ -156,33 +168,27 @@ Example:
 
     .. code-block:: python
 
-        [{'datetime_stopped': 'Mon, 17 Sep 2018 05:00:56 GMT',
-        'datetime_started': 'Mon, 17 Sep 2018 05:00:35 GMT',
-        'knobs': {'batch_size': 32,
-                            'epochs': 1,
-                            'hidden_layer_units': 10,
-                            'learning_rate': 0.0075360338999624086},
-        'id': '8d40ad88-e5a1-4b16-b188-44be920b1683',
-        'model_name': 'single_hidden_layer_tf',
-        'score': 0.8231},
-        {'datetime_stopped': 'Mon, 17 Sep 2018 05:04:26 GMT',
-        'datetime_started': 'Mon, 17 Sep 2018 05:03:06 GMT',
-        'knobs': {'batch_size': 1,
-                            'epochs': 1,
-                            'hidden_layer_units': 10,
-                            'learning_rate': 0.030337360568713518},
-        'id': '74bd9b43-9812-4930-a29c-9b765b5b46bc',
-        'model_name': 'single_hidden_layer_tf',
-        'score': 0.099},
-        {'datetime_stopped': 'Mon, 17 Sep 2018 05:03:06 GMT',
-        'datetime_started': 'Mon, 17 Sep 2018 05:00:56 GMT',
-        'knobs': {'batch_size': 1,
-                            'epochs': 1,
-                            'hidden_layer_units': 78,
-                            'learning_rate': 0.056356430854509774},
-        'id': '94ea26de-e4a1-45af-8907-51cc4509d410',
-        'model_name': 'single_hidden_layer_tf',
-        'score': 0.092}]
+        [{'datetime_started': 'Thu, 04 Oct 2018 03:26:54 GMT',
+        'datetime_stopped': 'Thu, 04 Oct 2018 03:27:04 GMT',
+        'id': '38383e64-4406-4292-9e4b-abe342a085d3',
+        'knobs': {'batch_size': 128,
+                    'epochs': 1,
+                    'hidden_layer_units': 34,
+                    'learning_rate': 0.022193442791377953},
+        'model_name': 'TfSingleHiddenLayer',
+        'score': 0.8312},
+        {'datetime_started': 'Thu, 04 Oct 2018 03:25:18 GMT',
+        'datetime_stopped': 'Thu, 04 Oct 2018 03:27:39 GMT',
+        'id': 'd8ea9d7f-c484-462b-80cb-dfa01f07d9c1',
+        'knobs': {'criterion': 'entropy', 'max_depth': 8},
+        'model_name': 'SkDt',
+        'score': 0.7823},
+        {'datetime_started': 'Thu, 04 Oct 2018 03:25:18 GMT',
+        'datetime_stopped': 'Thu, 04 Oct 2018 03:27:23 GMT',
+        'id': '99bc9628-be0d-406e-97f8-1566aa58ffd7',
+        'knobs': {'criterion': 'entropy', 'max_depth': 6},
+        'model_name': 'SkDt',
+        'score': 0.7341}]
 
 .. _`creating-inference-job`:
 
@@ -209,9 +215,9 @@ Example:
 
         {'app': 'fashion_mnist_app',
         'app_version': 1,
-        'id': '25c117a0-1677-44b2-affb-c56f8f99dabf',
+        'id': '38c53776-c450-4b86-a173-6e245863549a',
         'predictor_host': '127.0.0.1:30000',
-        'train_job_id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58'}
+        'train_job_id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76'}
     
 
 Listing inference jobs of an app
@@ -231,12 +237,12 @@ Example:
 
         [{'app': 'fashion_mnist_app',
         'app_version': 1,
-        'datetime_started': 'Mon, 17 Sep 2018 05:17:34 GMT',
+        'datetime_started': 'Thu, 04 Oct 2018 03:31:59 GMT',
         'datetime_stopped': None,
-        'id': '25c117a0-1677-44b2-affb-c56f8f99dabf',
+        'id': '38c53776-c450-4b86-a173-6e245863549a',
         'predictor_host': '127.0.0.1:30000',
         'status': 'RUNNING',
-        'train_job_id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58'}]
+        'train_job_id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76'}]
 
 
 Retrieving details of running inference job for an app 
@@ -256,36 +262,33 @@ Example:
 
         [{'app': 'fashion_mnist_app',
         'app_version': 1,
-        'datetime_started': 'Mon, 17 Sep 2018 05:17:34 GMT',
+        'datetime_started': 'Thu, 04 Oct 2018 03:31:59 GMT',
         'datetime_stopped': None,
-        'id': '25c117a0-1677-44b2-affb-c56f8f99dabf',
+        'id': '38c53776-c450-4b86-a173-6e245863549a',
         'predictor_host': '127.0.0.1:30000',
         'status': 'RUNNING',
-        'train_job_id': '99b6a250-d0d0-431f-8fa7-eeedcd9bed58',
-        'workers': [{'datetime_started': 'Mon, 17 Sep 2018 05:17:34 GMT',
+        'train_job_id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76',
+        'workers': [{'datetime_started': 'Thu, 04 Oct 2018 03:31:59 GMT',
                     'datetime_stopped': None,
                     'replicas': 2,
-                    'service_id': '27d1986f-f96c-4ada-ae35-d6cd1d55f8ca',
+                    'service_id': '13e21391-c054-489e-819b-90fd1ab175bb',
                     'status': 'RUNNING',
-                    'trial': {'knobs': {'batch_size': 32,
-                                                    'epochs': 1,
-                                                    'hidden_layer_units': 10,
-                                                    'learning_rate': 0.0075360338999624086},
-                                'id': '8d40ad88-e5a1-4b16-b188-44be920b1683',
-                                'model_name': 'single_hidden_layer_tf',
-                                'score': 0.8231}},
-                    {'datetime_started': 'Mon, 17 Sep 2018 05:17:34 GMT',
+                    'trial': {'id': '38383e64-4406-4292-9e4b-abe342a085d3',
+                                'knobs': {'batch_size': 128,
+                                        'epochs': 1,
+                                        'hidden_layer_units': 34,
+                                        'learning_rate': 0.022193442791377953},
+                                'model_name': 'TfSingleHiddenLayer',
+                                'score': 0.8312}},
+                    {'datetime_started': 'Thu, 04 Oct 2018 03:31:59 GMT',
                     'datetime_stopped': None,
                     'replicas': 2,
-                    'service_id': '951b78c8-dbc3-470c-8d5d-55db11eca6b0',
+                    'service_id': 'f25fb364-270f-4b11-b5d5-4466dbfdfb0b',
                     'status': 'RUNNING',
-                    'trial': {'knobs': {'batch_size': 1,
-                                                    'epochs': 1,
-                                                    'hidden_layer_units': 10,
-                                                    'learning_rate': 0.030337360568713518},
-                                'id': '74bd9b43-9812-4930-a29c-9b765b5b46bc',
-                                'model_name': 'single_hidden_layer_tf',
-                                'score': 0.099}}]}]
+                    'trial': {'id': 'd8ea9d7f-c484-462b-80cb-dfa01f07d9c1',
+                                'knobs': {'criterion': 'entropy', 'max_depth': 8},
+                                'model_name': 'SkDt',
+                                'score': 0.7823}}]}]
 
 
 Stopping a running inference job
