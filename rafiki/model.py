@@ -2,8 +2,8 @@ import os
 import json
 import abc
 import traceback
-
 from rafiki.advisor import make_advisor
+from rafiki.utils.model import parse_model_prediction
 
 class InvalidModelClassException(Exception):
     pass
@@ -86,6 +86,7 @@ class BaseModel(abc.ABC):
     def predict(self, queries):
         '''
         Make predictions on a batch of queries with this model instance after training. 
+        Each prediction should be JSON serializable.
         This will be called only when model is *trained*.
 
         :param queries: List of queries, where a query is in a format specified by the task 
@@ -99,7 +100,7 @@ class BaseModel(abc.ABC):
     def dump_parameters(self):
         '''
         Return a dictionary of model parameters that fully define this model instance's trained state. 
-        This dictionary must be JSON serializable.
+        This dictionary should be JSON serializable.
         This will be used for trained model serialization within Rafiki.
         This will be called only when model is *trained*.
 
@@ -132,7 +133,6 @@ class BaseModel(abc.ABC):
 
 def test_model_class(model_class, train_dataset_uri, test_dataset_uri, 
                 queries=[], knobs=None):
-
     '''
     Validates whether a model class is properly defined. 
     The model instance's methods will be called in an order similar to that in Rafiki.
@@ -200,6 +200,16 @@ def test_model_class(model_class, train_dataset_uri, test_dataset_uri,
     print('Testing predictions with model...')
     print('Using queries: {}'.format(queries))
     predictions = model_inst.predict(queries)
+
+    try:
+        for prediction in predictions:
+            prediction = parse_model_prediction(prediction)
+            json.dumps(prediction)
+            
+    except Exception:
+        traceback.print_stack()
+        raise InvalidModelClassException('Each `prediction` should be JSON serializable')
+
     print('Predictions: {}'.format(predictions))
     
     print('The model definition is valid!')
