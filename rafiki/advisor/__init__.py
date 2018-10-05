@@ -1,2 +1,1 @@
-from .service import AdvisorService
-from .app import app
+from .advisor import make_advisor

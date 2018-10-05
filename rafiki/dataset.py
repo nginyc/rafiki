@@ -1,7 +1,6 @@
 import os
 import abc
 from urllib.parse import urlparse, parse_qs
-from tensorflow import keras
 
 def load_dataset(dataset_uri):
     parse_result = urlparse(dataset_uri)
@@ -14,8 +13,8 @@ def load_dataset(dataset_uri):
     else:
         raise Exception('Dataset URI scheme not supported: {}'.format(parse_result.scheme))
 
-
 def load_tf_keras_dataset(dataset_name, train_or_test):
+    from tensorflow import keras
     keras_dataset = getattr(keras.datasets, dataset_name)
 
     (train_images, train_labels), (test_images, test_labels) = \

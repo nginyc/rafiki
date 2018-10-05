@@ -1,9 +1,9 @@
-Class Documentation
+Python Documentation
 ====================================================================
 
 .. toctree::
    :maxdepth: 2
    
    rafiki.client.Client
-   rafiki.model.BaseModel
+   rafiki.model
    rafiki.constants

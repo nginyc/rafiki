@@ -1,9 +1,12 @@
 import os
+import json
 import abc
-import pickle
-from importlib import import_module
+import traceback
+from rafiki.advisor import make_advisor
+from rafiki.utils.model import parse_model_prediction
 
-TEMP_MODEL_FILE_NAME = 'temp'
+class InvalidModelClassException(Exception):
+    pass
 
 class InvalidModelParamsException(Exception):
     pass
@@ -83,6 +86,7 @@ class BaseModel(abc.ABC):
     def predict(self, queries):
         '''
         Make predictions on a batch of queries with this model instance after training. 
+        Each prediction should be JSON serializable.
         This will be called only when model is *trained*.
 
         :param queries: List of queries, where a query is in a format specified by the task 
@@ -95,7 +99,8 @@ class BaseModel(abc.ABC):
     @abc.abstractmethod
     def dump_parameters(self):
         '''
-        Return a dictionary of model parameters that fully define this model instance's trained state.
+        Return a dictionary of model parameters that fully define this model instance's trained state. 
+        This dictionary should be JSON serializable.
         This will be used for trained model serialization within Rafiki.
         This will be called only when model is *trained*.
 
@@ -125,19 +130,91 @@ class BaseModel(abc.ABC):
         '''
         pass
 
-def load_model_class(model_file_bytes, model_class):
-    # Save the model file to disk
-    f = open('{}.py'.format(TEMP_MODEL_FILE_NAME), 'wb')
-    f.write(model_file_bytes)
-    f.close()
 
-    # Import model file as module
-    mod = import_module(TEMP_MODEL_FILE_NAME)
+def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, 
+                queries=[], knobs=None):
+    '''
+    Validates whether a model class is properly defined. 
+    The model instance's methods will be called in an order similar to that in Rafiki.
 
-    # Extract model class from module
-    clazz = getattr(mod, model_class)
+    :param str train_dataset_uri: URI of the train dataset for testing the training of model
+    :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model
+    :param list[any] queries: List of queries for testing predictions with the trained model
+    :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used
+    :type knobs: dict[str, any]
+    :returns: The trained model
+    '''
+    
+    print('Testing instantiation of model...')
+    model_inst = model_class()
 
-    # Remove temporary file
-    os.remove(f.name)
+    print('Testing getting of model\'s knob config...')
+    knob_config = model_inst.get_knob_config()
 
-    return clazz
+    if not isinstance(knob_config, dict):
+        raise InvalidModelClassException('`get_knob_config()` should return a dict[str, any]')
+
+    if 'knobs' not in knob_config:
+        raise InvalidModelClassException('`knob_config` should have a \'knobs\' key')
+    
+    advisor = make_advisor(knob_config)
+
+    if knobs is None:
+        knobs = advisor.propose()
+
+    print('Testing initialization of model...')
+    print('Using knobs: {}'.format(knobs))
+    model_inst.init(knobs)
+
+    print('Testing training of model...')
+    model_inst.train(train_dataset_uri)
+
+    print('Testing evaluation of model...')
+    score = model_inst.evaluate(test_dataset_uri)
+
+    if not isinstance(score, float):
+        raise InvalidModelClassException('`evaluate()` should return a float!')
+
+    print('Score: {}'.format(score))
+
+    print('Testing dumping of parameters of model...')
+    parameters = model_inst.dump_parameters()
+
+    if not isinstance(parameters, dict):
+        raise InvalidModelClassException('`dump_parameters()` should return a dict[str, any]')
+
+    try:
+        json.dumps(parameters)
+    except Exception:
+        traceback.print_stack()
+        raise InvalidModelClassException('`parameters` should be JSON serializable')
+
+    print('Testing destroying of model...')
+    model_inst.destroy()
+
+    print('Testing loading of parameters of model...')
+    model_inst = model_class()
+    model_inst.init(knobs)
+    model_inst.load_parameters(parameters)
+
+    print('Testing predictions with model...')
+    print('Using queries: {}'.format(queries))
+    predictions = model_inst.predict(queries)
+
+    try:
+        for prediction in predictions:
+            prediction = parse_model_prediction(prediction)
+            json.dumps(prediction)
+            
+    except Exception:
+        traceback.print_stack()
+        raise InvalidModelClassException('Each `prediction` should be JSON serializable')
+
+    print('Predictions: {}'.format(predictions))
+    
+    print('The model definition is valid!')
+
+    return model_inst
+
+
+
