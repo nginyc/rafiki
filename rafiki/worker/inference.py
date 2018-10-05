@@ -8,7 +8,7 @@ import logging
 import traceback
 import json
 
-from rafiki.model import load_model_class
+from rafiki.utils.model import load_model_class, parse_model_prediction
 from rafiki.db import Database
 from rafiki.cache import Cache
 from rafiki.config import RUNNING_INFERENCE_WORKERS, REQUEST_QUEUE, INFERENCE_WORKER_SLEEP, BATCH_SIZE
@@ -53,7 +53,7 @@ class InferenceWorker(object):
                 predictions = None
                 try:
                     predictions = self._model.predict(queries)
-                    predictions = [to_json_serializable(x) for x in predictions]
+                    predictions = [parse_model_prediction(x) for x in predictions]
                 except Exception:
                     logger.error('Error while making predictions:')
                     logger.error(traceback.format_exc())
@@ -120,9 +120,3 @@ class InferenceWorker(object):
             inference_job.predictor_service_id,
             worker.trial_id
         )
-
-def to_json_serializable(data):
-    if isinstance(data, np.int64):
-        return int(data)
-
-    return data
