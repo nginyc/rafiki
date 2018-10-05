@@ -23,8 +23,8 @@ Example:
     .. code-block:: python
 
         from rafiki.client import Client
-        client = Client()
-        client.login(email='app_developer@rafiki', password='rafiki')
+        client = Client(admin_host='localhost', admin_port=8000)
+        client.login(email='superadmin@rafiki', password='rafiki')
         
 
 Listing models by task

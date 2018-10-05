@@ -4,6 +4,6 @@ Developer Guide
 .. toctree::
    :maxdepth: 2
    
-   setup
+   setup-development
    architecture
    folder-structure
