@@ -6,7 +6,7 @@ import base64
 import numpy as np
 
 from rafiki.dataset import load_dataset
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
+from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
 
 class SkSvm(BaseModel):
     '''
@@ -99,7 +99,7 @@ class SkSvm(BaseModel):
 
 
 if __name__ == '__main__':
-    test_model_class(
+    validate_model_class(
         model_class=SkSvm,
         train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
         test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test',
