@@ -14,7 +14,7 @@ Index
    
    docs/user/index.rst
    docs/dev/index.rst
-   docs/classes/index.rst
+   docs/python/index.rst
 
 What is Rafiki?
 --------------------------------------------------------------------

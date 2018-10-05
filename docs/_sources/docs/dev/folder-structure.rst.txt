@@ -1,3 +1,5 @@
+.. _`folder-structure`:
+
 Folder Structure
 ====================================================================
 
@@ -42,6 +44,7 @@ Folder Structure
     - `utils/`
 
         Collection of Rafiki-internal utility methods (e.g. for logging, authentication)
+    
     - `config.py`
 
         Stores Rafiki-internal application-level configuration variables
@@ -52,7 +55,11 @@ Folder Structure
 
     - `model.py`
 
-        Stores definition of abstract :class:`rafiki.model.BaseModel` that all Rafiki models should extend, as well as Rafiki-internal methods for managing models.
+        Stores definition of abstract :class:`rafiki.model.BaseModel` that all Rafiki models should extend
+
+    - `dataset.py`
+
+        Collection of utility methods for loading and reading from datasets in model definitions
 
 - `dockerfiles/`
     

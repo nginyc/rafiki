@@ -1,9 +1,9 @@
-Developer Guide
+Python Documentation
 ====================================================================
 
 .. toctree::
    :maxdepth: 2
    
-   setup-development
-   architecture
-   folder-structure
+   rafiki.client.Client
+   rafiki.model
+   rafiki.constants

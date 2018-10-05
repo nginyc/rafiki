@@ -20,7 +20,7 @@ Example:
     .. code-block:: python
 
         from rafiki.client import Client
-        client = Client()
+        client = Client(admin_host='localhost', admin_port=8000)
         client.login(email='superadmin@rafiki', password='rafiki')
         
 Creating users
