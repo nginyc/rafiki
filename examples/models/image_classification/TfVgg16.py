@@ -11,6 +11,7 @@ from urllib.parse import urlparse, parse_qs
 
 from rafiki.dataset import load_dataset
 from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
+from rafiki.constants import DatasetTask
 
 class TfVgg16(BaseModel):
     '''
@@ -37,6 +38,9 @@ class TfVgg16(BaseModel):
             'conditional_knobs': {}
         }
 
+    def get_predict_label_mapping(self):
+        return self._predict_label_mapping
+
     def init(self, knobs):
         self._batch_size = knobs.get('batch_size')
         self._epochs = knobs.get('epochs')
@@ -45,59 +49,51 @@ class TfVgg16(BaseModel):
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
 
-    def train(self, dataset_uri):
-        (images, labels) = self._load_dataset(dataset_uri)
+    def train(self, dataset_uri, task):
+        (images, labels) = self._load_dataset(dataset_uri, task)
         images = images.reshape(-1, 784)
         images = np.dstack([images] * 3)
         images = images.reshape(-1, 28, 28, 3)
-        images = np.asarray([img_to_array(array_to_img(im, scale=False).resize((48,48))) for im in images])
+        images = [np.asarray([img_to_array(array_to_img(im, scale=False).resize((48,48))) for im in images])]
 
-        num_classes = len(np.unique(labels))
+        class_names = np.unique(labels)
+        num_classes = len(class_names)
+        self._predict_label_mapping = dict(zip(range(num_classes), class_names))
+        train_and_evalutate_label_mapping = {v: k for k, v in  self._predict_label_mapping.items()}
 
-        X = [images]
-        y = keras.utils.to_categorical(
-            labels, 
-            num_classes=num_classes
-        )
+        labels = np.array([train_and_evalutate_label_mapping()[label] for label in labels])
 
         with self._graph.as_default():
             self._model = self._build_model(num_classes)
             with self._sess.as_default():
                 self._model.fit(
-                    X, 
-                    y, 
+                    images, 
+                    labels, 
                     epochs=self._epochs, 
                     batch_size=self._batch_size
                 )
 
-    def evaluate(self, dataset_uri):
-        (images, labels) = self._load_dataset(dataset_uri)
+    def evaluate(self, dataset_uri, task):
+        (images, labels) = self._load_dataset(dataset_uri, task)
         images = images.reshape(-1, 784)
         images = np.dstack([images] * 3)
         images = images.reshape(-1, 28, 28, 3)
-        images = np.asarray([img_to_array(array_to_img(im, scale=False).resize((48,48))) for im in images])
+        images = [np.asarray([img_to_array(array_to_img(im, scale=False).resize((48,48))) for im in images])]
 
-        num_classes = len(np.unique(labels))
+        train_and_evalutate_label_mapping = {v: k for k, v in  self._predict_label_mapping.items()}
+        labels = np.array([train_and_evalutate_label_mapping[label] for label in labels])
 
-        X = [images]
-        y = keras.utils.to_categorical(
-            labels, 
-            num_classes=num_classes
-        )
-
-        preds = self.predict(X)
-
-        accuracy = sum(labels == preds) / len(y)
+        with self._graph.as_default():
+            with self._sess.as_default():
+                (loss, accuracy) = self._model.evaluate(images, labels)
         return accuracy
 
     def predict(self, queries):
         X = np.array(queries)
         with self._graph.as_default():
             with self._sess.as_default():
-                probs = self._model.predict(X)
-                preds = np.argmax(probs, axis=1)
-
-        return preds
+                probabilities = self._model.predict(X)
+        return probabilities
     
     def destroy(self):
         self._sess.close()
@@ -146,9 +142,9 @@ class TfVgg16(BaseModel):
         # Remove temp file
         os.remove(tmp.name)
 
-    def _load_dataset(self, dataset_uri):
+    def _load_dataset(self, dataset_uri, task):
         # Here, we use Rafiki's in-built dataset loader
-        return load_dataset(dataset_uri) 
+        return load_dataset(dataset_uri, task) 
 
     def _build_model(self, num_classes):
         learning_rate = self._learning_rate
@@ -161,7 +157,7 @@ class TfVgg16(BaseModel):
 
         model.compile(
             optimizer=keras.optimizers.Adam(lr=learning_rate),
-            loss='categorical_crossentropy',
+            loss='sparse_categorical_crossentropy',
             metrics=['accuracy']
         )
         return model
@@ -169,8 +165,9 @@ class TfVgg16(BaseModel):
 if __name__ == '__main__':
     validate_model_class(
         model_class=TfVgg16,
-        train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
-        test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test',
+        train_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true',
+        test_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true',
+        task=DatasetTask.IMAGE_CLASSIFICATION,
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
