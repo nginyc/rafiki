@@ -1,7 +1,7 @@
 from btb.tuning import GP
 from btb import HyperParameter, ParamTypes
 
-from .base_advisor import BaseAdvisor
+from .advisor import BaseAdvisor
 
 class BtbGpAdvisor(BaseAdvisor):
     '''

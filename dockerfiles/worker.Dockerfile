@@ -20,7 +20,7 @@ COPY rafiki/worker/requirements.txt worker/requirements.txt
 RUN pip install -r worker/requirements.txt
 
 # Install popular ML libraries
-RUN pip install numpy==1.14.5 tensorflow==1.10.1 h5py==2.8.0 torch==0.4.1 Keras==2.2.2
+RUN pip install numpy==1.14.5 tensorflow==1.10.1 h5py==2.8.0 torch==0.4.1 Keras==2.2.2 scikit-learn==0.20.0
 
 COPY rafiki/ rafiki/
 

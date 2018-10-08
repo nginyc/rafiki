@@ -1,7 +1,7 @@
 import os
 
 from rafiki.utils.log import configure_logging
-from rafiki.predictor import app
+from rafiki.predictor.app import app
 
 service_id = os.environ['RAFIKI_SERVICE_ID']
 container_id = os.environ.get('HOSTNAME', 'localhost')

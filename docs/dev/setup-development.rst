@@ -1,4 +1,6 @@
-Setup
+.. _`setup-development`:
+
+Setup & Development
 ====================================================================
 
 .. contents:: Table of Contents
@@ -9,10 +11,11 @@ Installation
 We assume development or deployment in a MacOS or Linux environment.
 
 1. Install Docker 18
+
 2. Install Python 3.6
 
 
-Quickstart
+Quick Setup
 --------------------------------------------------------------------
 
 1. Setup Rafiki's complete stack with the init script:
@@ -37,6 +40,42 @@ Before running any individual scripts, make sure to run the shell configuration 
 
     source .env.sh
 
+Refer to :ref:`architecture` and :ref:`folder-structure` for a developer's overview of Rafiki.
+
+Starting Parts of the Stack
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The quickstart instructions set up a single node Docker Swarm on your machine. Separate shell scripts in the `./scripts/` folder configure and start parts of Rafiki's stack. Refer to the commands in
+`./scripts/start.sh`.
+
+Connecting to Rafiki's DB
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g `Postico <https://eggerapps.at/postico/>`_) with these credentials:
+
+::
+
+    POSTGRES_HOST=localhost
+    POSTGRES_PORT=5433
+    POSTGRES_USER=rafiki
+    POSTGRES_DB=rafiki
+    POSTGRES_PASSWORD=rafiki
+
+Connecting to Rafiki's Cache
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can connect to Redis DB with `rebrow <https://github.com/marians/rebrow>`_:
+
+.. code-block:: shell
+
+    bash scripts/start_rebrow.sh
+
+...with these credentials by default:
+
+::
+
+    REDIS_HOST=rafiki_cache
+    REDIS_PORT=6379
 
 Building Images Locally
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -70,11 +109,6 @@ Rafiki uses `Sphinx documentation <http://www.sphinx-doc.org>`_ and hosts the do
     bash scripts/build_docs.sh
     open docs/index.html
 
-Starting Parts of the Stack
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The quickstart instructions set up a single node Docker Swarm on your machine. Separate shell scripts in the `./scripts/` folder configure and start parts of Rafiki's stack. Refer to the commands in
-`./scripts/start.sh`.
 
 Reading Rafiki's logs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -85,34 +119,6 @@ You can read logs of Rafiki Admin, Rafiki Advisor & any of Rafiki's services in 
 
     open $LOGS_FOLDER_PATH
 
-Connecting to Rafiki's DB
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g `Postico <https://eggerapps.at/postico/>`_) with these credentials:
-
-::
-
-    POSTGRES_HOST=localhost
-    POSTGRES_PORT=5433
-    POSTGRES_USER=rafiki
-    POSTGRES_DB=rafiki
-    POSTGRES_PASSWORD=rafiki
-
-Connecting to Rafiki's Cache
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-You can connect to Redis DB with `rebrow <https://github.com/marians/rebrow>`_:
-
-.. code-block:: shell
-
-    bash scripts/start_rebrow.sh
-
-...with these credentials by default:
-
-::
-
-    REDIS_HOST=rafiki_cache
-    REDIS_PORT=6379
 
 Using Rafiki Admin's HTTP interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
