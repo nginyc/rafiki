@@ -153,6 +153,7 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task
 
     :param str train_dataset_uri: URI of the train dataset for testing the training of model
     :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model
+    :param str task: Task type of model
     :param list[any] queries: List of queries for testing predictions with the trained model
     :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used
     :type knobs: dict[str, any]

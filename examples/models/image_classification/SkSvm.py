@@ -7,6 +7,7 @@ import numpy as np
 
 from rafiki.dataset import load_dataset
 from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
+from rafiki.constants import DatasetTask
 
 class SkSvm(BaseModel):
     '''
@@ -35,6 +36,9 @@ class SkSvm(BaseModel):
             }
         }
 
+    def get_predict_label_mapping(self):
+        return self._predict_label_mapping
+
     def init(self, knobs):
         self._max_iter = knobs.get('max_iter') 
         self._kernel = knobs.get('kernel') 
@@ -47,14 +51,24 @@ class SkSvm(BaseModel):
             self._C
         )
         
-    def train(self, dataset_uri):
-        (images, labels) = self._load_dataset(dataset_uri)
+    def train(self, dataset_uri, task):
+        (images, labels) = self._load_dataset(dataset_uri, task)
+        class_names = np.unique(labels)
+        num_classes = len(class_names)
+        self._predict_label_mapping = dict(zip(range(num_classes), class_names))
+        train_and_evalutate_label_mapping = {v: k for k, v in  self._predict_label_mapping.items()}
+
+        labels = np.array([train_and_evalutate_label_mapping()[label] for label in labels])
+
         X = self._prepare_X(images)
         y = labels
         self._clf.fit(X, y)
 
-    def evaluate(self, dataset_uri):
-        (images, labels) = self._load_dataset(dataset_uri)
+    def evaluate(self, dataset_uri, task):
+        (images, labels) = self._load_dataset(dataset_uri, task)
+        train_and_evalutate_label_mapping = {v: k for k, v in  self._predict_label_mapping.items()}
+        labels = np.array([train_and_evalutate_label_mapping[label] for label in labels])
+        
         X = self._prepare_X(images)
         y = labels
         preds = self._clf.predict(X)
@@ -84,9 +98,9 @@ class SkSvm(BaseModel):
     def _prepare_X(self, images):
         return [np.array(image).flatten() for image in images]
 
-    def _load_dataset(self, dataset_uri):
+    def _load_dataset(self, dataset_uri, task):
         # Here, we use Rafiki's in-built dataset loader
-        return load_dataset(dataset_uri) 
+        return load_dataset(dataset_uri, task) 
 
     def _build_classifier(self, max_iter, kernel, gamma, C):
         clf = svm.SVC(
@@ -101,8 +115,9 @@ class SkSvm(BaseModel):
 if __name__ == '__main__':
     validate_model_class(
         model_class=SkSvm,
-        train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
-        test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test',
+        train_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true',
+        test_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true',
+        task=DatasetTask.IMAGE_CLASSIFICATION,
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
