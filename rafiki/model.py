@@ -145,7 +145,7 @@ class BaseModel(abc.ABC):
         pass
 
 
-def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task
+def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
                 queries=[], knobs=None):
     '''
     Validates whether a model class is properly defined. 
