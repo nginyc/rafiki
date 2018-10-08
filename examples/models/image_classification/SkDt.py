@@ -47,7 +47,7 @@ class SkDt(BaseModel):
         self._predict_label_mapping = dict(zip(range(num_classes), class_names))
         train_and_evalutate_label_mapping = {v: k for k, v in  self._predict_label_mapping.items()}
 
-        labels = np.array([train_and_evalutate_label_mapping()[label] for label in labels])
+        labels = np.array([train_and_evalutate_label_mapping[label] for label in labels])
 
         X = self._prepare_X(images)
         y = labels

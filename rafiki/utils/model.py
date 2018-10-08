@@ -21,6 +21,9 @@ def load_model_class(model_file_bytes, model_class):
 
     return clazz
 
+def probabilities_to_predictions(probabilities):
+    return np.argmax(probabilities, axis=1)
+
 def parse_model_prediction(prediction):
     if isinstance(prediction, np.int64):
         return int(prediction)

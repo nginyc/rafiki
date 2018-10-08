@@ -57,7 +57,7 @@ class TfSingleHiddenLayer(BaseModel):
         self._predict_label_mapping = dict(zip(range(num_classes), class_names))
         train_and_evalutate_label_mapping = {v: k for k, v in  self._predict_label_mapping.items()}
 
-        labels = np.array([train_and_evalutate_label_mapping()[label] for label in labels])
+        labels = np.array([train_and_evalutate_label_mapping[label] for label in labels])
 
         with self._graph.as_default():
             self._model = self._build_model(num_classes)
@@ -108,11 +108,13 @@ class TfSingleHiddenLayer(BaseModel):
         os.remove(tmp.name)
 
         return {
-            'h5_model_base64': h5_model_base64
+            'h5_model_base64': h5_model_base64,
+            'predict_label_mapping': self._predict_label_mapping
         }
 
     def load_parameters(self, params):
         h5_model_base64 = params.get('h5_model_base64', None)
+        predict_label_mapping = params.get('predict_label_mapping', None)
 
         if h5_model_base64 is None:
             raise InvalidModelParamsException()
@@ -129,7 +131,7 @@ class TfSingleHiddenLayer(BaseModel):
         with self._graph.as_default():
             with self._sess.as_default():
                 self._model = keras.models.load_model(tmp.name)
-        
+                self._predict_label_mapping = predict_label_mapping
         # Remove temp file
         os.remove(tmp.name)
 

@@ -3,7 +3,7 @@ import json
 import abc
 import traceback
 from rafiki.advisor import make_advisor
-from rafiki.utils.model import parse_model_prediction
+from rafiki.utils.model import parse_model_prediction, probabilities_to_predictions
 
 class InvalidModelClassException(Exception):
     pass
@@ -214,7 +214,10 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
 
     print('Testing predictions with model...')
     print('Using queries: {}'.format(queries))
-    predictions = model_inst.predict(queries)
+    probabilities = model_inst.predict(queries)
+    predictions = probabilities_to_predictions(probabilities)
+
+    print('Model Dictionary: {}'.format(model_inst.get_predict_label_mapping()))
 
     try:
         for prediction in predictions:

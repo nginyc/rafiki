@@ -61,7 +61,7 @@ class TfVgg16(BaseModel):
         self._predict_label_mapping = dict(zip(range(num_classes), class_names))
         train_and_evalutate_label_mapping = {v: k for k, v in  self._predict_label_mapping.items()}
 
-        labels = np.array([train_and_evalutate_label_mapping()[label] for label in labels])
+        labels = np.array([train_and_evalutate_label_mapping[label] for label in labels])
 
         with self._graph.as_default():
             self._model = self._build_model(num_classes)
