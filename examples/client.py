@@ -5,7 +5,7 @@ def create_model(client):
     model_data = client.create_model(
         name='multi_layer_perceptron',
         task=DatasetTask.IMAGE_CLASSIFICATION,
-        model_file_path='examples/models/multi_layer_perceptron.py',
+        model_file_path='examples/models/image_classification/TfSingleHiddenLayer.py',
         model_class='MultiLayerPerceptron'
     )
     print(model_data)
