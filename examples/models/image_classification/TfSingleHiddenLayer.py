@@ -82,8 +82,8 @@ class TfSingleHiddenLayer(BaseModel):
         X = np.array(queries)
         with self._graph.as_default():
             with self._sess.as_default():
-                probabilities = self._model.predict(X)
-        return probabilities
+                probs = self._model.predict(X)
+        return probs
 
     def destroy(self):
         self._sess.close()
@@ -113,7 +113,6 @@ class TfSingleHiddenLayer(BaseModel):
 
     def load_parameters(self, params):
         h5_model_base64 = params.get('h5_model_base64', None)
-        predict_label_mapping = params.get('predict_label_mapping', None)
 
         if h5_model_base64 is None:
             raise InvalidModelParamsException()
@@ -130,9 +129,12 @@ class TfSingleHiddenLayer(BaseModel):
         with self._graph.as_default():
             with self._sess.as_default():
                 self._model = keras.models.load_model(tmp.name)
-                self._predict_label_mapping = predict_label_mapping
+                
         # Remove temp file
         os.remove(tmp.name)
+
+        if 'predict_label_mapping' in params:
+            self._predict_label_mapping = params['predict_label_mapping']
 
     def _load_dataset(self, dataset_uri, task):
         # Here, we use Rafiki's in-built dataset loader

@@ -65,8 +65,8 @@ class SkDt(BaseModel):
 
     def predict(self, queries):
         X = self._prepare_X(queries)
-        preds = self._clf.predict(X)
-        return preds
+        probs = self._clf.predict_proba(X)
+        return probs
 
     def destroy(self):
         pass
@@ -75,13 +75,17 @@ class SkDt(BaseModel):
         clf_bytes = pickle.dumps(self._clf)
         clf_base64 = base64.b64encode(clf_bytes).decode('utf-8')
         return {
-            'clf_base64': clf_base64
+            'clf_base64': clf_base64,
+            'predict_label_mapping': self._predict_label_mapping
         }
 
     def load_parameters(self, params):
         if 'clf_base64' in params:
             clf_bytes = base64.b64decode(params['clf_base64'].encode('utf-8'))
             self._clf = pickle.loads(clf_bytes)
+
+        if 'predict_label_mapping' in params:
+            self._predict_label_mapping = params['predict_label_mapping']
 
     def _prepare_X(self, images):
         return [np.array(image).flatten() for image in images]
