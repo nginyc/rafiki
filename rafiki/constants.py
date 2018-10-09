@@ -44,5 +44,5 @@ class DatasetProtocol():
     HTTP = 'http'
     HTTPS = 'https'
 
-class DatasetTask():
+class TaskType():
     IMAGE_CLASSIFICATION = 'IMAGE_CLASSIFICATION'

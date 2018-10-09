@@ -5,9 +5,8 @@ import os
 import base64
 import numpy as np
 
-from rafiki.dataset import load_dataset
-from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
-from rafiki.constants import DatasetTask
+from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class, load_dataset
+from rafiki.constants import TaskType
 
 class SkSvm(BaseModel):
     '''
@@ -117,7 +116,7 @@ if __name__ == '__main__':
         model_class=SkSvm,
         train_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true',
         test_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true',
-        task=DatasetTask.IMAGE_CLASSIFICATION,
+        task=TaskType.IMAGE_CLASSIFICATION,
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

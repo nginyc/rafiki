@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import zipfile
 import io
 
-from rafiki.constants import *
+from rafiki.constants import TaskType, DatasetProtocol
 
 def load_dataset(uri, task):
     parsed_uri = urlparse(uri)
@@ -43,4 +43,4 @@ def _is_https(protocol):
     return protocol == DatasetProtocol.HTTPS
 
 def _is_image_classification(task):
-    return task == DatasetTask.IMAGE_CLASSIFICATION
+    return task == TaskType.IMAGE_CLASSIFICATION

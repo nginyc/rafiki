@@ -212,12 +212,16 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
     model_inst.init(knobs)
     model_inst.load_parameters(parameters)
 
+    print('Testing retrieving of predict label mapping...')
+    predict_label_mapping = model_inst.get_predict_label_mapping()
+
+    if not isinstance(predict_label_mapping, dict):
+        raise InvalidModelClassException('`get_predict_label_mapping()` should return a dict[int, str]')
+
     print('Testing predictions with model...')
     print('Using queries: {}'.format(queries))
     probabilities = model_inst.predict(queries)
     predictions = probabilities_to_predictions(probabilities)
-
-    print('Model Dictionary: {}'.format(model_inst.get_predict_label_mapping()))
 
     try:
         for prediction in predictions:
