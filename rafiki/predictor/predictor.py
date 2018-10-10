@@ -1,11 +1,12 @@
-import uuid
 import time
 import json
 import logging
 
 from rafiki.cache import Cache
 from rafiki.db import Database
-from rafiki.config import RUNNING_INFERENCE_WORKERS, REQUEST_QUEUE, QFE_SLEEP
+from rafiki.config import PREDICTOR_PREDICT_SLEEP
+
+from .ensemble import ensemble_predictions
 
 logger = logging.getLogger(__name__)
  
@@ -15,52 +16,80 @@ class Predictor(object):
         self._service_id = service_id
         self._db = db
         self._cache = cache
+        
+        with self._db:
+            (self._inference_job_id, self._worker_to_predict_label_mapping, self._task) \
+                = self._read_predictor_info()
 
     def predict(self, query):
         logger.info('Received query:')
         logger.info(query)
 
-        id = str(uuid.uuid4())
-        request = {
-            'id': id,
-            'query': query
-        }
+        running_worker_ids = self._cache.get_workers_of_inference_job(self._inference_job_id)
+        worker_to_prediction = {}
+        worker_to_query_id = {}
+        responded_worker_ids = set() 
+        for worker_id in running_worker_ids:
+            query_id = self._cache.add_query_of_worker(worker_id, query)
+            worker_to_query_id[worker_id] = query_id
 
-        running_inference_workers = self._get_inference_workers()
-        request_ids = set()
-        for running_inference_worker in running_inference_workers:
-            queue_key = '{}_{}'.format(REQUEST_QUEUE, running_inference_worker.decode())
-            request_key = '{}_{}'.format(id, running_inference_worker.decode())
-            self._cache.append_list(queue_key, request)
-            request_ids.add(request_key)
-        
-        response_ids = set()
-        responses = { 'responses': [] }
-
-        logger.info('Waiting for predictions...')
+        logger.info('Waiting for predictions from workers...')
 
         #TODO: add SLO. break loop when timer is out.
         while True:
-            unresponded_ids = request_ids - response_ids
-            for unresponded_id in unresponded_ids:
-                prediction_jsons = self._cache.get_list_range(unresponded_id, 0, -1)
-                if len(prediction_jsons) > 0:
-                    prediction_json = prediction_jsons[0]
-                    prediction = json.loads(prediction_json)
-                    response_ids.add(unresponded_id)
-                    responses['responses'].append(prediction)
-                    self._cache.delete(unresponded_id)
-            if (request_ids == response_ids): break
-            time.sleep(QFE_SLEEP)
+            for (worker_id, query_id) in worker_to_query_id.items():
+                if worker_id in responded_worker_ids:
+                    continue
+                    
+                prediction = self._cache.pop_prediction_of_worker(worker_id, query_id)
+                if prediction is not None:
+                    worker_to_prediction[worker_id] = prediction
+                    responded_worker_ids.add(worker_id)
+             
+            if len(responded_worker_ids) == len(running_worker_ids): 
+                break
 
-        logger.info('Responding with predictions:')
-        logger.info(responses)
+            time.sleep(PREDICTOR_PREDICT_SLEEP)
 
-        return responses
+        logger.info('Predictions:')
+        logger.info(worker_to_prediction)
 
-    def _get_inference_workers(self):
-        inference_workers_key = '{}_{}'.format(RUNNING_INFERENCE_WORKERS, self._service_id)
-        return self._cache.get_set(inference_workers_key)
+        predictions_list = [
+            [worker_to_prediction[worker_id]]
+            for worker_id in running_worker_ids
+        ]
+
+        predict_label_mappings = [
+            self._worker_to_predict_label_mapping[worker_id]
+            for worker_id in running_worker_ids
+        ]
+
+        predictions = ensemble_predictions(predictions_list, 
+                                            predict_label_mappings,
+                                            self._task)
+
+        prediction = predictions[0] if len(predictions) > 0 else None
+
+        return {
+            'prediction': prediction
+        }
+
+    def _read_predictor_info(self):
+        inference_job = self._db.get_inference_job_by_predictor(self._service_id)
+        train_job = self._db.get_train_job(inference_job.train_job_id)
+        workers = self._db.get_workers_of_inference_job(inference_job.id)
+
+        # Load inference job's trials' predict label mappings
+        worker_to_predict_label_mappings = {}
+        for worker in workers:
+            trial = self._db.get_trial(worker.trial_id)
+            worker_to_predict_label_mappings[worker.service_id] = trial.predict_label_mapping
+
+        return (
+            inference_job.id,
+            worker_to_predict_label_mappings,
+            train_job.task
+        )
 
     def predict_batch(self, queries):
         #TODO: implement method

@@ -3,7 +3,6 @@ import uuid
 import random
 import os
 import numpy as np
-import ast
 import logging
 import traceback
 import json
@@ -11,7 +10,7 @@ import json
 from rafiki.utils.model import load_model_class, parse_model_prediction
 from rafiki.db import Database
 from rafiki.cache import Cache
-from rafiki.config import RUNNING_INFERENCE_WORKERS, REQUEST_QUEUE, INFERENCE_WORKER_SLEEP, BATCH_SIZE
+from rafiki.config import INFERENCE_WORKER_SLEEP, INFERENCE_WORKER_PREDICT_BATCH_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -30,23 +29,17 @@ class InferenceWorker(object):
             .format(self._service_id))
         
         with self._db:
-            (predictor_service_id, trial_id) = self._read_worker_info()
+            (inference_job_id, trial_id) = self._read_worker_info()
             self._model = self._load_model(trial_id)
 
-        self._register_worker(predictor_service_id)
+        # Add to inference job's set of running workers
+        self._cache.add_worker_of_inference_job(self._service_id, inference_job_id)
             
-        queue_key = self._get_queue_key()
         while True:
-            requests = self._cache.get_list_range(queue_key, 0, BATCH_SIZE - 1)
-            ids = []
-            queries = []
-
-            for request in requests:
-                request = ast.literal_eval(request.decode())
-                queries.append(request['query'])
-                ids.append(request['id'])
+            (query_ids, queries) = \
+                self._cache.pop_queries_of_worker(self._service_id, INFERENCE_WORKER_PREDICT_BATCH_SIZE)
             
-            if len(ids) > 0:
+            if len(queries) > 0:
                 logger.info('Making predictions for queries...')
                 logger.info(queries)
 
@@ -62,26 +55,21 @@ class InferenceWorker(object):
                     logger.info('Predictions:')
                     logger.info(predictions)
 
-                    self._cache.trim_list(queue_key, len(ids), -1)
-                    for (id, prediction) in zip(ids, predictions):
-                        prediction_json = json.dumps(prediction)
-                        request_id = '{}_{}'.format(id, self._service_id)
-                        self._cache.append_list(request_id, prediction_json)
+                    for (query_id, prediction) in zip(query_ids, predictions):
+                        self._cache.add_prediction_of_worker(self._service_id, query_id, prediction)
 
             time.sleep(INFERENCE_WORKER_SLEEP)
 
     def stop(self):
         with self._db:
-            (predictor_service_id, _) = self._read_worker_info()
+            (inference_job_id, _) = self._read_worker_info()
 
-        self._unregister_worker(predictor_service_id)
+        # Remove from inference job's set of running workers
+        self._cache.delete_worker_of_inference_job(self._service_id, inference_job_id)
 
         if self._model is not None:
             self._model.destroy()
             self._model = None
-
-    def _get_queue_key(self):
-        return '{}_{}'.format(REQUEST_QUEUE, self._service_id)
 
     def _load_model(self, trial_id):
         trial = self._db.get_trial(trial_id)
@@ -95,20 +83,6 @@ class InferenceWorker(object):
 
         return model_inst
 
-    def _unregister_worker(self, predictor_service_id):
-        # Remove from predictor's set of running workers
-        inference_workers_key = '{}_{}'.format(RUNNING_INFERENCE_WORKERS, predictor_service_id)
-        self._cache.remove_from_set(inference_workers_key, self._service_id)
-
-        # Remove own queries queue
-        queue_key = self._get_queue_key()
-        self._cache.delete(queue_key)
-
-    def _register_worker(self, predictor_service_id):
-        # Add to predictor's set of running workers
-        inference_workers_key = '{}_{}'.format(RUNNING_INFERENCE_WORKERS, predictor_service_id)
-        self._cache.add_to_set(inference_workers_key, self._service_id)
-
     def _read_worker_info(self):
         worker = self._db.get_inference_job_worker(self._service_id)
         inference_job = self._db.get_inference_job(worker.inference_job_id)
@@ -117,6 +91,6 @@ class InferenceWorker(object):
             raise InvalidWorkerException()
 
         return (
-            inference_job.predictor_service_id,
+            inference_job.id,
             worker.trial_id
         )

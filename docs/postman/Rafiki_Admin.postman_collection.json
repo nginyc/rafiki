@@ -103,7 +103,7 @@
 						},
 						{
 							"key": "task",
-							"value": "IMAGE_CLASSIFICATION_WITH_ARRAYS",
+							"value": "IMAGE_CLASSIFICATION",
 							"type": "text"
 						},
 						{
@@ -137,7 +137,7 @@
 					"raw": ""
 				},
 				"url": {
-					"raw": "http://{{host}}/models?task=IMAGE_CLASSIFICATION_WITH_ARRAYS",
+					"raw": "http://{{host}}/models?task=IMAGE_CLASSIFICATION",
 					"protocol": "http",
 					"host": [
 						"{{host}}"
@@ -148,7 +148,7 @@
 					"query": [
 						{
 							"key": "task",
-							"value": "IMAGE_CLASSIFICATION_WITH_ARRAYS",
+							"value": "IMAGE_CLASSIFICATION",
 							"equals": true
 						}
 					]
@@ -172,19 +172,19 @@
 						},
 						{
 							"key": "task",
-							"value": "IMAGE_CLASSIFICATION_WITH_ARRAYS",
+							"value": "IMAGE_CLASSIFICATION",
 							"description": "",
 							"type": "text"
 						},
 						{
 							"key": "train_dataset_uri",
-							"value": "tf-keras://fashion_mnist?train_or_test=train",
+							"value": "https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true",
 							"description": "",
 							"type": "text"
 						},
 						{
 							"key": "test_dataset_uri",
-							"value": "tf-keras://fashion_mnist?train_or_test=test",
+							"value": "https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true",
 							"description": "",
 							"type": "text"
 						},

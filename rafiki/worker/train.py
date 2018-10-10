@@ -40,7 +40,7 @@ class TrainWorker(object):
             self._db.connect()
             (budget_type, budget_amount, model_id,
                 model_file_bytes, model_class, train_job_id, 
-                train_dataset_uri, test_dataset_uri) = self._read_worker_info()
+                train_dataset_uri, test_dataset_uri, task) = self._read_worker_info()
 
             # Load model class from bytes
             clazz = load_model_class(model_file_bytes, model_class)
@@ -86,30 +86,32 @@ class TrainWorker(object):
             try:
                 logger.info('Starting trial...')
                 logger.info('Training & evaluating model...')
-                self._db.mark_trial_as_errored
-                (score, parameters) = self._train_and_evaluate_model(clazz, 
-                                                                    knobs,
-                                                                    train_dataset_uri, 
-                                                                    test_dataset_uri)
+                (score, parameters, predict_label_mapping) = \
+                    self._train_and_evaluate_model(clazz, 
+                                                    knobs,
+                                                    train_dataset_uri, 
+                                                    test_dataset_uri, 
+                                                    task)
+
                 logger.info('Trial score: {}'.format(score))
+                
                 with self._db:
                     logger.info('Marking trial as complete in DB...')
                     trial = self._db.get_trial(self._trial_id)
-                    self._db.mark_trial_as_complete(
-                        trial,
-                        score=score,
-                        parameters=parameters
-                    )
-                    self._trial_id = None
+                    self._db.mark_trial_as_complete(trial, score, parameters,
+                                                    predict_label_mapping)
+
+                self._trial_id = None
             except Exception:
                 logger.error('Error while running trial:')
                 logger.error(traceback.format_exc())
-
                 logger.info('Marking trial as errored in DB...')
+
                 with self._db:
                     trial = self._db.get_trial(self._trial_id)
                     self._db.mark_trial_as_errored(trial)
-                    self._trial_id = None
+
+                self._trial_id = None
 
             # Report results of trial to advisor
             try:
@@ -133,19 +135,20 @@ class TrainWorker(object):
             logger.error(traceback.format_exc())
 
     def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, 
-                                test_dataset_uri):
+                                    test_dataset_uri, task):
         model_inst = clazz()
         model_inst.init(knobs)
 
         # Train model
-        model_inst.train(train_dataset_uri)
+        model_inst.train(train_dataset_uri, task)
+        predict_label_mapping = model_inst.get_predict_label_mapping()
 
         # Evaluate model
-        score = model_inst.evaluate(test_dataset_uri)
+        score = model_inst.evaluate(test_dataset_uri, task)
         parameters = model_inst.dump_parameters()
         model_inst.destroy()
 
-        return (score, parameters)
+        return (score, parameters, predict_label_mapping)
 
     # Creates a new trial in the DB
     def _create_new_trial(self, model_id, train_job_id, knobs):
@@ -227,7 +230,8 @@ class TrainWorker(object):
             model.model_class,
             train_job.id,
             train_job.train_dataset_uri,
-            train_job.test_dataset_uri
+            train_job.test_dataset_uri,
+            train_job.task
         )
 
     def _make_client(self):

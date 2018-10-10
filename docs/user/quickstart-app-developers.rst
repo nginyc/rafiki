@@ -6,6 +6,7 @@ Quickstart (Application Developers)
 .. contents:: Table of Contents
 
 This quickstart submits the `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference.
+An Python example on how to do a full train-inference flow is available ``./examples/scripts/client-usage.py``.
 
 Installation
 --------------------------------------------------------------------
@@ -36,7 +37,7 @@ Example:
 
     .. code-block:: python
 
-        client.get_models_of_task(task='IMAGE_CLASSIFICATION_WITH_ARRAYS')
+        client.get_models_of_task(task='IMAGE_CLASSIFICATION')
 
     Output:
 
@@ -46,13 +47,13 @@ Example:
         'docker_image': 'rafikiai/rafiki_worker:0.0.3',
         'model_class': 'TfSingleHiddenLayer',
         'name': 'TfSingleHiddenLayer',
-        'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
+        'task': 'IMAGE_CLASSIFICATION',
         'user_id': '23f3526a-35d1-46ba-be68-af8f4992a0f9'},
         {'datetime_created': 'Thu, 04 Oct 2018 03:24:59 GMT',
         'docker_image': 'rafikiai/rafiki_worker:0.0.3',
         'model_class': 'SkDt',
         'name': 'SkDt',
-        'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
+        'task': 'IMAGE_CLASSIFICATION',
         'user_id': '23f3526a-35d1-46ba-be68-af8f4992a0f9'}]
     
 
@@ -69,11 +70,11 @@ Example:
 
         client.create_train_job(
             app='fashion_mnist_app',
-            task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
-            train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
-            test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test',
+            task='IMAGE_CLASSIFICATION',
+            train_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true',
+            test_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true',
             budget_type='MODEL_TRIAL_COUNT',
-            budget_amount=3
+            budget_amount=2
         )
 
     Output:
@@ -108,9 +109,9 @@ Example:
         'datetime_started': 'Thu, 04 Oct 2018 03:25:06 GMT',
         'id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76',
         'status': 'COMPLETED',
-        'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
-        'test_dataset_uri': 'tf-keras://fashion_mnist?train_or_test=test',
-        'train_dataset_uri': 'tf-keras://fashion_mnist?train_or_test=train'}]
+        'task': 'IMAGE_CLASSIFICATION',
+        'test_dataset_uri': 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true',
+        'train_dataset_uri': 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true'}]
 
 
 Retrieving the latest train job's details for an app
@@ -128,7 +129,7 @@ Example:
 
     .. code-block:: python
 
-        [{'app': 'fashion_mnist_app',
+        {'app': 'fashion_mnist_app',
         'app_version': 1,
         'budget_amount': 3,
         'budget_type': 'MODEL_TRIAL_COUNT',
@@ -136,9 +137,9 @@ Example:
         'datetime_started': 'Thu, 04 Oct 2018 03:25:06 GMT',
         'id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76',
         'status': 'COMPLETED',
-        'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
-        'test_dataset_uri': 'tf-keras://fashion_mnist?train_or_test=test',
-        'train_dataset_uri': 'tf-keras://fashion_mnist?train_or_test=train',
+        'task': 'IMAGE_CLASSIFICATION',
+        'test_dataset_uri': 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true',
+        'train_dataset_uri': 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true',
         'workers': [{'datetime_started': 'Thu, 04 Oct 2018 03:25:06 GMT',
                     'datetime_stopped': 'Thu, 04 Oct 2018 03:27:15 GMT',
                     'model_name': 'TfSingleHiddenLayer',
@@ -150,7 +151,7 @@ Example:
                     'model_name': 'SkDt',
                     'replicas': 2,
                     'service_id': '6898ed0a-d39c-49fe-bbad-1ce5b01fd2dd',
-                    'status': 'STOPPED'}]}]
+                    'status': 'STOPPED'}]}
 
 
 Listing best trials of the latest train job for an app
@@ -260,7 +261,7 @@ Example:
 
     .. code-block:: python
 
-        [{'app': 'fashion_mnist_app',
+        {'app': 'fashion_mnist_app',
         'app_version': 1,
         'datetime_started': 'Thu, 04 Oct 2018 03:31:59 GMT',
         'datetime_stopped': None,
@@ -288,7 +289,7 @@ Example:
                     'trial': {'id': 'd8ea9d7f-c484-462b-80cb-dfa01f07d9c1',
                                 'knobs': {'criterion': 'entropy', 'max_depth': 8},
                                 'model_name': 'SkDt',
-                                'score': 0.7823}}]}]
+                                'score': 0.7823}}]}
 
 
 Stopping a running inference job

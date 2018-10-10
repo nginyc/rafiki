@@ -1,4 +1,4 @@
-docker run --name $POSTGRES_HOST \
+docker run --rm --name $POSTGRES_HOST \
   --network $DOCKER_NETWORK \
   -e POSTGRES_HOST=$POSTGRES_HOST \
   -e POSTGRES_PORT=$POSTGRES_PORT \

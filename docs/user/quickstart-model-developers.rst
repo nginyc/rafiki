@@ -45,14 +45,14 @@ Examples:
 
         client.create_model(
             name='TfSingleHiddenLayer',
-            task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
+            task='IMAGE_CLASSIFICATION',
             model_file_path='examples/models/image_classification/TfSingleHiddenLayer.py',
             model_class='TfSingleHiddenLayer'
         )
 
         client.create_model(
             name='SkDt',
-            task='IMAGE_CLASSIFICATION_WITH_ARRAYS',
+            task='IMAGE_CLASSIFICATION',
             model_file_path='examples/models/image_classification/SkDt.py',
             model_class='SkDt'
         )
@@ -73,7 +73,7 @@ Example:
 
     .. code-block:: python
 
-        client.get_models_of_task(task='IMAGE_CLASSIFICATION_WITH_ARRAYS')
+        client.get_models_of_task(task='IMAGE_CLASSIFICATION')
 
     Output:
 
@@ -83,13 +83,13 @@ Example:
         'docker_image': 'rafikiai/rafiki_worker:0.0.3',
         'model_class': 'TfSingleHiddenLayer',
         'name': 'TfSingleHiddenLayer',
-        'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
+        'task': 'IMAGE_CLASSIFICATION',
         'user_id': '23f3526a-35d1-46ba-be68-af8f4992a0f9'},
         {'datetime_created': 'Thu, 04 Oct 2018 03:24:59 GMT',
         'docker_image': 'rafikiai/rafiki_worker:0.0.3',
         'model_class': 'SkDt',
         'name': 'SkDt',
-        'task': 'IMAGE_CLASSIFICATION_WITH_ARRAYS',
+        'task': 'IMAGE_CLASSIFICATION',
         'user_id': '23f3526a-35d1-46ba-be68-af8f4992a0f9'}]
     
 
