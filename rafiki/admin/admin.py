@@ -27,6 +27,9 @@ class RunningInferenceJobExistsException(Exception):
 class InvalidRunningInferenceJobException(Exception):
     pass
 
+class NoModelsForTaskException(Exception):
+    pass
+
 class Admin(object):
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
         self._base_worker_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_WORKER'],
@@ -73,6 +76,11 @@ class Admin(object):
         # Compute auto-incremented app version
         train_jobs = self._db.get_train_jobs_of_app(app)
         app_version = max([x.app_version for x in train_jobs], default=0) + 1
+
+        # Ensure that there are models associated with task
+        models = self._db.get_models_of_task(task)
+        if len(models) == 0:
+            raise NoModelsForTaskException()
 
         train_job = self._db.create_train_job(
             user_id=user_id,
