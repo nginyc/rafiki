@@ -12,7 +12,7 @@ USER_PASSWORD = 'rafiki'
 APP = 'fashion_mnist_app'
 TRAIN_DATASET_URI = 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true'
 TEST_DATASET_URI = 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true'
-QUERIES = [
+QUERY = \
     [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
@@ -41,7 +41,6 @@ QUERIES = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-] 
 
 
 def create_models(client):
@@ -79,11 +78,9 @@ def create_train_job(client):
 
 def wait_until_train_job_has_completed(client):
     while True:
-        time.sleep(5000)
+        time.sleep(10)
         try:
             train_job = client.get_train_job(app=APP)
-            pprint.pprint(train_job)
-
             if train_job.get('status') == 'COMPLETED':
                 return
 
@@ -103,11 +100,10 @@ def create_inference_job(client):
 # Returns `predictor_host` of inference job
 def wait_until_inference_job_is_running(client):
     while True:
-        time.sleep(5000)
+        # Give inference job deployment a bit of time
+        time.sleep(20)
         try:
             inference_job = client.get_running_inference_job(app=APP)
-            pprint.pprint(inference_job)
-
             if inference_job.get('status') == 'RUNNING':
                 return inference_job.get('predictor_host')
 
@@ -116,8 +112,8 @@ def wait_until_inference_job_is_running(client):
 
 def make_predictions(client, predictor_host):
     res = requests.post(
-        url=predictor_host,
-        json={ 'queries': QUERIES }
+        url='http://{}/predict'.format(predictor_host),
+        json={ 'query': QUERY }
     )
 
     if res.status_code != 200:

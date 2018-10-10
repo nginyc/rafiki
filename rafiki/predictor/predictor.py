@@ -64,9 +64,11 @@ class Predictor(object):
             for worker_id in running_worker_ids
         ]
 
-        [prediction] = ensemble_predictions(predictions_list, 
+        predictions = ensemble_predictions(predictions_list, 
                                             predict_label_mappings,
                                             self._task)
+
+        prediction = predictions[0] if len(predictions) > 0 else None
 
         return {
             'prediction': prediction

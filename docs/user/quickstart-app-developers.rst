@@ -6,6 +6,7 @@ Quickstart (Application Developers)
 .. contents:: Table of Contents
 
 This quickstart submits the `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference.
+An Python example on how to do a full train-inference flow is available ``./examples/scripts/client-usage.py``.
 
 Installation
 --------------------------------------------------------------------

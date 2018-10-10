@@ -30,8 +30,5 @@ Example:
     .. code-block:: shell
 
         {
-            "responses": [
-                9,
-                9
-            ]
+            "prediction": "Boot"
         }
