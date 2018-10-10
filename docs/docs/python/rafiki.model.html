@@ -58,7 +58,7 @@
             
             
               <div class="version">
-                0.0.3
+                0.0.4
               </div>
             
           
@@ -161,19 +161,19 @@
 <h1>rafiki.model<a class="headerlink" href="#rafiki-model" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
 <dt id="rafiki.model.BaseModel">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">BaseModel</code><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">BaseModel</code><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Rafiki’s base model class that Rafiki models should extend. 
 Rafiki models should implement all abstract methods according to their associated tasks’ specifications.</p>
 <dl class="method">
 <dt id="rafiki.model.BaseModel.destroy">
-<code class="descname">destroy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.destroy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.destroy" title="Permalink to this definition">¶</a></dt>
+<code class="descname">destroy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.destroy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.destroy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Destroy this model instance, closing any sessions or freeing any connections.
 No other methods will be called subsequently.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.dump_parameters">
-<code class="descname">dump_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.dump_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.dump_parameters" title="Permalink to this definition">¶</a></dt>
+<code class="descname">dump_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.dump_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.dump_parameters" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a dictionary of model parameters that fully define this model instance’s trained state. 
 This dictionary should be JSON serializable.
 This will be used for trained model serialization within Rafiki.
@@ -192,18 +192,24 @@ This will be called only when model is <em>trained</em>.</p>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.evaluate">
-<code class="descname">evaluate</code><span class="sig-paren">(</span><em>dataset_uri</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.evaluate" title="Permalink to this definition">¶</a></dt>
+<code class="descname">evaluate</code><span class="sig-paren">(</span><em>dataset_uri</em>, <em>task</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.evaluate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate this model instance with given dataset after training. 
 This will be called only when model is <em>trained</em>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dataset_uri</strong> (<em>str</em>) – URI of the test dataset in a format specified by the task</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>dataset_uri</strong> (<em>str</em>) – URI of the test dataset in a format specified by the task</li>
+<li><strong>task</strong> (<em>str</em>) – Task type</li>
+</ul>
+</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Accuracy as float from 0-1 on the test dataset</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Accuracy as float from 0-1 on the test dataset</p>
+</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">float</td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">float</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -211,7 +217,7 @@ This will be called only when model is <em>trained</em>.</p>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.get_knob_config">
-<code class="descname">get_knob_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.get_knob_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.get_knob_config" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_knob_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.get_knob_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.get_knob_config" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a dictionary defining this model’s knob configuration 
 (i.e. list of knob names, their data types and their ranges).</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -249,8 +255,25 @@ This will be called only when model is <em>trained</em>.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="rafiki.model.BaseModel.get_predict_label_mapping">
+<code class="descname">get_predict_label_mapping</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.get_predict_label_mapping"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.get_predict_label_mapping" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a dictionary mapping from index to class labels. 
+This method is only called after training.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Dictionary mapping from index to class labels.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict[int, str]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="rafiki.model.BaseModel.init">
-<code class="descname">init</code><span class="sig-paren">(</span><em>knobs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.init"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.init" title="Permalink to this definition">¶</a></dt>
+<code class="descname">init</code><span class="sig-paren">(</span><em>knobs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.init"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.init" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialize the model with a dictionary of knob values. 
 These knob values will be chosen by Rafiki based on the model’s knob config.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -265,7 +288,7 @@ These knob values will be chosen by Rafiki based on the model’s knob config.</
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.load_parameters">
-<code class="descname">load_parameters</code><span class="sig-paren">(</span><em>params</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.load_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.load_parameters" title="Permalink to this definition">¶</a></dt>
+<code class="descname">load_parameters</code><span class="sig-paren">(</span><em>params</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.load_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.load_parameters" title="Permalink to this definition">¶</a></dt>
 <dd><p>Load a dictionary of model parameters into this model instance.
 This will be used for trained model deserialization within Rafiki.
 The model will be considered <em>trained</em> subsequently.</p>
@@ -281,7 +304,7 @@ The model will be considered <em>trained</em> subsequently.</p>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.predict">
-<code class="descname">predict</code><span class="sig-paren">(</span><em>queries</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.predict" title="Permalink to this definition">¶</a></dt>
+<code class="descname">predict</code><span class="sig-paren">(</span><em>queries</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.predict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Make predictions on a batch of queries with this model instance after training. 
 Each prediction should be JSON serializable.
 This will be called only when model is <em>trained</em>.</p>
@@ -301,13 +324,17 @@ This will be called only when model is <em>trained</em>.</p>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.train">
-<code class="descname">train</code><span class="sig-paren">(</span><em>dataset_uri</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model.html#BaseModel.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.train" title="Permalink to this definition">¶</a></dt>
+<code class="descname">train</code><span class="sig-paren">(</span><em>dataset_uri</em>, <em>task</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.train" title="Permalink to this definition">¶</a></dt>
 <dd><p>Train this model instance with given dataset and initialized knob values.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dataset_uri</strong> (<em>str</em>) – URI of the train dataset in a format specified by the task</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>dataset_uri</strong> (<em>str</em>) – URI of the train dataset in a format specified by the task</li>
+<li><strong>task</strong> (<em>str</em>) – Task type</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
@@ -317,7 +344,7 @@ This will be called only when model is <em>trained</em>.</p>
 
 <dl class="method">
 <dt id="rafiki.model.validate_model_class">
-<code class="descclassname">model.</code><code class="descname">validate_model_class</code><span class="sig-paren">(</span><em>train_dataset_uri</em>, <em>test_dataset_uri</em>, <em>queries=[]</em>, <em>knobs=None</em><span class="sig-paren">)</span><a class="headerlink" href="#rafiki.model.validate_model_class" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">model.</code><code class="descname">validate_model_class</code><span class="sig-paren">(</span><em>train_dataset_uri</em>, <em>test_dataset_uri</em>, <em>task</em>, <em>queries=[]</em>, <em>knobs=None</em><span class="sig-paren">)</span><a class="headerlink" href="#rafiki.model.validate_model_class" title="Permalink to this definition">¶</a></dt>
 <dd><p>Validates whether a model class is properly defined. 
 The model instance’s methods will be called in an order similar to that in Rafiki.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -327,6 +354,7 @@ The model instance’s methods will be called in an order similar to that in Raf
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>train_dataset_uri</strong> (<em>str</em>) – URI of the train dataset for testing the training of model</li>
 <li><strong>test_dataset_uri</strong> (<em>str</em>) – URI of the test dataset for testing the evaluating of model</li>
+<li><strong>task</strong> (<em>str</em>) – Task type of model</li>
 <li><strong>queries</strong> (<em>list</em><em>[</em><em>any</em><em>]</em>) – List of queries for testing predictions with the trained model</li>
 <li><strong>knobs</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>any</em><em>]</em>) – Knobs to train the model with. If not specified, knobs from an advisor will be used</li>
 </ul>
@@ -361,7 +389,7 @@ The model instance’s methods will be called in an order similar to that in Raf
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2018, nginyc, cadmusthefounder, nudles
 
     </p>
   </div>
@@ -380,21 +408,14 @@ The model instance’s methods will be called in an order similar to that in Raf
 
   
 
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../',
-            VERSION:'',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
 
   
 

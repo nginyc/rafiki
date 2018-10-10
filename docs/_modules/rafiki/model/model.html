@@ -1,0 +1,445 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>rafiki.model.model &mdash; Rafiki  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Rafiki
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.4
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../docs/user/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../docs/dev/index.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../docs/python/index.html">Python Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Rafiki</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>rafiki.model.model</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for rafiki.model.model</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">abc</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">from</span> <span class="nn">rafiki.advisor</span> <span class="k">import</span> <span class="n">make_advisor</span>
+<span class="kn">from</span> <span class="nn">rafiki.predictor</span> <span class="k">import</span> <span class="n">ensemble_predictions</span>
+<span class="kn">from</span> <span class="nn">rafiki.utils.model</span> <span class="k">import</span> <span class="n">parse_model_prediction</span>
+<span class="kn">from</span> <span class="nn">rafiki.constants</span> <span class="k">import</span> <span class="n">TaskType</span>
+
+<span class="k">class</span> <span class="nc">InvalidModelClassException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="k">class</span> <span class="nc">InvalidModelParamsException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<div class="viewcode-block" id="BaseModel"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel">[docs]</a><span class="k">class</span> <span class="nc">BaseModel</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Rafiki&#39;s base model class that Rafiki models should extend. </span>
+<span class="sd">    Rafiki models should implement all abstract methods according to their associated tasks&#39; specifications.</span>
+<span class="sd">    &#39;&#39;&#39;</span>   
+
+<div class="viewcode-block" id="BaseModel.get_knob_config"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel.get_knob_config">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_knob_config</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Return a dictionary defining this model&#39;s knob configuration </span>
+<span class="sd">        (i.e. list of knob names, their data types and their ranges).</span>
+
+<span class="sd">        :returns: Dictionary defining this model&#39;s knob configuration </span>
+<span class="sd">        :rtype:</span>
+<span class="sd">            ::</span>
+
+<span class="sd">                {</span>
+<span class="sd">                    &#39;knobs&#39;: {</span>
+<span class="sd">                        &#39;hidden_layer_units&#39;: {</span>
+<span class="sd">                            &#39;type&#39;: &#39;int&#39;,</span>
+<span class="sd">                            &#39;range&#39;: [2, 128]</span>
+<span class="sd">                        },</span>
+<span class="sd">                        &#39;epochs&#39;: {</span>
+<span class="sd">                            &#39;type&#39;: &#39;int&#39;,</span>
+<span class="sd">                            &#39;range&#39;: [1, 1]</span>
+<span class="sd">                        },</span>
+<span class="sd">                        &#39;learning_rate&#39;: {</span>
+<span class="sd">                            &#39;type&#39;: &#39;float_exp&#39;,</span>
+<span class="sd">                            &#39;range&#39;: [1e-5, 1e-1]</span>
+<span class="sd">                        },</span>
+<span class="sd">                        &#39;batch_size&#39;: {</span>
+<span class="sd">                            &#39;type&#39;: &#39;int_cat&#39;,</span>
+<span class="sd">                            &#39;values&#39;: [1, 2, 4, 8, 16, 32, 64, 128]</span>
+<span class="sd">                        }</span>
+<span class="sd">                    }</span>
+<span class="sd">                }</span>
+<span class="sd">            </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="BaseModel.get_predict_label_mapping"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel.get_predict_label_mapping">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_predict_label_mapping</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Return a dictionary mapping from index to class labels. </span>
+<span class="sd">        This method is only called after training.</span>
+
+<span class="sd">        :returns: Dictionary mapping from index to class labels. </span>
+<span class="sd">        :rtype: dict[int, str]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="BaseModel.init"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel.init">[docs]</a>    <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">knobs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Initialize the model with a dictionary of knob values. </span>
+<span class="sd">        These knob values will be chosen by Rafiki based on the model&#39;s knob config.</span>
+
+<span class="sd">        :param knobs: Dictionary of knob values for this model instance</span>
+<span class="sd">        :type knobs: dict[str, any]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="BaseModel.train"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel.train">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">,</span> <span class="n">task</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Train this model instance with given dataset and initialized knob values.</span>
+
+<span class="sd">        :param str dataset_uri: URI of the train dataset in a format specified by the task</span>
+<span class="sd">        :param str task: Task type</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+    <span class="c1"># TODO: Allow configuration of other metrics</span>
+<div class="viewcode-block" id="BaseModel.evaluate"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel.evaluate">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">,</span> <span class="n">task</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Evaluate this model instance with given dataset after training. </span>
+<span class="sd">        This will be called only when model is *trained*.</span>
+
+<span class="sd">        :param str dataset_uri: URI of the test dataset in a format specified by the task</span>
+<span class="sd">        :param str task: Task type</span>
+<span class="sd">        :returns: Accuracy as float from 0-1 on the test dataset</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="BaseModel.predict"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel.predict">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queries</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Make predictions on a batch of queries with this model instance after training. </span>
+<span class="sd">        Each prediction should be JSON serializable.</span>
+<span class="sd">        This will be called only when model is *trained*.</span>
+
+<span class="sd">        :param queries: List of queries, where a query is in a format specified by the task </span>
+<span class="sd">        :type queries: list[any]</span>
+<span class="sd">        :returns: List of predictions, where a prediction is in a format specified by the task </span>
+<span class="sd">        :rtype: list[any]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="BaseModel.dump_parameters"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel.dump_parameters">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">dump_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Return a dictionary of model parameters that fully define this model instance&#39;s trained state. </span>
+<span class="sd">        This dictionary should be JSON serializable.</span>
+<span class="sd">        This will be used for trained model serialization within Rafiki.</span>
+<span class="sd">        This will be called only when model is *trained*.</span>
+
+<span class="sd">        :returns: Dictionary of model parameters</span>
+<span class="sd">        :rtype: dict[string, string]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="BaseModel.load_parameters"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel.load_parameters">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">load_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Load a dictionary of model parameters into this model instance.</span>
+<span class="sd">        This will be used for trained model deserialization within Rafiki.</span>
+<span class="sd">        The model will be considered *trained* subsequently.</span>
+
+<span class="sd">        :param params: Dictionary of model parameters</span>
+<span class="sd">        :type params: dict[string, string]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="BaseModel.destroy"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel.destroy">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">destroy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Destroy this model instance, closing any sessions or freeing any connections.</span>
+<span class="sd">        No other methods will be called subsequently.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">pass</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">validate_model_class</span><span class="p">(</span><span class="n">model_class</span><span class="p">,</span> <span class="n">train_dataset_uri</span><span class="p">,</span> <span class="n">test_dataset_uri</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span>
+                <span class="n">queries</span><span class="o">=</span><span class="p">[],</span> <span class="n">knobs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Validates whether a model class is properly defined. </span>
+<span class="sd">    The model instance&#39;s methods will be called in an order similar to that in Rafiki.</span>
+
+<span class="sd">    :param str train_dataset_uri: URI of the train dataset for testing the training of model</span>
+<span class="sd">    :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model</span>
+<span class="sd">    :param str task: Task type of model</span>
+<span class="sd">    :param list[any] queries: List of queries for testing predictions with the trained model</span>
+<span class="sd">    :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used</span>
+<span class="sd">    :type knobs: dict[str, any]</span>
+<span class="sd">    :returns: The trained model</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing instantiation of model...&#39;</span><span class="p">)</span>
+    <span class="n">model_inst</span> <span class="o">=</span> <span class="n">model_class</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing getting of model</span><span class="se">\&#39;</span><span class="s1">s knob config...&#39;</span><span class="p">)</span>
+    <span class="n">knob_config</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">get_knob_config</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">knob_config</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="s1">&#39;`get_knob_config()` should return a dict[str, any]&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s1">&#39;knobs&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">knob_config</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="s1">&#39;`knob_config` should have a </span><span class="se">\&#39;</span><span class="s1">knobs</span><span class="se">\&#39;</span><span class="s1"> key&#39;</span><span class="p">)</span>
+    
+    <span class="n">advisor</span> <span class="o">=</span> <span class="n">make_advisor</span><span class="p">(</span><span class="n">knob_config</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">knobs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">knobs</span> <span class="o">=</span> <span class="n">advisor</span><span class="o">.</span><span class="n">propose</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing initialization of model...&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Using knobs: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">knobs</span><span class="p">))</span>
+    <span class="n">model_inst</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">knobs</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing training of model...&#39;</span><span class="p">)</span>
+    <span class="n">model_inst</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">train_dataset_uri</span><span class="p">,</span> <span class="n">task</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing evaluation of model...&#39;</span><span class="p">)</span>
+    <span class="n">score</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">test_dataset_uri</span><span class="p">,</span> <span class="n">task</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="s1">&#39;`evaluate()` should return a float!&#39;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Score: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">score</span><span class="p">))</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing dumping of parameters of model...&#39;</span><span class="p">)</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">dump_parameters</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="s1">&#39;`dump_parameters()` should return a dict[str, any]&#39;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">traceback</span><span class="o">.</span><span class="n">print_stack</span><span class="p">()</span>
+        <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="s1">&#39;`parameters` should be JSON serializable&#39;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing destroying of model...&#39;</span><span class="p">)</span>
+    <span class="n">model_inst</span><span class="o">.</span><span class="n">destroy</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing loading of parameters of model...&#39;</span><span class="p">)</span>
+    <span class="n">model_inst</span> <span class="o">=</span> <span class="n">model_class</span><span class="p">()</span>
+    <span class="n">model_inst</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">knobs</span><span class="p">)</span>
+    <span class="n">model_inst</span><span class="o">.</span><span class="n">load_parameters</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing retrieving of predict label mapping...&#39;</span><span class="p">)</span>
+    <span class="n">predict_label_mapping</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">get_predict_label_mapping</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">predict_label_mapping</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="s1">&#39;`get_predict_label_mapping()` should return a dict[int, str]&#39;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing predictions with model...&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Using queries: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">queries</span><span class="p">))</span>
+    <span class="n">predictions</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">queries</span><span class="p">)</span>
+    <span class="n">predictions</span> <span class="o">=</span> <span class="n">ensemble_predictions</span><span class="p">([</span><span class="n">predictions</span><span class="p">],</span> <span class="p">[</span><span class="n">predict_label_mapping</span><span class="p">],</span> <span class="n">task</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">prediction</span> <span class="ow">in</span> <span class="n">predictions</span><span class="p">:</span>
+            <span class="n">prediction</span> <span class="o">=</span> <span class="n">parse_model_prediction</span><span class="p">(</span><span class="n">prediction</span><span class="p">)</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">prediction</span><span class="p">)</span>
+            
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">traceback</span><span class="o">.</span><span class="n">print_stack</span><span class="p">()</span>
+        <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="s1">&#39;Each `prediction` should be JSON serializable&#39;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Predictions: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">predictions</span><span class="p">))</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;The model definition is valid!&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">model_inst</span>
+
+
+
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, nginyc, cadmusthefounder, nudles
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
