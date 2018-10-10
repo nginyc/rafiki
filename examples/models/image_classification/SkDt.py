@@ -5,8 +5,8 @@ import os
 import base64
 import numpy as np
 
-from rafiki.dataset import load_dataset
-from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
+from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class, load_dataset
+from rafiki.constants import TaskType
 
 class SkDt(BaseModel):
     '''
@@ -27,6 +27,9 @@ class SkDt(BaseModel):
             }
         }
 
+    def get_predict_label_mapping(self):
+        return self._predict_label_mapping
+
     def init(self, knobs):
         self._max_depth = knobs.get('max_depth') 
         self._criterion = knobs.get('criterion') 
@@ -35,14 +38,25 @@ class SkDt(BaseModel):
             self._criterion
         )
         
-    def train(self, dataset_uri):
-        (images, labels) = self._load_dataset(dataset_uri)
+    def train(self, dataset_uri, task):
+        (images, labels) = self._load_dataset(dataset_uri, task)
+        
+        class_names = np.unique(labels)
+        num_classes = len(class_names)
+        self._predict_label_mapping = dict(zip(range(num_classes), class_names))
+        train_and_evalutate_label_mapping = {v: k for k, v in  self._predict_label_mapping.items()}
+
+        labels = np.array([train_and_evalutate_label_mapping[label] for label in labels])
+
         X = self._prepare_X(images)
         y = labels
         self._clf.fit(X, y)
 
-    def evaluate(self, dataset_uri):
-        (images, labels) = self._load_dataset(dataset_uri)
+    def evaluate(self, dataset_uri, task):
+        (images, labels) = self._load_dataset(dataset_uri, task)
+        train_and_evalutate_label_mapping = {v: k for k, v in  self._predict_label_mapping.items()}
+        labels = np.array([train_and_evalutate_label_mapping[label] for label in labels])
+
         X = self._prepare_X(images)
         y = labels
         preds = self._clf.predict(X)
@@ -51,8 +65,8 @@ class SkDt(BaseModel):
 
     def predict(self, queries):
         X = self._prepare_X(queries)
-        preds = self._clf.predict(X)
-        return preds
+        probs = self._clf.predict_proba(X)
+        return probs
 
     def destroy(self):
         pass
@@ -61,7 +75,8 @@ class SkDt(BaseModel):
         clf_bytes = pickle.dumps(self._clf)
         clf_base64 = base64.b64encode(clf_bytes).decode('utf-8')
         return {
-            'clf_base64': clf_base64
+            'clf_base64': clf_base64,
+            'predict_label_mapping': self._predict_label_mapping
         }
 
     def load_parameters(self, params):
@@ -69,12 +84,15 @@ class SkDt(BaseModel):
             clf_bytes = base64.b64decode(params['clf_base64'].encode('utf-8'))
             self._clf = pickle.loads(clf_bytes)
 
+        if 'predict_label_mapping' in params:
+            self._predict_label_mapping = params['predict_label_mapping']
+
     def _prepare_X(self, images):
         return [np.array(image).flatten() for image in images]
 
-    def _load_dataset(self, dataset_uri):
+    def _load_dataset(self, dataset_uri, task):
         # Here, we use Rafiki's in-built dataset loader
-        return load_dataset(dataset_uri) 
+        return load_dataset(dataset_uri, task) 
 
     def _build_classifier(self, max_depth, criterion):
         clf = tree.DecisionTreeClassifier(
@@ -83,12 +101,12 @@ class SkDt(BaseModel):
         ) 
         return clf
 
-
 if __name__ == '__main__':
     validate_model_class(
         model_class=SkDt,
-        train_dataset_uri='tf-keras://fashion_mnist?train_or_test=train',
-        test_dataset_uri='tf-keras://fashion_mnist?train_or_test=test',
+        train_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true',
+        test_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true',
+        task=TaskType.IMAGE_CLASSIFICATION,
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

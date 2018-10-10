@@ -3,7 +3,9 @@ import json
 import abc
 import traceback
 from rafiki.advisor import make_advisor
+from rafiki.predictor import ensemble_predictions
 from rafiki.utils.model import parse_model_prediction
+from rafiki.constants import TaskType
 
 class InvalidModelClassException(Exception):
     pass
@@ -51,6 +53,17 @@ class BaseModel(abc.ABC):
         '''
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def get_predict_label_mapping(self):
+        '''
+        Return a dictionary mapping from index to class labels. 
+        This method is only called after training.
+
+        :returns: Dictionary mapping from index to class labels. 
+        :rtype: dict[int, str]
+        '''
+        raise NotImplementedError()
+
     def init(self, knobs):
         '''
         Initialize the model with a dictionary of knob values. 
@@ -59,24 +72,27 @@ class BaseModel(abc.ABC):
         :param knobs: Dictionary of knob values for this model instance
         :type knobs: dict[str, any]
         '''
+        pass
 
     @abc.abstractmethod
-    def train(self, dataset_uri):
+    def train(self, dataset_uri, task):
         '''
         Train this model instance with given dataset and initialized knob values.
 
         :param str dataset_uri: URI of the train dataset in a format specified by the task
+        :param str task: Task type
         '''
         raise NotImplementedError()
 
     # TODO: Allow configuration of other metrics
     @abc.abstractmethod
-    def evaluate(self, dataset_uri):
+    def evaluate(self, dataset_uri, task):
         '''
         Evaluate this model instance with given dataset after training. 
         This will be called only when model is *trained*.
 
         :param str dataset_uri: URI of the test dataset in a format specified by the task
+        :param str task: Task type
         :returns: Accuracy as float from 0-1 on the test dataset
         :rtype: float
         '''
@@ -131,7 +147,7 @@ class BaseModel(abc.ABC):
         pass
 
 
-def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, 
+def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
                 queries=[], knobs=None):
     '''
     Validates whether a model class is properly defined. 
@@ -139,6 +155,7 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri,
 
     :param str train_dataset_uri: URI of the train dataset for testing the training of model
     :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model
+    :param str task: Task type of model
     :param list[any] queries: List of queries for testing predictions with the trained model
     :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used
     :type knobs: dict[str, any]
@@ -167,10 +184,10 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri,
     model_inst.init(knobs)
 
     print('Testing training of model...')
-    model_inst.train(train_dataset_uri)
+    model_inst.train(train_dataset_uri, task)
 
     print('Testing evaluation of model...')
-    score = model_inst.evaluate(test_dataset_uri)
+    score = model_inst.evaluate(test_dataset_uri, task)
 
     if not isinstance(score, float):
         raise InvalidModelClassException('`evaluate()` should return a float!')
@@ -197,9 +214,16 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri,
     model_inst.init(knobs)
     model_inst.load_parameters(parameters)
 
+    print('Testing retrieving of predict label mapping...')
+    predict_label_mapping = model_inst.get_predict_label_mapping()
+
+    if not isinstance(predict_label_mapping, dict):
+        raise InvalidModelClassException('`get_predict_label_mapping()` should return a dict[int, str]')
+
     print('Testing predictions with model...')
     print('Using queries: {}'.format(queries))
     predictions = model_inst.predict(queries)
+    predictions = ensemble_predictions([predictions], [predict_label_mapping], task)
 
     try:
         for prediction in predictions:

@@ -27,6 +27,9 @@ class RunningInferenceJobExistsException(Exception):
 class InvalidRunningInferenceJobException(Exception):
     pass
 
+class NoModelsForTaskException(Exception):
+    pass
+
 class Admin(object):
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
         self._base_worker_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_WORKER'],
@@ -74,6 +77,11 @@ class Admin(object):
         train_jobs = self._db.get_train_jobs_of_app(app)
         app_version = max([x.app_version for x in train_jobs], default=0) + 1
 
+        # Ensure that there are models associated with task
+        models = self._db.get_models_of_task(task)
+        if len(models) == 0:
+            raise NoModelsForTaskException()
+
         train_job = self._db.create_train_job(
             user_id=user_id,
             app=app,
@@ -110,33 +118,31 @@ class Admin(object):
         services = [self._db.get_service(x.service_id) for x in workers]
         worker_models = [self._db.get_model(x.model_id) for x in workers]
 
-        return [
-            {
-                'id': train_job.id,
-                'status': train_job.status,
-                'app': train_job.app,
-                'app_version': train_job.app_version,
-                'task': train_job.task,
-                'train_dataset_uri': train_job.train_dataset_uri,
-                'test_dataset_uri': train_job.test_dataset_uri,
-                'datetime_started': train_job.datetime_started,
-                'datetime_completed': train_job.datetime_completed,
-                'budget_type': train_job.budget_type,
-                'budget_amount': train_job.budget_amount,
-                'workers': [
-                    {
-                        'service_id': service.id,
-                        'status': service.status,
-                        'replicas': service.replicas,
-                        'datetime_started': service.datetime_started,
-                        'datetime_stopped': service.datetime_stopped,
-                        'model_name': model.name
-                    }
-                    for (worker, service, model) 
-                    in zip(workers, services, worker_models)
-                ]
-            }
-        ]
+        return {
+            'id': train_job.id,
+            'status': train_job.status,
+            'app': train_job.app,
+            'app_version': train_job.app_version,
+            'task': train_job.task,
+            'train_dataset_uri': train_job.train_dataset_uri,
+            'test_dataset_uri': train_job.test_dataset_uri,
+            'datetime_started': train_job.datetime_started,
+            'datetime_completed': train_job.datetime_completed,
+            'budget_type': train_job.budget_type,
+            'budget_amount': train_job.budget_amount,
+            'workers': [
+                {
+                    'service_id': service.id,
+                    'status': service.status,
+                    'replicas': service.replicas,
+                    'datetime_started': service.datetime_started,
+                    'datetime_stopped': service.datetime_stopped,
+                    'model_name': model.name
+                }
+                for (worker, service, model) 
+                in zip(workers, services, worker_models)
+            ]
+        }
 
     def get_train_jobs_of_app(self, app):
         train_jobs = self._db.get_train_jobs_of_app(app)
@@ -255,35 +261,33 @@ class Admin(object):
         worker_trials = [self._db.get_trial(x.trial_id) for x in workers]
         worker_trial_models = [self._db.get_model(x.model_id) for x in worker_trials]
 
-        return [
-            {
-                'id': inference_job.id,
-                'status': inference_job.status,
-                'train_job_id': train_job.id,
-                'app': train_job.app,
-                'app_version': train_job.app_version,
-                'datetime_started': inference_job.datetime_started,
-                'datetime_stopped': inference_job.datetime_stopped,
-                'predictor_host': predictor_host,
-                'workers': [
-                    {
-                        'service_id': service.id,
-                        'status': service.status,
-                        'replicas': service.replicas,
-                        'datetime_started': service.datetime_started,
-                        'datetime_stopped': service.datetime_stopped,
-                        'trial': {
-                            'id': trial.id,
-                            'score': trial.score,
-                            'knobs': trial.knobs,
-                            'model_name': model.name
-                        }
+        return {
+            'id': inference_job.id,
+            'status': inference_job.status,
+            'train_job_id': train_job.id,
+            'app': train_job.app,
+            'app_version': train_job.app_version,
+            'datetime_started': inference_job.datetime_started,
+            'datetime_stopped': inference_job.datetime_stopped,
+            'predictor_host': predictor_host,
+            'workers': [
+                {
+                    'service_id': service.id,
+                    'status': service.status,
+                    'replicas': service.replicas,
+                    'datetime_started': service.datetime_started,
+                    'datetime_stopped': service.datetime_stopped,
+                    'trial': {
+                        'id': trial.id,
+                        'score': trial.score,
+                        'knobs': trial.knobs,
+                        'model_name': model.name
                     }
-                    for (worker, service, trial, model) 
-                    in zip(workers, services, worker_trials, worker_trial_models)
-                ]
-            }
-        ]
+                }
+                for (worker, service, trial, model) 
+                in zip(workers, services, worker_trials, worker_trial_models)
+            ]
+        }
 
     def get_inference_jobs_of_app(self, app):
         inference_jobs = self._db.get_inference_jobs_of_app(app)

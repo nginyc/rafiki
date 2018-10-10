@@ -3,7 +3,7 @@ Task Specification
 
 .. contents:: Table of Contents
 
-IMAGE_CLASSIFICATION_WITH_ARRAYS
+IMAGE_CLASSIFICATION
 --------------------------------------------------------------------
 
 Dataset Types: 

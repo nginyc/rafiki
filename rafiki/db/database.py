@@ -145,6 +145,11 @@ class Database(object):
         inference_job = self._session.query(InferenceJob).get(id)
         return inference_job
 
+    def get_inference_job_by_predictor(self, predictor_service_id):
+        inference_job = self._session.query(InferenceJob) \
+            .filter(InferenceJob.predictor_service_id == predictor_service_id).first()
+        return inference_job
+
     def get_running_inference_job_by_train_job(self, train_job_id):
         inference_job = self._session.query(InferenceJob) \
             .filter(InferenceJob.train_job_id == train_job_id) \
@@ -171,6 +176,11 @@ class Database(object):
             .order_by(InferenceJob.datetime_started.desc()).all()
 
         return inference_jobs
+
+    def get_workers_of_inference_job(self, inference_job_id):
+        workers = self._session.query(InferenceJobWorker) \
+            .filter(InferenceJobWorker.inference_job_id == inference_job_id).all()
+        return workers
 
     ####################################
     # Inference Job Workers
@@ -334,11 +344,12 @@ class Database(object):
         self._session.add(trial)
         return trial
 
-    def mark_trial_as_complete(self, trial, score, parameters):
+    def mark_trial_as_complete(self, trial, score, parameters, predict_label_mapping):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
         trial.datetime_stopped = datetime.datetime.utcnow()
         trial.parameters = parameters
+        trial.predict_label_mapping = predict_label_mapping
         self._session.add(trial)
         return trial
 
