@@ -100,6 +100,7 @@ class Trial(Base):
     status = Column(String, nullable=False, default=TrialStatus.RUNNING)
     score = Column(Float, default=0)
     parameters = Column(JSON, default=None)
+    predict_label_mapping = Column(JSON, default=None)
     datetime_stopped = Column(DateTime, default=None)
     
 

@@ -20,15 +20,9 @@ def load_model_class(model_file_bytes, model_class):
     os.remove(f.name)
 
     return clazz
-
-def probabilities_to_predictions(probabilities):
-    return np.argmax(probabilities, axis=1)
-
-def parse_model_prediction(prediction):
-    if isinstance(prediction, np.int64):
-        return int(prediction)
     
-    if isinstance(prediction, np.uint8):
-        return int(prediction)
+def parse_model_prediction(prediction):
+    if isinstance(prediction, np.ndarray):
+        return prediction.tolist()
 
     return prediction

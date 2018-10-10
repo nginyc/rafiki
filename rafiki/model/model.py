@@ -3,7 +3,9 @@ import json
 import abc
 import traceback
 from rafiki.advisor import make_advisor
-from rafiki.utils.model import parse_model_prediction, probabilities_to_predictions
+from rafiki.predictor import ensemble_predictions
+from rafiki.utils.model import parse_model_prediction
+from rafiki.constants import TaskType
 
 class InvalidModelClassException(Exception):
     pass
@@ -220,8 +222,8 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
 
     print('Testing predictions with model...')
     print('Using queries: {}'.format(queries))
-    probabilities = model_inst.predict(queries)
-    predictions = probabilities_to_predictions(probabilities)
+    predictions = model_inst.predict(queries)
+    predictions = ensemble_predictions([predictions], [predict_label_mapping], task)
 
     try:
         for prediction in predictions:
