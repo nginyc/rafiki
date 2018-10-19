@@ -7,7 +7,9 @@ from rafiki.constants import TaskType, BudgetType, TrainJobStatus
 
 ADMIN_HOST = 'localhost'
 ADMIN_PORT = 8000
-USER_EMAIL = 'superadmin@rafiki'
+SUPERADMIN_EMAIL = 'superadmin@rafiki'
+MODEL_DEVELOPER_EMAIL = 'model_developer@rafiki'
+APP_DEVELOPER_EMAIL = 'app_developer@rafiki'
 USER_PASSWORD = 'rafiki'
 APP = 'fashion_mnist_app'
 TRAIN_DATASET_URI = 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true'
@@ -42,6 +44,24 @@ QUERY = \
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
+def create_users(client):
+    # Add a model developer
+    pprint.pprint(
+        client.create_user(
+            email=APP_DEVELOPER_EMAIL,
+            password=USER_PASSWORD,
+            user_type='APP_DEVELOPER'
+        )
+    )
+
+    # Add an app developer
+    pprint.pprint(
+        client.create_user(
+            email='model_developer@rafiki',
+            password='rafiki',
+            user_type='MODEL_DEVELOPER'
+        )
+    )
 
 def create_models(client):
     # Add TfSingleHiddenLayer model to Rafiki
@@ -132,10 +152,19 @@ def stop_inference_job(client):
 
 if __name__ == '__main__':
     client = Client(admin_host=ADMIN_HOST, admin_port=ADMIN_PORT)
-    client.login(email=USER_EMAIL, password=USER_PASSWORD)
+    client.login(email=SUPERADMIN_EMAIL, password=USER_PASSWORD)
+
+    print('Adding users to Rafiki...')
+    create_users(client)
+
+    print('Logging in as model developer...')
+    client.login(email=MODEL_DEVELOPER_EMAIL, password=USER_PASSWORD)
 
     print('Adding models to Rafiki...') 
     create_models(client)
+
+    print('Logging in as app developer...')
+    client.login(email=APP_DEVELOPER_EMAIL, password=USER_PASSWORD)
 
     print('Creating train job for app "{}" on Rafiki...'.format(APP)) 
     create_train_job(client)
