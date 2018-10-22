@@ -3,7 +3,7 @@ import time
 import requests
 
 from rafiki.client import Client
-from rafiki.constants import TaskType, BudgetType
+from rafiki.constants import TaskType, BudgetType, TrainJobStatus
 
 ADMIN_HOST = 'localhost'
 ADMIN_PORT = 8000
@@ -81,9 +81,15 @@ def wait_until_train_job_has_completed(client):
         time.sleep(10)
         try:
             train_job = client.get_train_job(app=APP)
-            if train_job.get('status') == 'COMPLETED':
-                return
-
+            status = train_job.get('status')
+            if status == TrainJobStatus.COMPLETED:
+                # Train job completed!
+                return True
+            elif status != TrainJobStatus.RUNNING:
+                # Train job has either errored or been stopped
+                return False
+            else:
+                continue
         except:
             pass
 
@@ -135,7 +141,9 @@ if __name__ == '__main__':
     create_train_job(client)
 
     print('Waiting for train job to complete...')
-    wait_until_train_job_has_completed(client)
+    print('This might take a few minutes.')
+    result = wait_until_train_job_has_completed(client)
+    if not result: raise Exception('Train job has errored or stopped.')
     print('Train job has been completed!')
 
     print('Listing best trials of latest train job for app "{}"...'.format(APP))
