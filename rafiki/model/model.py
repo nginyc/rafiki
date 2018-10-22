@@ -217,7 +217,12 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
     print('Testing retrieving of predict label mapping...')
     predict_label_mapping = model_inst.get_predict_label_mapping()
 
-    if not isinstance(predict_label_mapping, dict):
+    try:
+        if not isinstance(predict_label_mapping, dict):
+            raise Exception()
+            
+        predict_label_mapping = json.loads(json.dumps(predict_label_mapping))
+    except:
         raise InvalidModelClassException('`get_predict_label_mapping()` should return a dict[int, str]')
 
     print('Testing predictions with model...')
