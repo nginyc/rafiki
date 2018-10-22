@@ -7,11 +7,8 @@ from rafiki.predictor import ensemble_predictions
 from rafiki.utils.model import parse_model_prediction
 from rafiki.constants import TaskType
 
-class InvalidModelClassException(Exception):
-    pass
-
-class InvalidModelParamsException(Exception):
-    pass
+class InvalidModelClassException(Exception): pass
+class InvalidModelParamsException(Exception): pass
 
 class BaseModel(abc.ABC):
     '''

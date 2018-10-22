@@ -14,8 +14,7 @@ from rafiki.config import INFERENCE_WORKER_SLEEP, INFERENCE_WORKER_PREDICT_BATCH
 
 logger = logging.getLogger(__name__)
 
-class InvalidWorkerException(Exception):
-    pass
+class InvalidWorkerException(Exception): pass
 
 class InferenceWorker(object):
     def __init__(self, service_id, cache=Cache(), db=Database()):

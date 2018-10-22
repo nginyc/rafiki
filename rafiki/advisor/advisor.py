@@ -2,8 +2,7 @@ import abc
 
 from rafiki.constants import AdvisorType
 
-class InvalidAdvisorTypeException(Exception):
-    pass
+class InvalidAdvisorTypeException(Exception): pass
 
 class BaseAdvisor(abc.ABC):
     '''

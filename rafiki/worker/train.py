@@ -12,17 +12,10 @@ from rafiki.client import Client
 
 logger = logging.getLogger(__name__)
 
-class InvalidTrainJobException(Exception):
-    pass
-
-class InvalidModelException(Exception):
-    pass
-
-class InvalidBudgetTypeException(Exception):
-    pass
-
-class InvalidWorkerException(Exception):
-    pass
+class InvalidTrainJobException(Exception): pass
+class InvalidModelException(Exception): pass
+class InvalidBudgetTypeException(Exception): pass
+class InvalidWorkerException(Exception): pass
 
 class TrainWorker(object):
     def __init__(self, service_id, db=Database()):
