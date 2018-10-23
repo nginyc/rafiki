@@ -2,6 +2,7 @@ import time
 import logging
 import os
 import traceback
+import pickle
 import pprint
 
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
@@ -79,20 +80,14 @@ class TrainWorker(object):
             try:
                 logger.info('Starting trial...')
                 logger.info('Training & evaluating model...')
-                (score, parameters, predict_label_mapping) = \
-                    self._train_and_evaluate_model(clazz, 
-                                                    knobs,
-                                                    train_dataset_uri, 
-                                                    test_dataset_uri, 
-                                                    task)
-
+                (score, parameters) = self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
+                                                                    test_dataset_uri, task)
                 logger.info('Trial score: {}'.format(score))
                 
                 with self._db:
                     logger.info('Marking trial as complete in DB...')
                     trial = self._db.get_trial(self._trial_id)
-                    self._db.mark_trial_as_complete(trial, score, parameters,
-                                                    predict_label_mapping)
+                    self._db.mark_trial_as_complete(trial, score, parameters)
 
                 self._trial_id = None
             except Exception:
@@ -134,14 +129,17 @@ class TrainWorker(object):
 
         # Train model
         model_inst.train(train_dataset_uri, task)
-        predict_label_mapping = model_inst.get_predict_label_mapping()
 
         # Evaluate model
         score = model_inst.evaluate(test_dataset_uri, task)
+
+        # Dump and pickle model parameters
         parameters = model_inst.dump_parameters()
+        parameters = pickle.dumps(parameters)
+    
         model_inst.destroy()
 
-        return (score, parameters, predict_label_mapping)
+        return (score, parameters)
 
     # Creates a new trial in the DB
     def _create_new_trial(self, model_id, train_job_id, knobs):

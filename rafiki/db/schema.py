@@ -74,6 +74,7 @@ class TrainJob(Base):
     task = Column(String, nullable=False)
     train_dataset_uri = Column(String, nullable=False)
     test_dataset_uri = Column(String, nullable=False)
+    train_dataset_meta = Column(Binary, default=None)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     budget_type = Column(String, nullable=False)
     budget_amount = Column(Integer, nullable=False)
@@ -99,10 +100,8 @@ class Trial(Base):
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
     status = Column(String, nullable=False, default=TrialStatus.RUNNING)
     score = Column(Float, default=0)
-    parameters = Column(JSON, default=None)
-    predict_label_mapping = Column(JSON, default=None)
+    parameters = Column(Binary, default=None)
     datetime_stopped = Column(DateTime, default=None)
-    
 
 class User(Base):
     __tablename__ = 'user'

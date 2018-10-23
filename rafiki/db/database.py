@@ -52,7 +52,8 @@ class Database(object):
 
     def create_train_job(self, user_id, app, 
         app_version, task, train_dataset_uri, test_dataset_uri,
-        budget_type, budget_amount):
+        budget_type, budget_amount, train_dataset_meta):
+
         train_job = TrainJob(
             user_id=user_id,
             app=app,
@@ -61,7 +62,8 @@ class Database(object):
             train_dataset_uri=train_dataset_uri,
             test_dataset_uri=test_dataset_uri,
             budget_type=budget_type, 
-            budget_amount=budget_amount
+            budget_amount=budget_amount,
+            train_dataset_meta=train_dataset_meta
         )
         self._session.add(train_job)
         return train_job
@@ -344,12 +346,11 @@ class Database(object):
         self._session.add(trial)
         return trial
 
-    def mark_trial_as_complete(self, trial, score, parameters, predict_label_mapping):
+    def mark_trial_as_complete(self, trial, score, parameters):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
         trial.datetime_stopped = datetime.datetime.utcnow()
         trial.parameters = parameters
-        trial.predict_label_mapping = predict_label_mapping
         self._session.add(trial)
         return trial
 

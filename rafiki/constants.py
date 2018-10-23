@@ -40,9 +40,8 @@ class UserType():
 class AdvisorType():
     BTB_GP = 'BTB_GP'
 
-class DatasetProtocol():
-    HTTP = 'http'
-    HTTPS = 'https'
+class DatasetType():
+    IMAGE_CLASSES_BY_FOLDERS = 'IMAGE_CLASSES_BY_FOLDERS'
 
 class TaskType():
     IMAGE_CLASSIFICATION = 'IMAGE_CLASSIFICATION'

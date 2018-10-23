@@ -2,11 +2,13 @@ import os
 import logging
 import traceback
 import bcrypt
+import pickle
 
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.container import DockerSwarmContainerManager 
+from rafiki.model import DatasetUtils
 
 from .services_manager import ServicesManager
 
@@ -72,6 +74,11 @@ class Admin(object):
         if len(models) == 0:
             raise NoModelsForTaskException()
 
+        # Load train dataset metadata
+        dataset_utils = DatasetUtils()
+        (_, train_dataset_meta) = dataset_utils.load_dataset(train_dataset_uri, task)
+        train_dataset_meta_pickled = pickle.dumps(train_dataset_meta)
+
         train_job = self._db.create_train_job(
             user_id=user_id,
             app=app,
@@ -80,7 +87,8 @@ class Admin(object):
             train_dataset_uri=train_dataset_uri,
             test_dataset_uri=test_dataset_uri,
             budget_type=budget_type,
-            budget_amount=budget_amount
+            budget_amount=budget_amount,
+            train_dataset_meta=train_dataset_meta_pickled
         )
         self._db.commit()
 

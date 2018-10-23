@@ -6,8 +6,10 @@ import tempfile
 import numpy as np
 import base64
 
-from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class, load_dataset
+from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
 from rafiki.constants import TaskType
+
+EPOCHS = 3
 
 class TfSingleHiddenLayer(BaseModel):
     '''
@@ -21,10 +23,6 @@ class TfSingleHiddenLayer(BaseModel):
                     'type': 'int',
                     'range': [2, 128]
                 },
-                'epochs': {
-                    'type': 'int',
-                    'range': [1, 1]
-                },
                 'learning_rate': {
                     'type': 'float_exp',
                     'range': [1e-5, 1e-1]
@@ -36,12 +34,8 @@ class TfSingleHiddenLayer(BaseModel):
             }
         }
 
-    def get_predict_label_mapping(self):
-        return self._predict_label_mapping
-        
     def init(self, knobs):
         self._batch_size = knobs.get('batch_size')
-        self._epochs = knobs.get('epochs')
         self._hidden_layer_units = knobs.get('hidden_layer_units')
         self._learning_rate = knobs.get('learning_rate')
 
@@ -49,33 +43,26 @@ class TfSingleHiddenLayer(BaseModel):
         self._sess = tf.Session(graph=self._graph)
         
     def train(self, dataset_uri, task):
-        (images, labels) = self._load_dataset(dataset_uri, task)
-
-        class_names = np.unique(labels)
-        num_classes = len(class_names)
-        self._predict_label_mapping = dict(zip(range(num_classes), class_names))
-        train_and_evalutate_label_mapping = {v: k for k, v in  self._predict_label_mapping.items()}
-
-        labels = np.array([train_and_evalutate_label_mapping[label] for label in labels])
-
+        ((images, labels), train_index_to_label) = self.utils.load_dataset(dataset_uri, task)
+        self._train_index_to_label = train_index_to_label
+        num_classes = len(np.unique(labels))
         with self._graph.as_default():
             self._model = self._build_model(num_classes)
             with self._sess.as_default():
                 self._model.fit(
-                    images, 
-                    labels, 
-                    epochs=self._epochs, 
+                    np.array(images), 
+                    np.array(labels), 
+                    verbose=0,
+                    epochs=EPOCHS,
                     batch_size=self._batch_size
                 )
 
     def evaluate(self, dataset_uri, task):
-        (images, labels) = self._load_dataset(dataset_uri, task)
-        train_and_evalutate_label_mapping = {v: k for k, v in  self._predict_label_mapping.items()}
-        labels = np.array([train_and_evalutate_label_mapping[label] for label in labels])
-
+        ((images, labels), test_index_to_label) = self.utils.load_dataset(dataset_uri, task)
+        labels = self.utils.relabel_dataset_labels(labels, self._train_index_to_label, test_index_to_label)
         with self._graph.as_default():
             with self._sess.as_default():
-                (loss, accuracy) = self._model.evaluate(images, labels)
+                (loss, accuracy) = self._model.evaluate(np.array(images), np.array(labels))
         return accuracy
 
     def predict(self, queries):
@@ -89,56 +76,47 @@ class TfSingleHiddenLayer(BaseModel):
         self._sess.close()
 
     def dump_parameters(self):
-        # TODO: Not save to & read from a file 
+        params = {}
 
-        # Save whole model to temp h5 file
-        tmp = tempfile.NamedTemporaryFile(delete=False)
-        with self._graph.as_default():
-            with self._sess.as_default():
-                self._model.save(tmp.name)
+        # Save model parameters
+        with tempfile.NamedTemporaryFile() as tmp:
+            # Save whole model to temp h5 file
+            with self._graph.as_default():
+                with self._sess.as_default():
+                    self._model.save(tmp.name)
         
-        # Read from temp h5 file & encode it to base64 string
-        with open(tmp.name, 'rb') as f:
-            h5_model_bytes = f.read()
+            # Read from temp h5 file & encode it to base64 string
+            with open(tmp.name, 'rb') as f:
+                h5_model_bytes = f.read()
 
-        h5_model_base64 = base64.b64encode(h5_model_bytes).decode('utf-8')
+            params['h5_model_base64'] = base64.b64encode(h5_model_bytes).decode('utf-8')
 
-        # Remove temp file
-        os.remove(tmp.name)
+        # Save train_index_to_label
+        params['train_index_to_label'] = self._train_index_to_label
 
-        return {
-            'h5_model_base64': h5_model_base64,
-            'predict_label_mapping': self._predict_label_mapping
-        }
+        return params
 
     def load_parameters(self, params):
+        # Load model parameters
         h5_model_base64 = params.get('h5_model_base64', None)
-
         if h5_model_base64 is None:
             raise InvalidModelParamsException()
 
-        # TODO: Not save to & read from a file 
+        with tempfile.NamedTemporaryFile() as tmp:
+            # Convert back to bytes & write to temp file
+            h5_model_bytes = base64.b64decode(h5_model_base64.encode('utf-8'))
+            with open(tmp.name, 'wb') as f:
+                f.write(h5_model_bytes)
 
-        # Convert back to bytes & write to temp file
-        tmp = tempfile.NamedTemporaryFile(delete=False)
-        h5_model_bytes = base64.b64decode(h5_model_base64.encode('utf-8'))
-        with open(tmp.name, 'wb') as f:
-            f.write(h5_model_bytes)
-
-        # Load model from temp file
-        with self._graph.as_default():
-            with self._sess.as_default():
-                self._model = keras.models.load_model(tmp.name)
+            # Load model from temp file
+            with self._graph.as_default():
+                with self._sess.as_default():
+                    self._model = keras.models.load_model(tmp.name)
                 
-        # Remove temp file
-        os.remove(tmp.name)
-
-        if 'predict_label_mapping' in params:
-            self._predict_label_mapping = params['predict_label_mapping']
-
-    def _load_dataset(self, dataset_uri, task):
-        # Here, we use Rafiki's in-built dataset loader
-        return load_dataset(dataset_uri, task) 
+        # Load train_index_to_label
+        self._train_index_to_label = params.get('train_index_to_label', None)
+        if self._train_index_to_label is None:
+            raise InvalidModelParamsException()
 
     def _build_model(self, num_classes):
         hidden_layer_units = self._hidden_layer_units

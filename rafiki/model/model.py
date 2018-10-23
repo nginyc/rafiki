@@ -2,19 +2,32 @@ import os
 import json
 import abc
 import traceback
+import pickle
 from rafiki.advisor import make_advisor
 from rafiki.predictor import ensemble_predictions
 from rafiki.utils.model import parse_model_prediction
 from rafiki.constants import TaskType
 
+from .dataset import DatasetUtils
+
 class InvalidModelClassException(Exception): pass
 class InvalidModelParamsException(Exception): pass
+
+class ModelUtils(DatasetUtils):
+    '''
+    Collection of utility methods for model developers e.g. dataset loading
+    '''   
+    pass
 
 class BaseModel(abc.ABC):
     '''
     Rafiki's base model class that Rafiki models should extend. 
     Rafiki models should implement all abstract methods according to their associated tasks' specifications.
     '''   
+
+    def __init__(self):
+        self.utils = ModelUtils()
+        super().__init__()
 
     @abc.abstractmethod
     def get_knob_config(self):
@@ -47,17 +60,6 @@ class BaseModel(abc.ABC):
                     }
                 }
             
-        '''
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def get_predict_label_mapping(self):
-        '''
-        Return a dictionary mapping from index to class labels. 
-        This method is only called after training.
-
-        :returns: Dictionary mapping from index to class labels. 
-        :rtype: dict[int, str]
         '''
         raise NotImplementedError()
 
@@ -159,8 +161,19 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
     :returns: The trained model
     '''
     
+    print('Loading train dataset\'s metadata...')
+    dataset_utils = DatasetUtils()
+    (_, train_dataset_meta) = dataset_utils.load_dataset(train_dataset_uri, task)
+
+    # Train dataset's metadata is pickled and put into DB
+    train_dataset_meta = pickle.loads(pickle.dumps(train_dataset_meta))
+    
     print('Testing instantiation of model...')
     model_inst = model_class()
+
+    print('Checking deprecated methods...')
+    if getattr(model_inst, 'get_predict_label_mapping', None) is not None:
+        print('WARNING: `get_predict_label_mapping` has been deprecated!')
 
     print('Testing getting of model\'s knob config...')
     knob_config = model_inst.get_knob_config()
@@ -198,10 +211,11 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
         raise InvalidModelClassException('`dump_parameters()` should return a dict[str, any]')
 
     try:
-        json.dumps(parameters)
+        # Model parameters are pickled and put into DB
+        parameters = pickle.loads(pickle.dumps(parameters))
     except Exception:
         traceback.print_stack()
-        raise InvalidModelClassException('`parameters` should be JSON serializable')
+        raise InvalidModelClassException('`parameters` should be pickle-able')
 
     print('Testing destroying of model...')
     model_inst.destroy()
@@ -211,27 +225,17 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
     model_inst.init(knobs)
     model_inst.load_parameters(parameters)
 
-    print('Testing retrieving of predict label mapping...')
-    predict_label_mapping = model_inst.get_predict_label_mapping()
-
-    try:
-        if not isinstance(predict_label_mapping, dict):
-            raise Exception()
-            
-        predict_label_mapping = json.loads(json.dumps(predict_label_mapping))
-    except:
-        raise InvalidModelClassException('`get_predict_label_mapping()` should return a dict[int, str]')
-
     print('Testing predictions with model...')
     print('Using queries: {}'.format(queries))
     predictions = model_inst.predict(queries)
-    predictions = ensemble_predictions([predictions], [predict_label_mapping], task)
+
+    # Ensembling predictions in predictor
+    predictions = ensemble_predictions([predictions], train_dataset_meta, task)
 
     try:
         for prediction in predictions:
             prediction = parse_model_prediction(prediction)
             json.dumps(prediction)
-            
     except Exception:
         traceback.print_stack()
         raise InvalidModelClassException('Each `prediction` should be JSON serializable')

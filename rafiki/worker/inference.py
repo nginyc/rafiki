@@ -3,6 +3,7 @@ import uuid
 import random
 import os
 import numpy as np
+import pickle
 import logging
 import traceback
 import json
@@ -78,7 +79,10 @@ class InferenceWorker(object):
         clazz = load_model_class(model.model_file_bytes, model.model_class)
         model_inst = clazz()
         model_inst.init(trial.knobs)
-        model_inst.load_parameters(trial.parameters)
+
+        # Unpickle model parameters and load it
+        parameters = pickle.loads(trial.parameters)
+        model_inst.load_parameters(parameters)
 
         return model_inst
 

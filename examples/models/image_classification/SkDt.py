@@ -5,7 +5,7 @@ import os
 import base64
 import numpy as np
 
-from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class, load_dataset
+from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
 from rafiki.constants import TaskType
 
 class SkDt(BaseModel):
@@ -27,9 +27,6 @@ class SkDt(BaseModel):
             }
         }
 
-    def get_predict_label_mapping(self):
-        return self._predict_label_mapping
-
     def init(self, knobs):
         self._max_depth = knobs.get('max_depth') 
         self._criterion = knobs.get('criterion') 
@@ -39,24 +36,15 @@ class SkDt(BaseModel):
         )
         
     def train(self, dataset_uri, task):
-        (images, labels) = self._load_dataset(dataset_uri, task)
-        
-        class_names = np.unique(labels)
-        num_classes = len(class_names)
-        self._predict_label_mapping = dict(zip(range(num_classes), class_names))
-        train_and_evalutate_label_mapping = {v: k for k, v in  self._predict_label_mapping.items()}
-
-        labels = np.array([train_and_evalutate_label_mapping[label] for label in labels])
-
+        ((images, labels), train_index_to_label) = self.utils.load_dataset(dataset_uri, task)
+        self._train_index_to_label = train_index_to_label
         X = self._prepare_X(images)
         y = labels
         self._clf.fit(X, y)
 
     def evaluate(self, dataset_uri, task):
-        (images, labels) = self._load_dataset(dataset_uri, task)
-        train_and_evalutate_label_mapping = {v: k for k, v in  self._predict_label_mapping.items()}
-        labels = np.array([train_and_evalutate_label_mapping[label] for label in labels])
-
+        ((images, labels), test_index_to_label) = self.utils.load_dataset(dataset_uri, task)
+        labels = self.utils.relabel_dataset_labels(labels, self._train_index_to_label, test_index_to_label)
         X = self._prepare_X(images)
         y = labels
         preds = self._clf.predict(X)
@@ -72,27 +60,34 @@ class SkDt(BaseModel):
         pass
 
     def dump_parameters(self):
+        params = {}
+
+        # Save model parameters
         clf_bytes = pickle.dumps(self._clf)
         clf_base64 = base64.b64encode(clf_bytes).decode('utf-8')
-        return {
-            'clf_base64': clf_base64,
-            'predict_label_mapping': self._predict_label_mapping
-        }
+        params['clf_base64'] = clf_base64
+
+        # Save train_index_to_label
+        params['train_index_to_label'] = self._train_index_to_label
+        
+        return params
 
     def load_parameters(self, params):
-        if 'clf_base64' in params:
-            clf_bytes = base64.b64decode(params['clf_base64'].encode('utf-8'))
-            self._clf = pickle.loads(clf_bytes)
+        # Load model parameters
+        clf_base64 = params.get('clf_base64', None)
+        if clf_base64 is None:
+            raise InvalidModelParamsException()
+        
+        clf_bytes = base64.b64decode(params['clf_base64'].encode('utf-8'))
+        self._clf = pickle.loads(clf_bytes)
 
-        if 'predict_label_mapping' in params:
-            self._predict_label_mapping = params['predict_label_mapping']
+        # Load train_index_to_label
+        self._train_index_to_label = params.get('train_index_to_label', None)
+        if self._train_index_to_label is None:
+            raise InvalidModelParamsException()
 
     def _prepare_X(self, images):
         return [np.array(image).flatten() for image in images]
-
-    def _load_dataset(self, dataset_uri, task):
-        # Here, we use Rafiki's in-built dataset loader
-        return load_dataset(dataset_uri, task) 
 
     def _build_classifier(self, max_depth, criterion):
         clf = tree.DecisionTreeClassifier(
