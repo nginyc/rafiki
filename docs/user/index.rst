@@ -9,3 +9,4 @@ User Guide
    quickstart-model-developers
    quickstart-admins
    tasks
+   datasets

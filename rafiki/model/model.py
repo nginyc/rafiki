@@ -115,7 +115,7 @@ class BaseModel(abc.ABC):
     def dump_parameters(self):
         '''
         Return a dictionary of model parameters that fully define this model instance's trained state. 
-        This dictionary should be JSON serializable.
+        This dictionary should be serializable by the Python's ``pickle`` module.
         This will be used for trained model serialization within Rafiki.
         This will be called only when model is *trained*.
 
@@ -215,7 +215,7 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
         parameters = pickle.loads(pickle.dumps(parameters))
     except Exception:
         traceback.print_stack()
-        raise InvalidModelClassException('`parameters` should be pickle-able')
+        raise InvalidModelClassException('`parameters` should be serializable by `pickle`.')
 
     print('Testing destroying of model...')
     model_inst.destroy()
