@@ -4,7 +4,7 @@
 
 Read Rafiki's full documentation at https://nginyc.github.io/rafiki/docs/.
 
-## Quickstart
+## Quick Setup
 
 Prerequisites: MacOS or Linux environment
 
@@ -24,4 +24,4 @@ Prerequisites: MacOS or Linux environment
     bash scripts/stop.sh
     ```
 
-More instructions are available in [Rafiki's developer guide](https://nginyc.github.io/rafiki/docs/docs/dev).
+More instructions are available in [Rafiki's Developer Guide](https://nginyc.github.io/rafiki/docs/docs/dev).

@@ -5,7 +5,7 @@ import bcrypt
 import pickle
 
 from rafiki.db import Database
-from rafiki.constants import ServiceStatus, UserType, ServiceType
+from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.container import DockerSwarmContainerManager 
 from rafiki.model import DatasetUtils
@@ -221,6 +221,9 @@ class Admin(object):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
         if train_job is None:
             raise InvalidTrainJobException('Have you started a train job for this app?')
+
+        if train_job.status != TrainJobStatus.COMPLETED:
+            raise InvalidTrainJobException('Train job has not completed.')
 
         # Ensure only 1 running inference job for 1 train job
         inference_job = self._db.get_running_inference_job_by_train_job(train_job.id)

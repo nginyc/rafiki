@@ -5,7 +5,10 @@ Setup & Development
 
 .. contents:: Table of Contents
 
-Installation
+
+.. _`quick-setup`:
+
+Quick Setup
 --------------------------------------------------------------------
 
 We assume development or deployment in a MacOS or Linux environment.
@@ -14,17 +17,13 @@ We assume development or deployment in a MacOS or Linux environment.
 
 2. Install Python 3.6
 
-
-Quick Setup
---------------------------------------------------------------------
-
-1. Setup Rafiki's complete stack with the init script:
+3. Setup Rafiki's complete stack with the init script:
 
 .. code-block:: shell
 
     bash scripts/start.sh
 
-2. To destroy Rafiki's complete stack:
+4. To destroy Rafiki's complete stack:
 
 .. code-block:: shell
 
