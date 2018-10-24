@@ -23,7 +23,7 @@ class InvalidDatasetProtocolException(Exception): pass
 class InvalidDatasetTypeException(Exception): pass 
 class InvalidDatasetFormatException(Exception): pass 
 
-class DatasetUtils():
+class ModelDatasetUtils():
     def load_dataset(self, dataset_uri, task):
         if task not in TASK_TYPE_TO_DATASET_TYPE:
             raise InvalidTaskException()

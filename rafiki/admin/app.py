@@ -115,6 +115,17 @@ def stop_train_job_worker(auth, service_id):
         return jsonify(admin.stop_train_job_worker(service_id, **params))
 
 ####################################
+# Trials
+####################################
+
+@app.route('/trials/<trial_id>/logs', methods=['GET'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
+def get_trial_logs(auth, trial_id):
+    params = get_request_params()
+    with admin:
+        return jsonify(admin.get_trial_logs(trial_id, **params))
+
+####################################
 # Inference Jobs
 ####################################
 

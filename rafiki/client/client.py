@@ -226,6 +226,19 @@ class Client(object):
         return data
 
     ####################################
+    # Trials
+    ####################################
+
+    def get_trial_logs(self, trial_id):
+        '''
+        Gets the logs for a specific trial.
+
+        :param str trial_id: ID of trial
+        '''
+        data = self._get('/trials/{}/logs'.format(trial_id))
+        return data
+
+    ####################################
     # Inference Jobs
     ####################################
 

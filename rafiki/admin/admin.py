@@ -8,7 +8,7 @@ from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.container import DockerSwarmContainerManager 
-from rafiki.model import DatasetUtils
+from rafiki.model import ModelDatasetUtils
 
 from .services_manager import ServicesManager
 
@@ -19,6 +19,7 @@ class InvalidUserException(Exception): pass
 class InvalidPasswordException(Exception): pass
 class InvalidRunningInferenceJobException(Exception): pass
 class InvalidTrainJobException(Exception): pass
+class InvalidTrialException(Exception): pass
 class RunningInferenceJobExistsException(Exception): pass
 class NoModelsForTaskException(Exception): pass
 
@@ -75,7 +76,7 @@ class Admin(object):
             raise NoModelsForTaskException()
 
         # Load train dataset metadata
-        dataset_utils = DatasetUtils()
+        dataset_utils = ModelDatasetUtils()
         (_, train_dataset_meta) = dataset_utils.load_dataset(train_dataset_uri, task)
         train_dataset_meta_pickled = pickle.dumps(train_dataset_meta)
 
@@ -212,6 +213,17 @@ class Admin(object):
             'model_id': worker.model_id,
             'train_job_id': worker.train_job_id
         }
+
+    ####################################
+    # Trials
+    ####################################
+    
+    def get_trial_logs(self, trial_id):
+        trial = self._db.get_trial(trial_id)
+        if trial is None:
+            raise InvalidTrialException()
+        logs_str = trial.logs.decode('utf-8')
+        return logs_str
 
     ####################################
     # Inference Job

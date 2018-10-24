@@ -41,11 +41,13 @@ class TfSingleHiddenLayer(BaseModel):
 
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
+        self._describe_plots()
         
     def train(self, dataset_uri, task):
         ((images, labels), train_index_to_label) = self.utils.load_dataset(dataset_uri, task)
         self._train_index_to_label = train_index_to_label
         num_classes = len(np.unique(labels))
+        
         with self._graph.as_default():
             self._model = self._build_model(num_classes)
             with self._sess.as_default():
@@ -54,7 +56,10 @@ class TfSingleHiddenLayer(BaseModel):
                     np.array(labels), 
                     verbose=0,
                     epochs=EPOCHS,
-                    batch_size=self._batch_size
+                    batch_size=self._batch_size,
+                    callbacks=[
+                        tf.keras.callbacks.LambdaCallback(on_epoch_end=self._on_train_epoch_end)
+                    ]
                 )
 
     def evaluate(self, dataset_uri, task):
@@ -117,6 +122,13 @@ class TfSingleHiddenLayer(BaseModel):
         self._train_index_to_label = params.get('train_index_to_label', None)
         if self._train_index_to_label is None:
             raise InvalidModelParamsException()
+
+    def _on_train_epoch_end(self, epoch, logs):
+        loss = logs['loss']
+        self.utils.log_metrics(loss=loss)
+
+    def _describe_plots(self):
+        self.utils.describe_plot('Loss over time', ['loss'])
 
     def _build_model(self, num_classes):
         hidden_layer_units = self._hidden_layer_units

@@ -2,12 +2,16 @@ import time
 import logging
 import os
 import traceback
+import datetime
 import pickle
 import pprint
+import tempfile
+import json
 
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
 from rafiki.utils.model import load_model_class
+from rafiki.model import ModelLogUtilsLogger
 from rafiki.db import Database
 from rafiki.client import Client
 
@@ -80,14 +84,15 @@ class TrainWorker(object):
             try:
                 logger.info('Starting trial...')
                 logger.info('Training & evaluating model...')
-                (score, parameters) = self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
-                                                                    test_dataset_uri, task)
+                (score, parameters, logs) = \
+                    self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
+                                                test_dataset_uri, task)
                 logger.info('Trial score: {}'.format(score))
                 
                 with self._db:
                     logger.info('Marking trial as complete in DB...')
                     trial = self._db.get_trial(self._trial_id)
-                    self._db.mark_trial_as_complete(trial, score, parameters)
+                    self._db.mark_trial_as_complete(trial, score, parameters, logs)
 
                 self._trial_id = None
             except Exception:
@@ -125,6 +130,12 @@ class TrainWorker(object):
     def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, 
                                     test_dataset_uri, task):
         model_inst = clazz()
+
+        # Insert model training logger
+        model_logger = TrainModelLogUtilsLogger()
+        model_inst.utils.add_logger(model_logger)
+
+        # Initialize model
         model_inst.init(knobs)
 
         # Train model
@@ -136,10 +147,13 @@ class TrainWorker(object):
         # Dump and pickle model parameters
         parameters = model_inst.dump_parameters()
         parameters = pickle.dumps(parameters)
+
+        # Export model logs
+        logs = model_logger.export_logs()
     
         model_inst.destroy()
 
-        return (score, parameters)
+        return (score, parameters, logs)
 
     # Creates a new trial in the DB
     def _create_new_trial(self, model_id, train_job_id, knobs):
@@ -238,3 +252,30 @@ class TrainWorker(object):
                         advisor_port=advisor_port)
         client.login(email=superadmin_email, password=superadmin_password)
         return client
+
+class TrainModelLogUtilsLogger(ModelLogUtilsLogger):
+    def __init__(self):
+        self._log_file = tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8')
+
+    def log(self, message):
+        self._log(type='MESSAGE', message=message)
+        
+    def describe_plot(self, title, metrics, x_axis):
+        self._log(type='PLOT', title=title, metrics=metrics, x_axis=x_axis)
+
+    def log_metrics(self, **kwargs):
+        self._log(type='METRICS', **kwargs)
+
+    # Read from temporary internal log file as bytes and remove it
+    def export_logs(self):
+        self._log_file.close()
+        with open(self._log_file.name, 'rb') as f:
+            logs = f.read()
+
+        os.remove(self._log_file.name)
+        return logs
+
+    # Logs dictionary to temporary internal log file in JSON, appending current time
+    def _log(self, **kwargs):
+        kwargs['time'] = datetime.datetime.now().isoformat()
+        self._log_file.write('{}\n'.format(json.dumps(kwargs)))
