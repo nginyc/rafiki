@@ -9,6 +9,7 @@ from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatu
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.container import DockerSwarmContainerManager 
 from rafiki.model import ModelDatasetUtils
+from rafiki.utils.log import JobLogger
 
 from .services_manager import ServicesManager
 
@@ -222,8 +223,12 @@ class Admin(object):
         trial = self._db.get_trial(trial_id)
         if trial is None:
             raise InvalidTrialException()
-        logs_str = trial.logs.decode('utf-8')
-        return logs_str
+
+        job_logger = JobLogger()
+        job_logger.import_logs(trial.logs)
+        logs = job_logger.read_logs()
+        job_logger.destroy()
+        return logs
 
     ####################################
     # Inference Job

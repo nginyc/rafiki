@@ -2,15 +2,13 @@ import time
 import logging
 import os
 import traceback
-import datetime
 import pickle
 import pprint
-import tempfile
-import json
 
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
 from rafiki.utils.model import load_model_class
+from rafiki.utils.log import JobLogger
 from rafiki.model import ModelLogUtilsLogger
 from rafiki.db import Database
 from rafiki.client import Client
@@ -133,7 +131,7 @@ class TrainWorker(object):
 
         # Insert model training logger
         model_logger = TrainModelLogUtilsLogger()
-        model_inst.utils.add_logger(model_logger)
+        model_inst.utils.set_logger(model_logger)
 
         # Initialize model
         model_inst.init(knobs)
@@ -147,11 +145,11 @@ class TrainWorker(object):
         # Dump and pickle model parameters
         parameters = model_inst.dump_parameters()
         parameters = pickle.dumps(parameters)
+        model_inst.destroy()
 
         # Export model logs
         logs = model_logger.export_logs()
-    
-        model_inst.destroy()
+        model_logger.destroy()
 
         return (score, parameters, logs)
 
@@ -255,27 +253,19 @@ class TrainWorker(object):
 
 class TrainModelLogUtilsLogger(ModelLogUtilsLogger):
     def __init__(self):
-        self._log_file = tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8')
+        self._job_logger = JobLogger()
 
     def log(self, message):
-        self._log(type='MESSAGE', message=message)
+        return self._job_logger.log(message)
         
-    def describe_plot(self, title, metrics, x_axis):
-        self._log(type='PLOT', title=title, metrics=metrics, x_axis=x_axis)
+    def define_plot(self, title, metrics, x_axis):
+        return self._job_logger.define_plot(title, metrics, x_axis)
 
     def log_metrics(self, **kwargs):
-        self._log(type='METRICS', **kwargs)
+        return self._job_logger.log_metrics(**kwargs)
 
-    # Read from temporary internal log file as bytes and remove it
     def export_logs(self):
-        self._log_file.close()
-        with open(self._log_file.name, 'rb') as f:
-            logs = f.read()
+        return self._job_logger.export_logs()
 
-        os.remove(self._log_file.name)
-        return logs
-
-    # Logs dictionary to temporary internal log file in JSON, appending current time
-    def _log(self, **kwargs):
-        kwargs['time'] = datetime.datetime.now().isoformat()
-        self._log_file.write('{}\n'.format(json.dumps(kwargs)))
+    def destroy(self):
+        return self._job_logger.destroy()
