@@ -22,16 +22,14 @@ What is Rafiki?
 *Rafiki* is a distributed, scalable system that trains machine learning (ML) models and deploys trained models, built with ease-of-use in mind.
 To do so, it leverages on automated machine learning (AutoML).
 
-For *app developers* and *app users*, without any ML expertise, they can:
+For *Application Developers* and *Application Users*, without any ML expertise, they can:
 
 - Create a model training job for supported tasks, with their own datasets
 - Deploy an ensemble of trained models for inference
 - Integrate model predictions in their apps over HTTP
 
-Check out :ref:`quickstart-app-developers` and :ref:`quickstart-app-users`.
-
-For *model developers*, they can:
+For *Model Developers*, they can:
 
 - Contribute to Rafiki's pool of model templates
 
-Check out :ref:`quickstart-model-developers`.
+Check out :ref:`quick-setup` to deploy/develop Rafiki on your machine, and/or :ref:`quick-start` to use a deployed instance of Rafiki.
