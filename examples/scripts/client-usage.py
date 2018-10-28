@@ -109,8 +109,14 @@ def wait_until_inference_job_is_running(client):
         time.sleep(10)
         try:
             inference_job = client.get_running_inference_job(app=APP)
-            if inference_job.get('status') == InferenceJobStatus.RUNNING:
+            status = inference_job.get('status')
+            if status  == InferenceJobStatus.RUNNING:
                 return inference_job.get('predictor_host')
+            elif status in [InferenceJobStatus.ERRORED, InferenceJobStatus.STOPPED]:
+                # Inference job has either errored or been stopped
+                return False
+            else:
+                continue
 
         except:
             pass
@@ -153,6 +159,7 @@ if __name__ == '__main__':
 
     print('Waiting for inference job to be running...')
     predictor_host = wait_until_inference_job_is_running(client)
+    if not predictor_host: raise Exception('Inference job has errored or stopped.')
     print('Inference job is running!')
 
     print('Making predictions...')

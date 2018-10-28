@@ -223,6 +223,7 @@ class ServicesManager(object):
             while service.status not in \
                     [ServiceStatus.RUNNING, ServiceStatus.ERRORED, ServiceStatus.STOPPED]:
                 time.sleep(SERVICE_STATUS_WAIT)
+                self._db.expire()
                 service = self._db.get_service(service.id)
 
             if service.status in [ServiceStatus.ERRORED, ServiceStatus.STOPPED]:

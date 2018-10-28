@@ -13,19 +13,15 @@ def run_service(db, start_service, end_service):
     container_id = os.environ.get('HOSTNAME', 'localhost')
     configure_logging('service-{}-{}'.format(service_id, container_id))
 
-    service = db.get_service(service_id)
-
     def _sigterm_handler(_signo, _stack_frame):
-        print("SIGTERM received: %s, %s" % (_signo, _stack_frame))
+        logger.warn("SIGTERM received: %s, %s" % (_signo, _stack_frame))
 
-        # Mark service as errored in DB
+        # Mark service as stopped in DB
         with db:
             service = db.get_service(service_id)
-            db.mark_service_as_errored(service)
+            db.mark_service_as_stopped(service)
 
     signal.signal(signal.SIGTERM, _sigterm_handler)
-
-    print('Starting service {}...'.format(service_id))
 
     # Mark service as running in DB
     with db:
@@ -33,7 +29,11 @@ def run_service(db, start_service, end_service):
         db.mark_service_as_running(service)
 
     try:
+        logger.info('Starting service {}...'.format(service_id))
+
         start_service(service_id, service_type)
+
+        logger.info('Ending service {}...'.format(service_id))
 
         # Mark service as stopped in DB
         with db:

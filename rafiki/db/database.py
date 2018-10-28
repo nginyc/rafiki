@@ -100,6 +100,7 @@ class Database(object):
 
     def mark_train_job_as_running(self, train_job):
         train_job.status = TrainJobStatus.RUNNING
+        train_job.datetime_completed = None
         self._session.add(train_job)
         return train_job
 
@@ -165,6 +166,7 @@ class Database(object):
     
     def mark_inference_job_as_running(self, inference_job):
         inference_job.status = InferenceJobStatus.RUNNING
+        inference_job.datetime_completed = None
         return inference_job
 
     def mark_inference_job_as_stopped(self, inference_job):
@@ -242,7 +244,8 @@ class Database(object):
         self._session.add(service)
 
     def mark_service_as_running(self, service):
-        service.status = ServiceStatus.DEPLOYING
+        service.status = ServiceStatus.RUNNING
+        service.datetime_stopped = None
         self._session.add(service)
 
     def mark_service_as_errored(self, service):
@@ -389,6 +392,10 @@ class Database(object):
 
     def commit(self):
         self._session.commit()
+
+    # Ensures that future database queries load fresh data from underlying database
+    def expire(self):
+        self._session.expire_all()
 
     def disconnect(self):
         if self._session is not None:
