@@ -1,33 +1,10 @@
-import sys
-import os
-import signal
-import traceback
-import logging
-
+from rafiki.utils.service import run_service
+from rafiki.db import Database
 from rafiki.constants import ServiceType
-from rafiki.utils.log import configure_logging
-
-service_id = os.environ['RAFIKI_SERVICE_ID']
-service_type = os.environ['RAFIKI_SERVICE_TYPE']
-container_id = os.environ.get('HOSTNAME', 'localhost')
-
-configure_logging('service-{}-{}'.format(service_id, container_id))
-
-logger = logging.getLogger(__name__)
-
-def sigterm_handler(_signo, _stack_frame):
-    print("SIGTERM received: %s, %s" % (_signo, _stack_frame))
-    exit_worker()
 
 worker = None
-def exit_worker():
-    if worker is not None:
-        worker.stop()
-        print('Worker stopped gracefully.')  
 
-signal.signal(signal.SIGTERM, sigterm_handler)
-
-try:
+def start_service(service_id, service_type):
     if service_type == ServiceType.TRAIN:
         from rafiki.worker import TrainWorker
         worker = TrainWorker(service_id)
@@ -38,10 +15,10 @@ try:
         worker.start()
     else:
         raise Exception('Invalid service type: {}'.format(service_type))
-    exit_worker()
-except Exception as e:
-    logger.error('Error while running worker:')
-    logger.error(traceback.format_exc())
-    exit_worker()
-    raise e
-    
+
+def stop_service(service_id, service_type):
+    if worker is not None:
+        worker.stop()    
+
+db = Database()
+run_service(db, start_service, stop_service)

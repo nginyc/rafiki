@@ -1,15 +1,17 @@
 import os
 
-from rafiki.utils.log import configure_logging
+from rafiki.utils.service import run_service
+from rafiki.db import Database
 from rafiki.predictor.app import app
 
-service_id = os.environ['RAFIKI_SERVICE_ID']
-container_id = os.environ.get('HOSTNAME', 'localhost')
-
-configure_logging('service-{}-{}'.format(service_id, container_id))
-
-if __name__ == "__main__":
+def start_service(service_id, service_type):
     app.run(host='0.0.0.0', 
             port=os.getenv('PREDICTOR_PORT', 8002), 
             debug=True, 
             threaded=True)
+
+def stop_service(service_id, service_type):
+    pass
+
+db = Database()
+run_service(db, start_service, stop_service)

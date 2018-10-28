@@ -16,7 +16,8 @@ class Predictor(object):
         self._service_id = service_id
         self._db = db
         self._cache = cache
-        
+
+    def start(self):
         with self._db:
             (self._inference_job_id, self._worker_to_predict_label_mapping, self._task) \
                 = self._read_predictor_info()

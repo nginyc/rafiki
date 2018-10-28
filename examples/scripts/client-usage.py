@@ -3,7 +3,7 @@ import time
 import requests
 
 from rafiki.client import Client
-from rafiki.constants import TaskType, BudgetType, TrainJobStatus
+from rafiki.constants import TaskType, BudgetType, TrainJobStatus, InferenceJobStatus
 
 ADMIN_HOST = 'localhost'
 ADMIN_PORT = 8000
@@ -106,11 +106,10 @@ def create_inference_job(client):
 # Returns `predictor_host` of inference job
 def wait_until_inference_job_is_running(client):
     while True:
-        # Give inference job deployment a bit of time
-        time.sleep(20)
+        time.sleep(10)
         try:
             inference_job = client.get_running_inference_job(app=APP)
-            if inference_job.get('status') == 'RUNNING':
+            if inference_job.get('status') == InferenceJobStatus.RUNNING:
                 return inference_job.get('predictor_host')
 
         except:

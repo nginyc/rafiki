@@ -21,6 +21,7 @@ class TrialStatus():
 
 class ServiceStatus():
     STARTED = 'STARTED'
+    DEPLOYING = 'DEPLOYING'
     RUNNING = 'RUNNING'
     ERRORED = 'ERRORED'
     STOPPED = 'STOPPED'

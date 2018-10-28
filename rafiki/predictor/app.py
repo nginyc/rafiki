@@ -7,6 +7,7 @@ service_id = os.environ['RAFIKI_SERVICE_ID']
 
 app = Flask(__name__)
 predictor = Predictor(service_id)
+predictor.start()
 
 @app.route('/')
 def index():
