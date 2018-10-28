@@ -158,15 +158,23 @@ class Database(object):
             .filter(InferenceJob.status == InferenceJobStatus.RUNNING).first()
         return inference_job
 
-    def mark_inference_job_as_running(self, inference_job, 
-                                    predictor_service_id):
-        inference_job.status = InferenceJobStatus.RUNNING
+    def update_inference_job(self, inference_job, predictor_service_id):
         inference_job.predictor_service_id = predictor_service_id
         self._session.add(inference_job)
+        return inference_job
+    
+    def mark_inference_job_as_running(self, inference_job):
+        inference_job.status = InferenceJobStatus.RUNNING
         return inference_job
 
     def mark_inference_job_as_stopped(self, inference_job):
         inference_job.status = InferenceJobStatus.STOPPED
+        inference_job.datetime_stopped = datetime.datetime.utcnow()
+        self._session.add(inference_job)
+        return inference_job
+
+    def mark_inference_job_as_errored(self, inference_job):
+        inference_job.status = InferenceJobStatus.ERRORED
         inference_job.datetime_stopped = datetime.datetime.utcnow()
         self._session.add(inference_job)
         return inference_job
@@ -220,7 +228,7 @@ class Database(object):
         self._session.add(service)
         return service
 
-    def mark_service_as_running(self, service, container_service_id, 
+    def mark_service_as_deploying(self, service, container_service_id, 
                                 container_service_name, replicas, hostname,
                                 port, ext_hostname, ext_port):
         service.container_service_id = container_service_id
@@ -230,11 +238,16 @@ class Database(object):
         service.port = port
         service.ext_hostname = ext_hostname
         service.ext_port = ext_port
-        service.status = ServiceStatus.RUNNING
+        service.status = ServiceStatus.DEPLOYING
+        self._session.add(service)
+
+    def mark_service_as_running(self, service):
+        service.status = ServiceStatus.DEPLOYING
         self._session.add(service)
 
     def mark_service_as_errored(self, service):
         service.status = ServiceStatus.ERRORED
+        service.datetime_stopped = datetime.datetime.utcnow()
         self._session.add(service)
 
     def mark_service_as_stopped(self, service):
