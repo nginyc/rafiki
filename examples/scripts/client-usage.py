@@ -3,7 +3,7 @@ import time
 import requests
 
 from rafiki.client import Client
-from rafiki.constants import TaskType, BudgetType, TrainJobStatus
+from rafiki.constants import TaskType, BudgetType, TrainJobStatus, InferenceJobStatus
 
 ADMIN_HOST = 'localhost'
 ADMIN_PORT = 8000
@@ -126,12 +126,17 @@ def create_inference_job(client):
 # Returns `predictor_host` of inference job
 def wait_until_inference_job_is_running(client):
     while True:
-        # Give inference job deployment a bit of time
-        time.sleep(20)
+        time.sleep(10)
         try:
             inference_job = client.get_running_inference_job(app=APP)
-            if inference_job.get('status') == 'RUNNING':
+            status = inference_job.get('status')
+            if status  == InferenceJobStatus.RUNNING:
                 return inference_job.get('predictor_host')
+            elif status in [InferenceJobStatus.ERRORED, InferenceJobStatus.STOPPED]:
+                # Inference job has either errored or been stopped
+                return False
+            else:
+                continue
 
         except:
             pass
@@ -183,6 +188,7 @@ if __name__ == '__main__':
 
     print('Waiting for inference job to be running...')
     predictor_host = wait_until_inference_job_is_running(client)
+    if not predictor_host: raise Exception('Inference job has errored or stopped.')
     print('Inference job is running!')
 
     print('Making predictions...')

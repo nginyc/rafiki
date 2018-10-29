@@ -1,15 +1,18 @@
 import os
 import logging
 import traceback
+import time
 
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, \
     TRAIN_WORKER_REPLICAS_PER_MODEL, INFERENCE_WORKER_REPLICAS_PER_TRIAL, \
-    INFERENCE_MAX_BEST_TRIALS
+    INFERENCE_MAX_BEST_TRIALS, SERVICE_STATUS_WAIT
 from rafiki.container import DockerSwarmContainerManager 
 
 logger = logging.getLogger(__name__)
+
+class ServiceDeploymentException(Exception): pass
 
 class ServicesManager(object):
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
@@ -22,21 +25,36 @@ class ServicesManager(object):
 
     def create_inference_services(self, inference_job_id):
         inference_job = self._db.get_inference_job(inference_job_id)
+
+        try:
+            # Create predictor
+            predictor_service = self._create_predictor_service(inference_job)
+            self._db.update_inference_job(inference_job, predictor_service_id=predictor_service.id)
+            self._db.commit()
+
+            # Create a worker service for each best trial of associated train job
+            best_trials = self._get_best_trials_for_inference(inference_job)
+            trial_to_replicas = self._compute_inference_worker_replicas_for_trials(best_trials)
+            worker_services = []
+            for (trial, replicas) in trial_to_replicas.items():
+                service = self._create_inference_job_worker(inference_job, trial, replicas)
+                worker_services.append(service)
+
+            # Ensure that predictor service is running
+            self._wait_until_services_running([predictor_service])
+
+            # Mark inference job as running
+            self._db.mark_inference_job_as_running(inference_job)
+            self._db.commit()
+
+            return (inference_job, predictor_service)
+
+        except Exception as e:
+            # Mark inference job as errored
+            self._db.mark_inference_job_as_errored(inference_job)
+            self._db.commit()
+            raise e
         
-        # Create predictor
-        predictor_service = self._create_predictor_service(inference_job)
-
-        # Create a worker service for each best trial of associated train job
-        best_trials = self._get_best_trials_for_inference(inference_job)
-        trial_to_replicas = self._compute_inference_worker_replicas_for_trials(best_trials)
-        for (trial, replicas) in trial_to_replicas.items():
-            self._create_inference_job_worker(inference_job, trial, replicas)
-
-        self._db.mark_inference_job_as_running(inference_job, predictor_service_id=predictor_service.id)
-        self._db.commit()
-
-        return (inference_job, predictor_service)
-
     def stop_inference_services(self, inference_job_id):
         inference_job = self._db.get_inference_job(inference_job_id)
         
@@ -57,14 +75,17 @@ class ServicesManager(object):
 
     def create_train_services(self, train_job_id):
         train_job = self._db.get_train_job(train_job_id)
+        
+        # Create a worker service for each model
         models = self._db.get_models_of_task(train_job.task)
         model_to_replicas = self._compute_train_worker_replicas_for_models(models)
-
-        # Create a worker service for each model
         for (model, replicas) in model_to_replicas.items():
             self._create_train_job_worker(train_job, model, replicas)
 
-        self._update_train_job_status(train_job)
+        # Mark train job as running
+        self._db.mark_train_job_as_running(train_job)
+        self._db.commit()
+
         return train_job
 
     def stop_train_services(self, train_job_id):
@@ -183,17 +204,9 @@ class ServicesManager(object):
         # If all workers for the train job have stopped, stop train job as well
         if next((
             x for x in services 
-            if x.status in [ServiceStatus.RUNNING, ServiceStatus.STARTED]
+            if x.status in [ServiceStatus.RUNNING, ServiceStatus.STARTED, ServiceStatus.DEPLOYING]
         ), None) is None:
             self._db.mark_train_job_as_complete(train_job)
-            self._db.commit()
-
-        # If any worker for the train job is running, mark train job as running
-        elif next((
-            x for x in services 
-            if x.status in [ServiceStatus.RUNNING]
-        ), None) is not None:
-            self._db.mark_train_job_as_running(train_job)
             self._db.commit()
 
     def _stop_service(self, service):
@@ -202,6 +215,19 @@ class ServicesManager(object):
 
         self._db.mark_service_as_stopped(service)
         self._db.commit()
+
+    # Returns when all services have status of `RUNNING`
+    # Throws an exception if any of the services have a status of `ERRORED` or `STOPPED`
+    def _wait_until_services_running(self, services):
+        for service in services:
+            while service.status not in \
+                    [ServiceStatus.RUNNING, ServiceStatus.ERRORED, ServiceStatus.STOPPED]:
+                time.sleep(SERVICE_STATUS_WAIT)
+                self._db.expire()
+                service = self._db.get_service(service.id)
+
+            if service.status in [ServiceStatus.ERRORED, ServiceStatus.STOPPED]:
+                raise ServiceDeploymentException('Service of ID {} is of status {}'.format(service.id, service.status))
 
     def _create_service(self, service_type, docker_image,
                         replicas, environment_vars={}, args=[], 
@@ -254,7 +280,7 @@ class ServicesManager(object):
             hostname = container_service['hostname']
             port = container_service.get('port', None)
 
-            self._db.mark_service_as_running(
+            self._db.mark_service_as_deploying(
                 service,
                 container_service_name=container_service_name,
                 container_service_id=container_service_id,
