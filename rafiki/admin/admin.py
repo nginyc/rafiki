@@ -188,6 +188,10 @@ class Admin(object):
             for (trial, model) in zip(best_trials, best_trials_models)
         ]
 
+    def get_train_jobs_by_user(self, user_id):
+        train_jobs = self._db.get_train_jobs_by_user(user_id)
+        return train_jobs
+
     def get_trials_of_train_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
         if train_job is None:
@@ -343,7 +347,10 @@ class Admin(object):
             }
             for (inference_job, train_job, predictor_host) in zip(inference_jobs, train_jobs, predictor_hosts)
         ]
-    
+
+    def get_inference_jobs_by_user(self, user_id):
+        inference_jobs = self._db.get_inference_jobs_by_user(user_id)
+        return inference_jobs
 
     ####################################
     # Models

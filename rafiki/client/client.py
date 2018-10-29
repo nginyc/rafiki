@@ -160,6 +160,17 @@ class Client(object):
             'budget_amount': budget_amount
         })
         return data
+
+    def get_train_jobs_by_user(self, user_id):
+        '''
+        Lists all train jobs associated to an user on Rafiki.
+
+        :param str user_id: ID of the user
+        '''
+        data = self._get('/train_jobs', params={ 
+            'user_id': user_id
+        })
+        return data
     
     def get_train_jobs_of_app(self, app):
         '''
@@ -258,6 +269,17 @@ class Client(object):
         data = self._post('/inference_jobs', json={
             'app': app,
             'app_version': app_version
+        })
+        return data
+
+    def get_inference_jobs_by_user(self, user_id):
+        '''
+        Lists all inference jobs associated to an user on Rafiki.
+
+        :param str user_id: ID of the user
+        '''
+        data = self._get('/inference_jobs', params={ 
+            'user_id': user_id
         })
         return data
 
