@@ -62,7 +62,6 @@ class Predictor(object):
         ]
 
         predictions = ensemble_predictions(predictions_list, self._task)
-
         prediction = predictions[0] if len(predictions) > 0 else None
 
         return {

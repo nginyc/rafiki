@@ -74,7 +74,7 @@ class TfSingleHiddenLayer(BaseModel):
             with self._sess.as_default():
                 probs = self._model.predict(X)
                 
-        return probs
+        return probs.tolist()
 
     def destroy(self):
         self._sess.close()

@@ -218,15 +218,15 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
     print('Using queries: {}'.format(queries))
     predictions = model_inst.predict(queries)
 
-    # Ensembling predictions in predictor
-    predictions = ensemble_predictions([predictions], task)
-
     try:
         for prediction in predictions:
             json.dumps(prediction)
     except Exception:
         traceback.print_stack()
         raise InvalidModelClassException('Each `prediction` should be JSON serializable')
+
+    # Ensembling predictions in predictor
+    predictions = ensemble_predictions([predictions], task)
 
     print('Predictions: {}'.format(predictions))
     

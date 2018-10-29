@@ -68,7 +68,7 @@ class SkSvm(BaseModel):
     def predict(self, queries):
         X = self._prepare_X(queries)
         probs = self._clf.predict_proba(X)
-        return probs
+        return probs.tolist()
 
     def destroy(self):
         pass
