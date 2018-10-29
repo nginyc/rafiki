@@ -45,10 +45,10 @@ class TfVgg16(BaseModel):
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
 
-    def train(self, dataset_uri, task):
-        ((images, labels), train_index_to_label) = self.utils.load_dataset(dataset_uri, task)
-        self._train_index_to_label = train_index_to_label
-        num_classes = len(np.unique(labels))
+    def train(self, dataset_uri):
+        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        (num_samples, num_classes) = next(dataset)
+        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.array(images)
         images = images.reshape(-1, 784)
         images = np.dstack([images] * 3)
@@ -60,14 +60,15 @@ class TfVgg16(BaseModel):
             with self._sess.as_default():
                 self._model.fit(
                     images, 
-                    labels, 
+                    np.array(classes), 
                     epochs=self._epochs, 
                     batch_size=self._batch_size
                 )
 
-    def evaluate(self, dataset_uri, task):
-        ((images, labels), test_index_to_label) = self.utils.load_dataset(dataset_uri, task)
-        labels = self.utils.relabel_dataset_labels(labels, self._train_index_to_label, test_index_to_label)
+    def evaluate(self, dataset_uri):
+        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        (num_samples, num_classes) = next(dataset)
+        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.array(images)
         images = images.reshape(-1, 784)
         images = np.dstack([images] * 3)
@@ -76,7 +77,7 @@ class TfVgg16(BaseModel):
 
         with self._graph.as_default():
             with self._sess.as_default():
-                (loss, accuracy) = self._model.evaluate(images, labels)
+                (loss, accuracy) = self._model.evaluate(images, np.array(classes))
         return accuracy
 
     def predict(self, queries):
@@ -84,6 +85,7 @@ class TfVgg16(BaseModel):
         with self._graph.as_default():
             with self._sess.as_default():
                 probs = self._model.predict(X)
+                
         return probs
     
     def destroy(self):
@@ -105,9 +107,6 @@ class TfVgg16(BaseModel):
 
             params['h5_model_base64'] = base64.b64encode(h5_model_bytes).decode('utf-8')
 
-        # Save train_index_to_label
-        params['train_index_to_label'] = self._train_index_to_label
-
         return params
 
     def load_parameters(self, params):
@@ -127,11 +126,6 @@ class TfVgg16(BaseModel):
                 with self._sess.as_default():
                     self._model = keras.models.load_model(tmp.name)
                 
-        # Load train_index_to_label
-        self._train_index_to_label = params.get('train_index_to_label', None)
-        if self._train_index_to_label is None:
-            raise InvalidModelParamsException()
-
     def _build_model(self, num_classes):
         learning_rate = self._learning_rate
         model = keras.applications.VGG16(
@@ -151,8 +145,8 @@ class TfVgg16(BaseModel):
 if __name__ == '__main__':
     validate_model_class(
         model_class=TfVgg16,
-        train_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true',
-        test_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true',
+        train_dataset_uri='data/fashion_mnist_as_image_files_train.zip',
+        test_dataset_uri='data/fashion_mnist_as_image_files_test.zip',
         task=TaskType.IMAGE_CLASSIFICATION,
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

@@ -42,7 +42,7 @@ class AdvisorType():
     BTB_GP = 'BTB_GP'
 
 class DatasetType():
-    IMAGE_CLASSES_BY_FOLDERS = 'IMAGE_CLASSES_BY_FOLDERS'
+    IMAGE_FILES = 'IMAGE_FILES'
 
 class TaskType():
     IMAGE_CLASSIFICATION = 'IMAGE_CLASSIFICATION'

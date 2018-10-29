@@ -5,7 +5,6 @@ import traceback
 import pickle
 from rafiki.advisor import make_advisor
 from rafiki.predictor import ensemble_predictions
-from rafiki.utils.model import parse_model_prediction
 from rafiki.constants import TaskType
 
 from .dataset import DatasetUtils
@@ -74,24 +73,22 @@ class BaseModel(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def train(self, dataset_uri, task):
+    def train(self, dataset_uri):
         '''
         Train this model instance with given dataset and initialized knob values.
 
         :param str dataset_uri: URI of the train dataset in a format specified by the task
-        :param str task: Task type
         '''
         raise NotImplementedError()
 
     # TODO: Allow configuration of other metrics
     @abc.abstractmethod
-    def evaluate(self, dataset_uri, task):
+    def evaluate(self, dataset_uri):
         '''
         Evaluate this model instance with given dataset after training. 
         This will be called only when model is *trained*.
 
         :param str dataset_uri: URI of the test dataset in a format specified by the task
-        :param str task: Task type
         :returns: Accuracy as float from 0-1 on the test dataset
         :rtype: float
         '''
@@ -160,14 +157,6 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
     :type knobs: dict[str, any]
     :returns: The trained model
     '''
-    
-    print('Loading train dataset\'s metadata...')
-    dataset_utils = DatasetUtils()
-    (_, train_dataset_meta) = dataset_utils.load_dataset(train_dataset_uri, task)
-
-    # Train dataset's metadata is pickled and put into DB
-    train_dataset_meta = pickle.loads(pickle.dumps(train_dataset_meta))
-    
     print('Testing instantiation of model...')
     model_inst = model_class()
 
@@ -194,10 +183,10 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
     model_inst.init(knobs)
 
     print('Testing training of model...')
-    model_inst.train(train_dataset_uri, task)
+    model_inst.train(train_dataset_uri)
 
     print('Testing evaluation of model...')
-    score = model_inst.evaluate(test_dataset_uri, task)
+    score = model_inst.evaluate(test_dataset_uri)
 
     if not isinstance(score, float):
         raise InvalidModelClassException('`evaluate()` should return a float!')
@@ -230,11 +219,10 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
     predictions = model_inst.predict(queries)
 
     # Ensembling predictions in predictor
-    predictions = ensemble_predictions([predictions], train_dataset_meta, task)
+    predictions = ensemble_predictions([predictions], task)
 
     try:
         for prediction in predictions:
-            prediction = parse_model_prediction(prediction)
             json.dumps(prediction)
     except Exception:
         traceback.print_stack()

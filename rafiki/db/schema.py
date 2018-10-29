@@ -74,7 +74,6 @@ class TrainJob(Base):
     task = Column(String, nullable=False)
     train_dataset_uri = Column(String, nullable=False)
     test_dataset_uri = Column(String, nullable=False)
-    train_dataset_meta = Column(Binary, default=None)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     budget_type = Column(String, nullable=False)
     budget_amount = Column(Integer, nullable=False)
