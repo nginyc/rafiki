@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import os
 import traceback
 
@@ -10,6 +11,7 @@ from .admin import Admin
 admin = Admin()
 
 app = Flask(__name__)
+CORS(app)
 
 @app.route('/')
 def index():
@@ -57,6 +59,15 @@ def create_train_job(auth):
     params = get_request_params()
     with admin:
         return jsonify(admin.create_train_job(auth['user_id'], **params))
+
+@app.route('/train_jobs', methods=['GET'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
+def get_train_jobs(auth):
+    params = get_request_params()
+
+    if 'user_id' in params:
+        with admin:
+            return jsonify(admin.get_train_jobs_by_user(params['user_id']))
 
 @app.route('/train_jobs/<app>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
@@ -139,6 +150,15 @@ def create_inference_jobs(auth):
 
     with admin:
         return jsonify(admin.create_inference_job(auth['user_id'], **params))
+
+@app.route('/inference_jobs', methods=['GET'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
+def get_inference_jobs(auth):
+    params = get_request_params()
+
+    if 'user_id' in params:
+        with admin:
+            return jsonify(admin.get_inference_jobs_by_user(params['user_id']))
 
 @app.route('/inference_jobs/<app>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
