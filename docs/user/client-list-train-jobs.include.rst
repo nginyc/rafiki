@@ -19,5 +19,5 @@ Example:
         'id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76',
         'status': 'COMPLETED',
         'task': 'IMAGE_CLASSIFICATION',
-        'test_dataset_uri': 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true',
-        'train_dataset_uri': 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true'}]
+        'test_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_as_image_files_train.zip?raw=true',
+        'train_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_as_image_files_test.zip?raw=true'}]

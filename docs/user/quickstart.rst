@@ -19,12 +19,12 @@ Quick Start
     If you're an *Application User* just looking to make predictions to deployed models on a running instance of Rafiki, refer to :ref:`quickstart-app-users`.
 
 
-This guide assumes you have deployed your an empty instance of Rafiki and you want to 
-do a *full* train-inference flow, including adding of models to Rafiki. 
-This quickstart submits the `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference. 
-Refer to `./examples/scripts/client-usage.py <https://github.com/nginyc/rafiki/blob/master/examples/scripts/client-usage.py>`_ for a scripted version of this example.
+This guide assumes you have deployed your an empty instance of Rafiki and you want to do a *full* train-inference flow, 
+including preparation of dataset and adding of models to Rafiki. 
 
-More examples are available in Rafiki's `./examples/scripts/ <https://github.com/nginyc/rafiki/tree/master/examples/scripts>`_.
+This quickstart submits the `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference. 
+
+Refer to `./examples/scripts/client-usage.py <https://github.com/nginyc/rafiki/blob/master/examples/scripts/client-usage.py>`_ for a scripted version of this example.
 
 .. note::
 
