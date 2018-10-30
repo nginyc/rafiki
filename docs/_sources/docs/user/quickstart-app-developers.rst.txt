@@ -1,14 +1,13 @@
 .. _`quickstart-app-developers`:
 
-Quickstart (Application Developers)
+Quick Start (Application Developers)
 ====================================================================
 
 .. contents:: Table of Contents
 
-This quickstart submits the `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference.
-An Python example on how to do a full train-inference flow is available ``./examples/scripts/client-usage.py``.
+We assume that you have access to a running instance of *Rafiki Admin* at ``<admin_host>:<admin_port>``. 
 
-Installation
+Installing the Client
 --------------------------------------------------------------------
 
 .. include:: ./client-installation.include.rst
@@ -31,87 +30,19 @@ Example:
 Listing models by task
 --------------------------------------------------------------------
 
-.. seealso:: :meth:`rafiki.client.Client.get_models_of_task`
+.. include:: ./client-list-models.include.rst
 
-Example:
-
-    .. code-block:: python
-
-        client.get_models_of_task(task='IMAGE_CLASSIFICATION')
-
-    Output:
-
-    .. code-block:: python
-
-        [{'datetime_created': 'Thu, 04 Oct 2018 03:24:58 GMT',
-        'docker_image': 'rafikiai/rafiki_worker:0.0.3',
-        'model_class': 'TfSingleHiddenLayer',
-        'name': 'TfSingleHiddenLayer',
-        'task': 'IMAGE_CLASSIFICATION',
-        'user_id': '23f3526a-35d1-46ba-be68-af8f4992a0f9'},
-        {'datetime_created': 'Thu, 04 Oct 2018 03:24:59 GMT',
-        'docker_image': 'rafikiai/rafiki_worker:0.0.3',
-        'model_class': 'SkDt',
-        'name': 'SkDt',
-        'task': 'IMAGE_CLASSIFICATION',
-        'user_id': '23f3526a-35d1-46ba-be68-af8f4992a0f9'}]
-    
 
 Creating a train job
 --------------------------------------------------------------------
 
-A train job is uniquely identified by its associated app and the app version (returned in output).
-
-.. seealso:: :meth:`rafiki.client.Client.create_train_job`
-
-Example:
-
-    .. code-block:: python
-
-        client.create_train_job(
-            app='fashion_mnist_app',
-            task='IMAGE_CLASSIFICATION',
-            train_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true',
-            test_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true',
-            budget_type='MODEL_TRIAL_COUNT',
-            budget_amount=2
-        )
-
-    Output:
-
-    .. code-block:: python
-
-        {'app': 'fashion_mnist_app',
-        'app_version': 1,
-        'id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76'}
+.. include:: ./client-create-train-job.include.rst
 
 
 Listing train jobs of an app
 --------------------------------------------------------------------
 
-.. seealso:: :meth:`rafiki.client.Client.get_train_jobs_of_app`
-
-Example:
-
-    .. code-block:: python
-
-        client.get_train_jobs_of_app(app='fashion_mnist_app')
-
-    Output:
-
-    .. code-block:: python
-
-        [{'app': 'fashion_mnist_app',
-        'app_version': 1,
-        'budget_amount': 3,
-        'budget_type': 'MODEL_TRIAL_COUNT',
-        'datetime_completed': 'Thu, 04 Oct 2018 03:27:51 GMT',
-        'datetime_started': 'Thu, 04 Oct 2018 03:25:06 GMT',
-        'id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76',
-        'status': 'COMPLETED',
-        'task': 'IMAGE_CLASSIFICATION',
-        'test_dataset_uri': 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true',
-        'train_dataset_uri': 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true'}]
+.. include:: ./client-list-train-jobs.include.rst
 
 
 Retrieving the latest train job's details for an app
@@ -138,8 +69,8 @@ Example:
         'id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76',
         'status': 'COMPLETED',
         'task': 'IMAGE_CLASSIFICATION',
-        'test_dataset_uri': 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true',
-        'train_dataset_uri': 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true',
+        'test_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_as_image_files_train.zip?raw=true',
+        'train_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_as_image_files_test.zip?raw=true',
         'workers': [{'datetime_started': 'Thu, 04 Oct 2018 03:25:06 GMT',
                     'datetime_stopped': 'Thu, 04 Oct 2018 03:27:15 GMT',
                     'model_name': 'TfSingleHiddenLayer',
@@ -196,54 +127,17 @@ Example:
 Creating an inference job with the latest train job for an app
 --------------------------------------------------------------------
 
-An inference job is created from the trials of an associated train job, 
-and uniquely identified by that train job's associated app and the app version.
-
 Your app's users will make queries to the `/predict` endpoint of *predictor_host* over HTTP.
 
-.. seealso:: :meth:`rafiki.client.Client.create_inference_job`
 .. seealso:: :ref:`making-predictions` 
 
-Example:
-
-    .. code-block:: python
-
-        client.create_inference_job(app='fashion_mnist_app')
-
-    Output:
-
-    .. code-block:: python
-
-        {'app': 'fashion_mnist_app',
-        'app_version': 1,
-        'id': '38c53776-c450-4b86-a173-6e245863549a',
-        'predictor_host': '127.0.0.1:30000',
-        'train_job_id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76'}
+.. include:: ./client-create-inference-job.include.rst
     
 
 Listing inference jobs of an app
 --------------------------------------------------------------------
 
-.. seealso:: :meth:`rafiki.client.Client.get_inference_jobs_of_app`
-
-Example:
-
-    .. code-block:: python
-
-        client.get_inference_jobs_of_app(app='fashion_mnist_app')
-
-    Output:
-
-    .. code-block:: python
-
-        [{'app': 'fashion_mnist_app',
-        'app_version': 1,
-        'datetime_started': 'Thu, 04 Oct 2018 03:31:59 GMT',
-        'datetime_stopped': None,
-        'id': '38c53776-c450-4b86-a173-6e245863549a',
-        'predictor_host': '127.0.0.1:30000',
-        'status': 'RUNNING',
-        'train_job_id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76'}]
+.. include:: ./client-list-inference-jobs.include.rst
 
 
 Retrieving details of running inference job for an app 
@@ -295,10 +189,4 @@ Example:
 Stopping a running inference job
 --------------------------------------------------------------------
 
-.. seealso:: :meth:`rafiki.client.Client.stop_inference_job`
-
-Example:
-
-    .. code-block:: python
-
-        client.stop_inference_job(app='fashion_mnist_app')
+.. include:: ./client-stop-inference-job.include.rst

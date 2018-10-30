@@ -1,6 +1,7 @@
 import time
 import json
 import logging
+import pickle
 
 from rafiki.cache import Cache
 from rafiki.db import Database
@@ -16,9 +17,10 @@ class Predictor(object):
         self._service_id = service_id
         self._db = db
         self._cache = cache
-        
+
+    def start(self):
         with self._db:
-            (self._inference_job_id, self._worker_to_predict_label_mapping, self._task) \
+            (self._inference_job_id, self._task) \
                 = self._read_predictor_info()
 
     def predict(self, query):
@@ -59,15 +61,7 @@ class Predictor(object):
             for worker_id in running_worker_ids
         ]
 
-        predict_label_mappings = [
-            self._worker_to_predict_label_mapping[worker_id]
-            for worker_id in running_worker_ids
-        ]
-
-        predictions = ensemble_predictions(predictions_list, 
-                                            predict_label_mappings,
-                                            self._task)
-
+        predictions = ensemble_predictions(predictions_list, self._task)
         prediction = predictions[0] if len(predictions) > 0 else None
 
         return {
@@ -77,17 +71,9 @@ class Predictor(object):
     def _read_predictor_info(self):
         inference_job = self._db.get_inference_job_by_predictor(self._service_id)
         train_job = self._db.get_train_job(inference_job.train_job_id)
-        workers = self._db.get_workers_of_inference_job(inference_job.id)
-
-        # Load inference job's trials' predict label mappings
-        worker_to_predict_label_mappings = {}
-        for worker in workers:
-            trial = self._db.get_trial(worker.trial_id)
-            worker_to_predict_label_mappings[worker.service_id] = trial.predict_label_mapping
 
         return (
             inference_job.id,
-            worker_to_predict_label_mappings,
             train_job.task
         )
 

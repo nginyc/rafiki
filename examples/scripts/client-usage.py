@@ -3,15 +3,15 @@ import time
 import requests
 
 from rafiki.client import Client
-from rafiki.constants import TaskType, BudgetType
+from rafiki.constants import TaskType, BudgetType, TrainJobStatus, InferenceJobStatus
 
 ADMIN_HOST = 'localhost'
 ADMIN_PORT = 8000
 USER_EMAIL = 'superadmin@rafiki'
 USER_PASSWORD = 'rafiki'
 APP = 'fashion_mnist_app'
-TRAIN_DATASET_URI = 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true'
-TEST_DATASET_URI = 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true'
+TRAIN_DATASET_URI = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_as_image_files_train.zip?raw=true'
+TEST_DATASET_URI = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_as_image_files_test.zip?raw=true'
 QUERY = \
     [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
@@ -81,9 +81,15 @@ def wait_until_train_job_has_completed(client):
         time.sleep(10)
         try:
             train_job = client.get_train_job(app=APP)
-            if train_job.get('status') == 'COMPLETED':
-                return
-
+            status = train_job.get('status')
+            if status == TrainJobStatus.COMPLETED:
+                # Train job completed!
+                return True
+            elif status != TrainJobStatus.RUNNING:
+                # Train job has either errored or been stopped
+                return False
+            else:
+                continue
         except:
             pass
 
@@ -100,12 +106,17 @@ def create_inference_job(client):
 # Returns `predictor_host` of inference job
 def wait_until_inference_job_is_running(client):
     while True:
-        # Give inference job deployment a bit of time
-        time.sleep(20)
+        time.sleep(10)
         try:
             inference_job = client.get_running_inference_job(app=APP)
-            if inference_job.get('status') == 'RUNNING':
+            status = inference_job.get('status')
+            if status  == InferenceJobStatus.RUNNING:
                 return inference_job.get('predictor_host')
+            elif status in [InferenceJobStatus.ERRORED, InferenceJobStatus.STOPPED]:
+                # Inference job has either errored or been stopped
+                return False
+            else:
+                continue
 
         except:
             pass
@@ -135,7 +146,9 @@ if __name__ == '__main__':
     create_train_job(client)
 
     print('Waiting for train job to complete...')
-    wait_until_train_job_has_completed(client)
+    print('This might take a few minutes.')
+    result = wait_until_train_job_has_completed(client)
+    if not result: raise Exception('Train job has errored or stopped.')
     print('Train job has been completed!')
 
     print('Listing best trials of latest train job for app "{}"...'.format(APP))
@@ -146,6 +159,7 @@ if __name__ == '__main__':
 
     print('Waiting for inference job to be running...')
     predictor_host = wait_until_inference_job_is_running(client)
+    if not predictor_host: raise Exception('Inference job has errored or stopped.')
     print('Inference job is running!')
 
     print('Making predictions...')

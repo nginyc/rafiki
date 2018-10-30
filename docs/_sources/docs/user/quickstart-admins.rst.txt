@@ -1,8 +1,9 @@
-Quickstart (Rafiki Admins)
+Quick Start (Rafiki Admins)
 ====================================================================
 
 .. contents:: Table of Contents
 
+We assume that you have access to a running instance of *Rafiki Admin* at ``<admin_host>:<admin_port>``. 
 
 Installation
 --------------------------------------------------------------------

@@ -3,19 +3,19 @@ import uuid
 import random
 import os
 import numpy as np
+import pickle
 import logging
 import traceback
 import json
 
-from rafiki.utils.model import load_model_class, parse_model_prediction
+from rafiki.utils.model import load_model_class
 from rafiki.db import Database
 from rafiki.cache import Cache
 from rafiki.config import INFERENCE_WORKER_SLEEP, INFERENCE_WORKER_PREDICT_BATCH_SIZE
 
 logger = logging.getLogger(__name__)
 
-class InvalidWorkerException(Exception):
-    pass
+class InvalidWorkerException(Exception): pass
 
 class InferenceWorker(object):
     def __init__(self, service_id, cache=Cache(), db=Database()):
@@ -46,7 +46,6 @@ class InferenceWorker(object):
                 predictions = None
                 try:
                     predictions = self._model.predict(queries)
-                    predictions = [parse_model_prediction(x) for x in predictions]
                 except Exception:
                     logger.error('Error while making predictions:')
                     logger.error(traceback.format_exc())
@@ -79,7 +78,10 @@ class InferenceWorker(object):
         clazz = load_model_class(model.model_file_bytes, model.model_class)
         model_inst = clazz()
         model_inst.init(trial.knobs)
-        model_inst.load_parameters(trial.parameters)
+
+        # Unpickle model parameters and load it
+        parameters = pickle.loads(trial.parameters)
+        model_inst.load_parameters(parameters)
 
         return model_inst
 

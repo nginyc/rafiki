@@ -10,11 +10,8 @@ from .advisor import make_advisor
 
 logger = logging.getLogger(__name__)
 
-class InvalidAdvisorException(Exception):
-    pass
-
-class InvalidProposalException(Exception):
-    pass
+class InvalidAdvisorException(Exception): pass
+class InvalidProposalException(Exception): pass
 
 class AdvisorService(object):
     def __init__(self):

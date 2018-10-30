@@ -19,5 +19,5 @@ export RAFIKI_IMAGE_WORKER=rafikiai/rafiki_worker
 export RAFIKI_IMAGE_PREDICTOR=rafikiai/rafiki_predictor
 export IMAGE_POSTGRES=postgres:10.5
 export IMAGE_REDIS=redis:5.0-rc
-export RAFIKI_VERSION=0.0.4
+export RAFIKI_VERSION=0.0.5
 export PYTHONPATH=$PWD

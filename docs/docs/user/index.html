@@ -28,7 +28,7 @@
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Quickstart (Application Developers)" href="quickstart-app-developers.html" />
+    <link rel="next" title="Quick Start" href="quickstart.html" />
     <link rel="prev" title="Welcome to Rafiki’s Documentation!" href="../../index.html" /> 
 
   
@@ -58,7 +58,7 @@
             
             
               <div class="version">
-                0.0.4
+                0.0.5
               </div>
             
           
@@ -84,11 +84,13 @@
             
               <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">User Guide</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html">Quickstart (Application Developers)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html">Quickstart (Application Users)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html">Quickstart (Model Developers)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html">Quickstart (Rafiki Admins)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tasks.html">Tasks Supported</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html">Quick Start (Model Developers)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html">Quick Start (Application Developers)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html">Quick Start (Application Users)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html">Quick Start (Rafiki Admins)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tasks.html">Supported Tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datasets.html">Supported Dataset Types</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../dev/index.html">Developer Guide</a></li>
@@ -161,8 +163,28 @@
 <h1>User Guide<a class="headerlink" href="#user-guide" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="quickstart-app-developers.html">Quickstart (Application Developers)</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#installing-the-client">Installing the Client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#initializing-the-client">Initializing the Client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#creating-models">Creating models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#listing-models-by-task">Listing models by task</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#creating-a-train-job">Creating a train job</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#listing-train-jobs-of-an-app">Listing train jobs of an app</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#creating-an-inference-job-with-the-latest-train-job-for-an-app">Creating an inference job with the latest train job for an app</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#listing-inference-jobs-of-an-app">Listing inference jobs of an app</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#making-predictions">Making predictions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#stopping-a-running-inference-job">Stopping a running inference job</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart-model-developers.html">Quick Start (Model Developers)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html#installing-the-client">Installing the Client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html#initializing-the-client">Initializing the Client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html#creating-models">Creating models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html#listing-models-by-task">Listing models by task</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart-app-developers.html">Quick Start (Application Developers)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html#installing-the-client">Installing the Client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html#initializing-the-client">Initializing the Client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html#listing-models-by-task">Listing models by task</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html#creating-a-train-job">Creating a train job</a></li>
@@ -175,25 +197,22 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html#stopping-a-running-inference-job">Stopping a running inference job</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="quickstart-app-users.html">Quickstart (Application Users)</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart-app-users.html">Quick Start (Application Users)</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html#making-predictions">Making predictions</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="quickstart-model-developers.html">Quickstart (Model Developers)</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html#installation">Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html#initializing-the-client">Initializing the Client</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html#creating-models">Creating models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html#listing-models-by-task">Listing models by task</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="quickstart-admins.html">Quickstart (Rafiki Admins)</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart-admins.html">Quick Start (Rafiki Admins)</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html#installation">Installation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html#initializing-the-client">Initializing the Client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html#creating-users">Creating users</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="tasks.html">Tasks Supported</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="tasks.html">Supported Tasks</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tasks.html#image-classification">IMAGE_CLASSIFICATION</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="datasets.html">Supported Dataset Types</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="datasets.html#image-files">IMAGE_FILES</a></li>
 </ul>
 </li>
 </ul>
@@ -208,7 +227,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="quickstart-app-developers.html" class="btn btn-neutral float-right" title="Quickstart (Application Developers)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="quickstart.html" class="btn btn-neutral float-right" title="Quick Start" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="../../index.html" class="btn btn-neutral" title="Welcome to Rafiki’s Documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -220,7 +239,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, nginyc, cadmusthefounder, nudles
+        &copy; Copyright 2018, nginyc, cadmusthefounder, nudles.
 
     </p>
   </div>
@@ -239,14 +258,21 @@
 
   
 
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../../_static/jquery.js"></script>
-        <script type="text/javascript" src="../../_static/underscore.js"></script>
-        <script type="text/javascript" src="../../_static/doctools.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

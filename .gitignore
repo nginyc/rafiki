@@ -13,8 +13,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Gitkeeps
-!.gitkeep
-
 # MacOS
 .DS_Store
+
+# Datasets
+data/*
+!data/.gitkeep

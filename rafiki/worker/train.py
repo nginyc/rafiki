@@ -2,6 +2,7 @@ import time
 import logging
 import os
 import traceback
+import pickle
 import pprint
 
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
@@ -12,17 +13,10 @@ from rafiki.client import Client
 
 logger = logging.getLogger(__name__)
 
-class InvalidTrainJobException(Exception):
-    pass
-
-class InvalidModelException(Exception):
-    pass
-
-class InvalidBudgetTypeException(Exception):
-    pass
-
-class InvalidWorkerException(Exception):
-    pass
+class InvalidTrainJobException(Exception): pass
+class InvalidModelException(Exception): pass
+class InvalidBudgetTypeException(Exception): pass
+class InvalidWorkerException(Exception): pass
 
 class TrainWorker(object):
     def __init__(self, service_id, db=Database()):
@@ -40,7 +34,7 @@ class TrainWorker(object):
             self._db.connect()
             (budget_type, budget_amount, model_id,
                 model_file_bytes, model_class, train_job_id, 
-                train_dataset_uri, test_dataset_uri, task) = self._read_worker_info()
+                train_dataset_uri, test_dataset_uri) = self._read_worker_info()
 
             # Load model class from bytes
             clazz = load_model_class(model_file_bytes, model_class)
@@ -86,20 +80,14 @@ class TrainWorker(object):
             try:
                 logger.info('Starting trial...')
                 logger.info('Training & evaluating model...')
-                (score, parameters, predict_label_mapping) = \
-                    self._train_and_evaluate_model(clazz, 
-                                                    knobs,
-                                                    train_dataset_uri, 
-                                                    test_dataset_uri, 
-                                                    task)
-
+                (score, parameters) = self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
+                                                                    test_dataset_uri)
                 logger.info('Trial score: {}'.format(score))
                 
                 with self._db:
                     logger.info('Marking trial as complete in DB...')
                     trial = self._db.get_trial(self._trial_id)
-                    self._db.mark_trial_as_complete(trial, score, parameters,
-                                                    predict_label_mapping)
+                    self._db.mark_trial_as_complete(trial, score, parameters)
 
                 self._trial_id = None
             except Exception:
@@ -135,20 +123,23 @@ class TrainWorker(object):
             logger.error(traceback.format_exc())
 
     def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, 
-                                    test_dataset_uri, task):
+                                    test_dataset_uri):
         model_inst = clazz()
         model_inst.init(knobs)
 
         # Train model
-        model_inst.train(train_dataset_uri, task)
-        predict_label_mapping = model_inst.get_predict_label_mapping()
+        model_inst.train(train_dataset_uri)
 
         # Evaluate model
-        score = model_inst.evaluate(test_dataset_uri, task)
+        score = model_inst.evaluate(test_dataset_uri)
+
+        # Dump and pickle model parameters
         parameters = model_inst.dump_parameters()
+        parameters = pickle.dumps(parameters)
+    
         model_inst.destroy()
 
-        return (score, parameters, predict_label_mapping)
+        return (score, parameters)
 
     # Creates a new trial in the DB
     def _create_new_trial(self, model_id, train_job_id, knobs):
@@ -230,8 +221,7 @@ class TrainWorker(object):
             model.model_class,
             train_job.id,
             train_job.train_dataset_uri,
-            train_job.test_dataset_uri,
-            train_job.task
+            train_job.test_dataset_uri
         )
 
     def _make_client(self):

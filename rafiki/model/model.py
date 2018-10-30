@@ -2,15 +2,20 @@ import os
 import json
 import abc
 import traceback
+import pickle
 from rafiki.advisor import make_advisor
 from rafiki.predictor import ensemble_predictions
-from rafiki.utils.model import parse_model_prediction
 from rafiki.constants import TaskType
 
-class InvalidModelClassException(Exception):
-    pass
+from .dataset import DatasetUtils
 
-class InvalidModelParamsException(Exception):
+class InvalidModelClassException(Exception): pass
+class InvalidModelParamsException(Exception): pass
+
+class ModelUtils(DatasetUtils):
+    '''
+    Collection of utility methods for model developers e.g. dataset loading
+    '''   
     pass
 
 class BaseModel(abc.ABC):
@@ -18,6 +23,10 @@ class BaseModel(abc.ABC):
     Rafiki's base model class that Rafiki models should extend. 
     Rafiki models should implement all abstract methods according to their associated tasks' specifications.
     '''   
+
+    def __init__(self):
+        self.utils = ModelUtils()
+        super().__init__()
 
     @abc.abstractmethod
     def get_knob_config(self):
@@ -53,17 +62,6 @@ class BaseModel(abc.ABC):
         '''
         raise NotImplementedError()
 
-    @abc.abstractmethod
-    def get_predict_label_mapping(self):
-        '''
-        Return a dictionary mapping from index to class labels. 
-        This method is only called after training.
-
-        :returns: Dictionary mapping from index to class labels. 
-        :rtype: dict[int, str]
-        '''
-        raise NotImplementedError()
-
     def init(self, knobs):
         '''
         Initialize the model with a dictionary of knob values. 
@@ -75,24 +73,22 @@ class BaseModel(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def train(self, dataset_uri, task):
+    def train(self, dataset_uri):
         '''
         Train this model instance with given dataset and initialized knob values.
 
         :param str dataset_uri: URI of the train dataset in a format specified by the task
-        :param str task: Task type
         '''
         raise NotImplementedError()
 
     # TODO: Allow configuration of other metrics
     @abc.abstractmethod
-    def evaluate(self, dataset_uri, task):
+    def evaluate(self, dataset_uri):
         '''
         Evaluate this model instance with given dataset after training. 
         This will be called only when model is *trained*.
 
         :param str dataset_uri: URI of the test dataset in a format specified by the task
-        :param str task: Task type
         :returns: Accuracy as float from 0-1 on the test dataset
         :rtype: float
         '''
@@ -116,7 +112,7 @@ class BaseModel(abc.ABC):
     def dump_parameters(self):
         '''
         Return a dictionary of model parameters that fully define this model instance's trained state. 
-        This dictionary should be JSON serializable.
+        This dictionary should be serializable by the Python's ``pickle`` module.
         This will be used for trained model serialization within Rafiki.
         This will be called only when model is *trained*.
 
@@ -161,9 +157,12 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
     :type knobs: dict[str, any]
     :returns: The trained model
     '''
-    
     print('Testing instantiation of model...')
     model_inst = model_class()
+
+    print('Checking deprecated methods...')
+    if getattr(model_inst, 'get_predict_label_mapping', None) is not None:
+        print('WARNING: `get_predict_label_mapping` has been deprecated!')
 
     print('Testing getting of model\'s knob config...')
     knob_config = model_inst.get_knob_config()
@@ -184,10 +183,10 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
     model_inst.init(knobs)
 
     print('Testing training of model...')
-    model_inst.train(train_dataset_uri, task)
+    model_inst.train(train_dataset_uri)
 
     print('Testing evaluation of model...')
-    score = model_inst.evaluate(test_dataset_uri, task)
+    score = model_inst.evaluate(test_dataset_uri)
 
     if not isinstance(score, float):
         raise InvalidModelClassException('`evaluate()` should return a float!')
@@ -201,10 +200,11 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
         raise InvalidModelClassException('`dump_parameters()` should return a dict[str, any]')
 
     try:
-        json.dumps(parameters)
+        # Model parameters are pickled and put into DB
+        parameters = pickle.loads(pickle.dumps(parameters))
     except Exception:
         traceback.print_stack()
-        raise InvalidModelClassException('`parameters` should be JSON serializable')
+        raise InvalidModelClassException('`parameters` should be serializable by `pickle`.')
 
     print('Testing destroying of model...')
     model_inst.destroy()
@@ -214,25 +214,19 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
     model_inst.init(knobs)
     model_inst.load_parameters(parameters)
 
-    print('Testing retrieving of predict label mapping...')
-    predict_label_mapping = model_inst.get_predict_label_mapping()
-
-    if not isinstance(predict_label_mapping, dict):
-        raise InvalidModelClassException('`get_predict_label_mapping()` should return a dict[int, str]')
-
     print('Testing predictions with model...')
     print('Using queries: {}'.format(queries))
     predictions = model_inst.predict(queries)
-    predictions = ensemble_predictions([predictions], [predict_label_mapping], task)
 
     try:
         for prediction in predictions:
-            prediction = parse_model_prediction(prediction)
             json.dumps(prediction)
-            
     except Exception:
         traceback.print_stack()
         raise InvalidModelClassException('Each `prediction` should be JSON serializable')
+
+    # Ensembling predictions in predictor
+    predictions = ensemble_predictions([predictions], task)
 
     print('Predictions: {}'.format(predictions))
     

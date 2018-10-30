@@ -99,10 +99,8 @@ class Trial(Base):
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
     status = Column(String, nullable=False, default=TrialStatus.RUNNING)
     score = Column(Float, default=0)
-    parameters = Column(JSON, default=None)
-    predict_label_mapping = Column(JSON, default=None)
+    parameters = Column(Binary, default=None)
     datetime_stopped = Column(DateTime, default=None)
-    
 
 class User(Base):
     __tablename__ = 'user'

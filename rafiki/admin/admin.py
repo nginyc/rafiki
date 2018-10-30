@@ -2,9 +2,10 @@ import os
 import logging
 import traceback
 import bcrypt
+import pickle
 
 from rafiki.db import Database
-from rafiki.constants import ServiceStatus, UserType, ServiceType
+from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.container import DockerSwarmContainerManager 
 
@@ -12,23 +13,13 @@ from .services_manager import ServicesManager
 
 logger = logging.getLogger(__name__)
 
-class UserExistsException(Exception):
-    pass
-
-class InvalidUserException(Exception): 
-    pass
-
-class InvalidPasswordException(Exception):
-    pass
-
-class RunningInferenceJobExistsException(Exception):
-    pass
-
-class InvalidRunningInferenceJobException(Exception):
-    pass
-
-class NoModelsForTaskException(Exception):
-    pass
+class UserExistsException(Exception): pass
+class InvalidUserException(Exception): pass
+class InvalidPasswordException(Exception): pass
+class InvalidRunningInferenceJobException(Exception): pass
+class InvalidTrainJobException(Exception): pass
+class RunningInferenceJobExistsException(Exception): pass
+class NoModelsForTaskException(Exception): pass
 
 class Admin(object):
     def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
@@ -104,6 +95,9 @@ class Admin(object):
 
     def stop_train_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+        if train_job is None:
+            raise InvalidTrainJobException()
+
         self._services_manager.stop_train_services(train_job.id)
 
         return {
@@ -114,6 +108,9 @@ class Admin(object):
             
     def get_train_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+        if train_job is None:
+            raise InvalidTrainJobException()
+
         workers = self._db.get_workers_of_train_job(train_job.id)
         services = [self._db.get_service(x.service_id) for x in workers]
         worker_models = [self._db.get_model(x.model_id) for x in workers]
@@ -165,6 +162,9 @@ class Admin(object):
 
     def get_best_trials_of_train_job(self, app, app_version=-1, max_count=3):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+        if train_job is None:
+            raise InvalidTrainJobException()
+
         best_trials = self._db.get_best_trials_of_train_job(train_job.id, max_count=max_count)
         best_trials_models = [self._db.get_model(x.model_id) for x in best_trials]
         return [
@@ -181,6 +181,9 @@ class Admin(object):
 
     def get_trials_of_train_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+        if train_job is None:
+            raise InvalidTrainJobException()
+
         trials = self._db.get_trials_of_train_job(train_job.id)
         trials_models = [self._db.get_model(x.model_id) for x in trials]
         return [
@@ -209,6 +212,11 @@ class Admin(object):
 
     def create_inference_job(self, user_id, app, app_version):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+        if train_job is None:
+            raise InvalidTrainJobException('Have you started a train job for this app?')
+
+        if train_job.status != TrainJobStatus.COMPLETED:
+            raise InvalidTrainJobException('Train job has not completed.')
 
         # Ensure only 1 running inference job for 1 train job
         inference_job = self._db.get_running_inference_job_by_train_job(train_job.id)
@@ -234,8 +242,10 @@ class Admin(object):
 
     def stop_inference_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
-        inference_job = self._db.get_running_inference_job_by_train_job(train_job.id)
+        if train_job is None:
+            raise InvalidRunningInferenceJobException()
 
+        inference_job = self._db.get_running_inference_job_by_train_job(train_job.id)
         if inference_job is None:
             raise InvalidRunningInferenceJobException()
 
@@ -249,8 +259,10 @@ class Admin(object):
 
     def get_running_inference_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
-        inference_job = self._db.get_running_inference_job_by_train_job(train_job.id)
+        if train_job is None:
+            raise InvalidRunningInferenceJobException()
 
+        inference_job = self._db.get_running_inference_job_by_train_job(train_job.id)
         if inference_job is None:
             raise InvalidRunningInferenceJobException()
             
@@ -357,7 +369,7 @@ class Admin(object):
         ]
         
     ####################################
-    # Private
+    # Private / Users
     ####################################
 
     def _seed_users(self):
@@ -391,8 +403,16 @@ class Admin(object):
         self._db.commit()
         return user
 
+    ####################################
+    # Private / Services
+    ####################################
+
     def _get_service_host(self, service):
         return '{}:{}'.format(service.ext_hostname, service.ext_port)
+
+    ####################################
+    # Private / Others
+    ####################################
 
     def __enter__(self):
         self.connect()

@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.0.4
+                0.0.5
               </div>
             
           
@@ -151,15 +151,20 @@
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">abc</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
 <span class="kn">from</span> <span class="nn">rafiki.advisor</span> <span class="k">import</span> <span class="n">make_advisor</span>
 <span class="kn">from</span> <span class="nn">rafiki.predictor</span> <span class="k">import</span> <span class="n">ensemble_predictions</span>
-<span class="kn">from</span> <span class="nn">rafiki.utils.model</span> <span class="k">import</span> <span class="n">parse_model_prediction</span>
 <span class="kn">from</span> <span class="nn">rafiki.constants</span> <span class="k">import</span> <span class="n">TaskType</span>
 
-<span class="k">class</span> <span class="nc">InvalidModelClassException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-    <span class="k">pass</span>
+<span class="kn">from</span> <span class="nn">.dataset</span> <span class="k">import</span> <span class="n">DatasetUtils</span>
 
-<span class="k">class</span> <span class="nc">InvalidModelParamsException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">InvalidModelClassException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span>
+<span class="k">class</span> <span class="nc">InvalidModelParamsException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span>
+
+<span class="k">class</span> <span class="nc">ModelUtils</span><span class="p">(</span><span class="n">DatasetUtils</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Collection of utility methods for model developers e.g. dataset loading</span>
+<span class="sd">    &#39;&#39;&#39;</span>   
     <span class="k">pass</span>
 
 <div class="viewcode-block" id="BaseModel"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel">[docs]</a><span class="k">class</span> <span class="nc">BaseModel</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
@@ -167,6 +172,10 @@
 <span class="sd">    Rafiki&#39;s base model class that Rafiki models should extend. </span>
 <span class="sd">    Rafiki models should implement all abstract methods according to their associated tasks&#39; specifications.</span>
 <span class="sd">    &#39;&#39;&#39;</span>   
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">utils</span> <span class="o">=</span> <span class="n">ModelUtils</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
 <div class="viewcode-block" id="BaseModel.get_knob_config"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel.get_knob_config">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
     <span class="k">def</span> <span class="nf">get_knob_config</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -202,17 +211,6 @@
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="BaseModel.get_predict_label_mapping"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel.get_predict_label_mapping">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
-    <span class="k">def</span> <span class="nf">get_predict_label_mapping</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Return a dictionary mapping from index to class labels. </span>
-<span class="sd">        This method is only called after training.</span>
-
-<span class="sd">        :returns: Dictionary mapping from index to class labels. </span>
-<span class="sd">        :rtype: dict[int, str]</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
-
 <div class="viewcode-block" id="BaseModel.init"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel.init">[docs]</a>    <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">knobs</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Initialize the model with a dictionary of knob values. </span>
@@ -224,24 +222,22 @@
         <span class="k">pass</span></div>
 
 <div class="viewcode-block" id="BaseModel.train"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel.train">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
-    <span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">,</span> <span class="n">task</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Train this model instance with given dataset and initialized knob values.</span>
 
 <span class="sd">        :param str dataset_uri: URI of the train dataset in a format specified by the task</span>
-<span class="sd">        :param str task: Task type</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
 
     <span class="c1"># TODO: Allow configuration of other metrics</span>
 <div class="viewcode-block" id="BaseModel.evaluate"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel.evaluate">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
-    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">,</span> <span class="n">task</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Evaluate this model instance with given dataset after training. </span>
 <span class="sd">        This will be called only when model is *trained*.</span>
 
 <span class="sd">        :param str dataset_uri: URI of the test dataset in a format specified by the task</span>
-<span class="sd">        :param str task: Task type</span>
 <span class="sd">        :returns: Accuracy as float from 0-1 on the test dataset</span>
 <span class="sd">        :rtype: float</span>
 <span class="sd">        &#39;&#39;&#39;</span>
@@ -265,7 +261,7 @@
     <span class="k">def</span> <span class="nf">dump_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Return a dictionary of model parameters that fully define this model instance&#39;s trained state. </span>
-<span class="sd">        This dictionary should be JSON serializable.</span>
+<span class="sd">        This dictionary should be serializable by the Python&#39;s ``pickle`` module.</span>
 <span class="sd">        This will be used for trained model serialization within Rafiki.</span>
 <span class="sd">        This will be called only when model is *trained*.</span>
 
@@ -310,9 +306,12 @@
 <span class="sd">    :type knobs: dict[str, any]</span>
 <span class="sd">    :returns: The trained model</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing instantiation of model...&#39;</span><span class="p">)</span>
     <span class="n">model_inst</span> <span class="o">=</span> <span class="n">model_class</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Checking deprecated methods...&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model_inst</span><span class="p">,</span> <span class="s1">&#39;get_predict_label_mapping&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;WARNING: `get_predict_label_mapping` has been deprecated!&#39;</span><span class="p">)</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing getting of model</span><span class="se">\&#39;</span><span class="s1">s knob config...&#39;</span><span class="p">)</span>
     <span class="n">knob_config</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">get_knob_config</span><span class="p">()</span>
@@ -333,10 +332,10 @@
     <span class="n">model_inst</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">knobs</span><span class="p">)</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing training of model...&#39;</span><span class="p">)</span>
-    <span class="n">model_inst</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">train_dataset_uri</span><span class="p">,</span> <span class="n">task</span><span class="p">)</span>
+    <span class="n">model_inst</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">train_dataset_uri</span><span class="p">)</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing evaluation of model...&#39;</span><span class="p">)</span>
-    <span class="n">score</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">test_dataset_uri</span><span class="p">,</span> <span class="n">task</span><span class="p">)</span>
+    <span class="n">score</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">test_dataset_uri</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
         <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="s1">&#39;`evaluate()` should return a float!&#39;</span><span class="p">)</span>
@@ -350,10 +349,11 @@
         <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="s1">&#39;`dump_parameters()` should return a dict[str, any]&#39;</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
+        <span class="c1"># Model parameters are pickled and put into DB</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">parameters</span><span class="p">))</span>
     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
         <span class="n">traceback</span><span class="o">.</span><span class="n">print_stack</span><span class="p">()</span>
-        <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="s1">&#39;`parameters` should be JSON serializable&#39;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="s1">&#39;`parameters` should be serializable by `pickle`.&#39;</span><span class="p">)</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing destroying of model...&#39;</span><span class="p">)</span>
     <span class="n">model_inst</span><span class="o">.</span><span class="n">destroy</span><span class="p">()</span>
@@ -363,25 +363,19 @@
     <span class="n">model_inst</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">knobs</span><span class="p">)</span>
     <span class="n">model_inst</span><span class="o">.</span><span class="n">load_parameters</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing retrieving of predict label mapping...&#39;</span><span class="p">)</span>
-    <span class="n">predict_label_mapping</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">get_predict_label_mapping</span><span class="p">()</span>
-
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">predict_label_mapping</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="s1">&#39;`get_predict_label_mapping()` should return a dict[int, str]&#39;</span><span class="p">)</span>
-
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing predictions with model...&#39;</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Using queries: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">queries</span><span class="p">))</span>
     <span class="n">predictions</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">queries</span><span class="p">)</span>
-    <span class="n">predictions</span> <span class="o">=</span> <span class="n">ensemble_predictions</span><span class="p">([</span><span class="n">predictions</span><span class="p">],</span> <span class="p">[</span><span class="n">predict_label_mapping</span><span class="p">],</span> <span class="n">task</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">prediction</span> <span class="ow">in</span> <span class="n">predictions</span><span class="p">:</span>
-            <span class="n">prediction</span> <span class="o">=</span> <span class="n">parse_model_prediction</span><span class="p">(</span><span class="n">prediction</span><span class="p">)</span>
             <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">prediction</span><span class="p">)</span>
-            
     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
         <span class="n">traceback</span><span class="o">.</span><span class="n">print_stack</span><span class="p">()</span>
         <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="s1">&#39;Each `prediction` should be JSON serializable&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Ensembling predictions in predictor</span>
+    <span class="n">predictions</span> <span class="o">=</span> <span class="n">ensemble_predictions</span><span class="p">([</span><span class="n">predictions</span><span class="p">],</span> <span class="n">task</span><span class="p">)</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Predictions: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">predictions</span><span class="p">))</span>
     
@@ -403,7 +397,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, nginyc, cadmusthefounder, nudles
+        &copy; Copyright 2018, nginyc, cadmusthefounder, nudles.
 
     </p>
   </div>
@@ -422,14 +416,21 @@
 
   
 
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../../../_static/jquery.js"></script>
-        <script type="text/javascript" src="../../../_static/underscore.js"></script>
-        <script type="text/javascript" src="../../../_static/doctools.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

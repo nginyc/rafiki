@@ -21,6 +21,7 @@ class TrialStatus():
 
 class ServiceStatus():
     STARTED = 'STARTED'
+    DEPLOYING = 'DEPLOYING'
     RUNNING = 'RUNNING'
     ERRORED = 'ERRORED'
     STOPPED = 'STOPPED'
@@ -40,9 +41,8 @@ class UserType():
 class AdvisorType():
     BTB_GP = 'BTB_GP'
 
-class DatasetProtocol():
-    HTTP = 'http'
-    HTTPS = 'https'
+class DatasetType():
+    IMAGE_FILES = 'IMAGE_FILES'
 
 class TaskType():
     IMAGE_CLASSIFICATION = 'IMAGE_CLASSIFICATION'
