@@ -36,7 +36,7 @@ class TrainWorker(object):
             self._db.connect()
             (budget_type, budget_amount, model_id,
                 model_file_bytes, model_class, train_job_id, 
-                train_dataset_uri, test_dataset_uri, task) = self._read_worker_info()
+                train_dataset_uri, test_dataset_uri) = self._read_worker_info()
 
             # Load model class from bytes
             clazz = load_model_class(model_file_bytes, model_class)
@@ -82,9 +82,8 @@ class TrainWorker(object):
             try:
                 logger.info('Starting trial...')
                 logger.info('Training & evaluating model...')
-                (score, parameters, logs) = \
-                    self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
-                                                test_dataset_uri, task)
+                (score, parameters, logs) = self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
+                                                                        test_dataset_uri)
                 logger.info('Trial score: {}'.format(score))
                 
                 with self._db:
@@ -126,7 +125,7 @@ class TrainWorker(object):
             logger.error(traceback.format_exc())
 
     def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, 
-                                    test_dataset_uri, task):
+                                    test_dataset_uri):
         model_inst = clazz()
 
         # Insert model training logger
@@ -137,10 +136,10 @@ class TrainWorker(object):
         model_inst.init(knobs)
 
         # Train model
-        model_inst.train(train_dataset_uri, task)
+        model_inst.train(train_dataset_uri)
 
         # Evaluate model
-        score = model_inst.evaluate(test_dataset_uri, task)
+        score = model_inst.evaluate(test_dataset_uri)
 
         # Dump and pickle model parameters
         parameters = model_inst.dump_parameters()
@@ -233,8 +232,7 @@ class TrainWorker(object):
             model.model_class,
             train_job.id,
             train_job.train_dataset_uri,
-            train_job.test_dataset_uri,
-            train_job.task
+            train_job.test_dataset_uri
         )
 
     def _make_client(self):

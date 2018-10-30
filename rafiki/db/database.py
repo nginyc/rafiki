@@ -52,7 +52,7 @@ class Database(object):
 
     def create_train_job(self, user_id, app, 
         app_version, task, train_dataset_uri, test_dataset_uri,
-        budget_type, budget_amount, train_dataset_meta):
+        budget_type, budget_amount):
 
         train_job = TrainJob(
             user_id=user_id,
@@ -62,8 +62,7 @@ class Database(object):
             train_dataset_uri=train_dataset_uri,
             test_dataset_uri=test_dataset_uri,
             budget_type=budget_type, 
-            budget_amount=budget_amount,
-            train_dataset_meta=train_dataset_meta
+            budget_amount=budget_amount
         )
         self._session.add(train_job)
         return train_job

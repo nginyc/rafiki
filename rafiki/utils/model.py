@@ -1,5 +1,4 @@
 import os
-import numpy as np
 from importlib import import_module
 
 TEMP_MODEL_FILE_NAME = 'temp'
@@ -20,9 +19,4 @@ def load_model_class(model_file_bytes, model_class):
     os.remove(f.name)
 
     return clazz
-    
-def parse_model_prediction(prediction):
-    if isinstance(prediction, np.ndarray):
-        return prediction.tolist()
-
-    return prediction
+   

@@ -43,17 +43,24 @@ class TfSingleHiddenLayer(BaseModel):
         self._sess = tf.Session(graph=self._graph)
         self._define_plots()
         
+<<<<<<< HEAD
     def train(self, dataset_uri, task):
         ((images, labels), train_index_to_label) = self.utils.load_dataset(dataset_uri, task)
         self._train_index_to_label = train_index_to_label
         num_classes = len(np.unique(labels))
         
+=======
+    def train(self, dataset_uri):
+        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        (num_samples, num_classes) = next(dataset)
+        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+>>>>>>> move_model_label_mapping
         with self._graph.as_default():
             self._model = self._build_model(num_classes)
             with self._sess.as_default():
                 self._model.fit(
                     np.array(images), 
-                    np.array(labels), 
+                    np.array(classes), 
                     verbose=0,
                     epochs=EPOCHS,
                     batch_size=self._batch_size,
@@ -62,12 +69,15 @@ class TfSingleHiddenLayer(BaseModel):
                     ]
                 )
 
-    def evaluate(self, dataset_uri, task):
-        ((images, labels), test_index_to_label) = self.utils.load_dataset(dataset_uri, task)
-        labels = self.utils.relabel_dataset_labels(labels, self._train_index_to_label, test_index_to_label)
+    def evaluate(self, dataset_uri):
+        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        (num_samples, num_classes) = next(dataset)
+        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+
         with self._graph.as_default():
             with self._sess.as_default():
-                (loss, accuracy) = self._model.evaluate(np.array(images), np.array(labels))
+                (loss, accuracy) = self._model.evaluate(np.array(images), np.array(classes))
+
         return accuracy
 
     def predict(self, queries):
@@ -75,7 +85,8 @@ class TfSingleHiddenLayer(BaseModel):
         with self._graph.as_default():
             with self._sess.as_default():
                 probs = self._model.predict(X)
-        return probs
+                
+        return probs.tolist()
 
     def destroy(self):
         self._sess.close()
@@ -96,9 +107,6 @@ class TfSingleHiddenLayer(BaseModel):
 
             params['h5_model_base64'] = base64.b64encode(h5_model_bytes).decode('utf-8')
 
-        # Save train_index_to_label
-        params['train_index_to_label'] = self._train_index_to_label
-
         return params
 
     def load_parameters(self, params):
@@ -117,11 +125,6 @@ class TfSingleHiddenLayer(BaseModel):
             with self._graph.as_default():
                 with self._sess.as_default():
                     self._model = keras.models.load_model(tmp.name)
-                
-        # Load train_index_to_label
-        self._train_index_to_label = params.get('train_index_to_label', None)
-        if self._train_index_to_label is None:
-            raise InvalidModelParamsException()
 
     def _on_train_epoch_end(self, epoch, logs):
         loss = logs['loss']
@@ -157,8 +160,8 @@ class TfSingleHiddenLayer(BaseModel):
 if __name__ == '__main__':
     validate_model_class(
         model_class=TfSingleHiddenLayer,
-        train_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true',
-        test_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true',
+        train_dataset_uri='data/fashion_mnist_as_image_files_train.zip',
+        test_dataset_uri='data/fashion_mnist_as_image_files_test.zip',
         task=TaskType.IMAGE_CLASSIFICATION,
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

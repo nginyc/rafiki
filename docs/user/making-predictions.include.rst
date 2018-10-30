@@ -14,5 +14,5 @@ Example:
     .. code-block:: shell
 
         {
-            "prediction": "Boot"
+            "prediction": 9
         }

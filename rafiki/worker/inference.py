@@ -8,7 +8,7 @@ import logging
 import traceback
 import json
 
-from rafiki.utils.model import load_model_class, parse_model_prediction
+from rafiki.utils.model import load_model_class
 from rafiki.db import Database
 from rafiki.cache import Cache
 from rafiki.config import INFERENCE_WORKER_SLEEP, INFERENCE_WORKER_PREDICT_BATCH_SIZE
@@ -46,7 +46,6 @@ class InferenceWorker(object):
                 predictions = None
                 try:
                     predictions = self._model.predict(queries)
-                    predictions = [parse_model_prediction(x) for x in predictions]
                 except Exception:
                     logger.error('Error while making predictions:')
                     logger.error(traceback.format_exc())

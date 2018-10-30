@@ -12,8 +12,8 @@ MODEL_DEVELOPER_EMAIL = 'model_developer@rafiki'
 APP_DEVELOPER_EMAIL = 'app_developer@rafiki'
 USER_PASSWORD = 'rafiki'
 APP = 'fashion_mnist_app'
-TRAIN_DATASET_URI = 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true'
-TEST_DATASET_URI = 'https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true'
+TRAIN_DATASET_URI = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_as_image_files_train.zip?raw=true'
+TEST_DATASET_URI = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_as_image_files_test.zip?raw=true'
 QUERY = \
     [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

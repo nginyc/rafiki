@@ -3,35 +3,42 @@ Supported Dataset Types
 
 .. contents:: Table of Contents
 
-.. _`dataset-type:IMAGE_CLASSES_BY_FOLDERS`:
+Dataset URIs must have the protocols of either ``http`` or ``https``.
+
+.. note::
+    
+    You can alternatively use relative or absolute filepaths as dataset URIs, only if you have deployed the full Rafiki stack on your own machine.
+
+.. note::
+
+    Refer to `./examples/datasets/ <https://github.com/nginyc/rafiki/tree/master/examples/datasets/>`_ for examples on pre-processing 
+    common dataset formats to conform to the Rafiki's own dataset formats.
 
 
-IMAGE_CLASSES_BY_FOLDERS
+.. _`dataset-type:IMAGE_FILES`:
+
+IMAGE_FILES
 --------------------------------------------------------------------
 
-Protocol of URI must be ``http`` or ``https``.
+The dataset file must be of the ``.zip`` archive format with a ``images.csv`` at the root of the directory.
 
-The dataset file must be of the ``.zip`` archive format with the following folder structure:
+The ``images.csv`` should be of a .CSV format with 2 columns of ``path`` and ``class``.
 
-.. code-block:: bash
+For each row,
 
-    class_1/
-        image_1.png
-        image_2.png
-        image_3.png
-    class_2/
-        image_4.png
-        image_5.png
-        image_6.png
+    ``path`` should be a file path to a ``.png``, ``.jpg`` or ``.jpeg`` image file within the archive, relative to the root of the directory.
+
+    ``class`` should be an integer from ``0`` to ``k``, where ``k`` is the number of classes in the classification of images.
+
+An example of ``images.csv`` follows:
+
+.. code-block:: text
+
+    path,class
+    image-0-of-class-0.png,0
+    image-1-of-class-0.png,0
     ...
-    class_n/
-        image_k-2.png
-        image_k-1.png
-        image_k.png
+    image-0-of-class-1.png,1
+    ...
+    image-99-of-class-9.png,9
     
-Supported Image File Formats
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-- ``.png``
-- ``.jpg``
-- ``.jpeg``
-

@@ -47,18 +47,20 @@ class SkSvm(BaseModel):
             self._C
         )
         
-    def train(self, dataset_uri, task):
-        ((images, labels), train_index_to_label) = self.utils.load_dataset(dataset_uri, task)
-        self._train_index_to_label = train_index_to_label
+    def train(self, dataset_uri):
+        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        (num_samples, num_classes) = next(dataset)
+        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
-        y = labels
+        y = classes
         self._clf.fit(X, y)
 
-    def evaluate(self, dataset_uri, task):
-        ((images, labels), test_index_to_label) = self.utils.load_dataset(dataset_uri, task)
-        labels = self.utils.relabel_dataset_labels(labels, self._train_index_to_label, test_index_to_label)
+    def evaluate(self, dataset_uri):
+        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        (num_samples, num_classes) = next(dataset)
+        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
-        y = labels
+        y = classes
         preds = self._clf.predict(X)
         accuracy = sum(y == preds) / len(y)
         return accuracy
@@ -66,7 +68,7 @@ class SkSvm(BaseModel):
     def predict(self, queries):
         X = self._prepare_X(queries)
         probs = self._clf.predict_proba(X)
-        return probs
+        return probs.tolist()
 
     def destroy(self):
         pass
@@ -78,9 +80,6 @@ class SkSvm(BaseModel):
         clf_bytes = pickle.dumps(self._clf)
         clf_base64 = base64.b64encode(clf_bytes).decode('utf-8')
         params['clf_base64'] = clf_base64
-
-        # Save train_index_to_label
-        params['train_index_to_label'] = self._train_index_to_label
         
         return params
 
@@ -92,11 +91,6 @@ class SkSvm(BaseModel):
         
         clf_bytes = base64.b64decode(params['clf_base64'].encode('utf-8'))
         self._clf = pickle.loads(clf_bytes)
-
-        # Load train_index_to_label
-        self._train_index_to_label = params.get('train_index_to_label', None)
-        if self._train_index_to_label is None:
-            raise InvalidModelParamsException()
 
     def _prepare_X(self, images):
         return [np.array(image).flatten() for image in images]
@@ -115,8 +109,8 @@ class SkSvm(BaseModel):
 if __name__ == '__main__':
     validate_model_class(
         model_class=SkSvm,
-        train_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_train.zip?raw=true',
-        test_dataset_uri='https://github.com/cadmusthefounder/mnist_data/blob/master/output/fashion_test.zip?raw=true',
+        train_dataset_uri='data/fashion_mnist_as_image_files_train.zip',
+        test_dataset_uri='data/fashion_mnist_as_image_files_test.zip',
         task=TaskType.IMAGE_CLASSIFICATION,
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

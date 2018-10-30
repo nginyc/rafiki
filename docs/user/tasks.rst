@@ -1,3 +1,5 @@
+.. _`tasks`:
+
 Supported Tasks
 ====================================================================
 
@@ -24,7 +26,8 @@ IMAGE_CLASSIFICATION
 
 Dataset Type
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:ref:`dataset-type:IMAGE_CLASSES_BY_FOLDERS`
+
+:ref:`dataset-type:IMAGE_FILES`
 
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -34,4 +37,4 @@ A (28, 28) 2D list representing the grayscale version of the query image.
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A string representing the label of the prediction.
+An integer representing the predicted class.

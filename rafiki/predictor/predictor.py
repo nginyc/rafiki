@@ -20,7 +20,7 @@ class Predictor(object):
 
     def start(self):
         with self._db:
-            (self._inference_job_id, self._train_dataset_meta, self._task) \
+            (self._inference_job_id, self._task) \
                 = self._read_predictor_info()
 
     def predict(self, query):
@@ -61,10 +61,7 @@ class Predictor(object):
             for worker_id in running_worker_ids
         ]
 
-        predictions = ensemble_predictions(predictions_list, 
-                                            self._train_dataset_meta,
-                                            self._task)
-
+        predictions = ensemble_predictions(predictions_list, self._task)
         prediction = predictions[0] if len(predictions) > 0 else None
 
         return {
@@ -74,11 +71,9 @@ class Predictor(object):
     def _read_predictor_info(self):
         inference_job = self._db.get_inference_job_by_predictor(self._service_id)
         train_job = self._db.get_train_job(inference_job.train_job_id)
-        train_dataset_meta = pickle.loads(train_job.train_dataset_meta)
 
         return (
             inference_job.id,
-            train_dataset_meta,
             train_job.task
         )
 

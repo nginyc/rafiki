@@ -2,7 +2,7 @@ import numpy as np
 
 from rafiki.constants import TaskType
 
-def ensemble_predictions(predictions_list, train_dataset_meta, task):
+def ensemble_predictions(predictions_list, task):
     if len(predictions_list) == 0 or len(predictions_list[0]) == 0:
         return []
 
@@ -12,8 +12,14 @@ def ensemble_predictions(predictions_list, train_dataset_meta, task):
 
     if task == TaskType.IMAGE_CLASSIFICATION:
         # Map probabilities to most probable label
-        train_index_to_label = train_dataset_meta
-        pred_indices = np.argmax(predictions, axis=1)
-        predictions = [train_index_to_label[i] for i in pred_indices]
-    
+        predictions = np.argmax(predictions, axis=1)
+
+    predictions = _simplify_predictions(predictions)
+
+    return predictions
+
+def _simplify_predictions(predictions):
+    if isinstance(predictions, np.ndarray):
+        predictions = predictions.tolist()
+
     return predictions
