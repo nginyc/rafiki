@@ -28,7 +28,7 @@ For each row,
 
     ``path`` should be a file path to a ``.png``, ``.jpg`` or ``.jpeg`` image file within the archive, relative to the root of the directory.
 
-    ``class`` should be an integer from ``0`` to ``k``, where ``k`` is the number of classes in the classification of images.
+    ``class`` should be an integer from ``0`` to ``k - 1``, where ``k`` is the number of classes in the classification of images.
 
 An example of ``images.csv`` follows:
 
