@@ -32,7 +32,7 @@ class DatasetUtils():
             
             The first yield gives (<number of examples>, <number of classes>).
             Subsequent yields give (image, class) where each image is a 2D numpy array 
-                of integers (0, 255) as grayscale, each class is an integer from 0-k.
+                of integers (0, 255) as grayscale, each class is an integer from 0 to (k - 1).
         '''
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         
