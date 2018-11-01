@@ -21,13 +21,13 @@ We assume development or deployment in a MacOS or Linux environment.
 
 .. code-block:: shell
 
-    bash scripts/start.sh
+    sudo bash scripts/start.sh
 
 4. To destroy Rafiki's complete stack:
 
 .. code-block:: shell
 
-    bash scripts/stop.sh
+    sudo bash scripts/stop.sh
 
 
 Development
@@ -119,6 +119,11 @@ You can read logs of Rafiki Admin, Rafiki Advisor & any of Rafiki's services in 
     open $LOGS_FOLDER_PATH
 
 
+.. note::
+    
+    Ensure that Docker has permissions to mount $LOGS_FOLDER_PATH (e.g. under ``File Sharing`` on Mac)
+
+
 Using Rafiki Admin's HTTP interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -140,3 +145,6 @@ While building Rafiki's images locally, if you encounter an error like "No space
     docker rm $(docker ps -a -q)
     # Delete all images
     docker rmi $(docker images -q)
+
+From Mac Mojave onwards, due to Mac's new [privacy protection](https://www.howtogeek.com/361707/how-macos-mojaves-privacy-protection-works/) feature, 
+you might need to explicitly give Docker **Full Disk Access**, restart Docker, or even do a factory reset of Docker.
