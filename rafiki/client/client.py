@@ -21,6 +21,7 @@ class Client(object):
         self._advisor_host = advisor_host
         self._advisor_port = advisor_port
         self._token = None
+        self._user = None
 
     def login(self, email, password):
         '''
@@ -38,16 +39,28 @@ class Client(object):
         })
         self._token = data['token']
 
-        # Abstract token from user
-        del data['token']
+        # Save user's data
+        self._user = {
+            'id': data['user_id'],
+            'user_type': data['user_type']
+        }
 
-        return data
+        return self._user
+
+    def get_current_user(self):
+        '''
+        Gets currently logged in user's data.
+
+        :returns: Dictionary of shape `{ id, user_type }`, or `None` if client is not logged in
+        '''
+        return self._user
 
     def logout(self):
         '''
         Clears the current login session.
         '''
         self._token = None
+        self._user = None
 
     ####################################
     # User

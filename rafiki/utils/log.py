@@ -213,7 +213,7 @@ def _test_job_logger_for_predictor():
     # Predictor's logs are exported and cleared periodically
     logs_bytes = l.export_logs()
     l.clear_logs()
-    # l.destroy()
+    l.destroy()
 
     # App developer checks on this period's logs
     l2 = JobLogger()

@@ -43,18 +43,10 @@ class TfSingleHiddenLayer(BaseModel):
         self._sess = tf.Session(graph=self._graph)
         self._define_plots()
         
-<<<<<<< HEAD
-    def train(self, dataset_uri, task):
-        ((images, labels), train_index_to_label) = self.utils.load_dataset(dataset_uri, task)
-        self._train_index_to_label = train_index_to_label
-        num_classes = len(np.unique(labels))
-        
-=======
     def train(self, dataset_uri):
         dataset = self.utils.load_dataset_of_image_files(dataset_uri)
         (num_samples, num_classes) = next(dataset)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
->>>>>>> move_model_label_mapping
         with self._graph.as_default():
             self._model = self._build_model(num_classes)
             with self._sess.as_default():

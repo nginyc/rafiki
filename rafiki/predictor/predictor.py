@@ -68,6 +68,7 @@ class Predictor(object):
             'prediction': prediction
         }
 
+    # TODO: Fix system architecture diagram
     def _read_predictor_info(self):
         inference_job = self._db.get_inference_job_by_predictor(self._service_id)
         train_job = self._db.get_train_job(inference_job.train_job_id)
