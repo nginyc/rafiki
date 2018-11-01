@@ -17,7 +17,9 @@ class ModelUtils(ModelDatasetUtils, ModelLogUtils):
     '''
     Collection of utility methods for model developers e.g. dataset loading, in-training logging
     '''   
-    pass
+    def __init__(self):
+        ModelDatasetUtils.__init__(self)
+        ModelLogUtils.__init__(self)
 
 class BaseModel(abc.ABC):
     '''

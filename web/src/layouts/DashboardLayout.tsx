@@ -44,13 +44,13 @@ class DashboardLayout extends React.Component<Props> {
 
     return (
       <nav>
-        <Hidden smUp>
+        <Hidden mdUp>
           <Drawer classes={{ paper: classes.navDrawer }} 
             variant="temporary" open={isDrawerOpen} onClose={() => this.setState({ isDrawerOpen: false })}>
             {this.renderNavItems()}
           </Drawer>
         </Hidden>
-        <Hidden xsDown>
+        <Hidden smDown>
           <Drawer classes={{ paper: classes.navDrawer }} variant="permanent">
             {this.renderNavItems()}
           </Drawer>
@@ -65,7 +65,7 @@ class DashboardLayout extends React.Component<Props> {
     return (
       <AppBar position="static">
         <Toolbar>
-          <Hidden smUp>
+          <Hidden mdUp>
             <IconButton onClick={() => this.setState({ isDrawerOpen: !isDrawerOpen })} 
               color="inherit" aria-label="Menu">
                 <Menu />
@@ -80,24 +80,26 @@ class DashboardLayout extends React.Component<Props> {
   }
 
   renderPage() {
-    const { appUtils } = this.props;
+    const { appUtils, classes } = this.props;
 
     return (
-      <Switch>
-        <Route exact path={AppRoute.TRAIN_JOBS} render={(props) => {
-          return <TrainJobsPage appUtils={appUtils} />;
-        }}/>
-        <Route exact path={AppRoute.TRAIN_JOB_DETAIL} render={(props) => {
-          const { app, appVersion } = props.match.params;
-          return <TrainJobDetailPage app={app} appVersion={parseInt(appVersion)} appUtils={appUtils} />;
-        }}/>
-        <Route exact path={AppRoute.TRIAL_DETAIL} render={(props) => {
-          const { trialId } = props.match.params;
-          return <TrialDetailPage trialId={trialId} appUtils={appUtils} />;
-        }}/>
-        <Redirect to={AppRoute.TRAIN_JOBS} />
-      </Switch>
-    )
+      <main className={classes.main}>
+        <Switch>
+          <Route exact path={AppRoute.TRAIN_JOBS} render={(props) => {
+            return <TrainJobsPage appUtils={appUtils} />;
+          }}/>
+          <Route exact path={AppRoute.TRAIN_JOB_DETAIL} render={(props) => {
+            const { app, appVersion } = props.match.params;
+            return <TrainJobDetailPage app={app} appVersion={parseInt(appVersion)} appUtils={appUtils} />;
+          }}/>
+          <Route exact path={AppRoute.TRIAL_DETAIL} render={(props) => {
+            const { trialId } = props.match.params;
+            return <TrialDetailPage trialId={trialId} appUtils={appUtils} />;
+          }}/>
+          <Redirect to={AppRoute.TRAIN_JOBS} />
+        </Switch>
+      </main>  
+    );
   }
 
   render() {
@@ -109,10 +111,10 @@ class DashboardLayout extends React.Component<Props> {
           <div>
             {this.renderNav()}
           </div>
-          <main className={classes.main}>
+          <div className={classes.mainBox}>
             {this.renderBar()}
             {this.renderPage()}
-          </main>
+          </div>
         </div>
       </React.Fragment>
     );
@@ -122,10 +124,17 @@ class DashboardLayout extends React.Component<Props> {
 const styles: StyleRulesCallback = (theme) => ({
   root: {
   },
-  main: {
-    [theme.breakpoints.up('sm')]: {
+  mainBox: {
+    [theme.breakpoints.up('md')]: {
       marginLeft: 240
-    }
+    },
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100vh'
+  },
+  main: {
+    overflow: 'auto',
+    padding: theme.spacing.unit * 4
   },
   navDrawer: {
     width: 240

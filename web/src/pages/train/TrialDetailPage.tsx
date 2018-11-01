@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { withStyles, StyleRulesCallback } from '@material-ui/core/styles';
 
-import { Paper, CircularProgress } from '@material-ui/core';
+import { Paper, List, ListItem, Typography, Divider,
+  CircularProgress, ListItemText } from '@material-ui/core';
 import * as echarts from 'echarts';
 
 import { AppUtils } from '../../App';
@@ -33,10 +34,14 @@ class TrialDetailPage extends React.Component<Props> {
   }
 
   componentDidUpdate() {
+    this.updateCharts();
+  }
+
+  updateCharts() {
     const { logs } = this.state;
 
     if (!logs) return;
-
+    
     this.charts = [];
     const plots = Object.values(logs.plots);
     for (const i in plots) {
@@ -58,7 +63,6 @@ class TrialDetailPage extends React.Component<Props> {
           })
         });
       }
-      console.log(series);
 
       // @ts-ignore
       const chart = echarts.init(dom);  
@@ -84,7 +88,6 @@ class TrialDetailPage extends React.Component<Props> {
         series
       });
     }
-    
   }
 
   renderLogs() {
@@ -93,37 +96,73 @@ class TrialDetailPage extends React.Component<Props> {
 
     return (
       <div>
-        {Object.values(logs.plots).map((x, i) => {
-          return <Paper key={x.title} id={`plot-${i}`} className={classes.plotPaper}></Paper>;
-        })}
+        {
+          // Show plots section if there are plots
+          Object.values(logs.plots).length > 0 &&
+          <React.Fragment>
+            <Typography gutterBottom variant="h3">Plots</Typography>
+            {Object.values(logs.plots).map((x, i) => {
+              return <Paper key={x.title} id={`plot-${i}`} className={classes.plotPaper}></Paper>;
+            })}
+          </React.Fragment>
+        }
+        {
+          Object.values(logs.plots).length > 0 && Object.values(logs.messages).length > 0 &&
+          <Divider className={classes.divider} />
+        }
+        {
+          // Show messages section if there are messages
+          Object.values(logs.messages).length > 0 &&
+          <React.Fragment>
+            <Typography gutterBottom variant="h3">Messages</Typography>
+            <Paper>
+              <List>
+                {Object.values(logs.messages).map((x, i) => {
+                  const [date, text] = x;
+                  return (
+                    <ListItem>
+                      <ListItemText primary={text} secondary={date.toTimeString()} />
+                    </ListItem>
+                  );
+                })}
+                
+              </List>
+            </Paper>
+          </React.Fragment>
+        }
       </div>
     )
   }
 
   render() {
-    const { classes, appUtils } = this.props;
+    const { classes, appUtils, trialId } = this.props;
     const { logs } = this.state;
 
     return (
-      <main className={classes.main}>
-          <Paper className={classes.logsPaper}>
-            {
-              logs &&
-              this.renderLogs()
-            }
-            {
-              !logs &&
-              <CircularProgress />
-            }
-          </Paper>
-          
-      </main>
+      <React.Fragment>
+        <Typography gutterBottom variant="h2">
+          Trial
+          <span className={classes.headerSub}>{`(ID: V${trialId})`}</span>
+        </Typography>
+        <div className={classes.logsPaper}>
+          {
+            logs &&
+            this.renderLogs()
+          }
+          {
+            !logs &&
+            <CircularProgress />
+          }
+        </div>          
+      </React.Fragment>
     );
   }
 }
 
 const styles: StyleRulesCallback = (theme) => ({
-  main: {
+  headerSub: {
+    fontSize: theme.typography.h4.fontSize,
+    margin: theme.spacing.unit * 2
   },
   logsPaper: {
     overflowX: 'auto'
@@ -131,6 +170,9 @@ const styles: StyleRulesCallback = (theme) => ({
   plotPaper: {
     width: 500,
     height: 500
+  },
+  divider: {
+    margin: 20
   }
 });
 

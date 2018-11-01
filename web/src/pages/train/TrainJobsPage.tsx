@@ -36,9 +36,10 @@ class TrainJobsPage extends React.Component<Props> {
     const { trainJobs } = this.state;
 
     return (
-      <Table>
+      <Table padding="dense">
         <TableHead>
           <TableRow>
+            <TableCell padding="none"></TableCell>
             <TableCell>ID</TableCell>
             <TableCell>App</TableCell>
             <TableCell>App Version</TableCell>
@@ -47,22 +48,13 @@ class TrainJobsPage extends React.Component<Props> {
             <TableCell>Status</TableCell>
             <TableCell>Started At</TableCell>
             <TableCell>Completed At</TableCell>
-            <TableCell>Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {trainJobs.map(x => {
             return (
               <TableRow key={x.id} hover>
-                <TableCell>{x.id}</TableCell>
-                <TableCell>{x.app}</TableCell>
-                <TableCell>{x.app_version}</TableCell>
-                <TableCell>{x.task}</TableCell>
-                <TableCell>{x.budget_amount}</TableCell>
-                <TableCell>{x.status}</TableCell>
-                <TableCell>{x.datetime_started}</TableCell>
-                <TableCell>{x.datetime_completed}</TableCell>
-                <TableCell>
+                <TableCell padding="none">
                   <IconButton onClick={() => {
                     const link = AppRoute.TRAIN_JOB_DETAIL
                       .replace(':app', x.app)
@@ -72,6 +64,14 @@ class TrainJobsPage extends React.Component<Props> {
                     <Pageview /> 
                   </IconButton>
                 </TableCell>
+                <TableCell>{x.id}</TableCell>
+                <TableCell>{x.app}</TableCell>
+                <TableCell>{x.app_version}</TableCell>
+                <TableCell>{x.task}</TableCell>
+                <TableCell>{x.budget_amount}</TableCell>
+                <TableCell>{x.status}</TableCell>
+                <TableCell>{x.datetime_started}</TableCell>
+                <TableCell>{x.datetime_completed}</TableCell>
               </TableRow>
             );
           })}
@@ -85,26 +85,24 @@ class TrainJobsPage extends React.Component<Props> {
     const { trainJobs } = this.state;
 
     return (
-      <main className={classes.main}>
-          <Paper className={classes.jobsPaper}>
-            {
-              trainJobs &&
-              this.renderTrainJobs()
-            }
-            {
-              !trainJobs &&
-              <CircularProgress />
-            }
-          </Paper>
-          
-      </main>
+      <React.Fragment>
+        <Typography gutterBottom variant="h2">Your Train Jobs</Typography>
+        <Paper className={classes.jobsPaper}>
+          {
+            trainJobs &&
+            this.renderTrainJobs()
+          }
+          {
+            !trainJobs &&
+            <CircularProgress />
+          }
+        </Paper>
+      </React.Fragment>
     );
   }
 }
 
 const styles: StyleRulesCallback = (theme) => ({
-  main: {
-  },
   jobsPaper: {
     overflowX: 'auto'
   }

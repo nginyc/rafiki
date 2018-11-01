@@ -47,6 +47,7 @@ class TfSingleHiddenLayer(BaseModel):
         dataset = self.utils.load_dataset_of_image_files(dataset_uri)
         (num_samples, num_classes) = next(dataset)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+
         with self._graph.as_default():
             self._model = self._build_model(num_classes)
             with self._sess.as_default():
@@ -61,6 +62,11 @@ class TfSingleHiddenLayer(BaseModel):
                     ]
                 )
 
+                # Compute train accuracy
+                (loss, accuracy) = self._model.evaluate(np.array(images), np.array(classes))
+                self.utils.log('Train loss: {}'.format(loss))
+                self.utils.log('Train accuracy: {}'.format(accuracy))
+
     def evaluate(self, dataset_uri):
         dataset = self.utils.load_dataset_of_image_files(dataset_uri)
         (num_samples, num_classes) = next(dataset)
@@ -69,6 +75,7 @@ class TfSingleHiddenLayer(BaseModel):
         with self._graph.as_default():
             with self._sess.as_default():
                 (loss, accuracy) = self._model.evaluate(np.array(images), np.array(classes))
+                self.utils.log('Test loss: {}'.format(loss))
 
         return accuracy
 
@@ -123,7 +130,7 @@ class TfSingleHiddenLayer(BaseModel):
         self.utils.log_metrics(loss=loss)
 
     def _define_plots(self):
-        self.utils.define_plot('Loss over time', ['loss'])
+        self.utils.define_plot('Loss Over Time', ['loss'])
 
     def _build_model(self, num_classes):
         hidden_layer_units = self._hidden_layer_units

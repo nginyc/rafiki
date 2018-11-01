@@ -261,7 +261,7 @@ interface Trial {
 interface TrialLogs {
   plots: { [s: string]: TrialPlot };
   metrics: { [s: string]: TrialMetric };
-  message: [Date, string][];
+  messages: [Date, string][];
 }
 
 interface TrialPlot {
