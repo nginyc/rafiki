@@ -5,8 +5,9 @@ import requests
 from rafiki.client import Client
 from rafiki.constants import TaskType, BudgetType, TrainJobStatus, InferenceJobStatus
 
-ADMIN_HOST = 'localhost'
+RAFIKI_HOST = 'localhost'
 ADMIN_PORT = 8000
+ADMIN_WEB_PORT = 8080
 SUPERADMIN_EMAIL = 'superadmin@rafiki'
 MODEL_DEVELOPER_EMAIL = 'model_developer@rafiki'
 APP_DEVELOPER_EMAIL = 'app_developer@rafiki'
@@ -85,16 +86,20 @@ def create_models(client):
     )
 
 def create_train_job(client):
-    pprint.pprint(
-        client.create_train_job(
-            app=APP,
-            task=TaskType.IMAGE_CLASSIFICATION,
-            train_dataset_uri=TRAIN_DATASET_URI,
-            test_dataset_uri=TEST_DATASET_URI,
-            budget_type=BudgetType.MODEL_TRIAL_COUNT,
-            budget_amount=2
-        )
+    train_job = client.create_train_job(
+        app=APP,
+        task=TaskType.IMAGE_CLASSIFICATION,
+        train_dataset_uri=TRAIN_DATASET_URI,
+        test_dataset_uri=TEST_DATASET_URI,
+        budget_type=BudgetType.MODEL_TRIAL_COUNT,
+        budget_amount=2
     )
+    pprint.pprint(train_job)
+
+    app = train_job.get('app')
+    app_version = train_job.get('app_version')
+    train_job_web_url = 'http://{}:{}/train-jobs/{}/{}'.format(RAFIKI_HOST, ADMIN_WEB_PORT, app, app_version)
+    return (train_job_web_url)
 
 def wait_until_train_job_has_completed(client):
     while True:
@@ -156,7 +161,7 @@ def stop_inference_job(client):
     pprint.pprint(client.stop_inference_job(app=APP))
 
 if __name__ == '__main__':
-    client = Client(admin_host=ADMIN_HOST, admin_port=ADMIN_PORT)
+    client = Client(admin_host=RAFIKI_HOST, admin_port=ADMIN_PORT)
     client.login(email=SUPERADMIN_EMAIL, password=USER_PASSWORD)
 
     print('Adding users to Rafiki...')
@@ -172,9 +177,11 @@ if __name__ == '__main__':
     client.login(email=APP_DEVELOPER_EMAIL, password=USER_PASSWORD)
 
     print('Creating train job for app "{}" on Rafiki...'.format(APP)) 
-    create_train_job(client)
+    (train_job_web_url) = create_train_job(client)
 
     print('Waiting for train job to complete...')
+    print('You can view the status of the train job at {}.'.format(train_job_web_url))
+    print('Login as an app developer with email "{}" and password "{}".'.format(APP_DEVELOPER_EMAIL, USER_PASSWORD)) 
     print('This might take a few minutes.')
     result = wait_until_train_job_has_completed(client)
     if not result: raise Exception('Train job has errored or stopped.')
