@@ -21,7 +21,7 @@ class InvalidDatasetProtocolException(Exception): pass
 class InvalidDatasetTypeException(Exception): pass 
 class InvalidDatasetFormatException(Exception): pass 
 
-class DatasetUtils():
+class ModelDatasetUtils():
     def __init__(self):
         # Caches downloaded datasets
         self._dataset_uri_to_path = {}

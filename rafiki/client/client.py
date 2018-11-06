@@ -21,6 +21,7 @@ class Client(object):
         self._advisor_host = advisor_host
         self._advisor_port = advisor_port
         self._token = None
+        self._user = None
 
     def login(self, email, password):
         '''
@@ -38,16 +39,28 @@ class Client(object):
         })
         self._token = data['token']
 
-        # Abstract token from user
-        del data['token']
+        # Save user's data
+        self._user = {
+            'id': data['user_id'],
+            'user_type': data['user_type']
+        }
 
-        return data
+        return self._user
+
+    def get_current_user(self):
+        '''
+        Gets currently logged in user's data.
+
+        :returns: Dictionary of shape `{ id, user_type }`, or `None` if client is not logged in
+        '''
+        return self._user
 
     def logout(self):
         '''
         Clears the current login session.
         '''
         self._token = None
+        self._user = None
 
     ####################################
     # User
@@ -160,6 +173,17 @@ class Client(object):
             'budget_amount': budget_amount
         })
         return data
+
+    def get_train_jobs_by_user(self, user_id):
+        '''
+        Lists all train jobs associated to an user on Rafiki.
+
+        :param str user_id: ID of the user
+        '''
+        data = self._get('/train_jobs', params={ 
+            'user_id': user_id
+        })
+        return data
     
     def get_train_jobs_of_app(self, app):
         '''
@@ -226,6 +250,19 @@ class Client(object):
         return data
 
     ####################################
+    # Trials
+    ####################################
+
+    def get_trial_logs(self, trial_id):
+        '''
+        Gets the logs for a specific trial.
+
+        :param str trial_id: ID of trial
+        '''
+        data = self._get('/trials/{}/logs'.format(trial_id))
+        return data
+
+    ####################################
     # Inference Jobs
     ####################################
 
@@ -245,6 +282,17 @@ class Client(object):
         data = self._post('/inference_jobs', json={
             'app': app,
             'app_version': app_version
+        })
+        return data
+
+    def get_inference_jobs_by_user(self, user_id):
+        '''
+        Lists all inference jobs associated to an user on Rafiki.
+
+        :param str user_id: ID of the user
+        '''
+        data = self._get('/inference_jobs', params={ 
+            'user_id': user_id
         })
         return data
 

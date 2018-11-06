@@ -5,6 +5,7 @@ from rafiki.constants import ServiceType
 worker = None
 
 def start_service(service_id, service_type):
+    global worker
     if service_type == ServiceType.TRAIN:
         from rafiki.worker import TrainWorker
         worker = TrainWorker(service_id)
@@ -16,9 +17,10 @@ def start_service(service_id, service_type):
     else:
         raise Exception('Invalid service type: {}'.format(service_type))
 
-def stop_service(service_id, service_type):
+def end_service(service_id, service_type):
+    global worker
     if worker is not None:
         worker.stop()    
 
 db = Database()
-run_service(db, start_service, stop_service)
+run_service(db, start_service, end_service)

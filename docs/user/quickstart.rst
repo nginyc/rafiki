@@ -13,14 +13,13 @@ Quick Start
 
     If you're an *Application Developer* just looking to train and deploy models on a running instance of Rafiki, refer to :ref:`quickstart-app-developers`.
 
-
 .. note::
 
     If you're an *Application User* just looking to make predictions to deployed models on a running instance of Rafiki, refer to :ref:`quickstart-app-users`.
 
 
 This guide assumes you have deployed your an empty instance of Rafiki and you want to do a *full* train-inference flow, 
-including preparation of dataset and adding of models to Rafiki. 
+including preparation of dataset and adding of models to Rafiki.
 
 This quickstart submits the `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference. 
 

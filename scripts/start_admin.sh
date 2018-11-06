@@ -19,5 +19,5 @@ docker run --rm --name $ADMIN_HOST \
   -e RAFIKI_VERSION=$RAFIKI_VERSION \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $LOGS_FOLDER_PATH:$LOGS_FOLDER_PATH \
-  -p 8000:$ADMIN_PORT \
+  -p $ADMIN_EXT_PORT:$ADMIN_PORT \
   $RAFIKI_IMAGE_ADMIN:$RAFIKI_VERSION

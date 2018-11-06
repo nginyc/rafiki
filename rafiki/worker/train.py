@@ -8,6 +8,8 @@ import pprint
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
 from rafiki.utils.model import load_model_class
+from rafiki.utils.log import JobLogger
+from rafiki.model import ModelLogUtilsLogger
 from rafiki.db import Database
 from rafiki.client import Client
 
@@ -80,14 +82,14 @@ class TrainWorker(object):
             try:
                 logger.info('Starting trial...')
                 logger.info('Training & evaluating model...')
-                (score, parameters) = self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
-                                                                    test_dataset_uri)
+                (score, parameters, logs) = self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
+                                                                        test_dataset_uri)
                 logger.info('Trial score: {}'.format(score))
                 
                 with self._db:
                     logger.info('Marking trial as complete in DB...')
                     trial = self._db.get_trial(self._trial_id)
-                    self._db.mark_trial_as_complete(trial, score, parameters)
+                    self._db.mark_trial_as_complete(trial, score, parameters, logs)
 
                 self._trial_id = None
             except Exception:
@@ -125,6 +127,12 @@ class TrainWorker(object):
     def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, 
                                     test_dataset_uri):
         model_inst = clazz()
+
+        # Insert model training logger
+        model_logger = TrainModelLogUtilsLogger()
+        model_inst.utils.set_logger(model_logger)
+
+        # Initialize model
         model_inst.init(knobs)
 
         # Train model
@@ -136,10 +144,13 @@ class TrainWorker(object):
         # Dump and pickle model parameters
         parameters = model_inst.dump_parameters()
         parameters = pickle.dumps(parameters)
-    
         model_inst.destroy()
 
-        return (score, parameters)
+        # Export model logs
+        logs = model_logger.export_logs()
+        model_logger.destroy()
+
+        return (score, parameters, logs)
 
     # Creates a new trial in the DB
     def _create_new_trial(self, model_id, train_job_id, knobs):
@@ -237,3 +248,22 @@ class TrainWorker(object):
                         advisor_port=advisor_port)
         client.login(email=superadmin_email, password=superadmin_password)
         return client
+
+class TrainModelLogUtilsLogger(ModelLogUtilsLogger):
+    def __init__(self):
+        self._job_logger = JobLogger()
+
+    def log(self, message):
+        return self._job_logger.log(message)
+        
+    def define_plot(self, title, metrics, x_axis):
+        return self._job_logger.define_plot(title, metrics, x_axis)
+
+    def log_metrics(self, **kwargs):
+        return self._job_logger.log_metrics(**kwargs)
+
+    def export_logs(self):
+        return self._job_logger.export_logs()
+
+    def destroy(self):
+        return self._job_logger.destroy()

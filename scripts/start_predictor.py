@@ -10,8 +10,8 @@ def start_service(service_id, service_type):
             debug=True, 
             threaded=True)
 
-def stop_service(service_id, service_type):
+def end_service(service_id, service_type):
     pass
 
 db = Database()
-run_service(db, start_service, stop_service)
+run_service(db, start_service, end_service)

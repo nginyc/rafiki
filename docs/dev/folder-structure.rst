@@ -58,6 +58,10 @@ Folder Structure
 
         Stores Rafiki's constants used internally & externally (e.g. valid values for user type, budget type, train job status)
 
+- `web/`
+
+    Code for Rafiki's `Admin Web` component
+    
 - `dockerfiles/`
     
     Stores Dockerfiles for customized components of Rafiki 

@@ -21,6 +21,8 @@ def run_service(db, start_service, end_service):
             service = db.get_service(service_id)
             db.mark_service_as_stopped(service)
 
+        end_service(service_id, service_type)
+
     signal.signal(signal.SIGTERM, _sigterm_handler)
 
     # Mark service as running in DB

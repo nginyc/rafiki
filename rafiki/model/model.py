@@ -7,16 +7,19 @@ from rafiki.advisor import make_advisor
 from rafiki.predictor import ensemble_predictions
 from rafiki.constants import TaskType
 
-from .dataset import DatasetUtils
+from .dataset import ModelDatasetUtils
+from .log import ModelLogUtils
 
 class InvalidModelClassException(Exception): pass
 class InvalidModelParamsException(Exception): pass
 
-class ModelUtils(DatasetUtils):
+class ModelUtils(ModelDatasetUtils, ModelLogUtils):
     '''
-    Collection of utility methods for model developers e.g. dataset loading
+    Collection of utility methods for model developers e.g. dataset loading, in-training logging
     '''   
-    pass
+    def __init__(self):
+        ModelDatasetUtils.__init__(self)
+        ModelLogUtils.__init__(self)
 
 class BaseModel(abc.ABC):
     '''

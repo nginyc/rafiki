@@ -18,4 +18,6 @@ title "Building Rafiki Worker's image..."
 docker build -t $RAFIKI_IMAGE_WORKER:$RAFIKI_VERSION -f ./dockerfiles/worker.Dockerfile $PWD || exit 1 
 title "Building Rafiki Predictor's image..."
 docker build -t $RAFIKI_IMAGE_PREDICTOR:$RAFIKI_VERSION -f ./dockerfiles/predictor.Dockerfile $PWD || exit 1 
+title "Building Rafiki Admin Web's image..."
+docker build -t $RAFIKI_IMAGE_ADMIN_WEB:$RAFIKI_VERSION -f ./dockerfiles/admin_web.Dockerfile $PWD || exit 1 
 echo "Finished building all Rafiki's images successfully!"

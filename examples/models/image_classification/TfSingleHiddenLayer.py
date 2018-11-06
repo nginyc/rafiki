@@ -41,11 +41,13 @@ class TfSingleHiddenLayer(BaseModel):
 
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
+        self._define_plots()
         
     def train(self, dataset_uri):
         dataset = self.utils.load_dataset_of_image_files(dataset_uri)
         (num_samples, num_classes) = next(dataset)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+
         with self._graph.as_default():
             self._model = self._build_model(num_classes)
             with self._sess.as_default():
@@ -54,8 +56,16 @@ class TfSingleHiddenLayer(BaseModel):
                     np.array(classes), 
                     verbose=0,
                     epochs=EPOCHS,
-                    batch_size=self._batch_size
+                    batch_size=self._batch_size,
+                    callbacks=[
+                        tf.keras.callbacks.LambdaCallback(on_epoch_end=self._on_train_epoch_end)
+                    ]
                 )
+
+                # Compute train accuracy
+                (loss, accuracy) = self._model.evaluate(np.array(images), np.array(classes))
+                self.utils.log('Train loss: {}'.format(loss))
+                self.utils.log('Train accuracy: {}'.format(accuracy))
 
     def evaluate(self, dataset_uri):
         dataset = self.utils.load_dataset_of_image_files(dataset_uri)
@@ -65,6 +75,7 @@ class TfSingleHiddenLayer(BaseModel):
         with self._graph.as_default():
             with self._sess.as_default():
                 (loss, accuracy) = self._model.evaluate(np.array(images), np.array(classes))
+                self.utils.log('Test loss: {}'.format(loss))
 
         return accuracy
 
@@ -113,6 +124,15 @@ class TfSingleHiddenLayer(BaseModel):
             with self._graph.as_default():
                 with self._sess.as_default():
                     self._model = keras.models.load_model(tmp.name)
+
+    def _on_train_epoch_end(self, epoch, logs):
+        loss = logs['loss']
+        self.utils.log_loss_metric(loss, epoch)
+
+    def _define_plots(self):
+        # Define 2 plots: Loss against time, loss against epochs
+        self.utils.define_loss_plot()
+        self.utils.define_plot('Loss Over Time', ['loss'])
 
     def _build_model(self, num_classes):
         hidden_layer_units = self._hidden_layer_units

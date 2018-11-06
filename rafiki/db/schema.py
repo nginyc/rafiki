@@ -100,6 +100,7 @@ class Trial(Base):
     status = Column(String, nullable=False, default=TrialStatus.RUNNING)
     score = Column(Float, default=0)
     parameters = Column(Binary, default=None)
+    logs = Column(Binary, default=None)
     datetime_stopped = Column(DateTime, default=None)
 
 class User(Base):

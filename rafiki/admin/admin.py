@@ -8,6 +8,7 @@ from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.container import DockerSwarmContainerManager 
+from rafiki.utils.log import JobLogger
 
 from .services_manager import ServicesManager
 
@@ -18,6 +19,7 @@ class InvalidUserException(Exception): pass
 class InvalidPasswordException(Exception): pass
 class InvalidRunningInferenceJobException(Exception): pass
 class InvalidTrainJobException(Exception): pass
+class InvalidTrialException(Exception): pass
 class RunningInferenceJobExistsException(Exception): pass
 class NoModelsForTaskException(Exception): pass
 
@@ -179,6 +181,25 @@ class Admin(object):
             for (trial, model) in zip(best_trials, best_trials_models)
         ]
 
+    def get_train_jobs_by_user(self, user_id):
+        train_jobs = self._db.get_train_jobs_by_user(user_id)
+        return [
+            {
+                'id': x.id,
+                'status': x.status,
+                'app': x.app,
+                'app_version': x.app_version,
+                'task': x.task,
+                'train_dataset_uri': x.train_dataset_uri,
+                'test_dataset_uri': x.test_dataset_uri,
+                'datetime_started': x.datetime_started,
+                'datetime_completed': x.datetime_completed,
+                'budget_type': x.budget_type,
+                'budget_amount': x.budget_amount
+            }
+            for x in train_jobs
+        ]
+
     def get_trials_of_train_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
         if train_job is None:
@@ -191,6 +212,7 @@ class Admin(object):
                 'id': trial.id,
                 'knobs': trial.knobs,
                 'datetime_started': trial.datetime_started,
+                'status': trial.status,
                 'datetime_stopped': trial.datetime_stopped,
                 'model_name': model.name,
                 'score': trial.score
@@ -204,6 +226,26 @@ class Admin(object):
             'service_id': worker.service_id,
             'model_id': worker.model_id,
             'train_job_id': worker.train_job_id
+        }
+
+    ####################################
+    # Trials
+    ####################################
+    
+    def get_trial_logs(self, trial_id):
+        trial = self._db.get_trial(trial_id)
+        if trial is None:
+            raise InvalidTrialException()
+
+        job_logger = JobLogger()
+        job_logger.import_logs(trial.logs)
+        (plots, metrics, messages) = job_logger.read_logs()
+        job_logger.destroy()
+        
+        return {
+            'plots': plots,
+            'metrics': metrics,
+            'messages': messages
         }
 
     ####################################
@@ -319,7 +361,25 @@ class Admin(object):
             }
             for (inference_job, train_job, predictor_host) in zip(inference_jobs, train_jobs, predictor_hosts)
         ]
-    
+
+    def get_inference_jobs_by_user(self, user_id):
+        inference_jobs = self._db.get_inference_jobs_by_user(user_id)
+        train_jobs = [self._db.get_train_job(x.train_job_id) for x in inference_jobs]
+        predictor_services = [self._db.get_service(x.predictor_service_id) for x in inference_jobs]
+        predictor_hosts = [self._get_service_host(x) for x in predictor_services]
+        return [
+            {
+                'id': inference_job.id,
+                'status': inference_job.status,
+                'train_job_id': train_job.id,
+                'app': train_job.app,
+                'app_version': train_job.app_version,
+                'datetime_started': inference_job.datetime_started,
+                'datetime_stopped': inference_job.datetime_stopped,
+                'predictor_host': predictor_host
+            }
+            for (inference_job, train_job, predictor_host) in zip(inference_jobs, train_jobs, predictor_hosts)
+        ]
 
     ####################################
     # Models
