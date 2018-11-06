@@ -58,7 +58,7 @@
             
             
               <div class="version">
-                0.0.5
+                0.0.6
               </div>
             
           
@@ -203,13 +203,12 @@
 <li>Install Python 3.6</li>
 <li>Setup Rafiki’s complete stack with the init script:</li>
 </ol>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/start.sh
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sudo bash scripts/start.sh
 </pre></div>
 </div>
-<ol class="arabic simple" start="4">
-<li>To destroy Rafiki’s complete stack:</li>
-</ol>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/stop.sh
+<p><em>Rafiki Admin</em> and <em>Rafiki Admin Web</em> will be available at <code class="docutils literal notranslate"><span class="pre">localhost:8000</span></code> and <code class="docutils literal notranslate"><span class="pre">localhost:8080</span></code> respectively.</p>
+<p>To destroy Rafiki’s complete stack:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sudo bash scripts/stop.sh
 </pre></div>
 </div>
 </div>
@@ -280,6 +279,10 @@ open docs/index.html
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>open <span class="nv">$LOGS_FOLDER_PATH</span>
 </pre></div>
 </div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Ensure that Docker has permissions to mount $LOGS_FOLDER_PATH (e.g. under <code class="docutils literal notranslate"><span class="pre">File</span> <span class="pre">Sharing</span></code> on Mac)</p>
+</div>
 </div>
 <div class="section" id="using-rafiki-admin-s-http-interface">
 <h3><a class="toc-backref" href="#id13">Using Rafiki Admin’s HTTP interface</a><a class="headerlink" href="#using-rafiki-admin-s-http-interface" title="Permalink to this headline">¶</a></h3>
@@ -298,6 +301,8 @@ docker rm <span class="k">$(</span>docker ps -a -q<span class="k">)</span>
 docker rmi <span class="k">$(</span>docker images -q<span class="k">)</span>
 </pre></div>
 </div>
+<p>From Mac Mojave onwards, due to Mac’s new [privacy protection](<a class="reference external" href="https://www.howtogeek.com/361707/how-macos-mojaves-privacy-protection-works/">https://www.howtogeek.com/361707/how-macos-mojaves-privacy-protection-works/</a>) feature,
+you might need to explicitly give Docker <strong>Full Disk Access</strong>, restart Docker, or even do a factory reset of Docker.</p>
 </div>
 </div>
 

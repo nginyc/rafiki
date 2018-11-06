@@ -58,7 +58,7 @@
             
             
               <div class="version">
-                0.0.5
+                0.0.6
               </div>
             
           
@@ -195,7 +195,8 @@
 </li>
 </ul>
 </div>
-<p>We assume that you have access to a running instance of <em>Rafiki Admin</em> at <code class="docutils literal notranslate"><span class="pre">&lt;admin_host&gt;:&lt;admin_port&gt;</span></code>.</p>
+<p>We assume that you have access to a running instance of <em>Rafiki Admin</em> at <code class="docutils literal notranslate"><span class="pre">&lt;rafiki_host&gt;:&lt;admin_port&gt;</span></code>
+and <em>Rafiki Admin Web</em> at <code class="docutils literal notranslate"><span class="pre">&lt;rafiki_host&gt;:&lt;admin_web_port&gt;</span></code>.</p>
 <div class="section" id="installing-the-client">
 <h2><a class="toc-backref" href="#id2">Installing the Client</a><a class="headerlink" href="#installing-the-client" title="Permalink to this headline">¶</a></h2>
 <ol class="arabic">
@@ -268,6 +269,7 @@ and upload it to a publicly accessible URL.</p>
 <p class="first admonition-title">See also</p>
 <p class="last"><a class="reference internal" href="tasks.html#tasks"><span class="std std-ref">Supported Tasks</span></a></p>
 </div>
+<p>You can monitor your train jobs on Rafiki’s Admin Web’s GUI, including plots of metrics for models that have been trained on your dataset.</p>
 <p>Example:</p>
 <blockquote>
 <div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">create_train_job</span><span class="p">(</span>

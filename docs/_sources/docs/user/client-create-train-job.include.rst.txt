@@ -7,6 +7,8 @@ and upload it to a publicly accessible URL.
 
 .. seealso:: :ref:`tasks`
 
+You can monitor your train jobs on Rafiki's Admin Web's GUI, including plots of metrics for models that have been trained on your dataset.
+
 Example:
 
     .. code-block:: python

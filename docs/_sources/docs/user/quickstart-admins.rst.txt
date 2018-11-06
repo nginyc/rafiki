@@ -3,7 +3,8 @@ Quick Start (Rafiki Admins)
 
 .. contents:: Table of Contents
 
-We assume that you have access to a running instance of *Rafiki Admin* at ``<admin_host>:<admin_port>``. 
+We assume that you have access to a running instance of *Rafiki Admin* at ``<rafiki_host>:<admin_port>``
+and *Rafiki Admin Web* at ``<rafiki_host>:<admin_web_port>``.
 
 Installation
 --------------------------------------------------------------------

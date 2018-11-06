@@ -36,6 +36,7 @@ Static Components of Rafiki
 These components make up Rafiki's static stack.
 
 - *Admin* is a HTTP server that handles requests from users, and accordingly updates Rafiki's database or deploys components (e.g workers, predictors) based on these requests
+- *Admin Web* is a HTTP server that serves a Web UI for Admin
 - *Client* is a client-side Python SDK for sending requests to Admin
 - *Advisor* is a HTTP server that generates proposals of knobs during training
 - *Database* is Rafiki's main store for user, train job, inference job, model templates, and trained model data, including model parameters

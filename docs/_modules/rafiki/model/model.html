@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.0.5
+                0.0.6
               </div>
             
           
@@ -156,16 +156,19 @@
 <span class="kn">from</span> <span class="nn">rafiki.predictor</span> <span class="k">import</span> <span class="n">ensemble_predictions</span>
 <span class="kn">from</span> <span class="nn">rafiki.constants</span> <span class="k">import</span> <span class="n">TaskType</span>
 
-<span class="kn">from</span> <span class="nn">.dataset</span> <span class="k">import</span> <span class="n">DatasetUtils</span>
+<span class="kn">from</span> <span class="nn">.dataset</span> <span class="k">import</span> <span class="n">ModelDatasetUtils</span>
+<span class="kn">from</span> <span class="nn">.log</span> <span class="k">import</span> <span class="n">ModelLogUtils</span>
 
 <span class="k">class</span> <span class="nc">InvalidModelClassException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span>
 <span class="k">class</span> <span class="nc">InvalidModelParamsException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span>
 
-<span class="k">class</span> <span class="nc">ModelUtils</span><span class="p">(</span><span class="n">DatasetUtils</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">ModelUtils</span><span class="p">(</span><span class="n">ModelDatasetUtils</span><span class="p">,</span> <span class="n">ModelLogUtils</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Collection of utility methods for model developers e.g. dataset loading</span>
+<span class="sd">    Collection of utility methods for model developers e.g. dataset loading, in-training logging</span>
 <span class="sd">    &#39;&#39;&#39;</span>   
-    <span class="k">pass</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ModelDatasetUtils</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">ModelLogUtils</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
 <div class="viewcode-block" id="BaseModel"><a class="viewcode-back" href="../../../docs/python/rafiki.model.html#rafiki.model.BaseModel">[docs]</a><span class="k">class</span> <span class="nc">BaseModel</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>

@@ -58,7 +58,7 @@
             
             
               <div class="version">
-                0.0.5
+                0.0.6
               </div>
             
           
@@ -365,6 +365,34 @@ ordered by descending score.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="rafiki.client.Client.get_current_user">
+<code class="descname">get_current_user</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.get_current_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_current_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets currently logged in user’s data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Dictionary of shape <cite>{ id, user_type }</cite>, or <cite>None</cite> if client is not logged in</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_inference_jobs_by_user">
+<code class="descname">get_inference_jobs_by_user</code><span class="sig-paren">(</span><em>user_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.get_inference_jobs_by_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_inference_jobs_by_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists all inference jobs associated to an user on Rafiki.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>user_id</strong> (<em>str</em>) – ID of the user</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="rafiki.client.Client.get_inference_jobs_of_app">
 <code class="descname">get_inference_jobs_of_app</code><span class="sig-paren">(</span><em>app</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.get_inference_jobs_of_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_inference_jobs_of_app" title="Permalink to this definition">¶</a></dt>
 <dd><p>Lists all inference jobs associated to an app on Rafiki.</p>
@@ -437,6 +465,20 @@ including workers’ details.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="rafiki.client.Client.get_train_jobs_by_user">
+<code class="descname">get_train_jobs_by_user</code><span class="sig-paren">(</span><em>user_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.get_train_jobs_by_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_train_jobs_by_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists all train jobs associated to an user on Rafiki.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>user_id</strong> (<em>str</em>) – ID of the user</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="rafiki.client.Client.get_train_jobs_of_app">
 <code class="descname">get_train_jobs_of_app</code><span class="sig-paren">(</span><em>app</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.get_train_jobs_of_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_train_jobs_of_app" title="Permalink to this definition">¶</a></dt>
 <dd><p>Lists all train jobs associated to an app on Rafiki.</p>
@@ -445,6 +487,20 @@ including workers’ details.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>app</strong> (<em>str</em>) – Name of the app</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_trial_logs">
+<code class="descname">get_trial_logs</code><span class="sig-paren">(</span><em>trial_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.get_trial_logs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_trial_logs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the logs for a specific trial.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>trial_id</strong> (<em>str</em>) – ID of trial</td>
 </tr>
 </tbody>
 </table>
