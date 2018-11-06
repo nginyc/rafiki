@@ -132,10 +132,10 @@ class RafikiClient {
   _initializeStorage(storage?: Storage) {
     if (storage) {
       return storage;
-    } else if (window && window.sessionStorage) {
-      return window.sessionStorage;
     } else if (window && window.localStorage) {
       return window.localStorage;
+    } else if (window && window.sessionStorage) {
+      return window.sessionStorage;
     }
   }
 
