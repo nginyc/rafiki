@@ -20,6 +20,7 @@ export RAFIKI_IMAGE_ADVISOR=rafikiai/rafiki_advisor
 export RAFIKI_IMAGE_WORKER=rafikiai/rafiki_worker
 export RAFIKI_IMAGE_PREDICTOR=rafikiai/rafiki_predictor
 export ADMIN_WEB_HOST=rafiki_admin_web
+export ADMIN_WEB_EXT_PORT=8080
 export IMAGE_POSTGRES=postgres:10.5
 export IMAGE_REDIS=redis:5.0-rc
 export RAFIKI_VERSION=0.0.6

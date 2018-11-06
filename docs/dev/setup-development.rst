@@ -23,7 +23,9 @@ We assume development or deployment in a MacOS or Linux environment.
 
     sudo bash scripts/start.sh
 
-4. To destroy Rafiki's complete stack:
+*Rafiki Admin* and *Rafiki Admin Web* will be available at ``localhost:8000`` and ``localhost:8080`` respectively.
+
+To destroy Rafiki's complete stack:
 
 .. code-block:: shell
 

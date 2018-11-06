@@ -62,7 +62,7 @@ title "Starting Rafiki's Advisor..."
 ensure_stable "Rafiki's Advisor"
 
 title "Starting Rafiki's Admin Web..."
-(bash $FILE_DIR/start_web_admin.sh &> $LOG_FILEPATH) &
+(bash $FILE_DIR/start_admin_web.sh &> $LOG_FILEPATH) &
 ensure_stable "Rafiki's Admin Web"
 
 echo "To use Rafiki, use Rafiki Client in the Python CLI"
