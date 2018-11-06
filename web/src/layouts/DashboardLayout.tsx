@@ -72,7 +72,7 @@ class DashboardLayout extends React.Component<Props> {
             </IconButton>
           </Hidden>
           <Typography variant="h6" color="inherit">
-            Rafiki Web Admin
+            Rafiki Admin Web
           </Typography>
         </Toolbar>
       </AppBar>

@@ -13,6 +13,9 @@ interface AppUtils {
   appNavigator: AppNavigator;
 }
 
+declare var ADMIN_HOST: string;
+declare var ADMIN_PORT: string;
+
 class App extends React.Component {
   appUtils: AppUtils;
 
@@ -26,8 +29,12 @@ class App extends React.Component {
 
   constructor(props: {}) {
     super(props);
+
     
-    const rafikiClient = new RafikiClient();
+    const adminHost = ADMIN_HOST || 'localhost'; 
+    const adminPort = ADMIN_PORT ? parseInt(ADMIN_PORT) : 8000;
+    
+    const rafikiClient = new RafikiClient(adminHost, adminPort);
     const appNavigator = new AppNavigator();
 
     this.appUtils = {

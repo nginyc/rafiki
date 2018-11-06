@@ -22,7 +22,9 @@ module.exports = {
     new CleanWebpackPlugin(['dist']),
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify('development'),
-      'process.env.VERSION': JSON.stringify(packageJson.version)
+      'process.env.VERSION': JSON.stringify(packageJson.version),
+      'ADMIN_HOST': process.env.RAFIKI_IP_ADDRESS,
+      'ADMIN_PORT': process.env.ADMIN_EXT_PORT
     })
   ],
   module: {

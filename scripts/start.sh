@@ -61,5 +61,9 @@ title "Starting Rafiki's Advisor..."
 (bash $FILE_DIR/start_advisor.sh &> $LOG_FILEPATH) &
 ensure_stable "Rafiki's Advisor"
 
+title "Starting Rafiki's Admin Web..."
+(bash $FILE_DIR/start_web_admin.sh &> $LOG_FILEPATH) &
+ensure_stable "Rafiki's Admin Web"
+
 echo "To use Rafiki, use Rafiki Client in the Python CLI"
 echo "Refer to Rafiki's docs at https://nginyc.github.io/rafiki2/docs/"
