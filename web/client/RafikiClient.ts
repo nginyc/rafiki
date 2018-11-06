@@ -109,14 +109,12 @@ class RafikiClient {
   async getTrialLogs(trialId: string) {
     const data = <any>(await this._get(`/trials/${trialId}/logs`));
 
-    // Parse date strings into dates
+    // Parse date strings into Dates
     for (const metric of <any[]>Object.values(data.metrics)) {
-      for (const value of <any[]>Object.values(metric.values)) {
-        value[0] = this._toDate(value[0]);
-      }
+      metric.time = this._toDate(metric.time);
     }
     for (const message of <any[]>Object.values(data.messages)) {
-      message[0] = this._toDate(message[0]);
+      message.time = this._toDate(message.time);
     }
 
     const logs = <TrialLogs>data;
@@ -259,9 +257,9 @@ interface Trial {
 }
 
 interface TrialLogs {
-  plots: { [s: string]: TrialPlot };
-  metrics: { [s: string]: TrialMetric };
-  messages: [Date, string][];
+  plots: TrialPlot[];
+  metrics: TrialMetric[];
+  messages: TrialMessage[];
 }
 
 interface TrialPlot {
@@ -271,8 +269,13 @@ interface TrialPlot {
 }
 
 interface TrialMetric {
-  name: string;
-  values: [Date, number][];
+  time: Date;
+  [metric: string]: any;
+}
+
+interface TrialMessage {
+  time: Date;
+  message: string;
 }
 
 interface InferenceJob {
@@ -280,4 +283,4 @@ interface InferenceJob {
 }
 
 export default RafikiClient;
-export { User, TrainJob, InferenceJob, Trial, TrialLogs };
+export { User, TrainJob, InferenceJob, Trial, TrialLogs, TrialPlot };

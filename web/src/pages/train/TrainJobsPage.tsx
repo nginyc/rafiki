@@ -87,16 +87,16 @@ class TrainJobsPage extends React.Component<Props> {
     return (
       <React.Fragment>
         <Typography gutterBottom variant="h2">Your Train Jobs</Typography>
-        <Paper className={classes.jobsPaper}>
-          {
-            trainJobs &&
-            this.renderTrainJobs()
-          }
-          {
-            !trainJobs &&
-            <CircularProgress />
-          }
-        </Paper>
+        {
+          trainJobs &&
+          <Paper className={classes.jobsPaper}>
+            {this.renderTrainJobs()}
+          </Paper>
+        }
+        {
+          !trainJobs &&
+          <CircularProgress />
+        }
       </React.Fragment>
     );
   }

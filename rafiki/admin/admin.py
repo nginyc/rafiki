@@ -241,6 +241,7 @@ class Admin(object):
         job_logger.import_logs(trial.logs)
         (plots, metrics, messages) = job_logger.read_logs()
         job_logger.destroy()
+        
         return {
             'plots': plots,
             'metrics': metrics,

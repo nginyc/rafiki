@@ -19,6 +19,16 @@ class ModelLogUtils():
     def log(self, message):
         self._logger.log(message)
 
+    # Convenience method of defining a plot of ``loss` against ``epoch``
+    # To be used with ``log_loss_metric()``
+    def define_loss_plot(self):
+        self.define_plot('Loss Over Epochs', ['loss'], x_axis='epoch')
+
+    # Convenience method for logging `loss` against `epoch`
+    # To be used with ``define_loss_plot()``
+    def log_loss_metric(self, loss, epoch):
+        self.log_metrics(loss=loss, epoch=epoch)
+
     # Defines a plot for a set of metrics for model training analytics
     # By default, metrics will be plotted against time
     def define_plot(self, title, metrics, x_axis=None):

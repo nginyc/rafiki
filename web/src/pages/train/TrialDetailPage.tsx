@@ -7,7 +7,7 @@ import * as echarts from 'echarts';
 
 import { AppUtils } from '../../App';
 import { AppRoute } from '../../app/AppNavigator';
-import { TrialLogs } from '../../../client/RafikiClient';
+import { TrialLogs, TrialPlot } from '../../../client/RafikiClient';
 
 interface Props {
   classes: { [s: string]: any };
@@ -43,50 +43,17 @@ class TrialDetailPage extends React.Component<Props> {
     if (!logs) return;
     
     this.charts = [];
-    const plots = Object.values(logs.plots);
-    for (const i in plots) {
-      const plot = plots[i];
+    const chartOptions = getPlotChartOptions(logs);
+
+    for (const i in chartOptions) {
+      const chartOption = chartOptions[i];
       const dom = document.getElementById(`plot-${i}`);
 
       if (!dom) continue;
 
-      const series = [];
-      for (const name of plot.metrics) {
-        series.push({
-          name,
-          type: 'line',
-          data: logs.metrics[name].values.map(([date, value]) => {
-            return {
-              name: `(${date.toTimeString()}, ${value})`,
-              value: [date, value]
-            };
-          })
-        });
-      }
-
       // @ts-ignore
       const chart = echarts.init(dom);  
-      chart.setOption({
-        title: {
-          text: plot.title
-        },
-        tooltip: {
-          trigger: 'axis'
-        },
-        xAxis: {
-          type: 'time',
-          splitLine: {
-            show: false
-          }
-        },
-        yAxis: {
-          type: 'value',
-          splitLine: {
-            show: false
-          }
-        },
-        series
-      });
+      chart.setOption(chartOption);
     }
   }
 
@@ -118,10 +85,9 @@ class TrialDetailPage extends React.Component<Props> {
             <Paper>
               <List>
                 {Object.values(logs.messages).map((x, i) => {
-                  const [date, text] = x;
                   return (
-                    <ListItem>
-                      <ListItemText primary={text} secondary={date.toTimeString()} />
+                    <ListItem key={x.time + x.message}>
+                      <ListItemText primary={x.message} secondary={x.time.toTimeString()} />
                     </ListItem>
                   );
                 })}
@@ -159,6 +125,66 @@ class TrialDetailPage extends React.Component<Props> {
   }
 }
 
+function getPlotChartOptions(logs: TrialLogs): echarts.EChartOption[] {
+  const chartOptions: echarts.EChartOption[] = [];
+  console.log(logs);
+
+  for (const plot of logs.plots) {
+    const points = [];
+
+    for (const metric of logs.metrics) {
+      // Check if x axis value exists
+      const xAxis = plot.x_axis || 'time';
+      if (!(xAxis in metric)) {
+        continue;
+      }
+
+      // Initialize point
+      const point = [metric[xAxis]];
+
+      // For each of plot's y axis metrics, add it to point data
+      for (const plotMetric of plot.metrics) {
+        point.push(plotMetric in metric ? metric[plotMetric] : null);
+      }
+
+      points.push(point);
+    }
+
+    const series = [];
+    series.push({
+      name,
+      type: 'line',
+      data: points
+    });
+
+    const chartOption: echarts.EChartOption = {
+      title: {
+        text: plot.title
+      },
+      tooltip: {
+        trigger: 'axis'
+      },
+      xAxis: {
+        type:  plot.x_axis ? 'value' : 'time',
+        splitLine: {
+          show: false
+        }
+      },
+      yAxis: {
+        type: 'value',
+        splitLine: {
+          show: false
+        }
+      },
+      series
+    };
+
+    chartOptions.push(chartOption);
+  }
+
+  return chartOptions;
+}
+
 const styles: StyleRulesCallback = (theme) => ({
   headerSub: {
     fontSize: theme.typography.h4.fontSize,
@@ -168,11 +194,15 @@ const styles: StyleRulesCallback = (theme) => ({
     overflowX: 'auto'
   },
   plotPaper: {
-    width: 500,
-    height: 500
+    width: '100%',
+    maxWidth: 800,
+    height: 500,
+    padding: theme.spacing.unit,
+    paddingTop: theme.spacing.unit * 2,
+    margin: theme.spacing.unit * 4
   },
   divider: {
-    margin: 20
+    margin: theme.spacing.unit * 4
   }
 });
 

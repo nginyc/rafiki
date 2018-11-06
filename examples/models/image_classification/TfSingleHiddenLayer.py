@@ -127,9 +127,11 @@ class TfSingleHiddenLayer(BaseModel):
 
     def _on_train_epoch_end(self, epoch, logs):
         loss = logs['loss']
-        self.utils.log_metrics(loss=loss)
+        self.utils.log_loss_metric(loss, epoch)
 
     def _define_plots(self):
+        # Define 2 plots: Loss against time, loss against epochs
+        self.utils.define_loss_plot()
         self.utils.define_plot('Loss Over Time', ['loss'])
 
     def _build_model(self, num_classes):
