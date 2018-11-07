@@ -148,5 +148,5 @@ While building Rafiki's images locally, if you encounter an error like "No space
     # Delete all images
     docker rmi $(docker images -q)
 
-From Mac Mojave onwards, due to Mac's new [privacy protection](https://www.howtogeek.com/361707/how-macos-mojaves-privacy-protection-works/) feature, 
-you might need to explicitly give Docker **Full Disk Access**, restart Docker, or even do a factory reset of Docker.
+From Mac Mojave onwards, due to Mac's new `privacy protection feature <https://www.howtogeek.com/361707/how-macos-mojaves-privacy-protection-works/>`_, 
+you might need to explicitly give Docker *Full Disk Access*, restart Docker, or even do a factory reset of Docker.
