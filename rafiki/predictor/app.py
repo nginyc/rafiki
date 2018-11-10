@@ -11,6 +11,7 @@ app = Flask(__name__)
 def get_predictor():
     if not hasattr(g, 'predictor'):
         g.predictor = Predictor(service_id)
+        g.predictor.start()
     
     return g.predictor
 
