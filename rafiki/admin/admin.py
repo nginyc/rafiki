@@ -24,7 +24,12 @@ class RunningInferenceJobExistsException(Exception): pass
 class NoModelsForTaskException(Exception): pass
 
 class Admin(object):
-    def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
+    def __init__(self, db=None, container_manager=None):
+        if db is None: 
+            db = Database()
+        if container_manager is None: 
+            container_manager = DockerSwarmContainerManager()
+            
         self._base_worker_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_WORKER'],
                                                 os.environ['RAFIKI_VERSION'])
 

@@ -15,7 +15,12 @@ logger = logging.getLogger(__name__)
 class ServiceDeploymentException(Exception): pass
 
 class ServicesManager(object):
-    def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
+    def __init__(self, db=None, container_manager=None):
+        if db is None: 
+            db = Database()
+        if container_manager is None: 
+            container_manager = DockerSwarmContainerManager()
+        
         self._predictor_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_PREDICTOR'],
                                                 os.environ['RAFIKI_VERSION'])
         self._predictor_port = os.environ['PREDICTOR_PORT']

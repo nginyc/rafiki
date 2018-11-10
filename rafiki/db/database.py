@@ -1,7 +1,7 @@
 import datetime
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import os
 
 from rafiki.constants import TrainJobStatus, \
     TrialStatus, ServiceStatus, InferenceJobStatus
@@ -24,8 +24,9 @@ class Database(object):
             user=user, 
             password=password
         )
-        
+
         self._engine = create_engine(db_connection_url)
+        self._Session = sessionmaker(bind=self._engine)
         self._session = None
         self._define_tables()
 
@@ -396,8 +397,7 @@ class Database(object):
         self.connect()
 
     def connect(self):
-        Session = sessionmaker(bind=self._engine)
-        self._session = Session()
+        self._session = self._Session()
 
     def __exit__(self, exception_type, exception_value, traceback):
         self.disconnect()

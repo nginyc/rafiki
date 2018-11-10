@@ -21,7 +21,10 @@ class InvalidBudgetTypeException(Exception): pass
 class InvalidWorkerException(Exception): pass
 
 class TrainWorker(object):
-    def __init__(self, service_id, db=Database()):
+    def __init__(self, service_id, db=None):
+        if db is None: 
+            db = Database()
+            
         self._service_id = service_id
         self._db = db
         self._trial_id = None

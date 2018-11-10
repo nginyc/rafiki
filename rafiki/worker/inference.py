@@ -18,7 +18,12 @@ logger = logging.getLogger(__name__)
 class InvalidWorkerException(Exception): pass
 
 class InferenceWorker(object):
-    def __init__(self, service_id, cache=Cache(), db=Database()):
+    def __init__(self, service_id, cache=None, db=None):
+        if cache is None: 
+            cache = Cache()
+        if db is None: 
+            db = Database()
+
         self._cache = cache
         self._db = db
         self._service_id = service_id

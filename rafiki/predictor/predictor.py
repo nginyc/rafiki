@@ -13,7 +13,12 @@ logger = logging.getLogger(__name__)
  
 class Predictor(object):
 
-    def __init__(self, service_id, db=Database(), cache=Cache()):
+    def __init__(self, service_id, db=None, cache=None):
+        if db is None: 
+            db = Database()
+        if cache is None: 
+            cache = Cache()
+
         self._service_id = service_id
         self._db = db
         self._cache = cache
