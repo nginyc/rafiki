@@ -21,7 +21,7 @@ We assume development or deployment in a MacOS or Linux environment.
 
 .. code-block:: shell
 
-    sudo bash scripts/start.sh
+    bash scripts/start.sh
 
 *Rafiki Admin* and *Rafiki Admin Web* will be available at ``localhost:8000`` and ``localhost:8080`` respectively.
 
@@ -29,7 +29,7 @@ To destroy Rafiki's complete stack:
 
 .. code-block:: shell
 
-    sudo bash scripts/stop.sh
+    bash scripts/stop.sh
 
 
 Development
