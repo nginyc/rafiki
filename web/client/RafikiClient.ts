@@ -73,13 +73,16 @@ class RafikiClient {
     const data = await this._get('/train_jobs', {
       'user_id': userId
     });
-    const trainJobs = <TrainJob[]>data;
+    const trainJobs = (<any[]>data).map((x) => this._toTrainJob(x));
     return trainJobs;
   }
 
+  /*
+    Lists all trials of an train job with associated app & app version.
+  */
   async getTrialsOfTrainJob(app: string, appVersion: number = -1) {
     const data = await this._get(`/train_jobs/${app}/${appVersion}/trials`);
-    const trials = <Trial[]>data;
+    const trials = (<any[]>data).map((x) => this._toTrial(x));
     return trials;
   }
 
@@ -103,7 +106,17 @@ class RafikiClient {
    * Trials
    * ***************************************/
 
+  
   /*
+    Gets a trial.
+  */
+  async getTrial(trialId: string) {
+    const data = await this._get(`/trials/${trialId}`);
+    const trial = this._toTrial(data);
+    return trial;
+  }
+
+ /*
     Gets the logs for a trial.
   */
   async getTrialLogs(trialId: string) {
@@ -125,7 +138,33 @@ class RafikiClient {
    * Private
    * ***************************************/
 
-  _toDate(dateString: string) {
+  _toTrial(x: any) {
+    // Convert dates
+    if (x.datetime_started) {
+      x.datetime_started = this._toDate(x.datetime_started);
+    }
+
+    if (x.datetime_stopped) {
+      x.datetime_stopped = this._toDate(x.datetime_stopped);
+    }
+
+    return <Trial>x;
+  }
+
+  _toTrainJob(x: any) {
+    // Convert dates
+    if (x.datetime_started) {
+      x.datetime_started = this._toDate(x.datetime_started);
+    }
+
+    if (x.datetime_completed) {
+      x.datetime_completed = this._toDate(x.datetime_completed);
+    }
+
+    return <TrainJob>x;
+  }
+  
+   _toDate(dateString: string) {
     return new Date(Date.parse(dateString));
   }
 
@@ -241,8 +280,8 @@ interface TrainJob {
   app: string;
   app_version: string;
   budget_amount: number;
-  datetime_started: string;
-  datetime_completed: string;
+  datetime_started: Date;
+  datetime_completed?: Date;
   status: string;
   task: string;
 }
@@ -250,10 +289,11 @@ interface TrainJob {
 interface Trial {
   id: string;
   status: string;
-  datetime_started: string;
-  datetime_stopped: string;
+  datetime_started: Date;
+  datetime_stopped?: Date;
   score: number;
   model_name: string;
+  knobs: { [name: string]: any }
 }
 
 interface TrialLogs {

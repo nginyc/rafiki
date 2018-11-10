@@ -202,13 +202,14 @@ class TrainWorker(object):
             logger.warning('Error while deleting advisor:')
             logger.warning(traceback.format_exc())
 
-    # Returns whether the worker reached its budget
+    # Returns whether the worker reached its budget (only consider COMPLETED or ERRORED trials)
     def _if_budget_reached(self, budget_type, budget_amount, train_job_id, model_id):
         if budget_type == BudgetType.MODEL_TRIAL_COUNT:
             max_trials = budget_amount 
-            completed_trials = self._db.get_completed_trials_of_train_job(train_job_id)
-            model_completed_trials = [x for x in completed_trials if x.model_id == model_id]
-            return len(model_completed_trials) >= max_trials
+            trials = self._db.get_trials_of_train_job(train_job_id)
+            trials = [x for x in trials if x.status in [TrialStatus.COMPLETED, TrialStatus.ERRORED]]
+            model_trials = [x for x in trials if x.model_id == model_id]
+            return len(model_trials) >= max_trials
         else:
             raise InvalidBudgetTypeException()
 

@@ -361,13 +361,6 @@ class Database(object):
 
         return trials
 
-    def get_completed_trials_of_train_job(self, train_job_id):
-        trials = self._session.query(Trial) \
-            .filter(Trial.status == TrainJobStatus.COMPLETED) \
-            .filter(Trial.train_job_id == train_job_id).all()
-
-        return trials
-
     def mark_trial_as_errored(self, trial):
         trial.status = TrialStatus.ERRORED
         trial.datetime_stopped = datetime.datetime.utcnow()

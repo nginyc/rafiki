@@ -253,6 +253,15 @@ class Client(object):
     # Trials
     ####################################
 
+    def get_trial(self, trial_id):
+        '''
+        Gets a specific trial.
+
+        :param str trial_id: ID of trial
+        '''
+        data = self._get('/trials/{}'.format(trial_id))
+        return data
+
     def get_trial_logs(self, trial_id):
         '''
         Gets the logs for a specific trial.

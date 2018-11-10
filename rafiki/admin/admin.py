@@ -237,6 +237,24 @@ class Admin(object):
     # Trials
     ####################################
     
+    def get_trial(self, trial_id):
+        trial = self._db.get_trial(trial_id)
+        model = self._db.get_model(trial.model_id)
+        
+        if trial is None:
+            raise InvalidTrialException()
+
+        return {
+            'id': trial.id,
+            'knobs': trial.knobs,
+            'datetime_started': trial.datetime_started,
+            'status': trial.status,
+            'datetime_stopped': trial.datetime_stopped,
+            'model_name': model.name,
+            'score': trial.score,
+            'knobs': trial.knobs
+        }
+
     def get_trial_logs(self, trial_id):
         trial = self._db.get_trial(trial_id)
         if trial is None:
