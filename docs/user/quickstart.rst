@@ -23,7 +23,7 @@ including preparation of dataset and adding of models to Rafiki.
 
 This quickstart submits the `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference. 
 
-Refer to `./examples/scripts/client-usage.py <https://github.com/nginyc/rafiki/blob/master/examples/scripts/client-usage.py>`_ for a scripted version of this example.
+Refer to `./examples/scripts/client_quickstart.py <https://github.com/nginyc/rafiki/blob/master/examples/scripts/client_quickstart.py>`_ for a scripted version of this example.
 
 .. note::
 

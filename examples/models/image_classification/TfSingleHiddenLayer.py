@@ -6,10 +6,9 @@ import tempfile
 import numpy as np
 import base64
 
+from rafiki.config import APP_MODE
 from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
 from rafiki.constants import TaskType
-
-EPOCHS = 3
 
 class TfSingleHiddenLayer(BaseModel):
     '''
@@ -17,8 +16,18 @@ class TfSingleHiddenLayer(BaseModel):
     '''
 
     def get_knob_config(self):
+        epochs_range = [3, 100]
+        
+        if APP_MODE == 'DEV':
+            self.utils.log('WARNING: In DEV mode, `epochs` are set to 3.')
+            epochs_range = [3, 3]
+
         return {
             'knobs': {
+                'epochs': {
+                    'type': 'int',
+                    'range': epochs_range
+                },
                 'hidden_layer_units': {
                     'type': 'int',
                     'range': [2, 128]
@@ -38,6 +47,7 @@ class TfSingleHiddenLayer(BaseModel):
         self._batch_size = knobs.get('batch_size')
         self._hidden_layer_units = knobs.get('hidden_layer_units')
         self._learning_rate = knobs.get('learning_rate')
+        self._epochs = knobs.get('epochs')
 
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
@@ -45,17 +55,19 @@ class TfSingleHiddenLayer(BaseModel):
         
     def train(self, dataset_uri):
         dataset = self.utils.load_dataset_of_image_files(dataset_uri)
-        (num_samples, num_classes) = next(dataset)
+        num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+        images = np.asarray(images)
+        classes = np.asarray(classes)
 
         with self._graph.as_default():
             self._model = self._build_model(num_classes)
             with self._sess.as_default():
                 self._model.fit(
-                    np.array(images), 
-                    np.array(classes), 
+                    images, 
+                    classes, 
                     verbose=0,
-                    epochs=EPOCHS,
+                    epochs=self._epochs,
                     batch_size=self._batch_size,
                     callbacks=[
                         tf.keras.callbacks.LambdaCallback(on_epoch_end=self._on_train_epoch_end)
@@ -63,24 +75,25 @@ class TfSingleHiddenLayer(BaseModel):
                 )
 
                 # Compute train accuracy
-                (loss, accuracy) = self._model.evaluate(np.array(images), np.array(classes))
+                (loss, accuracy) = self._model.evaluate(images, classes)
                 self.utils.log('Train loss: {}'.format(loss))
                 self.utils.log('Train accuracy: {}'.format(accuracy))
 
     def evaluate(self, dataset_uri):
         dataset = self.utils.load_dataset_of_image_files(dataset_uri)
-        (num_samples, num_classes) = next(dataset)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+        images = np.asarray(images)
+        classes = np.asarray(classes)
 
         with self._graph.as_default():
             with self._sess.as_default():
-                (loss, accuracy) = self._model.evaluate(np.array(images), np.array(classes))
+                (loss, accuracy) = self._model.evaluate(images, classes)
                 self.utils.log('Test loss: {}'.format(loss))
 
         return accuracy
 
     def predict(self, queries):
-        X = np.array(queries)
+        X = np.asarray(queries)
         with self._graph.as_default():
             with self._sess.as_default():
                 probs = self._model.predict(X)

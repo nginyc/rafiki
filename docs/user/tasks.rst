@@ -21,6 +21,7 @@ and received by `App Users` as predictions to their queries sent to `Inference J
 
 .. seealso:: :ref:`making-predictions`
 
+
 IMAGE_CLASSIFICATION
 --------------------------------------------------------------------
 
@@ -29,12 +30,38 @@ Dataset Type
 
 :ref:`dataset-type:IMAGE_FILES`
 
+The train & test dataset's images should be have the same dimensions ``W x H``.
+
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A (28, 28) 2D list representing the grayscale version of the query image.
+A ``W x H`` 2D list representing the grayscale version of the query image. 
 
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 An integer representing the predicted class.
+
+POS_TAGGING
+--------------------------------------------------------------------
+
+Dataset Type
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:ref:`dataset-type:CORPUS`, such that:
+
+    - Sentences are delimited by  ``\n`` tokens.
+
+        - There is only 1 tag column of ``tag`` corresponding to the POS tag of the 
+          token as an integer from ``0`` to ``k - i``.
+
+
+Query Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A list of strings representing a sentence as a list of tokens in that sentence.
+
+Prediction Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A list of integers representing the list of predicted tag for each token, in sequence, for the sentence.

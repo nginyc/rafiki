@@ -49,7 +49,6 @@ class SkSvm(BaseModel):
         
     def train(self, dataset_uri):
         dataset = self.utils.load_dataset_of_image_files(dataset_uri)
-        (num_samples, num_classes) = next(dataset)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -57,7 +56,6 @@ class SkSvm(BaseModel):
 
     def evaluate(self, dataset_uri):
         dataset = self.utils.load_dataset_of_image_files(dataset_uri)
-        (num_samples, num_classes) = next(dataset)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -93,7 +91,7 @@ class SkSvm(BaseModel):
         self._clf = pickle.loads(clf_bytes)
 
     def _prepare_X(self, images):
-        return [np.array(image).flatten() for image in images]
+        return [np.asarray(image).flatten() for image in images]
 
     def _build_classifier(self, max_iter, kernel, gamma, C):
         clf = svm.SVC(

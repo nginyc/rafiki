@@ -49,7 +49,7 @@ class BaseModel(abc.ABC):
                         },
                         'epochs': {
                             'type': 'int',
-                            'range': [1, 1]
+                            'range': [1, 100]
                         },
                         'learning_rate': {
                             'type': 'float_exp',
@@ -120,7 +120,7 @@ class BaseModel(abc.ABC):
         This will be called only when model is *trained*.
 
         :returns: Dictionary of model parameters
-        :rtype: dict[string, string]
+        :rtype: dict[string, any]
         '''
 
         raise NotImplementedError()
@@ -133,7 +133,7 @@ class BaseModel(abc.ABC):
         The model will be considered *trained* subsequently.
 
         :param params: Dictionary of model parameters
-        :type params: dict[string, string]
+        :type params: dict[string, any]
         '''
         raise NotImplementedError()
 
@@ -147,7 +147,7 @@ class BaseModel(abc.ABC):
 
 
 def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
-                queries=[], knobs=None):
+                        queries=[], knobs=None):
     '''
     Validates whether a model class is properly defined. 
     The model instance's methods will be called in an order similar to that in Rafiki.

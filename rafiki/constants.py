@@ -46,3 +46,4 @@ class DatasetType():
 
 class TaskType():
     IMAGE_CLASSIFICATION = 'IMAGE_CLASSIFICATION'
+    POS_TAGGING = 'POS_TAGGING'
