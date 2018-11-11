@@ -5,9 +5,6 @@ envs/
 # Visual Studio Code config
 .vscode/
 
-# Logs
-*.log
-
 # Python byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -30,3 +27,8 @@ docs/searchindex.js
 # Datasets
 data/*
 !data/.gitkeep
+
+# Logs
+*.log
+logs/*
+!logs/.gitkeep

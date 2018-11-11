@@ -1,6 +1,6 @@
 source ./.env.sh
 
-LOG_FILEPATH=$LOGS_FOLDER_PATH/stop.log
+LOG_FILEPATH=$PWD/logs/stop.log
 
 # Echo title with border
 title() 
@@ -27,5 +27,5 @@ docker rm -f $ADVISOR_HOST || echo "Failed to stop Rafiki's Advisor"
 title "Stopping Rafiki's Admin Web..."
 docker rm -f $ADMIN_WEB_HOST || echo "Failed to stop Rafiki's Admin Web"
 
-echo "You'll need to destroy your machine's Docker swarm & Rafiki's logs folder at $LOGS_FOLDER_PATH manually"
+echo "You'll need to destroy your machine's Docker swarm manually"
 

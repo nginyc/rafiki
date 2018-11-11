@@ -1,27 +1,39 @@
-export POSTGRES_HOST=rafiki_db
-export POSTGRES_PORT=5432
+# Core configuration for Rafiki
+export DOCKER_NETWORK=rafiki
+export RAFIKI_VERSION=0.0.7
+export RAFIKI_IP_ADDRESS=127.0.0.1
+export ADMIN_EXT_PORT=8000
+export ADMIN_WEB_EXT_PORT=8080
+
+# Internal credentials for Rafiki's components
 export POSTGRES_USER=rafiki
 export POSTGRES_DB=rafiki
 export POSTGRES_PASSWORD=rafiki
-export DOCKER_NETWORK=rafiki
-export LOGS_FOLDER_PATH=/var/tmp/rafiki
+
+# Internal hosts & ports and configuration for Rafiki's components 
+export POSTGRES_HOST=rafiki_db
+export POSTGRES_PORT=5432
 export ADMIN_HOST=rafiki_admin
 export ADMIN_PORT=8000
-export ADMIN_EXT_PORT=8000
 export ADVISOR_HOST=rafiki_advisor
 export ADVISOR_PORT=8001
 export REDIS_HOST=rafiki_cache
 export REDIS_PORT=6379
 export PREDICTOR_PORT=8002
-export RAFIKI_IP_ADDRESS=127.0.0.1
+export ADMIN_WEB_HOST=rafiki_admin_web
+export LOCAL_WORKDIR_PATH=$PWD
+export DOCKER_WORKDIR_PATH=/root/rafiki
+
+# Docker images for Rafiki's custom components
 export RAFIKI_IMAGE_ADMIN=rafikiai/rafiki_admin
 export RAFIKI_IMAGE_ADMIN_WEB=rafikiai/rafiki_admin_web
 export RAFIKI_IMAGE_ADVISOR=rafikiai/rafiki_advisor
 export RAFIKI_IMAGE_WORKER=rafikiai/rafiki_worker
 export RAFIKI_IMAGE_PREDICTOR=rafikiai/rafiki_predictor
-export ADMIN_WEB_HOST=rafiki_admin_web
-export ADMIN_WEB_EXT_PORT=8080
+
+# Docker images for dependent services
 export IMAGE_POSTGRES=postgres:10.5
 export IMAGE_REDIS=redis:5.0-rc
-export RAFIKI_VERSION=0.0.6
-export PYTHONPATH=$PWD
+
+# Utility configuration
+export PYTHONPATH=$PWD # Ensures that `rafiki` module can be imported at project root

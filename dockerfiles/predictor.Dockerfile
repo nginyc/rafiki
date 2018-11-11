@@ -2,8 +2,10 @@ FROM python:3.6
 
 RUN apt-get update
 
-RUN mkdir /root/rafiki/
-WORKDIR /root/rafiki/
+ARG DOCKER_WORKDIR_PATH
+
+RUN mkdir $DOCKER_WORKDIR_PATH
+WORKDIR $DOCKER_WORKDIR_PATH
 
 # Install python dependencies
 COPY rafiki/utils/requirements.txt utils/requirements.txt
@@ -16,13 +18,11 @@ COPY rafiki/predictor/requirements.txt predictor/requirements.txt
 RUN pip install -r predictor/requirements.txt
 
 COPY rafiki/ rafiki/
-
-# Copy init script
-COPY scripts/start_predictor.py start_predictor.py
+COPY scripts/ scripts/
 
 ENV PYTHONUNBUFFERED 1
-ENV PYTHONPATH /root/rafiki/
+ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 
 EXPOSE 8002
 
-ENTRYPOINT [ "python", "start_predictor.py" ]
+ENTRYPOINT [ "python", "scripts/start_predictor.py" ]

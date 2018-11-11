@@ -1,7 +1,7 @@
 # Read from shell configuration file
 source ./.env.sh
 
-LOG_FILEPATH=$LOGS_FOLDER_PATH/start.log
+LOG_FILEPATH=$PWD/logs/stop.log
 FILE_DIR=$(dirname "$0")
 
 # Echo title with border
@@ -32,11 +32,6 @@ ensure_stable()
 
 title "Creating Docker swarm for Rafiki..."
 bash $FILE_DIR/create_docker_swarm.sh
-
-# Create logs folder
-
-title "Creating Rafiki's logs folder..."
-bash $FILE_DIR/create_logs_folder.sh
 
 # Pull images from Docker Hub
 

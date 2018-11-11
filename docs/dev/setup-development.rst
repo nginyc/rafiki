@@ -114,16 +114,7 @@ Rafiki uses `Sphinx documentation <http://www.sphinx-doc.org>`_ and hosts the do
 Reading Rafiki's logs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You can read logs of Rafiki Admin, Rafiki Advisor & any of Rafiki's services in Rafiki's logs directory:
-
-.. code-block:: shell
-
-    open $LOGS_FOLDER_PATH
-
-
-.. note::
-    
-    Ensure that Docker has permissions to mount $LOGS_FOLDER_PATH (e.g. under ``File Sharing`` on Mac)
+You can read logs of Rafiki Admin, Rafiki Advisor & any of Rafiki's services at in the project's `./logs` directory.
 
 
 Using Rafiki Admin's HTTP interface

@@ -11,12 +11,6 @@ from .admin import Admin
 app = Flask(__name__)
 CORS(app)
 
-def get_admin():
-    if not hasattr(g, 'admin'):
-        g.admin = Admin()
-    
-    return g.admin
-
 @app.route('/')
 def index():
     return 'Rafiki Admin is up.'
@@ -272,3 +266,9 @@ def get_request_params():
     params = {**params, **query_params}
 
     return params
+
+def get_admin():
+    if not hasattr(g, 'admin'):
+        g.admin = Admin()
+    
+    return g.admin

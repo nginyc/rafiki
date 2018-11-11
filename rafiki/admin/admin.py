@@ -35,7 +35,8 @@ class Admin(object):
 
         self._db = db
         self._services_manager = ServicesManager(db, container_manager)
-        
+
+    def seed(self):
         with self._db:
             self._seed_users()
 

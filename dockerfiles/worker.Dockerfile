@@ -4,8 +4,10 @@ FROM python:3.6
 RUN apt-get update
 RUN apt-get install -y postgresql postgresql-contrib
 
-RUN mkdir /root/rafiki/
-WORKDIR /root/rafiki/
+ARG DOCKER_WORKDIR_PATH
+
+RUN mkdir $DOCKER_WORKDIR_PATH
+WORKDIR $DOCKER_WORKDIR_PATH
 
 # Install python dependencies
 COPY rafiki/utils/requirements.txt utils/requirements.txt
@@ -25,11 +27,9 @@ RUN pip install -r worker/requirements.txt
 RUN pip install numpy==1.14.5 tensorflow==1.10.1 h5py==2.8.0 torch==0.4.1 Keras==2.2.2 scikit-learn==0.20.0
 
 COPY rafiki/ rafiki/
-
-# Copy init script
-COPY scripts/start_worker.py start_worker.py
+COPY scripts/ scripts/
 
 ENV PYTHONUNBUFFERED 1
-ENV PYTHONPATH /root/rafiki/
+ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 
-ENTRYPOINT [ "python", "start_worker.py" ]
+ENTRYPOINT [ "python", "scripts/start_worker.py" ]

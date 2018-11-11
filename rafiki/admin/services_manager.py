@@ -121,7 +121,6 @@ class ServicesManager(object):
             'POSTGRES_USER': os.environ['POSTGRES_USER'],
             'POSTGRES_DB': os.environ['POSTGRES_DB'],
             'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
-            'LOGS_FOLDER_PATH': os.environ['LOGS_FOLDER_PATH'],
             'REDIS_HOST': os.environ['REDIS_HOST'],
             'REDIS_PORT': os.environ['REDIS_PORT']
         }
@@ -150,7 +149,6 @@ class ServicesManager(object):
             'POSTGRES_USER': os.environ['POSTGRES_USER'],
             'POSTGRES_DB': os.environ['POSTGRES_DB'],
             'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
-            'LOGS_FOLDER_PATH': os.environ['LOGS_FOLDER_PATH'],
             'REDIS_HOST': os.environ['REDIS_HOST'],
             'REDIS_PORT': os.environ['REDIS_PORT']
         }
@@ -173,7 +171,6 @@ class ServicesManager(object):
             'POSTGRES_USER': os.environ['POSTGRES_USER'],
             'POSTGRES_DB': os.environ['POSTGRES_DB'],
             'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
-            'LOGS_FOLDER_PATH': os.environ['LOGS_FOLDER_PATH'],
             'ADMIN_HOST': os.environ['ADMIN_HOST'],
             'ADMIN_PORT': os.environ['ADMIN_PORT'],
             'ADVISOR_HOST': os.environ['ADVISOR_HOST'],
@@ -254,10 +251,11 @@ class ServicesManager(object):
             'RAFIKI_SERVICE_TYPE': service_type
         }
 
-        # Mount logs folder onto workers too
-        logs_folder_path = os.environ['LOGS_FOLDER_PATH']
+        # Mount whole local to containers' work directories (for sharing of logs & data) 
+        local_workdir = os.environ['LOCAL_WORKDIR_PATH']
+        cont_workdir = os.environ['DOCKER_WORKDIR_PATH']
         mounts = {
-            logs_folder_path: logs_folder_path
+            local_workdir: cont_workdir
         }
 
         # Expose container port if it exists
