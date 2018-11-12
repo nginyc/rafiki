@@ -19,7 +19,7 @@ Index
 What is Rafiki?
 --------------------------------------------------------------------
 
-*Rafiki* is a distributed, scalable system that trains machine learning (ML) models and deploys trained models, built with ease-of-use in mind.
+*Rafiki* is a distributed system that trains machine learning (ML) models and deploys trained models, built with ease-of-use in mind.
 To do so, it leverages on automated machine learning (AutoML).
 
 For *Application Developers* and *Application Users*, without any ML expertise, they can:

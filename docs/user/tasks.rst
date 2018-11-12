@@ -52,8 +52,8 @@ Dataset Type
 
     - Sentences are delimited by  ``\n`` tokens.
 
-        - There is only 1 tag column of ``tag`` corresponding to the POS tag of the 
-          token as an integer from ``0`` to ``k - i``.
+    - There is only 1 tag column of ``tag`` corresponding to the POS tag of the 
+        token as an integer from ``0`` to ``k - i``.
 
 
 Query Format 

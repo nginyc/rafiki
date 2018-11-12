@@ -1,6 +1,6 @@
 # Rafiki
 
-*Rafiki* is a distributed, scalable system that trains machine learning (ML) models and deploys trained models, built with ease-of-use in mind. To do so, it leverages on automated machine learning (AutoML).
+*Rafiki* is a distributed system that trains machine learning (ML) models and deploys trained models, built with ease-of-use in mind. To do so, it leverages on automated machine learning (AutoML).
 
 Read Rafiki's full documentation at https://nginyc.github.io/rafiki/docs/.
 
