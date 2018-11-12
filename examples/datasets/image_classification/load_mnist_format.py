@@ -8,7 +8,6 @@ import csv
 import shutil
 from tqdm import tqdm
 from itertools import chain
-from urllib.parse import urlparse
 from PIL import Image
 
 from rafiki.model import ModelUtils
@@ -18,8 +17,8 @@ utils = ModelUtils()
 def load(train_images_url, train_labels_url, test_images_url, test_labels_url, label_to_name, \
         out_train_dataset_path, out_test_dataset_path, out_meta_csv_path):
     '''
-        Loads and converts an image dataset of the MNIST format to the DatasetType `IMAGE_FILES`
-        Refer to http://yann.lecun.com/exdb/mnist/ for the MNIST dataset format.
+        Loads and converts an image dataset of the MNIST format to the DatasetType `IMAGE_FILES`.
+        Refer to http://yann.lecun.com/exdb/mnist/ for the MNIST dataset format for.
 
         :param str train_images_url: URL to download the training set images stored in the MNIST format
         :param str train_labels_url: URL to download the training set labels stored in the MNIST format
@@ -114,9 +113,9 @@ if __name__ == '__main__':
             8: 'Bag',
             9: 'Ankle boot'
         },
-        out_train_dataset_path='data/fashion_mnist_as_image_files_train.zip',
-        out_test_dataset_path='data/fashion_mnist_as_image_files_test.zip',
-        out_meta_csv_path='data/fashion_mnist_as_image_files_meta.csv'
+        out_train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
+        out_test_dataset_path='data/fashion_mnist_for_image_classification_test.zip',
+        out_meta_csv_path='data/fashion_mnist_for_image_classification_meta.csv'
     )
 
 

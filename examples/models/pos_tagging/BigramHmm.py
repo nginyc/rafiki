@@ -32,13 +32,13 @@ class BigramHmm(BaseModel):
         (sents_tokens, sents_tags) = zip(*[zip(*sent) for sent in dataset])
         self._num_tags = dataset.tag_num_classes[0]
         (self._trans_probs, self._emiss_probs) = self._compute_probs(self._num_tags, sents_tokens, sents_tags)
+        self.utils.log('No. of tags: {}'.format(self._num_tags))
 
     def evaluate(self, dataset_uri):
         dataset = self.utils.load_dataset_of_corpus(dataset_uri)
         (sents_tokens, sents_tags) = zip(*[zip(*sent) for sent in dataset])
         (sents_pred_tags) = self._tag_sents(self._num_tags, sents_tokens, self._trans_probs, self._emiss_probs)
         acc = self._compute_accuracy(sents_tags, sents_pred_tags)
-        self.utils.log('Test accuracy: {}'.format(acc))
         return acc
 
     def predict(self, queries):
@@ -191,8 +191,8 @@ class BigramHmm(BaseModel):
 if __name__ == '__main__':
     validate_model_class(
         model_class=BigramHmm,
-        train_dataset_uri='data/corpus.train.zip',
-        test_dataset_uri='data/corpus.test.zip',
+        train_dataset_uri='data/ptb_for_pos_tagging_train.zip',
+        test_dataset_uri='data/ptb_for_pos_tagging_test.zip',
         task=TaskType.POS_TAGGING,
         queries=[
             ['Ms.', 'Haag', 'plays', 'Elianti', '18', '.'],

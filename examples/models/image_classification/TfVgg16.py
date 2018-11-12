@@ -144,8 +144,8 @@ class TfVgg16(BaseModel):
 if __name__ == '__main__':
     validate_model_class(
         model_class=TfVgg16,
-        train_dataset_uri='data/fashion_mnist_as_image_files_train.zip',
-        test_dataset_uri='data/fashion_mnist_as_image_files_test.zip',
+        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
+        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
         task=TaskType.IMAGE_CLASSIFICATION,
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

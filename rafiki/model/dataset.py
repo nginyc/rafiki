@@ -70,7 +70,7 @@ class CorpusDataset(ModelDataset):
             dataset_zipfile.extractall(path=d)
             dataset_zipfile.close()
 
-            # Read corpus.tsv, yield metadata, then yield sample by sample
+            # Read corpus.tsv, read token by token, and merge them into sentences
             corpus_tsv_path = os.path.join(d, 'corpus.tsv') 
             try:
                 with open(corpus_tsv_path, mode='r') as f:
@@ -146,7 +146,7 @@ class ImageFilesDataset(ModelDataset):
         dataset_zipfile.extractall(path=dataset_dir.name)
         dataset_zipfile.close()
 
-        # Read images.csv, yield metadata, then yield sample by sample
+        # Read images.csv, and read image paths & classes
         images_csv_path = os.path.join(dataset_dir.name, 'images.csv') 
         try:
             with open(images_csv_path, mode='r') as f:
