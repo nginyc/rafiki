@@ -45,7 +45,7 @@ class CorpusDataset(ModelDataset):
     Class that helps loading of dataset with type `CORPUS`
 
     ``tags`` is the expected list of tags for each token in the corpus.
-    Dataset samples are grouped by a delimiter token corresponding to ``split_by``.
+    Dataset samples are grouped as sentences by a delimiter token corresponding to ``split_by``.
     
     ``tag_num_classes`` is a list of <number of classes for a tag>, in the same order as ``tags``.
     Each dataset sample is [[token, <tag_1>, <tag_2>, ..., <tag_k>]] where each token is a string, 
@@ -56,7 +56,8 @@ class CorpusDataset(ModelDataset):
     def __init__(self, dataset_path, tags, split_by):
         super().__init__(dataset_path)
         self.tags = tags
-        (self.size, self.tag_num_classes, self._sents) = self._load(self.path, self.tags, split_by)
+        (self.size, self.tag_num_classes, self.max_token_len, self.max_sent_len, self._sents) = \
+            self._load(self.path, self.tags, split_by)
 
     def __getitem__(self, index):
         return self._sents[index]
@@ -64,6 +65,8 @@ class CorpusDataset(ModelDataset):
     def _load(self, dataset_path, tags, split_by):
         sents = []
         tag_num_classes = [0 for _ in range(len(tags))]
+        max_token_len = 0
+        max_sent_len = 0
         
         with tempfile.TemporaryDirectory() as d:
             dataset_zipfile = zipfile.ZipFile(dataset_path, 'r')
@@ -94,13 +97,19 @@ class CorpusDataset(ModelDataset):
                         # Maintain max classes of tags
                         tag_num_classes = [max(x + 1, m) for (x, m) in zip(token_tags, tag_num_classes)]
 
+                        # Maintain max token length
+                        max_token_len = max(len(token), max_token_len)
+
+                    # Maintain max sent length
+                    max_sent_len = max(len(sent), max_sent_len)
+
             except Exception:
                 traceback.print_stack()
                 raise InvalidDatasetFormatException()
 
         size = len(sents)
 
-        return (size, tag_num_classes, sents)
+        return (size, tag_num_classes, max_token_len, max_sent_len, sents)
 
 class ImageFilesDataset(ModelDataset):
     '''

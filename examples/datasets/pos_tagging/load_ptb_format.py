@@ -41,7 +41,7 @@ def _convert_dataset(dataset_path, out_meta_tsv_path, \
     TAGGED_DIRNAME = 'treebank/tagged'
     SENTS_FILENAME_GLOB = '*.pos'
     TSV_FILENAME = 'corpus.tsv'
-    TEST_FILES_RATIO = 0.1
+    TEST_FILES_RATIO = 0.05
 
     # Create train dataset dir & start TSV
     train_d = tempfile.TemporaryDirectory()

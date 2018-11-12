@@ -12,8 +12,8 @@ from examples.scripts.client_quickstart import create_user, create_model, \
 if __name__ == '__main__':
     app = 'ptb_pos_app'
     task = TaskType.POS_TAGGING
-    train_dataset_uri = 'data/corpus.train.zip'
-    test_dataset_uri = 'data/corpus.test.zip'
+    train_dataset_uri = 'data/ptb_for_pos_tagging_train.zip'
+    test_dataset_uri = 'data/ptb_for_pos_tagging_test.zip'
     queries = [
         ['Ms.', 'Haag', 'plays', 'Elianti', '18', '.'],
         ['The', 'luxury', 'auto', 'maker', 'last', 'year', 'sold', '1,214', 'cars', 'in', 'the', 'U.S.']
@@ -34,6 +34,8 @@ if __name__ == '__main__':
     print('Adding models to Rafiki...') 
     create_model(client, 'BigramHmm', task, \
                 'examples/models/pos_tagging/BigramHmm.py', 'BigramHmm')
+    create_model(client, 'PyBiLstm', task, \
+                'examples/models/pos_tagging/PyBiLstm.py', 'PyBiLstm')
 
     print('Logging in as app developer...')
     client.login(email=APP_DEVELOPER_EMAIL, password=USER_PASSWORD)
