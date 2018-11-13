@@ -3,7 +3,7 @@ import json
 import abc
 import traceback
 import pickle
-from rafiki.advisor import make_advisor
+from rafiki.advisor import Advisor, AdvisorType
 from rafiki.predictor import ensemble_predictions
 from rafiki.constants import TaskType
 
@@ -14,9 +14,6 @@ class InvalidModelClassException(Exception): pass
 class InvalidModelParamsException(Exception): pass
 
 class ModelUtils(ModelDatasetUtils, ModelLogUtils):
-    '''
-    Collection of utility methods for model developers e.g. dataset loading, in-training logging
-    '''   
     def __init__(self):
         ModelDatasetUtils.__init__(self)
         ModelLogUtils.__init__(self)
@@ -176,7 +173,7 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
     if 'knobs' not in knob_config:
         raise InvalidModelClassException('`knob_config` should have a \'knobs\' key')
     
-    advisor = make_advisor(knob_config)
+    advisor = Advisor(knob_config, advisor_type=AdvisorType.BTB_GP)
 
     if knobs is None:
         knobs = advisor.propose()

@@ -1,1 +1,1 @@
-from .advisor import make_advisor
+from .advisor import Advisor, AdvisorType
