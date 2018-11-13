@@ -10,7 +10,7 @@ from rafiki.constants import TaskType
 
 class SkSvm(BaseModel):
     '''
-    Implements a SVM on scikit-learn
+    Implements a SVM on Scikit-Learn for simple image classification
     '''
 
     def get_knob_config(self):

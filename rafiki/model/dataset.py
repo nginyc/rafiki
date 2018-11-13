@@ -49,8 +49,8 @@ class CorpusDataset(ModelDataset):
     
     ``tag_num_classes`` is a list of <number of classes for a tag>, in the same order as ``tags``.
     Each dataset sample is [[token, <tag_1>, <tag_2>, ..., <tag_k>]] where each token is a string, 
-        each ``tag_i`` is an integer from 0 to (k_i - 1) as each token's corresponding class for that tag, 
-        with tags appearing in the same order as ``tags``. 
+    each ``tag_i`` is an integer from 0 to (k_i - 1) as each token's corresponding class for that tag, 
+    with tags appearing in the same order as ``tags``. 
     '''   
 
     def __init__(self, dataset_path, tags, split_by):
@@ -115,9 +115,9 @@ class ImageFilesDataset(ModelDataset):
     '''
     Class that helps loading of dataset with type `IMAGE_FILES`
     
-    ``classes`` is the number of image classes
+    ``classes`` is the number of image classes.
     Each dataset example is (image, class) where each image is a 2D list
-        of integers (0, 255) as grayscale, each class is an integer from 0 to (k - 1).
+    of integers (0, 255) as grayscale, each class is an integer from 0 to (k - 1).
     '''   
 
     def __init__(self, dataset_path, image_size):
@@ -171,6 +171,9 @@ class ImageFilesDataset(ModelDataset):
         return (num_samples, num_classes, image_paths, image_classes, dataset_dir)
 
 class ModelDatasetUtils():
+    '''
+    Collection of utility methods to help with the loading of datasets
+    '''   
     def __init__(self):
         # Caches downloaded datasets
         self._dataset_uri_to_path = {}
@@ -178,7 +181,9 @@ class ModelDatasetUtils():
     def load_dataset_of_corpus(self, dataset_uri, tags=['tag'], split_by='\\n'):
         '''
             Loads dataset with type `CORPUS`.
-            Returns an instance of ``CorpusDataset``.
+            
+            :param str dataset_uri: URI of the dataset file
+            :returns: An instance of ``CorpusDataset``.
         '''
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         return CorpusDataset(dataset_path, tags, split_by)

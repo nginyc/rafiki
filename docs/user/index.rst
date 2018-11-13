@@ -9,5 +9,6 @@ User Guide
    quickstart-app-developers
    quickstart-app-users
    quickstart-admins
+   creating-models
    tasks
    datasets

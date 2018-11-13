@@ -12,7 +12,8 @@ from rafiki.constants import TaskType
 
 class TfSingleHiddenLayer(BaseModel):
     '''
-    Implements a fully-connected neural network with a single hidden layer on Tensorflow
+    Implements a fully-connected neural network with a single hidden layer on Tensorflow 
+    for simple image classification
     '''
 
     def get_knob_config(self):

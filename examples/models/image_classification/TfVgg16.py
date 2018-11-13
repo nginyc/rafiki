@@ -14,7 +14,7 @@ from rafiki.config import APP_MODE
 
 class TfVgg16(BaseModel):
     '''
-    Implements VGG16 on Tensorflow
+    Implements VGG16 on Tensorflow for simple image classification
     '''
 
     def get_knob_config(self):

@@ -10,7 +10,7 @@ from rafiki.constants import TaskType
 
 class SkDt(BaseModel):
     '''
-    Implements a decision tree classifier on scikit-learn
+    Implements a decision tree classifier on Scikit-Learn for simple image classification
     '''
 
     def get_knob_config(self):
