@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.0-runtime-ubuntu16.04
+FROM nvidia/cuda:8.0-runtime-ubuntu16.04
 
 RUN apt-get update && apt-get -y upgrade
 
@@ -37,5 +37,4 @@ ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 
 EXPOSE 8000
 
-RUN echo "source activate rafiki; python scripts/start_admin.py $@" > start.sh
-CMD ["bash", "start.sh"]
+CMD ["bash", "-c", "source activate rafiki; python scripts/start_admin.py $@"]

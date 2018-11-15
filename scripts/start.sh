@@ -1,7 +1,7 @@
 # Read from shell configuration file
 source ./.env.sh
 
-LOG_FILEPATH=$PWD/logs/stop.log
+LOG_FILEPATH=$PWD/logs/start.log
 FILE_DIR=$(dirname "$0")
 
 # Echo title with border
