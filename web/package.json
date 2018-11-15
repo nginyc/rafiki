@@ -19,6 +19,7 @@
     "awesome-typescript-loader": "^5.2.1",
     "clean-webpack-plugin": "^0.1.19",
     "echarts": "^4.2.0-rc.2",
+    "ejs": "^2.6.1",
     "express": "^4.16.4",
     "file-loader": "^2.0.0",
     "moment": "^2.22.2",
