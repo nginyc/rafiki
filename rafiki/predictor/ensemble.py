@@ -7,12 +7,14 @@ def ensemble_predictions(predictions_list, task):
         return []
 
     # By default, just return some trial's predictions
-    index = 0
-    predictions = predictions_list[index]
+
+    mean_predictions = []
+    for predictions in np.transpose(predictions_list, axes=[1, 0, 2]):
+        mean_predictions.append(np.mean(predictions, axis=0))
 
     if task == TaskType.IMAGE_CLASSIFICATION:
         # Map probabilities to most probable label
-        predictions = np.argmax(predictions, axis=1)
+        predictions = np.argmax(mean_predictions, axis=1)
 
     predictions = _simplify_predictions(predictions)
 

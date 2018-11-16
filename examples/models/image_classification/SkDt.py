@@ -98,7 +98,7 @@ class SkDt(BaseModel):
 if __name__ == '__main__':
     validate_model_class(
         model_class=SkDt,
-        train_dataset_uri='data/fashion_mnist_as_image_files_train.zip',
+        train_dataset_uri='data/fashion_mnist_as_image_files_test.zip',
         test_dataset_uri='data/fashion_mnist_as_image_files_test.zip',
         task=TaskType.IMAGE_CLASSIFICATION,
         queries=[
