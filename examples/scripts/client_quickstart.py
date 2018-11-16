@@ -2,6 +2,7 @@ import pprint
 import time
 import requests
 import traceback
+import os
 
 from rafiki.client import Client
 from rafiki.constants import TaskType, UserType, BudgetType, TrainJobStatus, InferenceJobStatus, ModelDependency
@@ -13,6 +14,7 @@ SUPERADMIN_EMAIL = 'superadmin@rafiki'
 MODEL_DEVELOPER_EMAIL = 'model_developer@rafiki'
 APP_DEVELOPER_EMAIL = 'app_developer@rafiki'
 USER_PASSWORD = 'rafiki'
+ENABLE_GPU = os.environ.get('ENABLE_GPU', 0)
 
 def create_user(client, email, password, user_type):
     try:
@@ -28,9 +30,13 @@ def create_model(client, name, task, model_file_path, model_class, dependencies)
         # print(traceback.format_exc())
         print('Failed to create model "{}" - maybe it already exists?'.format(name))
 
-def create_train_job(client, app, task, train_dataset_uri, test_dataset_uri):
-    train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, \
-                                        budget={ BudgetType.MODEL_TRIAL_COUNT: 2 })
+def create_train_job(client, app, task, train_dataset_uri, test_dataset_uri, enable_gpu=0):
+    budget = {
+        BudgetType.MODEL_TRIAL_COUNT: 2,
+        BudgetType.ENABLE_GPU: enable_gpu
+    }
+
+    train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, budget=budget)
 
     app = train_job.get('app')
     app_version = train_job.get('app_version')
@@ -146,8 +152,8 @@ if __name__ == '__main__':
     client.login(email=APP_DEVELOPER_EMAIL, password=USER_PASSWORD)
 
     print('Creating train job for app "{}" on Rafiki...'.format(app)) 
-    (train_job, train_job_web_url) = create_train_job(client, app, task, 
-                                            train_dataset_uri, test_dataset_uri)
+    (train_job, train_job_web_url) = create_train_job(client, app, task, train_dataset_uri, \
+                                                    test_dataset_uri, enable_gpu=ENABLE_GPU)
     pprint.pprint(train_job)
 
     print('Waiting for train job to complete...')

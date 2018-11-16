@@ -7,7 +7,7 @@ from rafiki.constants import TaskType, BudgetType, UserType, ModelDependency
 from examples.scripts.client_quickstart import create_user, create_model, \
     create_train_job, wait_until_inference_job_is_running, wait_until_train_job_has_completed, \
     make_predictions, RAFIKI_HOST, ADMIN_PORT, ADMIN_WEB_PORT, SUPERADMIN_EMAIL, MODEL_DEVELOPER_EMAIL, \
-    APP_DEVELOPER_EMAIL, USER_PASSWORD
+    APP_DEVELOPER_EMAIL, USER_PASSWORD, ENABLE_GPU
 
 if __name__ == '__main__':
     app = 'ptb_pos_app'
@@ -41,8 +41,8 @@ if __name__ == '__main__':
     client.login(email=APP_DEVELOPER_EMAIL, password=USER_PASSWORD)
 
     print('Creating train job for app "{}" on Rafiki...'.format(app)) 
-    (train_job, train_job_web_url) = create_train_job(client, app, task, 
-                                            train_dataset_uri, test_dataset_uri)
+    (train_job, train_job_web_url) = create_train_job(client, app, task, train_dataset_uri, \
+                                                    test_dataset_uri, enable_gpu=ENABLE_GPU)
     pprint.pprint(train_job)
 
     print('Waiting for train job to complete...')
