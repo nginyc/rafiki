@@ -30,7 +30,6 @@ class ModelLogUtils():
         To be used with ``log_loss_metric()``.
         '''
         self.define_plot('Loss Over Epochs', ['loss'], x_axis='epoch')
-
   
     def log_loss_metric(self, loss, epoch):
         '''
@@ -71,4 +70,4 @@ class ModelLogUtilsLogger():
         self._print(', '.join(['{}={}'.format(metric, value) for (metric, value) in kwargs.items()]))
 
     def _print(self, message):
-        print('[{}] {}'.format(datetime.datetime.now(), message))
+        print(message)

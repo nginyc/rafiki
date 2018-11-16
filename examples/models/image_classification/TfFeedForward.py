@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow import keras
+from tensorflow.python.client import device_lib
 import json
 import os
 import tempfile
@@ -8,26 +9,32 @@ import base64
 
 from rafiki.config import APP_MODE
 from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
-from rafiki.constants import TaskType
+from rafiki.constants import TaskType, ModelDependency
 
-class TfSingleHiddenLayer(BaseModel):
+class TfFeedForward(BaseModel):
     '''
-    Implements a fully-connected neural network with a single hidden layer on Tensorflow 
+    Implements a fully-connected feed-forward neural network with variable hidden layers on Tensorflow 
     for simple image classification
     '''
 
     def get_knob_config(self):
         epochs_range = [3, 100]
+        hidden_layer_count_range = [1, 8]
         
         if APP_MODE == 'DEV':
-            self.utils.log('WARNING: In DEV mode, `epochs` are set to 3.')
+            print('WARNING: In DEV mode, `epochs` is set to 3 and `hidden_layer_count` is set to 2.')
             epochs_range = [3, 3]
+            hidden_layer_count_range = [2, 2]
 
         return {
             'knobs': {
                 'epochs': {
                     'type': 'int',
                     'range': epochs_range
+                },
+                'hidden_layer_count': {
+                    'type': 'int',
+                    'range': hidden_layer_count_range
                 },
                 'hidden_layer_units': {
                     'type': 'int',
@@ -39,7 +46,11 @@ class TfSingleHiddenLayer(BaseModel):
                 },
                 'batch_size': {
                     'type': 'int_cat',
-                    'values': [1, 2, 4, 8, 16, 32, 64, 128]
+                    'values': [16, 32, 64, 128]
+                },
+                'image_size': {
+                    'type': 'int_cat',
+                    'values': [8, 16, 32]
                 }
             }
         }
@@ -47,19 +58,23 @@ class TfSingleHiddenLayer(BaseModel):
     def init(self, knobs):
         self._batch_size = knobs.get('batch_size')
         self._hidden_layer_units = knobs.get('hidden_layer_units')
+        self._hidden_layer_count = knobs.get('hidden_layer_count')
         self._learning_rate = knobs.get('learning_rate')
         self._epochs = knobs.get('epochs')
+        self._image_size = knobs.get('image_size')
 
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
         self._define_plots()
         
     def train(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        dataset = self.utils.load_dataset_of_image_files(dataset_uri, image_size=[self._image_size, self._image_size])
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
         classes = np.asarray(classes)
+
+        self.utils.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
         with self._graph.as_default():
             self._model = self._build_model(num_classes)
@@ -81,7 +96,7 @@ class TfSingleHiddenLayer(BaseModel):
                 self.utils.log('Train accuracy: {}'.format(accuracy))
 
     def evaluate(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        dataset = self.utils.load_dataset_of_image_files(dataset_uri, image_size=[self._image_size, self._image_size])
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
         classes = np.asarray(classes)
@@ -94,7 +109,7 @@ class TfSingleHiddenLayer(BaseModel):
         return accuracy
 
     def predict(self, queries):
-        X = np.asarray(queries)
+        X = self.utils.resize_as_images(queries, image_size=[self._image_size, self._image_size])
         with self._graph.as_default():
             with self._sess.as_default():
                 probs = self._model.predict(X)
@@ -150,15 +165,20 @@ class TfSingleHiddenLayer(BaseModel):
 
     def _build_model(self, num_classes):
         hidden_layer_units = self._hidden_layer_units
+        hidden_layer_count = self._hidden_layer_count
         learning_rate = self._learning_rate
+        image_size = self._image_size
 
         model = keras.Sequential()
-        model.add(keras.layers.Flatten())
+        model.add(keras.layers.Flatten(input_shape=(image_size, image_size,)))
         model.add(keras.layers.BatchNormalization())
-        model.add(keras.layers.Dense(
-            hidden_layer_units,
-            activation=tf.nn.relu
-        ))
+
+        for _ in range(hidden_layer_count):
+            model.add(keras.layers.Dense(
+                hidden_layer_units,
+                activation=tf.nn.relu
+            ))
+
         model.add(keras.layers.Dense(
             num_classes, 
             activation=tf.nn.softmax
@@ -174,10 +194,13 @@ class TfSingleHiddenLayer(BaseModel):
 
 if __name__ == '__main__':
     validate_model_class(
-        model_class=TfSingleHiddenLayer,
+        model_class=TfFeedForward,
         train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
         test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
         task=TaskType.IMAGE_CLASSIFICATION,
+        dependencies={
+            ModelDependency.TENSORFLOW: '1.12.0'
+        },
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

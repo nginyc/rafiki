@@ -1,4 +1,5 @@
 import requests
+import json
 import pprint
 
 from rafiki.constants import BudgetType
@@ -88,7 +89,7 @@ class Client(object):
     # Models
     ####################################
 
-    def create_model(self, name, task, model_file_path, model_class, docker_image=None):
+    def create_model(self, name, task, model_file_path, model_class, dependencies={}, docker_image=None):
         '''
         Creates a model on Rafiki.
 
@@ -97,10 +98,11 @@ class Client(object):
         :param str name: Name of the model, must be unique on Rafiki
         :param str task: Task associated with the model, 
             the model must adhere to the specification of the task
-        :param obj model_file_path: Path to a single Python file that contains the definition for the model class.
+        :param str model_file_path: Path to a single Python file that contains the definition for the model class.
             Note this file should contain all necessary Python code for the model's implementation. 
             If the Python file imports any external Python modules, it should be installed in the model's Docker image.
         :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
+        :param { str: str } dependencies: List of dependencies the model requires.
         :param str docker_image: A custom docker image name that extends `rafikiai/rafiki_worker`
         '''
         f = open(model_file_path, 'rb')
@@ -114,6 +116,7 @@ class Client(object):
             form_data={
                 'name': name,
                 'task': task,
+                'dependencies': json.dumps(dependencies),
                 'docker_image': docker_image,
                 'model_class':  model_class
             }
@@ -147,8 +150,7 @@ class Client(object):
                         task, 
                         train_dataset_uri,
                         test_dataset_uri, 
-                        budget_type=BudgetType.MODEL_TRIAL_COUNT, 
-                        budget_amount=10):
+                        budget=None):
         '''
         Creates and starts a train job on Rafiki. 
         
@@ -159,9 +161,8 @@ class Client(object):
             the train job will train models associated with the task
         :param str train_dataset_uri: URI of the train dataset in a format specified by the task
         :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task
-        :param budget_type: Type of budget for the train job
-        :type budget_type: :class:`rafiki.constants.BudgetType`
-        :param int budget_amount: Budget amount in units specific to the budget type
+        :param budget: budget for the train job
+        :type budget: { :class:`rafiki.constants.BudgetType`: int }
         '''
 
         data = self._post('/train_jobs', json={
@@ -169,8 +170,7 @@ class Client(object):
             'task': task,
             'train_dataset_uri': train_dataset_uri,
             'test_dataset_uri': test_dataset_uri,
-            'budget_type': budget_type,
-            'budget_amount': budget_amount
+            'budget': budget
         })
         return data
 

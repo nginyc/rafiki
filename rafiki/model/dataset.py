@@ -199,17 +199,17 @@ class ModelDatasetUtils():
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         return ImageFilesDataset(dataset_path, image_size)
 
-    def resize_as_image(self, image, image_size):
+    def resize_as_images(self, images, image_size):
         '''
-            Resize grayscale image to another size.
+            Resize a list of N grayscale images to another size.
 
-            :param str image: image to resize as a 2D list (grayscale)
-            :param str image_size: dimensions to resize all images to (None for no resizing)
-            :returns: An instance of ``ImageFilesDataset``.
+            :param int[][][] images: images to resize as a N x 2D lists (grayscale)
+            :param int image_size: dimensions to resize all images to (None for no resizing)
+            :returns: images as N x 2D numpy arrays
         '''
-        image = Image.fromarray(image)
-        image = image.resize(image_size)
-        return np.asarray(image)
+        images = [Image.fromarray(np.asarray(x, dtype=np.uint8)) for x in images]
+        images = [np.asarray(x.resize(image_size)) for x in images]
+        return np.asarray(images)
                 
     def download_dataset_from_uri(self, dataset_uri):
         '''

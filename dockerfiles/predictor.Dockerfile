@@ -1,4 +1,4 @@
-FROM nvidia/cuda:8.0-runtime-ubuntu16.04
+FROM ubuntu:16.04
 
 RUN apt-get update && apt-get -y upgrade
 
@@ -35,4 +35,4 @@ ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 
 EXPOSE 8002
 
-CMD ["bash", "-c", "source activate rafiki; python scripts/start_predictor.py $@"]
+CMD ["bash", "-c", "source activate rafiki; python scripts/start_predictor.py"]

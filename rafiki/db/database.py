@@ -51,9 +51,8 @@ class Database(object):
     # Train Jobs
     ####################################
 
-    def create_train_job(self, user_id, app, 
-        app_version, task, train_dataset_uri, test_dataset_uri,
-        budget_type, budget_amount):
+    def create_train_job(self, user_id, app, app_version, task, \
+                        train_dataset_uri, test_dataset_uri, budget):
 
         train_job = TrainJob(
             user_id=user_id,
@@ -62,8 +61,7 @@ class Database(object):
             task=task,
             train_dataset_uri=train_dataset_uri,
             test_dataset_uri=test_dataset_uri,
-            budget_type=budget_type, 
-            budget_amount=budget_amount
+            budget=budget
         )
         self._session.add(train_job)
         return train_job
@@ -289,14 +287,15 @@ class Database(object):
     # Models
     ####################################
 
-    def create_model(self, user_id, name, task, model_file_bytes, model_class, docker_image):
+    def create_model(self, user_id, name, task, model_file_bytes, model_class, docker_image, dependencies):
         model = Model(
             user_id=user_id,
             name=name,
             task=task,
             model_file_bytes=model_file_bytes,
             model_class=model_class,
-            docker_image=docker_image
+            docker_image=docker_image,
+            dependencies=dependencies
         )
         self._session.add(model)
         return model

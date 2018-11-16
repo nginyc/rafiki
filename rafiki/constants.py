@@ -1,5 +1,12 @@
 class BudgetType():
     MODEL_TRIAL_COUNT = 'MODEL_TRIAL_COUNT'
+    ENABLE_GPU = 'ENABLE_GPU'
+
+class ModelDependency():
+    TENSORFLOW = 'tensorflow'
+    KERAS = 'Keras'
+    SCIKIT_LEARN = 'scikit-learn'
+    PYTORCH = 'torch'
 
 class InferenceJobStatus():
     STARTED = 'STARTED'

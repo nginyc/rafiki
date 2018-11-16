@@ -9,7 +9,7 @@ import abc
 from urllib.parse import urlparse, parse_qs 
 
 from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
-from rafiki.constants import TaskType
+from rafiki.constants import TaskType, ModelDependency
 from rafiki.config import APP_MODE
 
 class TfVgg16(BaseModel):
@@ -21,7 +21,7 @@ class TfVgg16(BaseModel):
         epochs_range = [1, 20]
         
         if APP_MODE == 'DEV':
-            self.utils.log('WARNING: In DEV mode, `epochs` are set to 1.')
+            print('WARNING: In DEV mode, `epochs` is set to 1.')
             epochs_range = [1, 1]
 
         return {
@@ -36,7 +36,7 @@ class TfVgg16(BaseModel):
                 },
                 'batch_size': {
                     'type': 'int_cat',
-                    'values': [1, 2, 4, 8, 16, 32, 64, 128]
+                    'values': [16, 32, 64, 128]
                 }
             }
         }
@@ -80,7 +80,7 @@ class TfVgg16(BaseModel):
         return accuracy
 
     def predict(self, queries):
-        X = np.asarray([self.utils.resize_as_image(x, [48, 48]) for x in queries])
+        X = self.utils.resize_as_images(queries, image_size=[48, 48])
         with self._graph.as_default():
             with self._sess.as_default():
                 probs = self._model.predict(X)
@@ -147,6 +147,9 @@ if __name__ == '__main__':
         train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
         test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
         task=TaskType.IMAGE_CLASSIFICATION,
+        dependencies={
+            ModelDependency.TENSORFLOW: '1.4.1'
+        },
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

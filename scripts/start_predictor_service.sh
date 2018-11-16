@@ -21,4 +21,4 @@ docker service create --name $1 \
   -e RAFIKI_SERVICE_ID=$2 \
   -p $4:8002 \
   --mount type=bind,src=$LOCAL_WORKDIR_PATH,dst=$DOCKER_WORKDIR_PATH \
-  $RAFIKI_IMAGE_PREDICTOR:$RAFIKI_VERSION $2
+  $RAFIKI_IMAGE_PREDICTOR:$RAFIKI_VERSION

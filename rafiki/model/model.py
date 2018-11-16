@@ -5,6 +5,7 @@ import traceback
 import pickle
 from rafiki.advisor import Advisor, AdvisorType
 from rafiki.predictor import ensemble_predictions
+from rafiki.utils.model import parse_model_install_command
 from rafiki.constants import TaskType
 
 from .dataset import ModelDatasetUtils
@@ -143,8 +144,8 @@ class BaseModel(abc.ABC):
         pass
 
 
-def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
-                        queries=[], knobs=None):
+def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task, \
+                        dependencies, enable_gpu=False, queries=[], knobs=None):
     '''
     Validates whether a model class is properly defined. 
     The model instance's methods will be called in an order similar to that in Rafiki.
@@ -152,11 +153,17 @@ def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task,
     :param str train_dataset_uri: URI of the train dataset for testing the training of model
     :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model
     :param str task: Task type of model
+    :param { str: str } dependencies: Model's dependencies
     :param list[any] queries: List of queries for testing predictions with the trained model
     :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used
     :type knobs: dict[str, any]
     :returns: The trained model
     '''
+    print('Testing installation for model...')
+    install_command = parse_model_install_command(dependencies, enable_gpu=enable_gpu)
+    exit_code = os.system(install_command)
+    if exit_code != 0: return
+
     print('Testing instantiation of model...')
     model_inst = model_class()
 

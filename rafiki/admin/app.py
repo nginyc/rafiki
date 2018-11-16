@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 import os
 import traceback
+import json
 
 from rafiki.constants import UserType
 from rafiki.utils.auth import generate_token, decode_token, UnauthorizedException, auth
@@ -222,8 +223,14 @@ def stop_inference_job(auth, app, app_version=-1):
 def create_model(auth):
     admin = get_admin()
     params = get_request_params()
+
+    # Expect model file as bytes
     model_file_bytes = request.files['model_file_bytes'].read()
     params['model_file_bytes'] = model_file_bytes
+
+    # Expect model dependencies as dict
+    if 'dependencies' in params and isinstance(params['dependencies'], str):
+        params['dependencies'] = json.loads(params['dependencies'])
 
     with admin:
         return jsonify(admin.create_model(auth['user_id'], **params))

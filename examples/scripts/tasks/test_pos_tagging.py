@@ -3,7 +3,7 @@ import time
 import requests
 
 from rafiki.client import Client
-from rafiki.constants import TaskType, BudgetType, UserType
+from rafiki.constants import TaskType, BudgetType, UserType, ModelDependency
 from examples.scripts.client_quickstart import create_user, create_model, \
     create_train_job, wait_until_inference_job_is_running, wait_until_train_job_has_completed, \
     make_predictions, RAFIKI_HOST, ADMIN_PORT, ADMIN_WEB_PORT, SUPERADMIN_EMAIL, MODEL_DEVELOPER_EMAIL, \
@@ -32,10 +32,10 @@ if __name__ == '__main__':
     client.login(email=MODEL_DEVELOPER_EMAIL, password=USER_PASSWORD)
 
     print('Adding models to Rafiki...') 
-    create_model(client, 'BigramHmm', task, \
-                'examples/models/pos_tagging/BigramHmm.py', 'BigramHmm')
-    create_model(client, 'PyBiLstm', task, \
-                'examples/models/pos_tagging/PyBiLstm.py', 'PyBiLstm')
+    create_model(client, 'BigramHmm', task, 'examples/models/pos_tagging/BigramHmm.py', \
+                'BigramHmm', dependencies={})
+    create_model(client, 'PyBiLstm', task, 'examples/models/pos_tagging/PyBiLstm.py', \
+                'PyBiLstm', dependencies={ ModelDependency.PYTORCH: '0.4.1' })
 
     print('Logging in as app developer...')
     client.login(email=APP_DEVELOPER_EMAIL, password=USER_PASSWORD)

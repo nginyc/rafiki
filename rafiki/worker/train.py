@@ -37,14 +37,14 @@ class TrainWorker(object):
         advisor_id = None
         while True:
             self._db.connect()
-            (budget_type, budget_amount, model_id,
+            (budget, model_id,
                 model_file_bytes, model_class, train_job_id, 
                 train_dataset_uri, test_dataset_uri) = self._read_worker_info()
 
             # Load model class from bytes
             clazz = load_model_class(model_file_bytes, model_class)
 
-            if self._if_budget_reached(budget_type, budget_amount, train_job_id, model_id):
+            if self._if_budget_reached(budget, train_job_id, model_id):
                 # If budget reached
                 logger.info('Budget for train job has reached')
 
@@ -203,15 +203,13 @@ class TrainWorker(object):
             logger.warning(traceback.format_exc())
 
     # Returns whether the worker reached its budget (only consider COMPLETED or ERRORED trials)
-    def _if_budget_reached(self, budget_type, budget_amount, train_job_id, model_id):
-        if budget_type == BudgetType.MODEL_TRIAL_COUNT:
-            max_trials = budget_amount 
-            trials = self._db.get_trials_of_train_job(train_job_id)
-            trials = [x for x in trials if x.status in [TrialStatus.COMPLETED, TrialStatus.ERRORED]]
-            model_trials = [x for x in trials if x.model_id == model_id]
-            return len(model_trials) >= max_trials
-        else:
-            raise InvalidBudgetTypeException()
+    def _if_budget_reached(self, budget, train_job_id, model_id):
+        # By default, budget is model trial count of 10
+        max_trials = budget.get(BudgetType.MODEL_TRIAL_COUNT, 10)
+        trials = self._db.get_trials_of_train_job(train_job_id)
+        trials = [x for x in trials if x.status in [TrialStatus.COMPLETED, TrialStatus.ERRORED]]
+        model_trials = [x for x in trials if x.model_id == model_id]
+        return len(model_trials) >= max_trials
 
     def _read_worker_info(self):
         worker = self._db.get_train_job_worker(self._service_id)
@@ -229,8 +227,7 @@ class TrainWorker(object):
             raise InvalidTrainJobException()
 
         return (
-            train_job.budget_type, 
-            train_job.budget_amount, 
+            train_job.budget, 
             worker.model_id,
             model.model_file_bytes,
             model.model_class,

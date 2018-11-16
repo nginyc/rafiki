@@ -4,7 +4,7 @@ import requests
 import traceback
 
 from rafiki.client import Client
-from rafiki.constants import TaskType, UserType, BudgetType, TrainJobStatus, InferenceJobStatus
+from rafiki.constants import TaskType, UserType, BudgetType, TrainJobStatus, InferenceJobStatus, ModelDependency
 
 RAFIKI_HOST = 'localhost'
 ADMIN_PORT = 8000
@@ -18,18 +18,19 @@ def create_user(client, email, password, user_type):
     try:
         return client.create_user(email, password, user_type)
     except:
+        # print(traceback.format_exc())
         print('Failed to create user "{}" - maybe it already exists?'.format(email))
 
-def create_model(client, name, task, model_file_path, model_class):
+def create_model(client, name, task, model_file_path, model_class, dependencies):
     try:
-        return client.create_model(name, task, model_file_path, model_class)
+        return client.create_model(name, task, model_file_path, model_class, dependencies=dependencies)
     except:
+        # print(traceback.format_exc())
         print('Failed to create model "{}" - maybe it already exists?'.format(name))
 
 def create_train_job(client, app, task, train_dataset_uri, test_dataset_uri):
     train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, \
-                                        budget_type=BudgetType.MODEL_TRIAL_COUNT, \
-                                        budget_amount=2)
+                                        budget={ BudgetType.MODEL_TRIAL_COUNT: 2 })
 
     app = train_job.get('app')
     app_version = train_job.get('app_version')
@@ -136,10 +137,10 @@ if __name__ == '__main__':
     client.login(email=MODEL_DEVELOPER_EMAIL, password=USER_PASSWORD)
 
     print('Adding models to Rafiki...') 
-    create_model(client, 'TfSingleHiddenLayer', task, \
-                'examples/models/image_classification/TfSingleHiddenLayer.py', 'TfSingleHiddenLayer')
-    create_model(client, 'SkDt', task, 
-                'examples/models/image_classification/SkDt.py', 'SkDt')
+    create_model(client, 'TfFeedForward', task, 'examples/models/image_classification/TfFeedForward.py', \
+                'TfFeedForward', dependencies={ ModelDependency.TENSORFLOW: '1.12.0' })
+    create_model(client, 'SkDt', task, 'examples/models/image_classification/SkDt.py', \
+                'SkDt', dependencies={ ModelDependency.SCIKIT_LEARN: '0.20.0' })
 
     print('Logging in as app developer...')
     client.login(email=APP_DEVELOPER_EMAIL, password=USER_PASSWORD)
@@ -176,5 +177,4 @@ if __name__ == '__main__':
 
     print('Stopping inference job...')
     pprint.pprint(client.stop_inference_job(app))
-
 

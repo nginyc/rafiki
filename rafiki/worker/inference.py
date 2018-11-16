@@ -2,7 +2,6 @@ import time
 import uuid
 import random
 import os
-import numpy as np
 import pickle
 import logging
 import traceback

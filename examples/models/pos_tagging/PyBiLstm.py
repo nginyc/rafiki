@@ -13,8 +13,8 @@ import torch.optim as optim
 from torch.utils.data.dataset import Dataset
 
 from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
+from rafiki.constants import TaskType, ModelDependency
 from rafiki.config import APP_MODE
-from rafiki.constants import TaskType
 
 class PyBiLstm(BaseModel):
     '''
@@ -25,7 +25,7 @@ class PyBiLstm(BaseModel):
         epochs_range = [10, 50]
 
         if APP_MODE == 'DEV':
-            self.utils.log('WARNING: In DEV mode, `epochs` are set to 10.')
+            print('WARNING: In DEV mode, `epochs` is set to 10.')
             epochs_range = [10, 10]
         
         return {
@@ -305,6 +305,9 @@ if __name__ == '__main__':
         model_class=PyBiLstm,
         train_dataset_uri='data/ptb_for_pos_tagging_train.zip',
         test_dataset_uri='data/ptb_for_pos_tagging_test.zip',
+        dependencies={
+            ModelDependency.PYTORCH: '0.4.1'
+        },
         task=TaskType.POS_TAGGING,
         queries=[
             ['Ms.', 'Haag', 'plays', 'Elianti', '18', '.'],

@@ -4,11 +4,12 @@ import traceback
 import time
 
 from rafiki.db import Database
-from rafiki.constants import ServiceStatus, UserType, ServiceType
+from rafiki.constants import ServiceStatus, UserType, ServiceType, BudgetType
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, \
     TRAIN_WORKER_REPLICAS_PER_MODEL, INFERENCE_WORKER_REPLICAS_PER_TRIAL, \
     INFERENCE_MAX_BEST_TRIALS, SERVICE_STATUS_WAIT
 from rafiki.container import DockerSwarmContainerManager 
+from rafiki.utils.model import parse_model_install_command
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,7 @@ class ServicesManager(object):
     def _create_inference_job_worker(self, inference_job, trial, replicas):
         model = self._db.get_model(trial.model_id)
         service_type = ServiceType.INFERENCE
+        install_command = parse_model_install_command(model.dependencies, enable_gpu=False)
         environment_vars = {
             'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
             'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
@@ -122,7 +124,8 @@ class ServicesManager(object):
             'POSTGRES_DB': os.environ['POSTGRES_DB'],
             'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
             'REDIS_HOST': os.environ['REDIS_HOST'],
-            'REDIS_PORT': os.environ['REDIS_PORT']
+            'REDIS_PORT': os.environ['REDIS_PORT'],
+            'WORKER_INSTALL_COMMAND': install_command
         }
 
         service = self._create_service(
@@ -165,6 +168,8 @@ class ServicesManager(object):
 
     def _create_train_job_worker(self, train_job, model, replicas):
         service_type = ServiceType.TRAIN
+        enable_gpu = train_job.budget.get(BudgetType.ENABLE_GPU, 0) > 0
+        install_command = parse_model_install_command(model.dependencies, enable_gpu=enable_gpu)
         environment_vars = {
             'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
             'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
@@ -174,7 +179,8 @@ class ServicesManager(object):
             'ADMIN_HOST': os.environ['ADMIN_HOST'],
             'ADMIN_PORT': os.environ['ADMIN_PORT'],
             'ADVISOR_HOST': os.environ['ADVISOR_HOST'],
-            'ADVISOR_PORT': os.environ['ADVISOR_PORT']
+            'ADVISOR_PORT': os.environ['ADVISOR_PORT'],
+            'WORKER_INSTALL_COMMAND': install_command
         }
 
         service = self._create_service(
@@ -336,4 +342,5 @@ class ServicesManager(object):
             trial : INFERENCE_WORKER_REPLICAS_PER_TRIAL
             for trial in trials
         }
+
     

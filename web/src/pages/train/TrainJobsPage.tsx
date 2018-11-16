@@ -70,7 +70,7 @@ class TrainJobsPage extends React.Component<Props> {
                   <TableCell>{x.app}</TableCell>
                   <TableCell>{x.app_version}</TableCell>
                   <TableCell>{x.task}</TableCell>
-                  <TableCell>{x.budget_amount}</TableCell>
+                  <TableCell>{JSON.stringify(x.budget)}</TableCell>
                   <TableCell>{x.status}</TableCell>
                   <TableCell>{moment(x.datetime_started).fromNow()}</TableCell>
                   <TableCell>{x.datetime_completed ? moment(x.datetime_completed).fromNow() : '-'}</TableCell>

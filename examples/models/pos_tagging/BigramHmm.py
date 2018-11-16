@@ -194,6 +194,7 @@ if __name__ == '__main__':
         train_dataset_uri='data/ptb_for_pos_tagging_train.zip',
         test_dataset_uri='data/ptb_for_pos_tagging_test.zip',
         task=TaskType.POS_TAGGING,
+        dependencies={},
         queries=[
             ['Ms.', 'Haag', 'plays', 'Elianti', '18', '.'],
             ['The', 'luxury', 'auto', 'maker', 'last', 'year', 'sold', '1,214', 'cars', 'in', 'the', 'U.S.']

@@ -279,7 +279,9 @@ interface TrainJob {
   id: string;
   app: string;
   app_version: string;
-  budget_amount: number;
+  budget: {
+    [budget_type: string]: number
+  };
   datetime_started: Date;
   datetime_completed?: Date;
   status: string;

@@ -1,4 +1,4 @@
-FROM nvidia/cuda:8.0-runtime-ubuntu16.04
+FROM nvidia/cuda:9.0-runtime-ubuntu16.04
 
 RUN apt-get update && apt-get -y upgrade
 
@@ -31,13 +31,10 @@ RUN pip install -r client/requirements.txt
 COPY rafiki/worker/requirements.txt worker/requirements.txt
 RUN pip install -r worker/requirements.txt
 
-# Install popular ML libraries
-RUN pip install numpy==1.14.5 tensorflow==1.10.1 h5py==2.8.0 torch==0.4.1 Keras==2.2.2 scikit-learn==0.20.0
-
 COPY rafiki/ rafiki/
 COPY scripts/ scripts/
 
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 
-CMD ["bash", "-c", "source activate rafiki; python scripts/start_worker.py $@"]
+CMD ["bash", "-c", "source activate rafiki; $WORKER_INSTALL_COMMAND; python scripts/start_worker.py"]
