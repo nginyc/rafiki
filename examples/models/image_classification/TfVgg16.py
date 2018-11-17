@@ -47,7 +47,9 @@ class TfVgg16(BaseModel):
         self._learning_rate = knobs.get('learning_rate')
 
         self._graph = tf.Graph()
-        self._sess = tf.Session(graph=self._graph)
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        self._sess = tf.Session(graph=self._graph, config=config)
 
     def train(self, dataset_uri):
         dataset = self.utils.load_dataset_of_image_files(dataset_uri, image_size=[48, 48])

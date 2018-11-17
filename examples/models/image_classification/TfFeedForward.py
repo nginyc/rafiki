@@ -64,7 +64,9 @@ class TfFeedForward(BaseModel):
         self._image_size = knobs.get('image_size')
 
         self._graph = tf.Graph()
-        self._sess = tf.Session(graph=self._graph)
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        self._sess = tf.Session(graph=self._graph, config=config)
         self._define_plots()
         
     def train(self, dataset_uri):
