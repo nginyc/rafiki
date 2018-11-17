@@ -19,6 +19,6 @@ docker service create --name $1 \
   -e PREDICTOR_PORT=$PREDICTOR_PORT \
   -e RAFIKI_SERVICE_TYPE=$3 \
   -e RAFIKI_SERVICE_ID=$2 \
-  -p $4:8002 \
+  -p $4:$PREDICTOR_PORT \
   --mount type=bind,src=$LOCAL_WORKDIR_PATH,dst=$DOCKER_WORKDIR_PATH \
   $RAFIKI_IMAGE_PREDICTOR:$RAFIKI_VERSION

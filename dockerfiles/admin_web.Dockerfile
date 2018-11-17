@@ -14,6 +14,6 @@ COPY web/ web/
 
 RUN cd web/ && npm run build
 
-EXPOSE 8080
+EXPOSE 3001
 
 ENTRYPOINT [ "node", "web/app.js" ]

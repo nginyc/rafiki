@@ -27,6 +27,6 @@ RUN pip install -r advisor/requirements.txt
 COPY rafiki/ rafiki/
 COPY scripts/ scripts/
 
-EXPOSE 8001
+EXPOSE 3002
 
 CMD ["bash", "-c", "source activate rafiki; python scripts/start_advisor.py"]

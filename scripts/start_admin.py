@@ -14,5 +14,5 @@ if __name__ == "__main__":
     # Run Flask app
     app.run(
         host='0.0.0.0', 
-        port=os.getenv('ADMIN_PORT', 8000), 
+        port=os.getenv('ADMIN_PORT', 3000), 
         threaded=True)

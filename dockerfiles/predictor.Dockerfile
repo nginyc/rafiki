@@ -31,6 +31,6 @@ RUN pip install -r predictor/requirements.txt
 COPY rafiki/ rafiki/
 COPY scripts/ scripts/
 
-EXPOSE 8002
+EXPOSE 3003
 
 CMD ["bash", "-c", "source activate rafiki; python scripts/start_predictor.py"]

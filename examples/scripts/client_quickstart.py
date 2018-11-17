@@ -8,8 +8,8 @@ from rafiki.client import Client
 from rafiki.constants import TaskType, UserType, BudgetType, TrainJobStatus, InferenceJobStatus, ModelDependency
 
 RAFIKI_HOST = 'localhost'
-ADMIN_PORT = 8000
-ADMIN_WEB_PORT = 8080
+ADMIN_PORT = 3000
+ADMIN_WEB_PORT = 3001
 SUPERADMIN_EMAIL = 'superadmin@rafiki'
 MODEL_DEVELOPER_EMAIL = 'model_developer@rafiki'
 APP_DEVELOPER_EMAIL = 'app_developer@rafiki'

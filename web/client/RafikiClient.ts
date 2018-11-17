@@ -13,7 +13,7 @@ class RafikiClient {
   */
   constructor(
     adminHost: string = 'localhost', 
-    adminPort: number = 8000, 
+    adminPort: number = 3000, 
     storage?: Storage
   ) {
     this._storage = this._initializeStorage(storage);

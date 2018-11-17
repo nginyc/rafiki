@@ -35,7 +35,7 @@ class App extends React.Component {
     super(props);
 
     const adminHost = window.ADMIN_HOST || 'localhost'; 
-    const adminPort = window.ADMIN_PORT || 8000;
+    const adminPort = window.ADMIN_PORT || 3000;
     
     const rafikiClient = new RafikiClient(adminHost, adminPort);
     const appNavigator = new AppNavigator();

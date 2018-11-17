@@ -33,6 +33,6 @@ RUN pip install -r admin/requirements.txt
 COPY rafiki/ rafiki/
 COPY scripts/ scripts/
 
-EXPOSE 8000
+EXPOSE 3000
 
 CMD ["bash", "-c", "source activate rafiki; python scripts/start_admin.py"]
