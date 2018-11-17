@@ -11,11 +11,12 @@ RUN apt-get -y install curl bzip2 \
   && conda clean --all --yes
 ENV PATH /usr/local/envs/rafiki/bin:$PATH
 RUN pip install --upgrade pip
+ENV PYTHONUNBUFFERED 1
 
 ARG DOCKER_WORKDIR_PATH
-
 RUN mkdir $DOCKER_WORKDIR_PATH
 WORKDIR $DOCKER_WORKDIR_PATH
+ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 
 # Install python dependencies
 COPY rafiki/utils/requirements.txt utils/requirements.txt
@@ -31,9 +32,6 @@ RUN pip install -r admin/requirements.txt
 
 COPY rafiki/ rafiki/
 COPY scripts/ scripts/
-
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 
 EXPOSE 8000
 

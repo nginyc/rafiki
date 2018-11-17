@@ -37,14 +37,13 @@ RUN apt-get -y install curl bzip2 \
   && conda create -y --name rafiki python=3.6 \
   && conda clean --all --yes
 ENV PATH /usr/local/envs/rafiki/bin:$PATH
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 RUN pip install --upgrade pip
+ENV PYTHONUNBUFFERED 1
 
 ARG DOCKER_WORKDIR_PATH
-
 RUN mkdir $DOCKER_WORKDIR_PATH
 WORKDIR $DOCKER_WORKDIR_PATH
+ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 
 # Install python dependencies
 COPY rafiki/utils/requirements.txt utils/requirements.txt
