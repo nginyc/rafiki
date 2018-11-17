@@ -168,7 +168,7 @@ class ServicesManager(object):
 
     def _create_train_job_worker(self, train_job, model, replicas):
         service_type = ServiceType.TRAIN
-        enable_gpu = train_job.budget.get(BudgetType.ENABLE_GPU, 0) > 0
+        enable_gpu = int(train_job.budget.get(BudgetType.ENABLE_GPU, 0)) > 0
         install_command = parse_model_install_command(model.dependencies, enable_gpu=enable_gpu)
         environment_vars = {
             'POSTGRES_HOST': os.environ['POSTGRES_HOST'],

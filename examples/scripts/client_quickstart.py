@@ -14,7 +14,7 @@ SUPERADMIN_EMAIL = 'superadmin@rafiki'
 MODEL_DEVELOPER_EMAIL = 'model_developer@rafiki'
 APP_DEVELOPER_EMAIL = 'app_developer@rafiki'
 USER_PASSWORD = 'rafiki'
-ENABLE_GPU = os.environ.get('ENABLE_GPU', 0)
+ENABLE_GPU = int(os.environ.get('ENABLE_GPU', 0))
 
 def create_user(client, email, password, user_type):
     try:
