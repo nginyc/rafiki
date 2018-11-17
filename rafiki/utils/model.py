@@ -12,13 +12,16 @@ def load_model_class(model_file_bytes, model_class):
     with open(temp_model_file_name, 'wb') as f:
         f.write(model_file_bytes)
 
-    # Import model file as module
-    mod = import_module(temp_mod_name)
-
-    # Extract model class from module
-    clazz = getattr(mod, model_class)
-
-    os.remove(temp_model_file_name)
+    try:
+        # Import model file as module
+        mod = import_module(temp_mod_name)
+        # Extract model class from module
+        clazz = getattr(mod, model_class)
+    except Exception as e:
+        raise e
+    finally:
+        # Ensure that temp model file is removed upon model loading error
+        os.remove(temp_model_file_name)
 
     return clazz
 

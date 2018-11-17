@@ -41,18 +41,23 @@ class TrainWorker(object):
                 model_file_bytes, model_class, train_job_id, 
                 train_dataset_uri, test_dataset_uri) = self._read_worker_info()
 
-            # Load model class from bytes
-            clazz = load_model_class(model_file_bytes, model_class)
-
             if self._if_budget_reached(budget, train_job_id, model_id):
                 # If budget reached
                 logger.info('Budget for train job has reached')
-
                 self._stop_worker()
                 if advisor_id is not None:
                     self._delete_advisor(advisor_id)
 
                 break
+
+            # Load model class from bytes
+            try:
+                clazz = load_model_class(model_file_bytes, model_class)
+            except Exception as e:
+                logger.error('Error while loading model class for worker:')
+                logger.error(traceback.format_exc())
+                self._stop_worker()
+                raise e
 
             # If not created, create a Rafiki advisor for train worker to propose knobs in trials
             if advisor_id is None:
@@ -61,7 +66,6 @@ class TrainWorker(object):
                     advisor_id = self._create_advisor(clazz)
                     logger.info('Created advisor of ID "{}"'.format(advisor_id))
                 except Exception as e:
-                    # Throw just a warning - likely that another worker has stopped the service
                     logger.error('Error while creating advisor for worker:')
                     logger.error(traceback.format_exc())
                     raise e
@@ -180,8 +184,8 @@ class TrainWorker(object):
             self._client.stop_train_job_worker(self._service_id)
         except Exception:
             # Throw just a warning - likely that another worker has stopped the service
-            logger.warning('Error while stopping train job worker service:')
-            logger.warning(traceback.format_exc())
+            logger.warn('Error while stopping train job worker service:')
+            logger.warn(traceback.format_exc())
         
     def _create_advisor(self, clazz):
         # Retrieve knob config for model of worker 
