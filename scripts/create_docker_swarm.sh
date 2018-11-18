@@ -1,3 +1,4 @@
+docker swarm leave $1
 docker swarm init --advertise-addr $RAFIKI_IP_ADDRESS \
     || >&2 echo "Failed to init Docker swarm - continuing..."
 docker network create $DOCKER_NETWORK -d overlay --attachable --scope=swarm \
