@@ -12,9 +12,9 @@ Index
 .. toctree::
    :maxdepth: 2
    
-   docs/user/index.rst
-   docs/dev/index.rst
-   docs/python/index.rst
+   docs/src/user/index.rst
+   docs/src/dev/index.rst
+   docs/src/python/index.rst
 
 What is Rafiki?
 --------------------------------------------------------------------
@@ -33,7 +33,6 @@ For *Model Developers*, they can:
 - Contribute to Rafiki's pool of model templates
 
 Check out :ref:`quick-setup` to deploy/develop Rafiki on your machine, and/or :ref:`quick-start` to use a deployed instance of Rafiki.
-
 
 
 Acknowledgements
