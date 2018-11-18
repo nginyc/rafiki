@@ -1,0 +1,264 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>rafiki.constants &mdash; Rafiki  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> Rafiki
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.7
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/src/user/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/src/dev/index.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/src/python/index.html">Python Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Rafiki</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>rafiki.constants</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for rafiki.constants</h1><div class="highlight"><pre>
+<div class="viewcode-block" id="BudgetType"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.BudgetType">[docs]</a><span></span><span class="k">class</span> <span class="nc">BudgetType</span><span class="p">():</span>
+    <span class="n">MODEL_TRIAL_COUNT</span> <span class="o">=</span> <span class="s1">&#39;MODEL_TRIAL_COUNT&#39;</span>
+    <span class="n">ENABLE_GPU</span> <span class="o">=</span> <span class="s1">&#39;ENABLE_GPU&#39;</span></div>
+
+<span class="k">class</span> <span class="nc">ModelDependency</span><span class="p">():</span>
+    <span class="n">TENSORFLOW</span> <span class="o">=</span> <span class="s1">&#39;tensorflow&#39;</span>
+    <span class="n">KERAS</span> <span class="o">=</span> <span class="s1">&#39;Keras&#39;</span>
+    <span class="n">SCIKIT_LEARN</span> <span class="o">=</span> <span class="s1">&#39;scikit-learn&#39;</span>
+    <span class="n">PYTORCH</span> <span class="o">=</span> <span class="s1">&#39;torch&#39;</span>
+
+<div class="viewcode-block" id="InferenceJobStatus"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.InferenceJobStatus">[docs]</a><span class="k">class</span> <span class="nc">InferenceJobStatus</span><span class="p">():</span>
+    <span class="n">STARTED</span> <span class="o">=</span> <span class="s1">&#39;STARTED&#39;</span>
+    <span class="n">RUNNING</span> <span class="o">=</span> <span class="s1">&#39;RUNNING&#39;</span>
+    <span class="n">ERRORED</span> <span class="o">=</span> <span class="s1">&#39;ERRORED&#39;</span>
+    <span class="n">STOPPED</span> <span class="o">=</span> <span class="s1">&#39;STOPPED&#39;</span></div>
+
+<div class="viewcode-block" id="TrainJobStatus"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.TrainJobStatus">[docs]</a><span class="k">class</span> <span class="nc">TrainJobStatus</span><span class="p">():</span>
+    <span class="n">STARTED</span> <span class="o">=</span> <span class="s1">&#39;STARTED&#39;</span>
+    <span class="n">RUNNING</span> <span class="o">=</span> <span class="s1">&#39;RUNNING&#39;</span>
+    <span class="n">STOPPED</span> <span class="o">=</span> <span class="s1">&#39;STOPPED&#39;</span>
+    <span class="n">COMPLETED</span> <span class="o">=</span> <span class="s1">&#39;COMPLETED&#39;</span></div>
+
+<div class="viewcode-block" id="TrialStatus"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.TrialStatus">[docs]</a><span class="k">class</span> <span class="nc">TrialStatus</span><span class="p">():</span>
+    <span class="n">RUNNING</span> <span class="o">=</span> <span class="s1">&#39;RUNNING&#39;</span>
+    <span class="n">ERRORED</span> <span class="o">=</span> <span class="s1">&#39;ERRORED&#39;</span>
+    <span class="n">TERMINATED</span> <span class="o">=</span> <span class="s1">&#39;TERMINATED&#39;</span>
+    <span class="n">COMPLETED</span> <span class="o">=</span> <span class="s1">&#39;COMPLETED&#39;</span></div>
+
+<span class="k">class</span> <span class="nc">ServiceStatus</span><span class="p">():</span>
+    <span class="n">STARTED</span> <span class="o">=</span> <span class="s1">&#39;STARTED&#39;</span>
+    <span class="n">DEPLOYING</span> <span class="o">=</span> <span class="s1">&#39;DEPLOYING&#39;</span>
+    <span class="n">RUNNING</span> <span class="o">=</span> <span class="s1">&#39;RUNNING&#39;</span>
+    <span class="n">ERRORED</span> <span class="o">=</span> <span class="s1">&#39;ERRORED&#39;</span>
+    <span class="n">STOPPED</span> <span class="o">=</span> <span class="s1">&#39;STOPPED&#39;</span>
+
+<span class="k">class</span> <span class="nc">ServiceType</span><span class="p">():</span>
+    <span class="n">TRAIN</span> <span class="o">=</span> <span class="s1">&#39;TRAIN&#39;</span>
+    <span class="n">PREDICT</span> <span class="o">=</span> <span class="s1">&#39;PREDICT&#39;</span>
+    <span class="n">INFERENCE</span> <span class="o">=</span> <span class="s1">&#39;INFERENCE&#39;</span>
+
+<div class="viewcode-block" id="UserType"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.UserType">[docs]</a><span class="k">class</span> <span class="nc">UserType</span><span class="p">():</span>
+    <span class="n">SUPERADMIN</span> <span class="o">=</span> <span class="s1">&#39;SUPERADMIN&#39;</span>
+    <span class="n">ADMIN</span> <span class="o">=</span> <span class="s1">&#39;ADMIN&#39;</span>
+    <span class="n">MODEL_DEVELOPER</span> <span class="o">=</span> <span class="s1">&#39;MODEL_DEVELOPER&#39;</span>
+    <span class="n">APP_DEVELOPER</span> <span class="o">=</span> <span class="s1">&#39;APP_DEVELOPER&#39;</span>
+    <span class="n">USER</span> <span class="o">=</span> <span class="s1">&#39;USER&#39;</span></div>
+
+<span class="k">class</span> <span class="nc">AdvisorType</span><span class="p">():</span>
+    <span class="n">BTB_GP</span> <span class="o">=</span> <span class="s1">&#39;BTB_GP&#39;</span>
+
+<div class="viewcode-block" id="DatasetType"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.DatasetType">[docs]</a><span class="k">class</span> <span class="nc">DatasetType</span><span class="p">():</span>
+    <span class="n">IMAGE_FILES</span> <span class="o">=</span> <span class="s1">&#39;IMAGE_FILES&#39;</span></div>
+
+<div class="viewcode-block" id="TaskType"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.TaskType">[docs]</a><span class="k">class</span> <span class="nc">TaskType</span><span class="p">():</span>
+    <span class="n">IMAGE_CLASSIFICATION</span> <span class="o">=</span> <span class="s1">&#39;IMAGE_CLASSIFICATION&#39;</span>
+    <span class="n">POS_TAGGING</span> <span class="o">=</span> <span class="s1">&#39;POS_TAGGING&#39;</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, nginyc, cadmusthefounder, nudles.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

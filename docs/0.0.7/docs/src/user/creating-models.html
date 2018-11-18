@@ -1,0 +1,339 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Creating Models &mdash; Rafiki  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Supported Tasks" href="tasks.html" />
+    <link rel="prev" title="Using Rafiki’s Admin Web" href="using-admin-web.html" /> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Rafiki
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.7
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">User Guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html">Quick Start (Model Developers)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html">Quick Start (Application Developers)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html">Quick Start (Application Users)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html">Quick Start (Rafiki Admins)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using-admin-web.html">Using Rafiki’s Admin Web</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Creating Models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#model-environment">Model Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#testing-models">Testing Models</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#example-testing-models-for-image-classification">Example: Testing Models for <code class="docutils literal notranslate"><span class="pre">IMAGE_CLASSIFICATION</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#example-testing-models-for-pos-tagging">Example: Testing Models for <code class="docutils literal notranslate"><span class="pre">POS_TAGGING</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#model-logging-dataset-loading">Model Logging &amp; Dataset Loading</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tasks.html">Supported Tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datasets.html">Supported Dataset Types</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dev/index.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../python/index.html">Python Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Rafiki</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">User Guide</a> &raquo;</li>
+        
+      <li>Creating Models</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../../_sources/docs/src/user/creating-models.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="creating-models">
+<span id="id1"></span><h1><a class="toc-backref" href="#id2">Creating Models</a><a class="headerlink" href="#creating-models" title="Permalink to this headline">¶</a></h1>
+<div class="contents topic" id="table-of-contents">
+<p class="topic-title first">Table of Contents</p>
+<ul class="simple">
+<li><a class="reference internal" href="#creating-models" id="id2">Creating Models</a><ul>
+<li><a class="reference internal" href="#model-environment" id="id3">Model Environment</a></li>
+<li><a class="reference internal" href="#testing-models" id="id4">Testing Models</a><ul>
+<li><a class="reference internal" href="#example-testing-models-for-image-classification" id="id5">Example: Testing Models for <code class="docutils literal notranslate"><span class="pre">IMAGE_CLASSIFICATION</span></code></a></li>
+<li><a class="reference internal" href="#example-testing-models-for-pos-tagging" id="id6">Example: Testing Models for <code class="docutils literal notranslate"><span class="pre">POS_TAGGING</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#model-logging-dataset-loading" id="id7">Model Logging &amp; Dataset Loading</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>To create a model on Rafiki, use the <cite>rafiki.client.Client.create_model</cite> method.</p>
+<div class="section" id="model-environment">
+<h2><a class="toc-backref" href="#id3">Model Environment</a><a class="headerlink" href="#model-environment" title="Permalink to this headline">¶</a></h2>
+<p>Your model will be run in Python 3.6 with the following Python libraries pre-installed:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install <span class="nv">numpy</span><span class="o">==</span><span class="m">1</span>.14.5
+</pre></div>
+</div>
+</div></blockquote>
+<p>The <a class="reference external" href="https://github.com/nginyc/rafiki/blob/master/dockerfiles/worker.Dockerfile">base worker image’s Dockerfile</a>
+specifies the exact container environment your model will run in, prior to installing your model’s <code class="docutils literal notranslate"><span class="pre">dependencies</span></code>.
+You can optionally build a custom Docker image (<code class="docutils literal notranslate"><span class="pre">docker_image</span></code>) that extends <code class="docutils literal notranslate"><span class="pre">rafikiai/rafiki_worker</span></code>.
+Refer to the parameters of <a class="reference internal" href="../python/rafiki.client.Client.html#rafiki.client.Client.create_model" title="rafiki.client.Client.create_model"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_model()</span></code></a> for configuring how your model runs on Rafiki.</p>
+<p>Models should run at least run on CPU-only machines and optionally leverage on a shared GPU, if it is available.</p>
+</div>
+<div class="section" id="testing-models">
+<h2><a class="toc-backref" href="#id4">Testing Models</a><a class="headerlink" href="#testing-models" title="Permalink to this headline">¶</a></h2>
+<p>To illustrate how to write models on Rafiki, we have written the following:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Sample pre-processing logic to convert common dataset formats to Rafiki’s own dataset formats in <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/datasets/">./examples/datasets/</a></li>
+<li>Sample models in <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/models/">./examples/models/</a></li>
+<li>A method <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.test_model_class" title="rafiki.model.test_model_class"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.test_model_class()</span></code></a> that simulates a full train-inference flow on any Rafiki model</li>
+</ul>
+</div></blockquote>
+<p>To start testing your model, first install the Python dependencies at <code class="docutils literal notranslate"><span class="pre">rafiki/model/requirements.txt</span></code>:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install -r rafiki/model/requirements.txt
+</pre></div>
+</div>
+</div></blockquote>
+<div class="section" id="example-testing-models-for-image-classification">
+<h3><a class="toc-backref" href="#id5">Example: Testing Models for <code class="docutils literal notranslate"><span class="pre">IMAGE_CLASSIFICATION</span></code></a><a class="headerlink" href="#example-testing-models-for-image-classification" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p class="first">Download &amp; pre-process the original Fashion MNIST dataset to the dataset format specified by <code class="docutils literal notranslate"><span class="pre">IMAGE_CLASSIFICATION</span></code>:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python examples/datasets/image_classification/load_mnist_format.py
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p class="first">Test the sample models in <code class="docutils literal notranslate"><span class="pre">./examples/models/image_classification</span></code> with <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.test_model_class" title="rafiki.model.test_model_class"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.test_model_class()</span></code></a>:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python examples/models/image_classification/SkDt.py
+python examples/models/image_classification/TfSingleHiddenLayer.py
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ol>
+</div>
+<div class="section" id="example-testing-models-for-pos-tagging">
+<h3><a class="toc-backref" href="#id6">Example: Testing Models for <code class="docutils literal notranslate"><span class="pre">POS_TAGGING</span></code></a><a class="headerlink" href="#example-testing-models-for-pos-tagging" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p class="first">Download &amp; pre-process the subsample of the Penn Treebank dataset to the dataset format specified by <code class="docutils literal notranslate"><span class="pre">POS_TAGGING</span></code>:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python examples/datasets/pos_tagging/load_ptb_format.py
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p class="first">Test the sample models in <code class="docutils literal notranslate"><span class="pre">./examples/models/pos_tagging</span></code> with <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.test_model_class" title="rafiki.model.test_model_class"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.test_model_class()</span></code></a>:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python examples/models/pos_tagging/BigramHmm.py
+python examples/models/pos_tagging/PyBiLstm.py
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ol>
+</div>
+</div>
+<div class="section" id="model-logging-dataset-loading">
+<h2><a class="toc-backref" href="#id7">Model Logging &amp; Dataset Loading</a><a class="headerlink" href="#model-logging-dataset-loading" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.BaseModel" title="rafiki.model.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.BaseModel</span></code></a> has a property <code class="docutils literal notranslate"><span class="pre">utils</span></code> that subclasses the model utility classes
+<a class="reference internal" href="../python/rafiki.model.html#rafiki.model.log.ModelLogUtils" title="rafiki.model.log.ModelLogUtils"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.log.ModelLogUtils</span></code></a> and <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.dataset.ModelDatasetUtils" title="rafiki.model.dataset.ModelDatasetUtils"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.dataset.ModelDatasetUtils</span></code></a>. They
+help with model logging &amp; dataset loading respectively.</p>
+<p>Refer to the sample usage in the implementation of <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/TfSingleHiddenLayer.py">./examples/models/image_classification/TfSingleHiddenLayer.py</a>.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="tasks.html" class="btn btn-neutral float-right" title="Supported Tasks" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="using-admin-web.html" class="btn btn-neutral" title="Using Rafiki’s Admin Web" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, nginyc, cadmusthefounder, nudles.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
