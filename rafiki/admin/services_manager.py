@@ -125,7 +125,8 @@ class ServicesManager(object):
             'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
             'REDIS_HOST': os.environ['REDIS_HOST'],
             'REDIS_PORT': os.environ['REDIS_PORT'],
-            'WORKER_INSTALL_COMMAND': install_command
+            'WORKER_INSTALL_COMMAND': install_command,
+            'CUDA_VISIBLE_DEVICES': '-1' # Hide GPU
         }
 
         service = self._create_service(
@@ -180,7 +181,8 @@ class ServicesManager(object):
             'ADMIN_PORT': os.environ['ADMIN_PORT'],
             'ADVISOR_HOST': os.environ['ADVISOR_HOST'],
             'ADVISOR_PORT': os.environ['ADVISOR_PORT'],
-            'WORKER_INSTALL_COMMAND': install_command
+            'WORKER_INSTALL_COMMAND': install_command,
+            **({'CUDA_VISIBLE_DEVICES': -1} if not enable_gpu else {}) # Hide GPU if not enabled
         }
 
         service = self._create_service(
