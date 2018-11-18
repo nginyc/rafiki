@@ -1,5 +1,3 @@
-.. seealso:: :meth:`rafiki.client.Client.get_inference_jobs_of_app`
-
 Example:
 
     .. code-block:: python
@@ -10,11 +8,13 @@ Example:
 
     .. code-block:: python
 
-        [{'app': 'fashion_mnist_app',
+       [{'app': 'fashion_mnist_app',
         'app_version': 1,
-        'datetime_started': 'Thu, 04 Oct 2018 03:31:59 GMT',
+        'datetime_started': 'Sun, 18 Nov 2018 10:04:13 GMT',
         'datetime_stopped': None,
-        'id': '38c53776-c450-4b86-a173-6e245863549a',
+        'id': '74b8f43a-c4f8-4ebc-a643-18a879dbbd1d',
         'predictor_host': '127.0.0.1:30000',
         'status': 'RUNNING',
-        'train_job_id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76'}]
+        'train_job_id': '3f3b3bdd-43ac-4354-99a5-d4d86006b68a'}]
+
+.. seealso:: :meth:`rafiki.client.Client.get_inference_jobs_of_app`

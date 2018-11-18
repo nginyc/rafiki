@@ -40,7 +40,7 @@ A ``W x H`` 2D list representing the grayscale version of the query image.
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-An integer representing the predicted class.
+A size-``k`` list of floats, representing the probabilities of each class from ``0`` to ``k - 1``.
 
 POS_TAGGING
 --------------------------------------------------------------------
@@ -50,10 +50,9 @@ Dataset Type
 
 :ref:`dataset-type:CORPUS`, such that:
 
-    - Sentences are delimited by  ``\n`` tokens.
-
-    - There is only 1 tag column of ``tag`` corresponding to the POS tag of the 
-        token as an integer from ``0`` to ``k - i``.
+- Sentences are delimited by  ``\n`` tokens.
+- There is only 1 tag column of ``tag`` corresponding to the POS tag of the 
+    | token as an integer from ``0`` to ``k - 1``.
 
 
 Query Format 

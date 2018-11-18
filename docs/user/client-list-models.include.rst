@@ -1,6 +1,3 @@
-.. seealso:: :meth:`rafiki.client.Client.get_models_of_task`
-
-
 Example:
 
     .. code-block:: python
@@ -11,17 +8,21 @@ Example:
 
     .. code-block:: python
 
-        [{'datetime_created': 'Thu, 04 Oct 2018 03:24:58 GMT',
-        'docker_image': 'rafikiai/rafiki_worker:0.0.3',
-        'model_class': 'TfSingleHiddenLayer',
-        'name': 'TfSingleHiddenLayer',
+        [{'datetime_created': 'Sun, 18 Nov 2018 09:56:03 GMT',
+        'dependencies': {'tensorflow': '1.12.0'},
+        'docker_image': 'rafikiai/rafiki_worker:0.0.7',
+        'model_class': 'TfFeedForward',
+        'name': 'TfFeedForward',
         'task': 'IMAGE_CLASSIFICATION',
-        'user_id': '23f3526a-35d1-46ba-be68-af8f4992a0f9'},
-        {'datetime_created': 'Thu, 04 Oct 2018 03:24:59 GMT',
-        'docker_image': 'rafikiai/rafiki_worker:0.0.3',
+        'user_id': '9fdefa23-c838-4c56-8eb5-f625ff4245ab'},
+        {'datetime_created': 'Sun, 18 Nov 2018 09:56:04 GMT',
+        'dependencies': {'scikit-learn': '0.20.0'},
+        'docker_image': 'rafikiai/rafiki_worker:0.0.7',
         'model_class': 'SkDt',
         'name': 'SkDt',
         'task': 'IMAGE_CLASSIFICATION',
-        'user_id': '23f3526a-35d1-46ba-be68-af8f4992a0f9'}]
+        'user_id': '9fdefa23-c838-4c56-8eb5-f625ff4245ab'}]
+
+.. seealso:: :meth:`rafiki.client.Client.get_models_of_task`
     
 

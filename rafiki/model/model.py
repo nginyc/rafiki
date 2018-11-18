@@ -149,13 +149,13 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
                     train_dataset_uri, test_dataset_uri, \
                     enable_gpu=False, queries=[], knobs=None):
     '''
-    Tests whether a model class is properly defined, given datasets and queries, with a full train-inference flow.
+    Tests whether a model class is properly defined by running a full train-inference flow.
     The model instance's methods will be called in an order similar to that in Rafiki.
 
     :param str model_file_path: Path to a single Python file that contains the definition for the model class
     :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
     :param str task: Task type of model
-    :param { str: str } dependencies: Model's dependencies
+    :param dict[str, str] dependencies: Model's dependencies
     :param str train_dataset_uri: URI of the train dataset for testing the training of model
     :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model
     :param list[any] queries: List of queries for testing predictions with the trained model

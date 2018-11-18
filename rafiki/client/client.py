@@ -96,14 +96,26 @@ class Client(object):
         Only admins & model developers can manage models.
 
         :param str name: Name of the model, must be unique on Rafiki
-        :param str task: Task associated with the model, 
-            the model must adhere to the specification of the task
-        :param str model_file_path: Path to a single Python file that contains the definition for the model class.
-            Note this file should contain all necessary Python code for the model's implementation. 
-            If the Python file imports any external Python modules, it should be installed in the model's Docker image.
+        :param str task: Task associated with the model, where the model must adhere to the specification of the task
+        :param str model_file_path: Path to a single Python file that contains the definition for the model class
         :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
-        :param { str: str } dependencies: List of dependencies the model requires.
-        :param str docker_image: A custom docker image name that extends `rafikiai/rafiki_worker`
+        :param dependencies: List of dependencies & their versions
+        :type dependencies: dict[str, str]
+        :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
+
+        ``model_file_path`` should point to a file that contains all necessary Python code for the model's implementation. 
+        If the Python file imports any external Python modules, you should list it in ``dependencies`` or create a custom
+        ``docker_image``.
+
+        ``dependencies`` should be a dictionary of ``{ <dependency_name>: <dependency_version> }``, where 
+        ``<dependency_name>`` corresponds to the name of the Python Package Index (PyPI) package (e.g. ``tensorflow``)
+        and ``<dependency_version>`` corresponds to the version of the PyPI package (e.g. ``1.12.0``). These dependencies 
+        will be lazily installed on top of the worker's Docker image before the submitted model's code is executed.
+
+        If the model is to be run on GPU, Rafiki will make a best-effort attempt to map dependencies to their 
+        GPU-enabled versions, if required. For example, ``{ 'tensorflow': '1.12.0' }`` will be installed 
+        as ``{ 'tensorflow-gpu': '1.12.0' }``.
+
         '''
         f = open(model_file_path, 'rb')
         model_file_bytes = f.read()
@@ -153,6 +165,7 @@ class Client(object):
                         budget=None):
         '''
         Creates and starts a train job on Rafiki. 
+        A train job is uniquely identified by its associated app and the app version (returned in output).
         
         Only admins & app developers can manage train jobs.
 
@@ -162,7 +175,20 @@ class Client(object):
         :param str train_dataset_uri: URI of the train dataset in a format specified by the task
         :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task
         :param budget: budget for the train job
-        :type budget: { :class:`rafiki.constants.BudgetType`: int }
+        :type budget: dict[:class:`rafiki.constants.BudgetType`, int]
+
+        ``budget`` should be a dictionary of ``{ <budget_type>: <budget_amount> }``, where 
+        ``<budget_type>`` is one of :class:`rafiki.constants.BudgetType` and 
+        ``<budget_amount>`` specifies the amount for the associated budget type.
+        
+        The following describes the budget types available:
+
+        =====================       =====================
+        **Budget Type**             **Description**
+        ---------------------       ---------------------        
+        ``MODEL_TRIAL_COUNT``       Target number of trials, per model, to run
+        ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported
+        =====================       =====================
         '''
 
         data = self._post('/train_jobs', json={
@@ -277,9 +303,9 @@ class Client(object):
 
     def create_inference_job(self, app, app_version=-1):
         '''
-        Creates and starts a inference job on Rafiki with the 2 best trials of an associated train job. 
-        The inference job is tagged with the train job's app and app version. Throws an error if an 
-        inference job of the same train job is already running.
+        Creates and starts a inference job on Rafiki with the 2 best trials of an associated train job of the app. 
+        The train job must have the status of ``COMPLETED``.The inference job would be tagged with the train job's app and app version. 
+        Throws an error if an inference job of the same train job is already running.
 
         In this method's response, `predictor_host` is this inference job's predictor's host. 
 

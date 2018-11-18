@@ -17,16 +17,15 @@ Installing the Client
 Initializing the Client
 --------------------------------------------------------------------
 
-.. seealso:: :meth:`rafiki.client.Client.login`
-
 Example:
 
     .. code-block:: python
 
         from rafiki.client import Client
-        client = Client(admin_host='localhost', admin_port=8000)
-        client.login(email='superadmin@rafiki', password='rafiki')
+        client = Client(admin_host='localhost', admin_port=3000)
+        client.login(email='app_developer@rafiki', password='rafiki')
         
+.. seealso:: :meth:`rafiki.client.Client.login`
 
 Listing models by task
 --------------------------------------------------------------------
@@ -49,8 +48,6 @@ Listing train jobs of an app
 Retrieving the latest train job's details for an app
 --------------------------------------------------------------------
 
-.. seealso:: :meth:`rafiki.client.Client.get_train_job`
-
 Example:
 
     .. code-block:: python
@@ -63,33 +60,31 @@ Example:
 
         {'app': 'fashion_mnist_app',
         'app_version': 1,
-        'budget_amount': 2,
-        'budget_type': 'MODEL_TRIAL_COUNT',
-        'datetime_completed': 'Thu, 04 Oct 2018 03:27:51 GMT',
-        'datetime_started': 'Thu, 04 Oct 2018 03:25:06 GMT',
-        'id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76',
-        'status': 'COMPLETED',
+        'budget': {'MODEL_TRIAL_COUNT': 2},
+        'datetime_completed': None,
+        'datetime_started': 'Sun, 18 Nov 2018 09:56:36 GMT',
+        'id': '3f3b3bdd-43ac-4354-99a5-d4d86006b68a',
+        'status': 'RUNNING',
         'task': 'IMAGE_CLASSIFICATION',
-        'test_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true',
-        'train_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true',
-        'workers': [{'datetime_started': 'Thu, 04 Oct 2018 03:25:06 GMT',
-                    'datetime_stopped': 'Thu, 04 Oct 2018 03:27:15 GMT',
-                    'model_name': 'TfSingleHiddenLayer',
+        'test_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true',
+        'train_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true',
+        'workers': [{'datetime_started': 'Sun, 18 Nov 2018 09:56:36 GMT',
+                    'datetime_stopped': None,
+                    'model_name': 'TfFeedForward',
                     'replicas': 2,
-                    'service_id': '584ec59d-99ab-4e93-ab3a-af844d325a37',
-                    'status': 'STOPPED'},
-                    {'datetime_started': 'Thu, 04 Oct 2018 03:25:06 GMT',
-                    'datetime_stopped': 'Thu, 04 Oct 2018 03:27:51 GMT',
+                    'service_id': '64aeefae-eb49-416e-9488-4f22b19f55c7',
+                    'status': 'RUNNING'},
+                    {'datetime_started': 'Sun, 18 Nov 2018 09:56:36 GMT',
+                    'datetime_stopped': None,
                     'model_name': 'SkDt',
                     'replicas': 2,
-                    'service_id': '6898ed0a-d39c-49fe-bbad-1ce5b01fd2dd',
-                    'status': 'STOPPED'}]}
+                    'service_id': '17adee63-3a8a-4e18-baa8-48f3c8d0af42',
+                    'status': 'RUNNING'}]}
 
+.. seealso:: :meth:`rafiki.client.Client.get_train_job`
 
 Listing best trials of the latest train job for an app
 --------------------------------------------------------------------
-
-.. seealso:: :meth:`rafiki.client.Client.get_best_trials_of_train_job`
 
 Example:
 
@@ -122,6 +117,8 @@ Example:
         'knobs': {'criterion': 'entropy', 'max_depth': 6},
         'model_name': 'SkDt',
         'score': 0.7341}]
+
+.. seealso:: :meth:`rafiki.client.Client.get_best_trials_of_train_job`
 
 .. _`creating-inference-job`:
 
@@ -158,33 +155,35 @@ Example:
 
         {'app': 'fashion_mnist_app',
         'app_version': 1,
-        'datetime_started': 'Thu, 04 Oct 2018 03:31:59 GMT',
+        'datetime_started': 'Sun, 18 Nov 2018 10:04:13 GMT',
         'datetime_stopped': None,
-        'id': '38c53776-c450-4b86-a173-6e245863549a',
+        'id': '9bcf0fb9-0bd5-4e76-a730-44b6d2370695',
         'predictor_host': '127.0.0.1:30000',
         'status': 'RUNNING',
-        'train_job_id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76',
-        'workers': [{'datetime_started': 'Thu, 04 Oct 2018 03:31:59 GMT',
+        'train_job_id': '3f3b3bdd-43ac-4354-99a5-d4d86006b68a',
+        'workers': [{'datetime_started': 'Sun, 18 Nov 2018 10:04:13 GMT',
                     'datetime_stopped': None,
                     'replicas': 2,
-                    'service_id': '13e21391-c054-489e-819b-90fd1ab175bb',
+                    'service_id': '2ca0e607-9e1b-4292-b13d-08bc8d75e5b7',
                     'status': 'RUNNING',
-                    'trial': {'id': '38383e64-4406-4292-9e4b-abe342a085d3',
+                    'trial': {'id': '64984d19-ea18-4d4a-9cf9-9681ff829939',
                                 'knobs': {'batch_size': 128,
-                                        'epochs': 1,
-                                        'hidden_layer_units': 34,
-                                        'learning_rate': 0.022193442791377953},
-                                'model_name': 'TfSingleHiddenLayer',
-                                'score': 0.8312}},
-                    {'datetime_started': 'Thu, 04 Oct 2018 03:31:59 GMT',
+                                        'epochs': 3,
+                                        'hidden_layer_count': 2,
+                                        'hidden_layer_units': 6,
+                                        'image_size': 32,
+                                        'learning_rate': 0.00377395877597336},
+                                'model_name': 'TfFeedForward',
+                                'score': 0.8242}},
+                    {'datetime_started': 'Sun, 18 Nov 2018 10:04:13 GMT',
                     'datetime_stopped': None,
                     'replicas': 2,
-                    'service_id': 'f25fb364-270f-4b11-b5d5-4466dbfdfb0b',
+                    'service_id': 'b70c903e-1533-48bf-91c4-92bc5aeada6d',
                     'status': 'RUNNING',
-                    'trial': {'id': 'd8ea9d7f-c484-462b-80cb-dfa01f07d9c1',
-                                'knobs': {'criterion': 'entropy', 'max_depth': 8},
+                    'trial': {'id': '4dd981fd-82fa-4db6-8278-687fc38e7af0',
+                                'knobs': {'criterion': 'entropy', 'max_depth': 5},
                                 'model_name': 'SkDt',
-                                'score': 0.7823}}]}
+                                'score': 0.7048}}]}
 
 
 Stopping a running inference job

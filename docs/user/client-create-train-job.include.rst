@@ -1,13 +1,9 @@
-.. seealso:: :meth:`rafiki.client.Client.create_train_job`
+To create a model training job, you'll need to submit your dataset and a target task (see :ref:`tasks`), together with your app's name.
+You'll need to prepare your dataset in a format specified by the target task, and upload it to a publicly accessible URL. 
 
-A train job is uniquely identified by its associated app and the app version (returned in output).
+After creating a train job, you can monitor it on Rafiki Admin Web (see :ref:`using-admin-web`).
 
-To create a train job, you'll need to prepare your dataset in a format specified by the target task, 
-and upload it to a publicly accessible URL. 
-
-.. seealso:: :ref:`tasks`
-
-You can monitor your train jobs on Rafiki's Admin Web's GUI, including plots of metrics for models that have been trained on your dataset.
+Refer to the parameters of :meth:`rafiki.client.Client.create_train_job()` for configuring how your train job runs on Rafiki, such as enabling GPU usage.
 
 Example:
 
@@ -18,20 +14,20 @@ Example:
             task='IMAGE_CLASSIFICATION',
             train_dataset_uri='https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true',
             test_dataset_uri='https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true',
-            budget_type='MODEL_TRIAL_COUNT',
-            budget_amount=2
+            budget={ 'MODEL_TRIAL_COUNT': 2 }
         )
 
     Output:
 
     .. code-block:: python
 
-        {'app': 'fashion_mnist_app',
-        'app_version': 1,
-        'id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76'}
+        {'app': 'fashion_mnist_app', 
+        'app_version': 1, 
+        'id': '3f3b3bdd-43ac-4354-99a5-d4d86006b68a'}
 
 .. note::
 
-    The datasets in the above example have been pre-processed to conform to the task's dataset specification :ref:`dataset-type:IMAGE_FILES`. 
-    The code that does this pre-processing from the original Fashion MNIST dataset is available at `./examples/datasets/image_files/load_mnist_format.py <https://github.com/nginyc/rafiki/tree/master/examples/datasets/image_files/load_mnist_format.py>`_.
+    The datasets in the above example have been pre-processed to conform to the task's dataset specification. 
+    The code that does this pre-processing from the original Fashion MNIST dataset is available at `./examples/datasets/image_classification/load_mnist_format.py <https://github.com/nginyc/rafiki/tree/master/examples/datasets/image_classification/load_mnist_format.py>`_.
     
+.. seealso:: :meth:`rafiki.client.Client.create_train_job`

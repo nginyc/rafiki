@@ -19,15 +19,13 @@ Quick Start
 
 
 This guide assumes you have deployed your an empty instance of Rafiki and you want to do a *full* train-inference flow, 
-including preparation of dataset and adding of models to Rafiki.
-
-This quickstart submits the `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference. 
-
-Refer to `./examples/scripts/ <https://github.com/nginyc/rafiki/blob/master/examples/scripts/>`_ for more scripted examples of Rafiki.
+including preparation of dataset and adding of models to Rafiki. Below, the sequence of examples submit the 
+`Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference. 
+Alternatively, after installing Rafiki Client's dependencies, you can run `./examples/scripts/client-quickstart.py <https://github.com/nginyc/rafiki/blob/master/examples/scripts/client-quickstart.py>`_.
 
 .. note::
 
-    If you haven't setup Rafiki on your local machine, refer to :ref:`quick-setup` before continuing.
+    If you haven't set up Rafiki on your local machine, refer to :ref:`quick-setup` before continuing.
 
 
 Installing the Client
@@ -39,17 +37,17 @@ Installing the Client
 Initializing the Client
 --------------------------------------------------------------------
 
-.. seealso:: :meth:`rafiki.client.Client.login`
-
 Example:
 
     .. code-block:: python
 
         from rafiki.client import Client
-        client = Client(admin_host='localhost', admin_port=8000)
+        client = Client(admin_host='localhost', admin_port=3000)
         client.login(email='superadmin@rafiki', password='rafiki')
 
-        
+
+.. seealso:: :meth:`rafiki.client.Client.login`
+
 Creating models
 --------------------------------------------------------------------
 

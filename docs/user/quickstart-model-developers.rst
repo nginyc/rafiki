@@ -17,17 +17,16 @@ Installing the Client
 Initializing the Client
 --------------------------------------------------------------------
 
-.. seealso:: :meth:`rafiki.client.Client.login`
-
 Example:
 
     .. code-block:: python
 
         from rafiki.client import Client
-        client = Client(admin_host='localhost', admin_port=8000)
-        client.login(email='superadmin@rafiki', password='rafiki')
+        client = Client(admin_host='localhost', admin_port=3000)
+        client.login(email='model_developer@rafiki', password='rafiki')
 
-        
+.. seealso:: :meth:`rafiki.client.Client.login`        
+
 Creating models
 --------------------------------------------------------------------
 

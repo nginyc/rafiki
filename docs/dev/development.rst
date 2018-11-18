@@ -1,39 +1,9 @@
-.. _`setup-development`:
+.. _`development`:
 
-Setup & Development
+Development
 ====================================================================
 
 .. contents:: Table of Contents
-
-
-.. _`quick-setup`:
-
-Quick Setup
---------------------------------------------------------------------
-
-We assume development or deployment in a MacOS or Linux environment.
-
-1. Install Docker 18
-
-2. Install Python 3.6
-
-3. Setup Rafiki's complete stack with the init script:
-
-.. code-block:: shell
-
-    bash scripts/start.sh
-
-*Rafiki Admin* and *Rafiki Admin Web* will be available at ``localhost:8000`` and ``localhost:8080`` respectively.
-
-To destroy Rafiki's complete stack:
-
-.. code-block:: shell
-
-    bash scripts/stop.sh
-
-
-Development
---------------------------------------------------------------------
 
 Before running any individual scripts, make sure to run the shell configuration script:
 
@@ -43,14 +13,15 @@ Before running any individual scripts, make sure to run the shell configuration 
 
 Refer to :ref:`architecture` and :ref:`folder-structure` for a developer's overview of Rafiki.
 
+
 Starting Parts of the Stack
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------------------------------------------------
 
 The quickstart instructions set up a single node Docker Swarm on your machine. Separate shell scripts in the `./scripts/` folder configure and start parts of Rafiki's stack. Refer to the commands in
 `./scripts/start.sh`.
 
 Connecting to Rafiki's DB
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------------------------------------------------
 
 By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g `Postico <https://eggerapps.at/postico/>`_) with these credentials:
 
@@ -63,7 +34,7 @@ By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g 
     POSTGRES_PASSWORD=rafiki
 
 Connecting to Rafiki's Cache
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------------------------------------------------
 
 You can connect to Redis DB with `rebrow <https://github.com/marians/rebrow>`_:
 
@@ -79,7 +50,7 @@ You can connect to Redis DB with `rebrow <https://github.com/marians/rebrow>`_:
     REDIS_PORT=6379
 
 Building Images Locally
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------------------------------------------------
 
 The quickstart instructions pull pre-built `Rafiki's images <https://hub.docker.com/r/rafikiai/>`_ from Docker Hub. To build Rafiki's images locally (e.g. to reflect latest code changes):
 
@@ -92,7 +63,7 @@ The quickstart instructions pull pre-built `Rafiki's images <https://hub.docker.
     If you're testing latest code changes on multiple nodes, you'll need to build Rafiki's images on those nodes as well.
 
 Pushing Images to Docker Hub
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------------------------------------------------
 
 To push the Rafiki's latest images to Docker Hub (e.g. to reflect the latest code changes):
 
@@ -101,7 +72,7 @@ To push the Rafiki's latest images to Docker Hub (e.g. to reflect the latest cod
     bash scripts/push_images.sh
 
 Building Rafiki's Documentation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------------------------------------------------
 
 Rafiki uses `Sphinx documentation <http://www.sphinx-doc.org>`_ and hosts the documentation with `Github Pages <https://pages.github.com/>`_ on the `gh-pages branch <https://github.com/nginyc/rafiki/tree/gh-pages>`_. Build & view Rafiki's Sphinx documentation on your machine with the following commands:
 
@@ -109,23 +80,6 @@ Rafiki uses `Sphinx documentation <http://www.sphinx-doc.org>`_ and hosts the do
 
     bash scripts/build_docs.sh
     open docs/index.html
-
-
-Reading Rafiki's logs
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-You can read logs of Rafiki Admin, Rafiki Advisor & any of Rafiki's services at in the project's `./logs` directory.
-
-
-Using Rafiki Admin's HTTP interface
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-To make calls to the HTTP endpoints, you'll need first authenticate with email & password against the `POST /tokens` endpoint to obtain an authentication token `token`, and subsequently add the `Authorization` header for every other call:
-
-::
-
-    Authorization: Bearer {{token}}
-
 
 Troubleshooting
 --------------------------------------------------------------------

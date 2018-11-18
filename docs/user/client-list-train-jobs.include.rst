@@ -1,5 +1,3 @@
-.. seealso:: :meth:`rafiki.client.Client.get_train_jobs_of_app`
-
 Example:
 
     .. code-block:: python
@@ -12,12 +10,13 @@ Example:
 
         [{'app': 'fashion_mnist_app',
         'app_version': 1,
-        'budget_amount': 2,
-        'budget_type': 'MODEL_TRIAL_COUNT',
-        'datetime_completed': 'Thu, 04 Oct 2018 03:27:51 GMT',
-        'datetime_started': 'Thu, 04 Oct 2018 03:25:06 GMT',
-        'id': '65af28c7-e3ef-4fb0-af76-8b413d16ad76',
-        'status': 'COMPLETED',
+        'budget': {'MODEL_TRIAL_COUNT': 2},
+        'datetime_completed': None,
+        'datetime_started': 'Sun, 18 Nov 2018 09:56:36 GMT',
+        'id': '3f3b3bdd-43ac-4354-99a5-d4d86006b68a',
+        'status': 'RUNNING',
         'task': 'IMAGE_CLASSIFICATION',
-        'test_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true',
-        'train_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true'}]
+        'test_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true',
+        'train_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true'}]
+
+.. seealso:: :meth:`rafiki.client.Client.get_train_jobs_of_app`
