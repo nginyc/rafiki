@@ -1,14 +1,13 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 import os
 import traceback
+import json
 
 from rafiki.constants import UserType
 from rafiki.utils.auth import generate_token, decode_token, UnauthorizedException, auth
 
 from .admin import Admin
-
-admin = Admin()
 
 app = Flask(__name__)
 CORS(app)
@@ -24,12 +23,15 @@ def index():
 @app.route('/users', methods=['POST'])
 @auth([UserType.ADMIN])
 def create_user(auth):
+    admin = get_admin()
     params = get_request_params()
+
     with admin:
         return jsonify(admin.create_user(**params))
 
 @app.route('/tokens', methods=['POST'])
 def generate_user_token():
+    admin = get_admin()
     params = get_request_params()
 
     # Error will be thrown here if credentials are invalid
@@ -56,13 +58,16 @@ def generate_user_token():
 @app.route('/train_jobs', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def create_train_job(auth):
+    admin = get_admin()
     params = get_request_params()
+
     with admin:
         return jsonify(admin.create_train_job(auth['user_id'], **params))
 
 @app.route('/train_jobs', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def get_train_jobs(auth):
+    admin = get_admin()
     params = get_request_params()
 
     if 'user_id' in params:
@@ -72,27 +77,34 @@ def get_train_jobs(auth):
 @app.route('/train_jobs/<app>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def get_train_jobs_of_app(auth, app):
+    admin = get_admin()
     params = get_request_params()
+
     with admin:
         return jsonify(admin.get_train_jobs_of_app(app, **params))
 
 @app.route('/train_jobs/<app>/<app_version>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def get_train_job(auth, app, app_version):
+    admin = get_admin()
     params = get_request_params()
+
     with admin:
         return jsonify(admin.get_train_job(app, app_version=int(app_version), **params))
 
 @app.route('/train_jobs/<app>/<app_version>/stop', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def stop_train_job(auth, app, app_version):
+    admin = get_admin()
     params = get_request_params()
+
     with admin:
         return jsonify(admin.stop_train_job(app, app_version=int(app_version), **params))
 
 @app.route('/train_jobs/<app>/<app_version>/trials', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def get_trials_of_train_job(auth, app, app_version):
+    admin = get_admin()
     params = get_request_params()
 
     # Return best trials by train job
@@ -121,7 +133,9 @@ def get_trials_of_train_job(auth, app, app_version):
 @app.route('/train_job_workers/<service_id>/stop', methods=['POST'])
 @auth([])
 def stop_train_job_worker(auth, service_id):
+    admin = get_admin()
     params = get_request_params()
+
     with admin:
         return jsonify(admin.stop_train_job_worker(service_id, **params))
 
@@ -132,9 +146,20 @@ def stop_train_job_worker(auth, service_id):
 @app.route('/trials/<trial_id>/logs', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def get_trial_logs(auth, trial_id):
+    admin = get_admin()
     params = get_request_params()
+
     with admin:
         return jsonify(admin.get_trial_logs(trial_id, **params))
+
+@app.route('/trials/<trial_id>', methods=['GET'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
+def get_trial(auth, trial_id):
+    admin = get_admin()
+    params = get_request_params()
+
+    with admin:
+        return jsonify(admin.get_trial(trial_id, **params))
 
 ####################################
 # Inference Jobs
@@ -143,6 +168,7 @@ def get_trial_logs(auth, trial_id):
 @app.route('/inference_jobs', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def create_inference_jobs(auth):
+    admin = get_admin()
     params = get_request_params()
 
     if 'app_version' in params:
@@ -154,6 +180,7 @@ def create_inference_jobs(auth):
 @app.route('/inference_jobs', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def get_inference_jobs(auth):
+    admin = get_admin()
     params = get_request_params()
 
     if 'user_id' in params:
@@ -163,21 +190,27 @@ def get_inference_jobs(auth):
 @app.route('/inference_jobs/<app>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def get_inference_jobs_of_app(auth, app):
+    admin = get_admin()
     params = get_request_params()
+
     with admin:
         return jsonify(admin.get_inference_jobs_of_app(app, **params))
 
 @app.route('/inference_jobs/<app>/<app_version>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def get_running_inference_job(auth, app, app_version):
+    admin = get_admin()
     params = get_request_params()
+
     with admin:
         return jsonify(admin.get_running_inference_job(app, app_version=int(app_version), **params))
 
 @app.route('/inference_jobs/<app>/<app_version>/stop', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def stop_inference_job(auth, app, app_version=-1):
+    admin = get_admin()
     params = get_request_params()
+
     with admin:
         return jsonify(admin.stop_inference_job(app, app_version=int(app_version), **params))
 
@@ -188,9 +221,16 @@ def stop_inference_job(auth, app, app_version=-1):
 @app.route('/models', methods=['POST'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER])
 def create_model(auth):
+    admin = get_admin()
     params = get_request_params()
+
+    # Expect model file as bytes
     model_file_bytes = request.files['model_file_bytes'].read()
     params['model_file_bytes'] = model_file_bytes
+
+    # Expect model dependencies as dict
+    if 'dependencies' in params and isinstance(params['dependencies'], str):
+        params['dependencies'] = json.loads(params['dependencies'])
 
     with admin:
         return jsonify(admin.create_model(auth['user_id'], **params))
@@ -198,6 +238,7 @@ def create_model(auth):
 @app.route('/models', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER])
 def get_models(auth):
+    admin = get_admin()
     params = get_request_params()
 
     # Return models by task
@@ -232,3 +273,9 @@ def get_request_params():
     params = {**params, **query_params}
 
     return params
+
+def get_admin():
+    if not hasattr(g, 'admin'):
+        g.admin = Admin()
+    
+    return g.admin

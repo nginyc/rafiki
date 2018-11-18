@@ -1,7 +1,7 @@
 # Read from shell configuration file
 source ./.env.sh
 
-LOG_FILEPATH=$LOGS_FOLDER_PATH/start.log
+LOG_FILEPATH=$PWD/logs/start.log
 FILE_DIR=$(dirname "$0")
 
 # Echo title with border
@@ -33,11 +33,6 @@ ensure_stable()
 title "Creating Docker swarm for Rafiki..."
 bash $FILE_DIR/create_docker_swarm.sh
 
-# Create logs folder
-
-title "Creating Rafiki's logs folder..."
-bash $FILE_DIR/create_logs_folder.sh
-
 # Pull images from Docker Hub
 
 title "Pulling images for Rafiki from Docker Hub..."
@@ -66,4 +61,4 @@ title "Starting Rafiki's Admin Web..."
 ensure_stable "Rafiki's Admin Web"
 
 echo "To use Rafiki, use Rafiki Client in the Python CLI"
-echo "Refer to Rafiki's docs at https://nginyc.github.io/rafiki2/docs/"
+echo "Refer to Rafiki's docs at https://nginyc.github.io/rafiki/docs/"

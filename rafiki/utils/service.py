@@ -14,7 +14,7 @@ def run_service(db, start_service, end_service):
     configure_logging('service-{}-{}'.format(service_id, container_id))
 
     def _sigterm_handler(_signo, _stack_frame):
-        logger.warn("SIGTERM received: %s, %s" % (_signo, _stack_frame))
+        logger.warn("Terminal signal received: %s, %s" % (_signo, _stack_frame))
 
         # Mark service as stopped in DB
         with db:
@@ -22,7 +22,9 @@ def run_service(db, start_service, end_service):
             db.mark_service_as_stopped(service)
 
         end_service(service_id, service_type)
+        exit(0)
 
+    signal.signal(signal.SIGINT, _sigterm_handler)
     signal.signal(signal.SIGTERM, _sigterm_handler)
 
     # Mark service as running in DB

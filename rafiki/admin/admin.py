@@ -24,13 +24,19 @@ class RunningInferenceJobExistsException(Exception): pass
 class NoModelsForTaskException(Exception): pass
 
 class Admin(object):
-    def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
+    def __init__(self, db=None, container_manager=None):
+        if db is None: 
+            db = Database()
+        if container_manager is None: 
+            container_manager = DockerSwarmContainerManager()
+            
         self._base_worker_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_WORKER'],
                                                 os.environ['RAFIKI_VERSION'])
 
         self._db = db
         self._services_manager = ServicesManager(db, container_manager)
-        
+
+    def seed(self):
         with self._db:
             self._seed_users()
 
@@ -63,8 +69,7 @@ class Admin(object):
     ####################################
 
     def create_train_job(self, user_id, app,
-        task, train_dataset_uri, test_dataset_uri,
-        budget_type, budget_amount):
+        task, train_dataset_uri, test_dataset_uri, budget):
         
         # Compute auto-incremented app version
         train_jobs = self._db.get_train_jobs_of_app(app)
@@ -82,8 +87,7 @@ class Admin(object):
             task=task,
             train_dataset_uri=train_dataset_uri,
             test_dataset_uri=test_dataset_uri,
-            budget_type=budget_type,
-            budget_amount=budget_amount
+            budget=budget
         )
         self._db.commit()
 
@@ -127,8 +131,7 @@ class Admin(object):
             'test_dataset_uri': train_job.test_dataset_uri,
             'datetime_started': train_job.datetime_started,
             'datetime_completed': train_job.datetime_completed,
-            'budget_type': train_job.budget_type,
-            'budget_amount': train_job.budget_amount,
+            'budget': train_job.budget,
             'workers': [
                 {
                     'service_id': service.id,
@@ -156,8 +159,7 @@ class Admin(object):
                 'test_dataset_uri': x.test_dataset_uri,
                 'datetime_started': x.datetime_started,
                 'datetime_completed': x.datetime_completed,
-                'budget_type': x.budget_type,
-                'budget_amount': x.budget_amount
+                'budget': x.budget
             }
             for x in train_jobs
         ]
@@ -194,8 +196,7 @@ class Admin(object):
                 'test_dataset_uri': x.test_dataset_uri,
                 'datetime_started': x.datetime_started,
                 'datetime_completed': x.datetime_completed,
-                'budget_type': x.budget_type,
-                'budget_amount': x.budget_amount
+                'budget': x.budget
             }
             for x in train_jobs
         ]
@@ -232,6 +233,24 @@ class Admin(object):
     # Trials
     ####################################
     
+    def get_trial(self, trial_id):
+        trial = self._db.get_trial(trial_id)
+        model = self._db.get_model(trial.model_id)
+        
+        if trial is None:
+            raise InvalidTrialException()
+
+        return {
+            'id': trial.id,
+            'knobs': trial.knobs,
+            'datetime_started': trial.datetime_started,
+            'status': trial.status,
+            'datetime_stopped': trial.datetime_stopped,
+            'model_name': model.name,
+            'score': trial.score,
+            'knobs': trial.knobs
+        }
+
     def get_trial_logs(self, trial_id):
         trial = self._db.get_trial(trial_id)
         if trial is None:
@@ -385,15 +404,16 @@ class Admin(object):
     # Models
     ####################################
 
-    def create_model(self, user_id, name, task, 
-                    model_file_bytes, model_class, docker_image=None):
+    def create_model(self, user_id, name, task, model_file_bytes, 
+                    model_class, dependencies={}, docker_image=None):
         model = self._db.create_model(
             user_id=user_id,
             name=name,
             task=task,
             model_file_bytes=model_file_bytes,
             model_class=model_class,
-            docker_image=(docker_image or self._base_worker_image)
+            docker_image=(docker_image or self._base_worker_image),
+            dependencies=dependencies
         )
 
         return {
@@ -409,7 +429,8 @@ class Admin(object):
                 'model_class': model.model_class,
                 'datetime_created': model.datetime_created,
                 'user_id': model.user_id,
-                'docker_image': model.docker_image
+                'docker_image': model.docker_image,
+                'dependencies': model.dependencies
             }
             for model in models
         ]
@@ -423,7 +444,8 @@ class Admin(object):
                 'model_class': model.model_class,
                 'datetime_created': model.datetime_created,
                 'user_id': model.user_id,
-                'docker_image': model.docker_image
+                'docker_image': model.docker_image,
+                'dependencies': model.dependencies
             }
             for model in models
         ]

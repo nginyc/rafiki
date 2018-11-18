@@ -2,13 +2,18 @@ const express = require('express');
 const path = require('path');
 const app = express();
 
-const port = 8080;
+const port = 3001;
 
-app.use('/node_modules', express.static('./node_modules'));
-app.use('/dist', express.static('./dist'));
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
+app.use('/dist', express.static(path.join(__dirname, 'dist')));
 
 app.get('/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.render('index', {
+    'ADMIN_HOST': process.env.RAFIKI_IP_ADDRESS,
+    'ADMIN_PORT': process.env.ADMIN_EXT_PORT
+  });
 });
 
 app.listen(port, () => {

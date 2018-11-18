@@ -5,6 +5,9 @@ import datetime
 class DuplicatePlotException(Exception): pass
 
 class ModelLogUtils():
+    '''
+    Collection of utility methods for logging and plotting of messages & metrics during training.
+    '''   
     def __init__(self):
         # Add logging to stdout for local debugging
         self._logger = ModelLogUtilsLogger()
@@ -15,28 +18,38 @@ class ModelLogUtils():
         
         self._logger = logger
 
-    # Logs a message for model training analytics
     def log(self, message):
+        '''
+        Logs a message for analysis of model training.
+        '''
         self._logger.log(message)
 
-    # Convenience method of defining a plot of ``loss` against ``epoch``
-    # To be used with ``log_loss_metric()``
     def define_loss_plot(self):
+        '''
+        Convenience method of defining a plot of ``loss`` against ``epoch``.
+        To be used with ``log_loss_metric()``.
+        '''
         self.define_plot('Loss Over Epochs', ['loss'], x_axis='epoch')
-
-    # Convenience method for logging `loss` against `epoch`
-    # To be used with ``define_loss_plot()``
+  
     def log_loss_metric(self, loss, epoch):
+        '''
+        Convenience method for logging `loss` against `epoch`.
+        To be used with ``define_loss_plot()``.
+        '''
         self.log_metrics(loss=loss, epoch=epoch)
 
-    # Defines a plot for a set of metrics for model training analytics
-    # By default, metrics will be plotted against time
     def define_plot(self, title, metrics, x_axis=None):
+        '''
+        Defines a plot for a set of metrics for analysis of model training.
+        By default, metrics will be plotted against time.
+        '''
         self._logger.define_plot(title, metrics, x_axis)
 
-    # Logs metrics for a single point in time { <metric>: <value> }
-    # <value> is either a number or a boolean
     def log_metrics(self, **kwargs):
+        '''
+        Logs metrics for a single point in time { <metric>: <value> }.
+        <value> should be a number.
+        '''
         self._logger.log_metrics(**kwargs)
 
 class ModelLogUtilsLogger():
@@ -57,4 +70,4 @@ class ModelLogUtilsLogger():
         self._print(', '.join(['{}={}'.format(metric, value) for (metric, value) in kwargs.items()]))
 
     def _print(self, message):
-        print('[{}] {}'.format(datetime.datetime.now(), message))
+        print(message)

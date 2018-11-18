@@ -1,13 +1,15 @@
 import * as React from 'react';
 import { withStyles, StyleRulesCallback } from '@material-ui/core/styles';
 
-import { Paper, List, ListItem, Typography, Divider,
-  CircularProgress, ListItemText } from '@material-ui/core';
+import * as moment from 'moment';
+
+import { Paper, List, ListItem, Typography, Divider, Table, TableHead, TableBody, TableRow, 
+  CircularProgress, ListItemText, TableCell } from '@material-ui/core';
 import * as echarts from 'echarts';
 
 import { AppUtils } from '../../App';
 import { AppRoute } from '../../app/AppNavigator';
-import { TrialLogs, TrialPlot } from '../../../client/RafikiClient';
+import { TrialLogs, TrialPlot, Trial } from '../../../client/RafikiClient';
 
 interface Props {
   classes: { [s: string]: any };
@@ -18,18 +20,24 @@ interface Props {
 class TrialDetailPage extends React.Component<Props> {
   charts: echarts.ECharts[] = [];
   state: {
-    logs: TrialLogs | null
+    logs: TrialLogs | null,
+    trial: Trial | null
   } = {
-    logs: null
+    logs: null,
+    trial: null
   }
 
   async componentDidMount() {
     const { appUtils: { rafikiClient, showError }, trialId } = this.props;
     try {
-      const logs = await rafikiClient.getTrialLogs(trialId);
-      this.setState({ logs });
+      const [logs, trial] = await Promise.all([
+        rafikiClient.getTrialLogs(trialId),
+        rafikiClient.getTrial(trialId)
+      ]);
+
+      this.setState({ logs, trial });
     } catch (error) {
-      showError(error, 'Failed to retrieve logs for trial');
+      showError(error, 'Failed to retrieve trial & its logs');
     }
   }
 
@@ -57,69 +65,138 @@ class TrialDetailPage extends React.Component<Props> {
     }
   }
 
-  renderLogs() {
+  renderDetails() {
+    const { classes } = this.props;
+    const { trial } = this.state;
+
+    return (
+      <React.Fragment>
+        <Typography gutterBottom variant="h3">Details</Typography>
+        <Paper className={classes.detailsPaper}>
+          <Table padding="dense">
+            <TableBody>
+              <TableRow>
+                <TableCell>ID</TableCell>
+                <TableCell>{trial.id}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Model</TableCell>
+                <TableCell>{trial.model_name}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Status</TableCell>
+                <TableCell>{trial.status}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Score</TableCell>
+                <TableCell>{trial.score}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Knobs</TableCell>
+                <TableCell>{JSON.stringify(trial.knobs, null, 2)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Started at</TableCell>
+                <TableCell>{moment(trial.datetime_started).format('llll')}</TableCell>
+              </TableRow>
+              {
+                trial.datetime_stopped &&
+                <React.Fragment>
+                  <TableRow>
+                    <TableCell>Stopped at</TableCell>
+                    <TableCell>{moment(trial.datetime_stopped).format('llll')}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Duration</TableCell>
+                    <TableCell>{
+                      // @ts-ignore
+                      moment.duration(trial.datetime_stopped - trial.datetime_started).asMinutes()
+                    } min</TableCell>
+                  </TableRow>
+                </React.Fragment> 
+              }
+            </TableBody>
+          </Table>
+        </Paper>
+      </React.Fragment>
+    );
+  }
+
+  renderLogsPlots() {
     const { logs } = this.state;
     const { classes } = this.props;
 
     return (
-      <div>
-        {
-          // Show plots section if there are plots
-          Object.values(logs.plots).length > 0 &&
-          <React.Fragment>
-            <Typography gutterBottom variant="h3">Plots</Typography>
-            {Object.values(logs.plots).map((x, i) => {
-              return <Paper key={x.title} id={`plot-${i}`} className={classes.plotPaper}></Paper>;
+      // Show plots section if there are plots
+      Object.values(logs.plots).length > 0 &&
+      <React.Fragment>
+        <Typography gutterBottom variant="h3">Plots</Typography>
+        {Object.values(logs.plots).map((x, i) => {
+          return <Paper key={x.title} id={`plot-${i}`} className={classes.plotPaper}></Paper>;
+        })}
+      </React.Fragment>
+    )
+  }
+
+  renderLogsMessages() {
+    const { logs } = this.state;
+    const { classes } = this.props;
+
+    return (
+      // Show messages section if there are messages
+      Object.values(logs.messages).length > 0 &&
+      <React.Fragment>
+        <Typography gutterBottom variant="h3">Messages</Typography>
+        <Paper className={classes.messagesPaper}>
+          <List>
+            {Object.values(logs.messages).map((x, i) => {
+              return (
+                <ListItem key={x.time + x.message}>
+                  <ListItemText primary={x.message} secondary={x.time.toTimeString()} />
+                </ListItem>
+              );
             })}
-          </React.Fragment>
-        }
-        {
-          Object.values(logs.plots).length > 0 && Object.values(logs.messages).length > 0 &&
-          <Divider className={classes.divider} />
-        }
-        {
-          // Show messages section if there are messages
-          Object.values(logs.messages).length > 0 &&
-          <React.Fragment>
-            <Typography gutterBottom variant="h3">Messages</Typography>
-            <Paper>
-              <List>
-                {Object.values(logs.messages).map((x, i) => {
-                  return (
-                    <ListItem key={x.time + x.message}>
-                      <ListItemText primary={x.message} secondary={x.time.toTimeString()} />
-                    </ListItem>
-                  );
-                })}
-                
-              </List>
-            </Paper>
-          </React.Fragment>
-        }
-      </div>
+            
+          </List>
+        </Paper>
+      </React.Fragment>
     )
   }
 
   render() {
-    const { classes, appUtils, trialId } = this.props;
-    const { logs } = this.state;
+    const { classes, trialId } = this.props;
+    const { logs, trial } = this.state;
 
     return (
       <React.Fragment>
         <Typography gutterBottom variant="h2">
           Trial
-          <span className={classes.headerSub}>{`(ID: V${trialId})`}</span>
+          <span className={classes.headerSub}>{`(ID: ${trialId})`}</span>
         </Typography>
-        <div className={classes.logsPaper}>
-          {
-            logs &&
-            this.renderLogs()
-          }
-          {
-            !logs &&
-            <CircularProgress />
-          }
-        </div>          
+        {
+          trial &&
+          this.renderDetails()
+        }
+        {
+          logs && (Object.values(logs.plots).length > 0 || Object.values(logs.messages).length > 0) &&
+          <Divider className={classes.divider} />
+        }
+        {
+          logs && logs.plots &&
+          this.renderLogsPlots()
+        }
+        {
+          logs && Object.values(logs.plots).length > 0 && Object.values(logs.messages).length > 0 &&
+          <Divider className={classes.divider} />
+        }
+        {
+          logs && logs.messages &&
+          this.renderLogsMessages()
+        }
+        {
+          !(trial && logs) && 
+          <CircularProgress />
+        }
       </React.Fragment>
     );
   }
@@ -127,7 +204,6 @@ class TrialDetailPage extends React.Component<Props> {
 
 function getPlotChartOptions(logs: TrialLogs): echarts.EChartOption[] {
   const chartOptions: echarts.EChartOption[] = [];
-  console.log(logs);
 
   for (const plot of logs.plots) {
     const points = [];
@@ -190,8 +266,11 @@ const styles: StyleRulesCallback = (theme) => ({
     fontSize: theme.typography.h4.fontSize,
     margin: theme.spacing.unit * 2
   },
-  logsPaper: {
-    overflowX: 'auto'
+  detailsPaper: {
+    margin: theme.spacing.unit * 2
+  },
+  messagesPaper: {
+    margin: theme.spacing.unit * 2
   },
   plotPaper: {
     width: '100%',

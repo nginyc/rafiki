@@ -44,7 +44,7 @@ class Model(Base):
     model_class = Column(String, nullable=False)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
     docker_image = Column(String, nullable=False)
-
+    dependencies = Column(JSON, nullable=False)
 
 class Service(Base):
     __tablename__ = 'service'
@@ -75,8 +75,7 @@ class TrainJob(Base):
     train_dataset_uri = Column(String, nullable=False)
     test_dataset_uri = Column(String, nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
-    budget_type = Column(String, nullable=False)
-    budget_amount = Column(Integer, nullable=False)
+    budget = Column(JSON, nullable=False)
     status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
     datetime_completed = Column(DateTime, default=None)

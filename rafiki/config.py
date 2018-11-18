@@ -1,7 +1,11 @@
+import os
+
 # Global
 APP_SECRET = 'rafiki'
+APP_MODE = 'DEV' # DEV or PROD
 SUPERADMIN_EMAIL = 'superadmin@rafiki'
 SUPERADMIN_PASSWORD = 'rafiki'
+LOGS_FOLDER_PATH = os.path.join(os.getcwd(), 'logs')
 
 # Admin
 MIN_SERVICE_PORT = 30000

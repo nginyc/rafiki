@@ -8,16 +8,21 @@ title()
     echo "$edge"
 }
 
+build_image()
+{
+    docker build -t $1:$RAFIKI_VERSION -f $2 --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH $PWD || exit 1 
+}
+
 # Build Rafiki's images
 
 title "Building Rafiki Admin's image..."
-docker build -t $RAFIKI_IMAGE_ADMIN:$RAFIKI_VERSION -f ./dockerfiles/admin.Dockerfile $PWD || exit 1 
+build_image $RAFIKI_IMAGE_ADMIN ./dockerfiles/admin.Dockerfile
 title "Building Rafiki Advisor's image..."
-docker build -t $RAFIKI_IMAGE_ADVISOR:$RAFIKI_VERSION -f ./dockerfiles/advisor.Dockerfile $PWD || exit 1 
+build_image $RAFIKI_IMAGE_ADVISOR ./dockerfiles/advisor.Dockerfile
 title "Building Rafiki Worker's image..."
-docker build -t $RAFIKI_IMAGE_WORKER:$RAFIKI_VERSION -f ./dockerfiles/worker.Dockerfile $PWD || exit 1 
+build_image $RAFIKI_IMAGE_WORKER ./dockerfiles/worker.Dockerfile
 title "Building Rafiki Predictor's image..."
-docker build -t $RAFIKI_IMAGE_PREDICTOR:$RAFIKI_VERSION -f ./dockerfiles/predictor.Dockerfile $PWD || exit 1 
+build_image $RAFIKI_IMAGE_PREDICTOR ./dockerfiles/predictor.Dockerfile
 title "Building Rafiki Admin Web's image..."
-docker build -t $RAFIKI_IMAGE_ADMIN_WEB:$RAFIKI_VERSION -f ./dockerfiles/admin_web.Dockerfile $PWD || exit 1 
+build_image $RAFIKI_IMAGE_ADMIN_WEB ./dockerfiles/admin_web.Dockerfile
 echo "Finished building all Rafiki's images successfully!"

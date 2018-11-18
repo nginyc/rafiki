@@ -3,7 +3,7 @@ import { withStyles, StyleRulesCallback } from '@material-ui/core/styles';
 import { AppBar, Toolbar, Typography, Drawer, List, Hidden,
   ListItem, ListItemIcon, ListItemText } from '@material-ui/core';
 import IconButton from '@material-ui/core/IconButton';
-import { Menu, Schedule, CloudUpload } from '@material-ui/icons';
+import { Menu, Schedule, ExitToApp } from '@material-ui/icons';
 import { Route, Switch, Redirect } from 'react-router-dom';
 
 import { AppUtils } from '../App';
@@ -20,6 +20,12 @@ interface Props {
 class DashboardLayout extends React.Component<Props> {
   state = {
     isDrawerOpen: false
+  }
+
+  onLogout() {
+    const { appUtils: { rafikiClient, appNavigator } } = this.props;
+    rafikiClient.logout();
+    appNavigator.goTo(AppRoute.LOGIN);
   }
 
   renderNavItems() {
@@ -60,6 +66,7 @@ class DashboardLayout extends React.Component<Props> {
   }
 
   renderBar() {
+    const { classes } = this.props;
     const { isDrawerOpen } = this.state;
 
     return (
@@ -71,9 +78,14 @@ class DashboardLayout extends React.Component<Props> {
                 <Menu />
             </IconButton>
           </Hidden>
-          <Typography variant="h6" color="inherit">
-            Rafiki Admin Web
-          </Typography>
+          <div className={classes.barMain}>
+            <Typography variant="h6" color="inherit">
+              Rafiki Admin Web
+            </Typography>
+          </div>
+          <IconButton onClick={() => this.onLogout()} color="inherit" aria-label="Logout">
+            <ExitToApp />
+          </IconButton>
         </Toolbar>
       </AppBar>
     );
@@ -135,6 +147,9 @@ const styles: StyleRulesCallback = (theme) => ({
   main: {
     overflow: 'auto',
     padding: theme.spacing.unit * 4
+  },
+  barMain: {
+    flexGrow: 1
   },
   navDrawer: {
     width: 240

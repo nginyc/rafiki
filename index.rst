@@ -12,14 +12,14 @@ Index
 .. toctree::
    :maxdepth: 2
    
-   docs/user/index.rst
-   docs/dev/index.rst
-   docs/python/index.rst
+   docs/src/user/index.rst
+   docs/src/dev/index.rst
+   docs/src/python/index.rst
 
 What is Rafiki?
 --------------------------------------------------------------------
 
-*Rafiki* is a distributed, scalable system that trains machine learning (ML) models and deploys trained models, built with ease-of-use in mind.
+*Rafiki* is a distributed system that trains machine learning (ML) models and deploys trained models, built with ease-of-use in mind.
 To do so, it leverages on automated machine learning (AutoML).
 
 For *Application Developers* and *Application Users*, without any ML expertise, they can:
@@ -33,7 +33,6 @@ For *Model Developers*, they can:
 - Contribute to Rafiki's pool of model templates
 
 Check out :ref:`quick-setup` to deploy/develop Rafiki on your machine, and/or :ref:`quick-start` to use a deployed instance of Rafiki.
-
 
 
 Acknowledgements

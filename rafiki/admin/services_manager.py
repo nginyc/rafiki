@@ -4,18 +4,24 @@ import traceback
 import time
 
 from rafiki.db import Database
-from rafiki.constants import ServiceStatus, UserType, ServiceType
+from rafiki.constants import ServiceStatus, UserType, ServiceType, BudgetType
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, \
     TRAIN_WORKER_REPLICAS_PER_MODEL, INFERENCE_WORKER_REPLICAS_PER_TRIAL, \
     INFERENCE_MAX_BEST_TRIALS, SERVICE_STATUS_WAIT
 from rafiki.container import DockerSwarmContainerManager 
+from rafiki.model import parse_model_install_command
 
 logger = logging.getLogger(__name__)
 
 class ServiceDeploymentException(Exception): pass
 
 class ServicesManager(object):
-    def __init__(self, db=Database(), container_manager=DockerSwarmContainerManager()):
+    def __init__(self, db=None, container_manager=None):
+        if db is None: 
+            db = Database()
+        if container_manager is None: 
+            container_manager = DockerSwarmContainerManager()
+        
         self._predictor_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_PREDICTOR'],
                                                 os.environ['RAFIKI_VERSION'])
         self._predictor_port = os.environ['PREDICTOR_PORT']
@@ -110,15 +116,17 @@ class ServicesManager(object):
     def _create_inference_job_worker(self, inference_job, trial, replicas):
         model = self._db.get_model(trial.model_id)
         service_type = ServiceType.INFERENCE
+        install_command = parse_model_install_command(model.dependencies, enable_gpu=False)
         environment_vars = {
             'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
             'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
             'POSTGRES_USER': os.environ['POSTGRES_USER'],
             'POSTGRES_DB': os.environ['POSTGRES_DB'],
             'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
-            'LOGS_FOLDER_PATH': os.environ['LOGS_FOLDER_PATH'],
             'REDIS_HOST': os.environ['REDIS_HOST'],
-            'REDIS_PORT': os.environ['REDIS_PORT']
+            'REDIS_PORT': os.environ['REDIS_PORT'],
+            'WORKER_INSTALL_COMMAND': install_command,
+            'CUDA_VISIBLE_DEVICES': '-1' # Hide GPU
         }
 
         service = self._create_service(
@@ -145,7 +153,6 @@ class ServicesManager(object):
             'POSTGRES_USER': os.environ['POSTGRES_USER'],
             'POSTGRES_DB': os.environ['POSTGRES_DB'],
             'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
-            'LOGS_FOLDER_PATH': os.environ['LOGS_FOLDER_PATH'],
             'REDIS_HOST': os.environ['REDIS_HOST'],
             'REDIS_PORT': os.environ['REDIS_PORT']
         }
@@ -162,17 +169,20 @@ class ServicesManager(object):
 
     def _create_train_job_worker(self, train_job, model, replicas):
         service_type = ServiceType.TRAIN
+        enable_gpu = int(train_job.budget.get(BudgetType.ENABLE_GPU, 0)) > 0
+        install_command = parse_model_install_command(model.dependencies, enable_gpu=enable_gpu)
         environment_vars = {
             'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
             'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
             'POSTGRES_USER': os.environ['POSTGRES_USER'],
             'POSTGRES_DB': os.environ['POSTGRES_DB'],
             'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
-            'LOGS_FOLDER_PATH': os.environ['LOGS_FOLDER_PATH'],
             'ADMIN_HOST': os.environ['ADMIN_HOST'],
             'ADMIN_PORT': os.environ['ADMIN_PORT'],
             'ADVISOR_HOST': os.environ['ADVISOR_HOST'],
-            'ADVISOR_PORT': os.environ['ADVISOR_PORT']
+            'ADVISOR_PORT': os.environ['ADVISOR_PORT'],
+            'WORKER_INSTALL_COMMAND': install_command,
+            **({'CUDA_VISIBLE_DEVICES': -1} if not enable_gpu else {}) # Hide GPU if not enabled
         }
 
         service = self._create_service(
@@ -249,10 +259,11 @@ class ServicesManager(object):
             'RAFIKI_SERVICE_TYPE': service_type
         }
 
-        # Mount logs folder onto workers too
-        logs_folder_path = os.environ['LOGS_FOLDER_PATH']
+        # Mount whole local to containers' work directories (for sharing of logs & data) 
+        local_workdir = os.environ['LOCAL_WORKDIR_PATH']
+        cont_workdir = os.environ['DOCKER_WORKDIR_PATH']
         mounts = {
-            logs_folder_path: logs_folder_path
+            local_workdir: cont_workdir
         }
 
         # Expose container port if it exists
@@ -333,4 +344,5 @@ class ServicesManager(object):
             trial : INFERENCE_WORKER_REPLICAS_PER_TRIAL
             for trial in trials
         }
+
     

@@ -2,13 +2,12 @@ import time
 import uuid
 import random
 import os
-import numpy as np
 import pickle
 import logging
 import traceback
 import json
 
-from rafiki.utils.model import load_model_class
+from rafiki.model import load_model_class
 from rafiki.db import Database
 from rafiki.cache import Cache
 from rafiki.config import INFERENCE_WORKER_SLEEP, INFERENCE_WORKER_PREDICT_BATCH_SIZE
@@ -18,7 +17,12 @@ logger = logging.getLogger(__name__)
 class InvalidWorkerException(Exception): pass
 
 class InferenceWorker(object):
-    def __init__(self, service_id, cache=Cache(), db=Database()):
+    def __init__(self, service_id, cache=None, db=None):
+        if cache is None: 
+            cache = Cache()
+        if db is None: 
+            db = Database()
+
         self._cache = cache
         self._db = db
         self._service_id = service_id

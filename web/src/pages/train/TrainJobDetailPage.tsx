@@ -3,6 +3,7 @@ import { withStyles, StyleRulesCallback } from '@material-ui/core/styles';
 import { Typography, Paper, CircularProgress,
   Table, TableHead, TableCell, TableBody, TableRow, Icon, IconButton } from '@material-ui/core';
 import { Pageview } from '@material-ui/icons';
+import * as moment from 'moment';
 
 import { AppUtils } from '../../App';
 import { AppRoute } from '../../app/AppNavigator';
@@ -34,51 +35,60 @@ class TrainJobDetailPage extends React.Component<Props> {
   }
 
   renderTrials() {
-    const { appUtils: { appNavigator } } = this.props;
+    const { appUtils: { appNavigator }, classes } = this.props;
     const { trials } = this.state;
 
     return (
-      <Table padding="dense">
-        <TableHead>
-          <TableRow>
-            <TableCell padding="none"></TableCell>
-            <TableCell>ID</TableCell>
-            <TableCell>Model</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Score</TableCell>
-            <TableCell>Started At</TableCell>
-            <TableCell>Stopped At</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {trials.map(x => {
-            return (
-              <TableRow key={x.id} hover>
-                <TableCell padding="none">
-                  <IconButton onClick={() => {
-                    const link = AppRoute.TRIAL_DETAIL
-                      .replace(':trialId', x.id)
-                    appNavigator.goTo(link);
-                  }}>
-                    <Pageview /> 
-                  </IconButton>
-                </TableCell>
-                <TableCell>{x.id}</TableCell>
-                <TableCell>{x.model_name}</TableCell>
-                <TableCell>{x.status}</TableCell>
-                <TableCell>{x.score}</TableCell>
-                <TableCell>{x.datetime_started}</TableCell>
-                <TableCell>{x.datetime_stopped}</TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+      <Paper className={classes.trialsPaper}>
+        <Table padding="dense">
+          <TableHead>
+            <TableRow>
+              <TableCell padding="none"></TableCell>
+              <TableCell>ID</TableCell>
+              <TableCell>Model</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Score</TableCell>
+              <TableCell>Started At</TableCell>
+              <TableCell>Stopped At</TableCell>
+              <TableCell>Duration</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {trials.map(x => {
+              return (
+                <TableRow key={x.id} hover>
+                  <TableCell padding="none">
+                    <IconButton onClick={() => {
+                      const link = AppRoute.TRIAL_DETAIL
+                        .replace(':trialId', x.id)
+                      appNavigator.goTo(link);
+                    }}>
+                      <Pageview /> 
+                    </IconButton>
+                  </TableCell>
+                  <TableCell>{x.id}</TableCell>
+                  <TableCell>{x.model_name}</TableCell>
+                  <TableCell>{x.status}</TableCell>
+                  <TableCell>{x.score}</TableCell>
+                  <TableCell>{moment(x.datetime_started).fromNow()}</TableCell>
+                  <TableCell>{x.datetime_stopped ? moment(x.datetime_stopped).fromNow(): '-'}</TableCell>
+                  <TableCell>{
+                    x.datetime_stopped ? 
+                      // @ts-ignore
+                      moment.duration(x.datetime_stopped - x.datetime_started).humanize()
+                        : '-'
+                    }</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </Paper>
     )
   }
 
   render() {
-    const { classes, appUtils, app, appVersion } = this.props;
+    const { classes, app, appVersion } = this.props;
     const { trials } = this.state;
 
     return (
@@ -88,16 +98,14 @@ class TrainJobDetailPage extends React.Component<Props> {
           <span className={classes.headerSub}>{`(${app} V${appVersion})`}</span>
         </Typography>
         <Typography gutterBottom variant="h3">Trials</Typography>
-        <Paper className={classes.trialsPaper}>
-          {
-            trials &&
-            this.renderTrials()
-          }
-          {
-            !trials &&
-            <CircularProgress />
-          }
-        </Paper>
+        {
+          trials &&
+          this.renderTrials()
+        }
+        {
+          !trials &&
+          <CircularProgress />
+        }
       </React.Fragment>
     );
   }

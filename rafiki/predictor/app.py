@@ -1,13 +1,19 @@
 import os
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, g
+import threading
 
 from .predictor import Predictor
 
 service_id = os.environ['RAFIKI_SERVICE_ID']
 
 app = Flask(__name__)
-predictor = Predictor(service_id)
-predictor.start()
+
+def get_predictor():
+    if not hasattr(g, 'predictor'):
+        g.predictor = Predictor(service_id)
+        g.predictor.start()
+    
+    return g.predictor
 
 @app.route('/')
 def index():
@@ -15,6 +21,7 @@ def index():
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    predictor = get_predictor()
     params = request.get_json()
     query = params['query']
     

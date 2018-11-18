@@ -7,7 +7,7 @@ import pprint
 
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
-from rafiki.utils.model import load_model_class
+from rafiki.model import load_model_class
 from rafiki.utils.log import JobLogger
 from rafiki.model import ModelLogUtilsLogger
 from rafiki.db import Database
@@ -21,7 +21,10 @@ class InvalidBudgetTypeException(Exception): pass
 class InvalidWorkerException(Exception): pass
 
 class TrainWorker(object):
-    def __init__(self, service_id, db=Database()):
+    def __init__(self, service_id, db=None):
+        if db is None: 
+            db = Database()
+            
         self._service_id = service_id
         self._db = db
         self._trial_id = None
@@ -34,22 +37,27 @@ class TrainWorker(object):
         advisor_id = None
         while True:
             self._db.connect()
-            (budget_type, budget_amount, model_id,
+            (budget, model_id,
                 model_file_bytes, model_class, train_job_id, 
                 train_dataset_uri, test_dataset_uri) = self._read_worker_info()
 
-            # Load model class from bytes
-            clazz = load_model_class(model_file_bytes, model_class)
-
-            if self._if_budget_reached(budget_type, budget_amount, train_job_id, model_id):
+            if self._if_budget_reached(budget, train_job_id, model_id):
                 # If budget reached
                 logger.info('Budget for train job has reached')
-
                 self._stop_worker()
                 if advisor_id is not None:
                     self._delete_advisor(advisor_id)
 
                 break
+
+            # Load model class from bytes
+            try:
+                clazz = load_model_class(model_file_bytes, model_class)
+            except Exception as e:
+                logger.error('Error while loading model class for worker:')
+                logger.error(traceback.format_exc())
+                self._stop_worker()
+                raise e
 
             # If not created, create a Rafiki advisor for train worker to propose knobs in trials
             if advisor_id is None:
@@ -58,7 +66,6 @@ class TrainWorker(object):
                     advisor_id = self._create_advisor(clazz)
                     logger.info('Created advisor of ID "{}"'.format(advisor_id))
                 except Exception as e:
-                    # Throw just a warning - likely that another worker has stopped the service
                     logger.error('Error while creating advisor for worker:')
                     logger.error(traceback.format_exc())
                     raise e
@@ -177,8 +184,8 @@ class TrainWorker(object):
             self._client.stop_train_job_worker(self._service_id)
         except Exception:
             # Throw just a warning - likely that another worker has stopped the service
-            logger.warning('Error while stopping train job worker service:')
-            logger.warning(traceback.format_exc())
+            logger.warn('Error while stopping train job worker service:')
+            logger.warn(traceback.format_exc())
         
     def _create_advisor(self, clazz):
         # Retrieve knob config for model of worker 
@@ -199,15 +206,14 @@ class TrainWorker(object):
             logger.warning('Error while deleting advisor:')
             logger.warning(traceback.format_exc())
 
-    # Returns whether the worker reached its budget
-    def _if_budget_reached(self, budget_type, budget_amount, train_job_id, model_id):
-        if budget_type == BudgetType.MODEL_TRIAL_COUNT:
-            max_trials = budget_amount 
-            completed_trials = self._db.get_completed_trials_of_train_job(train_job_id)
-            model_completed_trials = [x for x in completed_trials if x.model_id == model_id]
-            return len(model_completed_trials) >= max_trials
-        else:
-            raise InvalidBudgetTypeException()
+    # Returns whether the worker reached its budget (only consider COMPLETED or ERRORED trials)
+    def _if_budget_reached(self, budget, train_job_id, model_id):
+        # By default, budget is model trial count of 10
+        max_trials = budget.get(BudgetType.MODEL_TRIAL_COUNT, 10)
+        trials = self._db.get_trials_of_train_job(train_job_id)
+        trials = [x for x in trials if x.status in [TrialStatus.COMPLETED, TrialStatus.ERRORED]]
+        model_trials = [x for x in trials if x.model_id == model_id]
+        return len(model_trials) >= max_trials
 
     def _read_worker_info(self):
         worker = self._db.get_train_job_worker(self._service_id)
@@ -225,8 +231,7 @@ class TrainWorker(object):
             raise InvalidTrainJobException()
 
         return (
-            train_job.budget_type, 
-            train_job.budget_amount, 
+            train_job.budget, 
             worker.model_id,
             model.model_file_bytes,
             model.model_class,

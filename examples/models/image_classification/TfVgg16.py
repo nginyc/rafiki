@@ -1,6 +1,5 @@
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.preprocessing.image import img_to_array, array_to_img
 import json
 import os
 import tempfile
@@ -9,20 +8,27 @@ import base64
 import abc
 from urllib.parse import urlparse, parse_qs 
 
-from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
-from rafiki.constants import TaskType
+from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
+from rafiki.constants import TaskType, ModelDependency
+from rafiki.config import APP_MODE
 
 class TfVgg16(BaseModel):
     '''
-    Implements VGG16 on Tensorflow
+    Implements VGG16 on Tensorflow for simple image classification
     '''
 
     def get_knob_config(self):
+        epochs_range = [1, 20]
+        
+        if APP_MODE == 'DEV':
+            print('WARNING: In DEV mode, `epochs` is set to 1.')
+            epochs_range = [1, 1]
+
         return {
             'knobs': {
                 'epochs': {
                     'type': 'int',
-                    'range': [1, 1]
+                    'range': epochs_range
                 },
                 'learning_rate': {
                     'type': 'float_exp',
@@ -30,11 +36,9 @@ class TfVgg16(BaseModel):
                 },
                 'batch_size': {
                     'type': 'int_cat',
-                    'values': [1, 2, 4, 8, 16, 32, 64, 128]
+                    'values': [16, 32, 64, 128]
                 }
-            },
-            'root_knobs': ['hidden_layer_units', 'epochs', 'learning_rate', 'batch_size'],
-            'conditional_knobs': {}
+            }
         }
 
     def init(self, knobs):
@@ -43,45 +47,42 @@ class TfVgg16(BaseModel):
         self._learning_rate = knobs.get('learning_rate')
 
         self._graph = tf.Graph()
-        self._sess = tf.Session(graph=self._graph)
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        self._sess = tf.Session(graph=self._graph, config=config)
 
     def train(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
-        (num_samples, num_classes) = next(dataset)
+        dataset = self.utils.load_dataset_of_image_files(dataset_uri, image_size=[48, 48])
+        num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-        images = np.array(images)
-        images = images.reshape(-1, 784)
-        images = np.dstack([images] * 3)
-        images = images.reshape(-1, 28, 28, 3)
-        images = [np.asarray([img_to_array(array_to_img(im, scale=False).resize((48,48))) for im in images])]
+        images = np.asarray(images)
+        images = np.stack([images] * 3, axis=-1)
+        classes = np.asarray(classes)
 
         with self._graph.as_default():
             self._model = self._build_model(num_classes)
             with self._sess.as_default():
                 self._model.fit(
                     images, 
-                    np.array(classes), 
+                    classes, 
                     epochs=self._epochs, 
                     batch_size=self._batch_size
                 )
 
     def evaluate(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
-        (num_samples, num_classes) = next(dataset)
+        dataset = self.utils.load_dataset_of_image_files(dataset_uri, image_size=[48, 48])
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-        images = np.array(images)
-        images = images.reshape(-1, 784)
+        images = np.asarray(images)
         images = np.dstack([images] * 3)
-        images = images.reshape(-1, 28, 28, 3)
-        images = [np.asarray([img_to_array(array_to_img(im, scale=False).resize((48,48))) for im in images])]
+        classes = np.asarray(classes)
 
         with self._graph.as_default():
             with self._sess.as_default():
-                (loss, accuracy) = self._model.evaluate(images, np.array(classes))
+                (loss, accuracy) = self._model.evaluate(images, classes)
         return accuracy
 
     def predict(self, queries):
-        X = np.array(queries)
+        X = self.utils.resize_as_images(queries, image_size=[48, 48])
         with self._graph.as_default():
             with self._sess.as_default():
                 probs = self._model.predict(X)
@@ -143,11 +144,15 @@ class TfVgg16(BaseModel):
         return model
 
 if __name__ == '__main__':
-    validate_model_class(
-        model_class=TfVgg16,
-        train_dataset_uri='data/fashion_mnist_as_image_files_train.zip',
-        test_dataset_uri='data/fashion_mnist_as_image_files_test.zip',
+    test_model_class(
+        model_file_path=__file__,
+        model_class='TfVgg16',
         task=TaskType.IMAGE_CLASSIFICATION,
+        dependencies={
+            ModelDependency.TENSORFLOW: '1.4.1'
+        },
+        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
+        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

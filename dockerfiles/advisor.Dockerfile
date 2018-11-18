@@ -1,11 +1,22 @@
-FROM python:3.6
+FROM ubuntu:16.04
 
-# Install PostgreSQL client
-RUN apt-get update
-RUN apt-get install -y postgresql postgresql-contrib
+RUN apt-get update && apt-get -y upgrade
 
-RUN mkdir /root/rafiki/
-WORKDIR /root/rafiki/
+# Install conda with pip and python 3.6
+RUN apt-get -y install curl bzip2 \
+  && curl -sSL https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh \
+  && bash /tmp/miniconda.sh -bfp /usr/local \
+  && rm -rf /tmp/miniconda.sh \
+  && conda create -y --name rafiki python=3.6 \
+  && conda clean --all --yes
+ENV PATH /usr/local/envs/rafiki/bin:$PATH
+RUN pip install --upgrade pip
+ENV PYTHONUNBUFFERED 1
+
+ARG DOCKER_WORKDIR_PATH
+RUN mkdir $DOCKER_WORKDIR_PATH
+WORKDIR $DOCKER_WORKDIR_PATH
+ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 
 # Install python dependencies
 COPY rafiki/utils/requirements.txt utils/requirements.txt
@@ -14,13 +25,8 @@ COPY rafiki/advisor/requirements.txt advisor/requirements.txt
 RUN pip install -r advisor/requirements.txt
 
 COPY rafiki/ rafiki/
+COPY scripts/ scripts/
 
-# Copy init script
-COPY scripts/start_advisor.py start_advisor.py
+EXPOSE 3002
 
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONPATH /root/rafiki/
-
-EXPOSE 8001
-
-CMD ["python", "start_advisor.py"]
+CMD ["python", "scripts/start_advisor.py"]

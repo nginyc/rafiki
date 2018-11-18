@@ -5,12 +5,12 @@ import os
 import base64
 import numpy as np
 
-from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
-from rafiki.constants import TaskType
+from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
+from rafiki.constants import TaskType, ModelDependency
 
 class SkDt(BaseModel):
     '''
-    Implements a decision tree classifier on scikit-learn
+    Implements a decision tree classifier on Scikit-Learn for simple image classification
     '''
 
     def get_knob_config(self):
@@ -37,7 +37,6 @@ class SkDt(BaseModel):
         
     def train(self, dataset_uri):
         dataset = self.utils.load_dataset_of_image_files(dataset_uri)
-        (num_samples, num_classes) = next(dataset)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -50,7 +49,6 @@ class SkDt(BaseModel):
 
     def evaluate(self, dataset_uri):
         dataset = self.utils.load_dataset_of_image_files(dataset_uri)
-        (num_samples, num_classes) = next(dataset)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -86,7 +84,7 @@ class SkDt(BaseModel):
         self._clf = pickle.loads(clf_bytes)
 
     def _prepare_X(self, images):
-        return [np.array(image).flatten() for image in images]
+        return [np.asarray(image).flatten() for image in images]
 
     def _build_classifier(self, max_depth, criterion):
         clf = tree.DecisionTreeClassifier(
@@ -96,11 +94,15 @@ class SkDt(BaseModel):
         return clf
 
 if __name__ == '__main__':
-    validate_model_class(
-        model_class=SkDt,
-        train_dataset_uri='data/fashion_mnist_as_image_files_train.zip',
-        test_dataset_uri='data/fashion_mnist_as_image_files_test.zip',
+    test_model_class(
+        model_file_path=__file__,
+        model_class='SkDt',
         task=TaskType.IMAGE_CLASSIFICATION,
+        dependencies={
+            ModelDependency.SCIKIT_LEARN: '0.20.0'
+        },
+        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
+        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

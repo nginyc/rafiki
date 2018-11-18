@@ -5,9 +5,6 @@ envs/
 # Visual Studio Code config
 .vscode/
 
-# Logs
-*.log
-
 # Python byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -16,6 +13,16 @@ __pycache__/
 # MacOS
 .DS_Store
 
+# Sphinx documentation
+.doctrees/
+docs/*
+!docs/src
+
 # Datasets
 data/*
 !data/.gitkeep
+
+# Logs
+*.log
+logs/*
+!logs/.gitkeep

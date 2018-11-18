@@ -3,6 +3,7 @@ import { withStyles, StyleRulesCallback } from '@material-ui/core/styles';
 import { Typography, Paper, CircularProgress,
   Table, TableHead, TableCell, TableBody, TableRow, Icon, IconButton } from '@material-ui/core';
 import { Pageview } from '@material-ui/icons';
+import * as moment from 'moment';
 
 import { AppUtils } from '../../App';
 import { AppRoute } from '../../app/AppNavigator';
@@ -32,51 +33,53 @@ class TrainJobsPage extends React.Component<Props> {
   }
 
   renderTrainJobs() {
-    const { appUtils: { appNavigator } } = this.props;
+    const { appUtils: { appNavigator }, classes } = this.props;
     const { trainJobs } = this.state;
 
     return (
-      <Table padding="dense">
-        <TableHead>
-          <TableRow>
-            <TableCell padding="none"></TableCell>
-            <TableCell>ID</TableCell>
-            <TableCell>App</TableCell>
-            <TableCell>App Version</TableCell>
-            <TableCell>Task</TableCell>
-            <TableCell>Budget</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Started At</TableCell>
-            <TableCell>Completed At</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {trainJobs.map(x => {
-            return (
-              <TableRow key={x.id} hover>
-                <TableCell padding="none">
-                  <IconButton onClick={() => {
-                    const link = AppRoute.TRAIN_JOB_DETAIL
-                      .replace(':app', x.app)
-                      .replace(':appVersion', x.app_version);
-                    appNavigator.goTo(link);
-                  }}>
-                    <Pageview /> 
-                  </IconButton>
-                </TableCell>
-                <TableCell>{x.id}</TableCell>
-                <TableCell>{x.app}</TableCell>
-                <TableCell>{x.app_version}</TableCell>
-                <TableCell>{x.task}</TableCell>
-                <TableCell>{x.budget_amount}</TableCell>
-                <TableCell>{x.status}</TableCell>
-                <TableCell>{x.datetime_started}</TableCell>
-                <TableCell>{x.datetime_completed}</TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+      <Paper className={classes.jobsPaper}>
+        <Table padding="dense">
+          <TableHead>
+            <TableRow>
+              <TableCell padding="none"></TableCell>
+              <TableCell>ID</TableCell>
+              <TableCell>App</TableCell>
+              <TableCell>App Version</TableCell>
+              <TableCell>Task</TableCell>
+              <TableCell>Budget</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Started At</TableCell>
+              <TableCell>Completed At</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {trainJobs.map(x => {
+              return (
+                <TableRow key={x.id} hover>
+                  <TableCell padding="none">
+                    <IconButton onClick={() => {
+                      const link = AppRoute.TRAIN_JOB_DETAIL
+                        .replace(':app', x.app)
+                        .replace(':appVersion', x.app_version);
+                      appNavigator.goTo(link);
+                    }}>
+                      <Pageview /> 
+                    </IconButton>
+                  </TableCell>
+                  <TableCell>{x.id}</TableCell>
+                  <TableCell>{x.app}</TableCell>
+                  <TableCell>{x.app_version}</TableCell>
+                  <TableCell>{x.task}</TableCell>
+                  <TableCell>{JSON.stringify(x.budget)}</TableCell>
+                  <TableCell>{x.status}</TableCell>
+                  <TableCell>{moment(x.datetime_started).fromNow()}</TableCell>
+                  <TableCell>{x.datetime_completed ? moment(x.datetime_completed).fromNow() : '-'}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </Paper>
     )
   }
 
@@ -89,9 +92,7 @@ class TrainJobsPage extends React.Component<Props> {
         <Typography gutterBottom variant="h2">Your Train Jobs</Typography>
         {
           trainJobs &&
-          <Paper className={classes.jobsPaper}>
-            {this.renderTrainJobs()}
-          </Paper>
+          this.renderTrainJobs()
         }
         {
           !trainJobs &&
