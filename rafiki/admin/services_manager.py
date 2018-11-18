@@ -9,7 +9,7 @@ from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, \
     TRAIN_WORKER_REPLICAS_PER_MODEL, INFERENCE_WORKER_REPLICAS_PER_TRIAL, \
     INFERENCE_MAX_BEST_TRIALS, SERVICE_STATUS_WAIT
 from rafiki.container import DockerSwarmContainerManager 
-from rafiki.utils.model import parse_model_install_command
+from rafiki.model import parse_model_install_command
 
 logger = logging.getLogger(__name__)
 

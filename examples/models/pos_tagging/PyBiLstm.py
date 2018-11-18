@@ -12,7 +12,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data.dataset import Dataset
 
-from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
+from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.config import APP_MODE
 
@@ -301,14 +301,15 @@ class PyNet(nn.Module):
         return word_probs_tsr
 
 if __name__ == '__main__':
-    validate_model_class(
-        model_class=PyBiLstm,
-        train_dataset_uri='data/ptb_for_pos_tagging_train.zip',
-        test_dataset_uri='data/ptb_for_pos_tagging_test.zip',
+    test_model_class(
+        model_file_path=__file__,
+        model_class='PyBiLstm',
+        task=TaskType.POS_TAGGING,
         dependencies={
             ModelDependency.PYTORCH: '0.4.1'
         },
-        task=TaskType.POS_TAGGING,
+        train_dataset_uri='data/ptb_for_pos_tagging_train.zip',
+        test_dataset_uri='data/ptb_for_pos_tagging_test.zip',
         queries=[
             ['Ms.', 'Haag', 'plays', 'Elianti', '18', '.'],
             ['The', 'luxury', 'auto', 'maker', 'last', 'year', 'sold', '1,214', 'cars', 'in', 'the', 'U.S.']

@@ -8,7 +8,7 @@ import traceback
 import pprint
 import json
 
-from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
+from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
 from rafiki.constants import TaskType
 
 # Min numeric value
@@ -189,12 +189,13 @@ class BigramHmm(BaseModel):
         return sents_tags
 
 if __name__ == '__main__':
-    validate_model_class(
-        model_class=BigramHmm,
-        train_dataset_uri='data/ptb_for_pos_tagging_train.zip',
-        test_dataset_uri='data/ptb_for_pos_tagging_test.zip',
+    test_model_class(
+        model_file_path=__file__,
+        model_class='BigramHmm',
         task=TaskType.POS_TAGGING,
         dependencies={},
+        train_dataset_uri='data/ptb_for_pos_tagging_train.zip',
+        test_dataset_uri='data/ptb_for_pos_tagging_test.zip',
         queries=[
             ['Ms.', 'Haag', 'plays', 'Elianti', '18', '.'],
             ['The', 'luxury', 'auto', 'maker', 'last', 'year', 'sold', '1,214', 'cars', 'in', 'the', 'U.S.']

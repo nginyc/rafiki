@@ -8,7 +8,7 @@ import numpy as np
 import base64
 
 from rafiki.config import APP_MODE
-from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
+from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
 from rafiki.constants import TaskType, ModelDependency
 
 class TfFeedForward(BaseModel):
@@ -195,14 +195,15 @@ class TfFeedForward(BaseModel):
 
 
 if __name__ == '__main__':
-    validate_model_class(
-        model_class=TfFeedForward,
-        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
+    test_model_class(
+        model_file_path=__file__,
+        model_class='TfFeedForward',
         task=TaskType.IMAGE_CLASSIFICATION,
         dependencies={
             ModelDependency.TENSORFLOW: '1.12.0'
         },
+        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
+        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

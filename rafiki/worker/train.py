@@ -7,7 +7,7 @@ import pprint
 
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
-from rafiki.utils.model import load_model_class
+from rafiki.model import load_model_class
 from rafiki.utils.log import JobLogger
 from rafiki.model import ModelLogUtilsLogger
 from rafiki.db import Database

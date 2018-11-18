@@ -3,10 +3,12 @@ import json
 import abc
 import traceback
 import pickle
+import uuid
+from importlib import import_module
+
 from rafiki.advisor import Advisor, AdvisorType
 from rafiki.predictor import ensemble_predictions
-from rafiki.utils.model import parse_model_install_command
-from rafiki.constants import TaskType
+from rafiki.constants import TaskType, ModelDependency
 
 from .dataset import ModelDatasetUtils
 from .log import ModelLogUtils
@@ -143,103 +145,174 @@ class BaseModel(abc.ABC):
         '''
         pass
 
-
-def validate_model_class(model_class, train_dataset_uri, test_dataset_uri, task, \
-                        dependencies, enable_gpu=False, queries=[], knobs=None):
+def test_model_class(model_file_path, model_class, task, dependencies, \
+                    train_dataset_uri, test_dataset_uri, \
+                    enable_gpu=False, queries=[], knobs=None):
     '''
-    Validates whether a model class is properly defined. 
+    Tests whether a model class is properly defined, given datasets and queries, with a full train-inference flow.
     The model instance's methods will be called in an order similar to that in Rafiki.
 
-    :param str train_dataset_uri: URI of the train dataset for testing the training of model
-    :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model
+    :param str model_file_path: Path to a single Python file that contains the definition for the model class
+    :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
     :param str task: Task type of model
     :param { str: str } dependencies: Model's dependencies
+    :param str train_dataset_uri: URI of the train dataset for testing the training of model
+    :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model
     :param list[any] queries: List of queries for testing predictions with the trained model
     :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used
     :type knobs: dict[str, any]
     :returns: The trained model
     '''
-    print('Testing installation for model...')
-    install_command = parse_model_install_command(dependencies, enable_gpu=enable_gpu)
-    exit_code = os.system(install_command)
-    if exit_code != 0: return
+    try:
+        print('Testing model installation...')
+        # Test installation
+        if not isinstance(dependencies, dict):
+            raise Exception('`dependencies` should be a dict[str, str]')
 
-    print('Testing instantiation of model...')
-    model_inst = model_class()
+        install_command = parse_model_install_command(dependencies, enable_gpu=enable_gpu)
+        exit_code = os.system(install_command)
+        if exit_code != 0: raise Exception('Error in installing model dependencies')
 
-    print('Checking deprecated methods...')
+        print('Testing loading of model...')
+        f = open(model_file_path, 'rb')
+        model_file_bytes = f.read()
+        py_model_class = load_model_class(model_file_bytes, model_class)
+        model_inst = py_model_class()
+        if not isinstance(model_inst, BaseModel):
+            raise Exception('Model should extend `rafiki.model.BaseModel`')
+
+        knob_config = model_inst.get_knob_config()
+        if not isinstance(knob_config, dict):
+            raise Exception('`get_knob_config()` should return a dict[str, any]')
+
+        if 'knobs' not in knob_config:
+            raise Exception('`knob_config` should have a \'knobs\' key')
+
+        print('Checking model dependencies & methods...')
+        _check_dependencies(py_model_class, dependencies)
+        _check_methods(py_model_class)
+
+        print('Testing training & evaluation of model...')
+        advisor = Advisor(knob_config, advisor_type=AdvisorType.BTB_GP)
+        if knobs is None: knobs = advisor.propose()
+        print('Using knobs: {}'.format(knobs))
+        model_inst.init(knobs)
+        model_inst.train(train_dataset_uri)
+        score = model_inst.evaluate(test_dataset_uri)
+
+        if not isinstance(score, float):
+            raise Exception('`evaluate()` should return a float!')
+
+        print('Score: {}'.format(score))
+
+        print('Testing dumping of parameters of model...')
+        parameters = model_inst.dump_parameters()
+
+        if not isinstance(parameters, dict):
+            raise Exception('`dump_parameters()` should return a dict[str, any]')
+
+        try:
+            # Model parameters are pickled and put into DB
+            parameters = pickle.loads(pickle.dumps(parameters))
+        except Exception:
+            traceback.print_stack()
+            raise Exception('`parameters` should be serializable by `pickle`')
+
+        print('Testing loading of parameters of model...')
+        model_inst.destroy()
+        model_inst = py_model_class()
+        model_inst.init(knobs)
+        model_inst.load_parameters(parameters)
+
+        print('Testing predictions with model...')
+        print('Using queries: {}'.format(queries))
+        predictions = model_inst.predict(queries)
+
+        try:
+            for prediction in predictions:
+                json.dumps(prediction)
+        except Exception:
+            traceback.print_stack()
+            raise Exception('Each `prediction` should be JSON serializable')
+
+        # Ensembling predictions in predictor
+        predictions = ensemble_predictions([predictions], task)
+
+        print('Predictions: {}'.format(predictions))
+        print('The model definition is valid!')
+    
+        return model_inst
+
+    except Exception as e:
+        raise InvalidModelClassException(e)
+
+def load_model_class(model_file_bytes, model_class):
+    temp_mod_name = str(uuid.uuid4())
+    temp_model_file_name ='{}.py'.format(temp_mod_name)
+
+    # Temporarily save the model file to disk
+    with open(temp_model_file_name, 'wb') as f:
+        f.write(model_file_bytes)
+
+    try:
+        # Import model file as module
+        mod = import_module(temp_mod_name)
+        # Extract model class from module
+        clazz = getattr(mod, model_class)
+    except Exception as e:
+        raise e
+    finally:
+        # Ensure that temp model file is removed upon model loading error
+        os.remove(temp_model_file_name)
+
+    return clazz
+
+def parse_model_install_command(dependencies, enable_gpu=False):
+    commands = []
+
+    # Determine PIP packages to install
+    pip_packages = []
+    for (dep, ver) in dependencies.items():
+        if dep == ModelDependency.KERAS:
+            pip_packages.append('Keras=={}'.format(ver))
+        elif dep == ModelDependency.PYTORCH:
+            pip_packages.append('torch=={}'.format(ver))
+        elif dep == ModelDependency.SCIKIT_LEARN:
+            pip_packages.append('scikit-learn=={}'.format(ver))
+        elif dep == ModelDependency.TENSORFLOW:
+            if enable_gpu:
+                pip_packages.append('tensorflow-gpu=={}'.format(ver))
+            else:
+                pip_packages.append('tensorflow=={}'.format(ver))
+    
+    if len(pip_packages) > 0:
+        commands.append('pip install {};'.format(' '.join(pip_packages)))
+
+    return ' '.join(commands)
+
+def _check_dependencies(py_model_class, dependencies):
+    for (dep, ver) in dependencies.items():
+        # Warn that TF models need to cater for GPU sharing
+        if dep == ModelDependency.TENSORFLOW:
+            _info('`tensorflow-gpu` of the same version will be installed if GPU is available during training.')
+            _warn('TensorFlow models must cater for GPU-sharing with ' \
+                    + '`config.gpu_options.allow_growth = True` (ref: https://www.tensorflow.org/guide/using_gpu#allowing_gpu_memory_growth).')
+
+        # Warn that Keras models should additionally depend on TF for GPU usage
+        elif dep == ModelDependency.KERAS:
+            _warn('Keras models can enable GPU usage with by adding a `tensorflow` dependency.')
+
+def _check_methods(py_model_class):
+    model_inst = py_model_class()
     if getattr(model_inst, 'get_predict_label_mapping', None) is not None:
-        print('WARNING: `get_predict_label_mapping` has been deprecated!')
+        _warn('`get_predict_label_mapping` has been deprecated')
 
-    print('Testing getting of model\'s knob config...')
-    knob_config = model_inst.get_knob_config()
+def _info(msg):
+    msg_color = '\033[94m'
+    end_color = '\033[0m'
+    print('{}INFO: {}{}'.format(msg_color, msg, end_color))
 
-    if not isinstance(knob_config, dict):
-        raise InvalidModelClassException('`get_knob_config()` should return a dict[str, any]')
-
-    if 'knobs' not in knob_config:
-        raise InvalidModelClassException('`knob_config` should have a \'knobs\' key')
-    
-    advisor = Advisor(knob_config, advisor_type=AdvisorType.BTB_GP)
-
-    if knobs is None:
-        knobs = advisor.propose()
-
-    print('Testing initialization of model...')
-    print('Using knobs: {}'.format(knobs))
-    model_inst.init(knobs)
-
-    print('Testing training of model...')
-    model_inst.train(train_dataset_uri)
-
-    print('Testing evaluation of model...')
-    score = model_inst.evaluate(test_dataset_uri)
-
-    if not isinstance(score, float):
-        raise InvalidModelClassException('`evaluate()` should return a float!')
-
-    print('Score: {}'.format(score))
-
-    print('Testing dumping of parameters of model...')
-    parameters = model_inst.dump_parameters()
-
-    if not isinstance(parameters, dict):
-        raise InvalidModelClassException('`dump_parameters()` should return a dict[str, any]')
-
-    try:
-        # Model parameters are pickled and put into DB
-        parameters = pickle.loads(pickle.dumps(parameters))
-    except Exception:
-        traceback.print_stack()
-        raise InvalidModelClassException('`parameters` should be serializable by `pickle`.')
-
-    print('Testing destroying of model...')
-    model_inst.destroy()
-
-    print('Testing loading of parameters of model...')
-    model_inst = model_class()
-    model_inst.init(knobs)
-    model_inst.load_parameters(parameters)
-
-    print('Testing predictions with model...')
-    print('Using queries: {}'.format(queries))
-    predictions = model_inst.predict(queries)
-
-    try:
-        for prediction in predictions:
-            json.dumps(prediction)
-    except Exception:
-        traceback.print_stack()
-        raise InvalidModelClassException('Each `prediction` should be JSON serializable')
-
-    # Ensembling predictions in predictor
-    predictions = ensemble_predictions([predictions], task)
-
-    print('Predictions: {}'.format(predictions))
-    
-    print('The model definition is valid!')
-
-    return model_inst
-
-
-
+def _warn(msg):
+    msg_color = '\033[93m'
+    end_color = '\033[0m'
+    print('{}WARNING: {}{}'.format(msg_color, msg, end_color))

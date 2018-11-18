@@ -5,7 +5,7 @@ import os
 import base64
 import numpy as np
 
-from rafiki.model import BaseModel, InvalidModelParamsException, validate_model_class
+from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
 from rafiki.constants import TaskType, ModelDependency
 
 class SkSvm(BaseModel):
@@ -105,14 +105,15 @@ class SkSvm(BaseModel):
 
 
 if __name__ == '__main__':
-    validate_model_class(
-        model_class=SkSvm,
-        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
+    test_model_class(
+        model_file_path=__file__,
+        model_class='SkSvm',
         task=TaskType.IMAGE_CLASSIFICATION,
         dependencies={
             ModelDependency.SCIKIT_LEARN: '0.20.0'
         },
+        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
+        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
