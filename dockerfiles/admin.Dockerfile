@@ -35,4 +35,4 @@ COPY scripts/ scripts/
 
 EXPOSE 3000
 
-CMD ["bash", "-c", "source activate rafiki; python scripts/start_admin.py"]
+CMD ["python", "scripts/start_admin.py"]

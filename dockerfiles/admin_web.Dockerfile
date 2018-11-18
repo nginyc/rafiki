@@ -16,4 +16,4 @@ RUN cd web/ && npm run build
 
 EXPOSE 3001
 
-ENTRYPOINT [ "node", "web/app.js" ]
+CMD ["node", "web/app.js"]

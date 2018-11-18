@@ -62,4 +62,4 @@ RUN pip install -r worker/requirements.txt
 COPY rafiki/ rafiki/
 COPY scripts/ scripts/
 
-CMD ["bash", "-c", "source activate rafiki; $WORKER_INSTALL_COMMAND; python scripts/start_worker.py"]
+CMD ["python", "scripts/start_worker.py"]

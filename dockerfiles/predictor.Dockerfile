@@ -33,4 +33,4 @@ COPY scripts/ scripts/
 
 EXPOSE 3003
 
-CMD ["bash", "-c", "source activate rafiki; python scripts/start_predictor.py"]
+CMD ["python", "scripts/start_predictor.py"]

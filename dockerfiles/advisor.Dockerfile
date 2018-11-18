@@ -29,4 +29,4 @@ COPY scripts/ scripts/
 
 EXPOSE 3002
 
-CMD ["bash", "-c", "source activate rafiki; python scripts/start_advisor.py"]
+CMD ["python", "scripts/start_advisor.py"]
