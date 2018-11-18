@@ -94,7 +94,7 @@ def _convert_dataset(dataset_path, out_meta_tsv_path, \
     # Write to out meta file
     index_to_tag = { v: k for (k, v) in tag_to_index.items() }
     with open(out_meta_tsv_path, mode='w') as f:
-        f.write('tag,name\n') # Header
+        f.write('tag\tname\n') # Header
         for i in range(len(index_to_tag)):
             f.write('{}\t{}\n'.format(i, index_to_tag[i]))
     

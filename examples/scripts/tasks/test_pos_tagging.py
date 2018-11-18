@@ -12,8 +12,8 @@ from examples.scripts.client_quickstart import create_user, create_model, \
 if __name__ == '__main__':
     app = 'ptb_pos_app'
     task = TaskType.POS_TAGGING
-    train_dataset_uri = 'data/ptb_for_pos_tagging_train.zip'
-    test_dataset_uri = 'data/ptb_for_pos_tagging_test.zip'
+    train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_train.zip?raw=true'
+    test_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_test.zip?raw=true'
     queries = [
         ['Ms.', 'Haag', 'plays', 'Elianti', '18', '.'],
         ['The', 'luxury', 'auto', 'maker', 'last', 'year', 'sold', '1,214', 'cars', 'in', 'the', 'U.S.']
