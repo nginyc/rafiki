@@ -1,4 +1,5 @@
 import numpy as np
+from collections import Iterable
 
 from rafiki.constants import TaskType
 
@@ -21,7 +22,13 @@ def ensemble_predictions(predictions_list, task):
     return predictions
 
 def _simplify_predictions(predictions):
+    # Convert numpy arrays to lists
     if isinstance(predictions, np.ndarray):
         predictions = predictions.tolist()
+
+    if isinstance(predictions, Iterable):
+        for i in range(len(predictions)):
+            if isinstance(predictions[i], np.ndarray):
+                predictions[i] = predictions[i].tolist()
 
     return predictions
