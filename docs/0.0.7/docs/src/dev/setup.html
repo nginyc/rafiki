@@ -185,19 +185,26 @@
 <div class="section" id="quick-setup">
 <span id="id2"></span><h2><a class="toc-backref" href="#id4">Quick Setup</a><a class="headerlink" href="#quick-setup" title="Permalink to this headline">¶</a></h2>
 <p>We assume development or deployment in a MacOS or Linux environment.</p>
-<ol class="arabic simple">
-<li>Install Docker 18</li>
-<li>Install Python 3.6</li>
-<li>Setup Rafiki’s complete stack with the init script:</li>
-</ol>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/start.sh
+<ol class="arabic">
+<li><p class="first">Install Docker 18 &amp; Python 3.6</p>
+</li>
+<li><p class="first">Clone the project at <a class="reference external" href="https://github.com/nginyc/rafiki">https://github.com/nginyc/rafiki</a></p>
+</li>
+<li><p class="first">Setup Rafiki’s complete stack with the init script:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/start.sh
 </pre></div>
 </div>
+</div></blockquote>
+</li>
+</ol>
 <p><em>Rafiki Admin</em> and <em>Rafiki Admin Web</em> will be available at <code class="docutils literal notranslate"><span class="pre">127.0.0.1:3000</span></code> and <code class="docutils literal notranslate"><span class="pre">127.0.0.1:3001</span></code> respectively.</p>
 <p>To destroy Rafiki’s complete stack:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/stop.sh
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/stop.sh
 </pre></div>
 </div>
+</div></blockquote>
 </div>
 <div class="section" id="adding-nodes-to-rafiki">
 <h2><a class="toc-backref" href="#id5">Adding Nodes to Rafiki</a><a class="headerlink" href="#adding-nodes-to-rafiki" title="Permalink to this headline">¶</a></h2>

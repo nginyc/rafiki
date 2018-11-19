@@ -185,9 +185,11 @@
 </ul>
 </div>
 <p>Before running any individual scripts, make sure to run the shell configuration script:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nb">source</span> .env.sh
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nb">source</span> .env.sh
 </pre></div>
 </div>
+</div></blockquote>
 <p>Refer to <a class="reference internal" href="architecture.html#architecture"><span class="std std-ref">Architecture</span></a> and <a class="reference internal" href="folder-structure.html#folder-structure"><span class="std std-ref">Folder Structure</span></a> for a developer’s overview of Rafiki.</p>
 <div class="section" id="starting-parts-of-the-stack">
 <h2><a class="toc-backref" href="#id3">Starting Parts of the Stack</a><a class="headerlink" href="#starting-parts-of-the-stack" title="Permalink to this headline">¶</a></h2>
@@ -197,32 +199,40 @@
 <div class="section" id="connecting-to-rafiki-s-db">
 <h2><a class="toc-backref" href="#id4">Connecting to Rafiki’s DB</a><a class="headerlink" href="#connecting-to-rafiki-s-db" title="Permalink to this headline">¶</a></h2>
 <p>By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g <a class="reference external" href="https://eggerapps.at/postico/">Postico</a>) with these credentials:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">POSTGRES_HOST</span><span class="o">=</span><span class="n">localhost</span>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">POSTGRES_HOST</span><span class="o">=</span><span class="n">localhost</span>
 <span class="n">POSTGRES_PORT</span><span class="o">=</span><span class="mi">5433</span>
 <span class="n">POSTGRES_USER</span><span class="o">=</span><span class="n">rafiki</span>
 <span class="n">POSTGRES_DB</span><span class="o">=</span><span class="n">rafiki</span>
 <span class="n">POSTGRES_PASSWORD</span><span class="o">=</span><span class="n">rafiki</span>
 </pre></div>
 </div>
+</div></blockquote>
 </div>
 <div class="section" id="connecting-to-rafiki-s-cache">
 <h2><a class="toc-backref" href="#id5">Connecting to Rafiki’s Cache</a><a class="headerlink" href="#connecting-to-rafiki-s-cache" title="Permalink to this headline">¶</a></h2>
 <p>You can connect to Redis DB with <a class="reference external" href="https://github.com/marians/rebrow">rebrow</a>:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/start_rebrow.sh
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/start_rebrow.sh
 </pre></div>
 </div>
+</div></blockquote>
 <p>…with these credentials by default:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">REDIS_HOST</span><span class="o">=</span><span class="n">rafiki_cache</span>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">REDIS_HOST</span><span class="o">=</span><span class="n">rafiki_cache</span>
 <span class="n">REDIS_PORT</span><span class="o">=</span><span class="mi">6379</span>
 </pre></div>
 </div>
+</div></blockquote>
 </div>
 <div class="section" id="building-images-locally">
 <h2><a class="toc-backref" href="#id6">Building Images Locally</a><a class="headerlink" href="#building-images-locally" title="Permalink to this headline">¶</a></h2>
 <p>The quickstart instructions pull pre-built <a class="reference external" href="https://hub.docker.com/r/rafikiai/">Rafiki’s images</a> from Docker Hub. To build Rafiki’s images locally (e.g. to reflect latest code changes):</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/build_images.sh
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/build_images.sh
 </pre></div>
 </div>
+</div></blockquote>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">If you’re testing latest code changes on multiple nodes, you’ll need to build Rafiki’s images on those nodes as well.</p>
@@ -231,27 +241,33 @@
 <div class="section" id="pushing-images-to-docker-hub">
 <h2><a class="toc-backref" href="#id7">Pushing Images to Docker Hub</a><a class="headerlink" href="#pushing-images-to-docker-hub" title="Permalink to this headline">¶</a></h2>
 <p>To push the Rafiki’s latest images to Docker Hub (e.g. to reflect the latest code changes):</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/push_images.sh
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/push_images.sh
 </pre></div>
 </div>
+</div></blockquote>
 </div>
 <div class="section" id="building-rafiki-s-documentation">
 <h2><a class="toc-backref" href="#id8">Building Rafiki’s Documentation</a><a class="headerlink" href="#building-rafiki-s-documentation" title="Permalink to this headline">¶</a></h2>
 <p>Rafiki uses <a class="reference external" href="http://www.sphinx-doc.org">Sphinx documentation</a> and hosts the documentation with <a class="reference external" href="https://pages.github.com/">Github Pages</a> on the <a class="reference external" href="https://github.com/nginyc/rafiki/tree/gh-pages">gh-pages branch</a>. Build &amp; view Rafiki’s Sphinx documentation on your machine with the following commands:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/build_docs.sh
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/build_docs.sh
 open docs/index.html
 </pre></div>
 </div>
+</div></blockquote>
 </div>
 <div class="section" id="troubleshooting">
 <h2><a class="toc-backref" href="#id9">Troubleshooting</a><a class="headerlink" href="#troubleshooting" title="Permalink to this headline">¶</a></h2>
 <p>While building Rafiki’s images locally, if you encounter an error like “No space left on device”, you might be running out of space allocated for Docker. Try removing all containers &amp; images:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># Delete all containers</span>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># Delete all containers</span>
 docker rm <span class="k">$(</span>docker ps -a -q<span class="k">)</span>
 <span class="c1"># Delete all images</span>
 docker rmi <span class="k">$(</span>docker images -q<span class="k">)</span>
 </pre></div>
 </div>
+</div></blockquote>
 <p>From Mac Mojave onwards, due to Mac’s new <a class="reference external" href="https://www.howtogeek.com/361707/how-macos-mojaves-privacy-protection-works/">privacy protection feature</a>,
 you might need to explicitly give Docker <em>Full Disk Access</em>, restart Docker, or even do a factory reset of Docker.</p>
 </div>
