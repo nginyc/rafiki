@@ -7,7 +7,7 @@ Creating Models
 .. contents:: Table of Contents
 
 
-To create a model on Rafiki, use the `rafiki.client.Client.create_model` method.
+To create a model on Rafiki, use the :meth:`rafiki.client.Client.create_model` method.
 
 
 Model Environment
@@ -19,12 +19,18 @@ Your model will be run in Python 3.6 with the following Python libraries pre-ins
 
         pip install numpy==1.14.5
 
-The `base worker image's Dockerfile <https://github.com/nginyc/rafiki/blob/master/dockerfiles/worker.Dockerfile>`_
-specifies the exact container environment your model will run in, prior to installing your model's ``dependencies``.
-You can optionally build a custom Docker image (``docker_image``) that extends ``rafikiai/rafiki_worker``.
-Refer to the parameters of :meth:`rafiki.client.Client.create_model` for configuring how your model runs on Rafiki.
+
+Additionally, you'll specify a list of dependencies to be installed for your model, 
+prior to model training and inference. This is configurable with the ``dependencies`` option 
+during model creation. 
+
+Alternatively, you can build a custom Docker image that extends <``rafikiai/rafiki_worker`` https://github.com/nginyc/rafiki/blob/master/dockerfiles/worker.Dockerfile>_,
+installing the required dependencies for your model. This is configurable with ``docker_image``) option
+during model creation.
 
 Models should run at least run on CPU-only machines and optionally leverage on a shared GPU, if it is available.
+
+Refer to the parameters of :meth:`rafiki.client.Client.create_model` for configuring how your model runs on Rafiki.
 
 Testing Models
 --------------------------------------------------------------------

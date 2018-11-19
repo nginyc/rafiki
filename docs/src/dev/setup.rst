@@ -13,23 +13,23 @@ Quick Setup
 
 We assume development or deployment in a MacOS or Linux environment.
 
-1. Install Docker 18
+1. Install Docker 18 & Python 3.6
 
-2. Install Python 3.6
+2. Clone the project at https://github.com/nginyc/rafiki
 
 3. Setup Rafiki's complete stack with the init script:
 
-.. code-block:: shell
+    .. code-block:: shell
 
-    bash scripts/start.sh
+        bash scripts/start.sh
 
 *Rafiki Admin* and *Rafiki Admin Web* will be available at ``127.0.0.1:3000`` and ``127.0.0.1:3001`` respectively.
 
 To destroy Rafiki's complete stack:
 
-.. code-block:: shell
+    .. code-block:: shell
 
-    bash scripts/stop.sh
+        bash scripts/stop.sh
 
 Adding Nodes to Rafiki
 --------------------------------------------------------------------
