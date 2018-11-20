@@ -61,4 +61,4 @@ title "Starting Rafiki's Admin Web..."
 ensure_stable "Rafiki's Admin Web"
 
 echo "To use Rafiki, use Rafiki Client in the Python CLI"
-echo "Refer to Rafiki's docs at https://nginyc.github.io/rafiki/docs/"
+echo "Refer to Rafiki's docs at https://nginyc.github.io/rafiki/docs/latest"
