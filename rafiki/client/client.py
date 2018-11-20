@@ -112,9 +112,24 @@ class Client(object):
         and ``<dependency_version>`` corresponds to the version of the PyPI package (e.g. ``1.12.0``). These dependencies 
         will be lazily installed on top of the worker's Docker image before the submitted model's code is executed.
 
-        If the model is to be run on GPU, Rafiki will make a best-effort attempt to map dependencies to their 
-        GPU-enabled versions, if required. For example, ``{ 'tensorflow': '1.12.0' }`` will be installed 
-        as ``{ 'tensorflow-gpu': '1.12.0' }``.
+        If the model is to be run on GPU, Rafiki could map dependencies to their GPU-enabled versions, if required. 
+        For example, ``{ 'tensorflow': '1.12.0' }`` will be installed as ``{ 'tensorflow-gpu': '1.12.0' }``.
+
+        Rafiki could also parse specific dependency names to install certain non-PyPI packages. 
+        For example, ``{ 'singa': '1.1.1' }`` will be installed as ``singa-cpu=1.1.1`` or ``singa-gpu=1.1.1`` using ``conda``.
+
+        Refer to the list of officially supported dependencies below. For dependencies that are not listed,
+        they will be installed as PyPI packages of the specified name and version.
+
+        =====================       =====================
+        **Dependency**              **Installation Command**
+        ---------------------       ---------------------        
+        ``tensorflow``              ``pip install tensorflow==${ver}`` or ``pip install tensorflow-gpu==${ver}``
+        ``singa``                   ``conda install -c nusdbsystem singa-cpu=${ver}`` or ``conda install -c nusdbsystem singa-gpu=${ver}``
+        ``Keras``                   ``pip install Keras==${ver}``
+        ``scikit-learn``            ``pip install scikit-learn==${ver}``
+        ``torch``                   ``pip install torch==${ver}``
+        =====================       =====================
 
         '''
         f = open(model_file_path, 'rb')
