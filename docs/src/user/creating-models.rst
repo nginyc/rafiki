@@ -24,7 +24,7 @@ Additionally, you'll specify a list of dependencies to be installed for your mod
 prior to model training and inference. This is configurable with the ``dependencies`` option 
 during model creation. 
 
-Alternatively, you can build a custom Docker image that extends <``rafikiai/rafiki_worker`` https://github.com/nginyc/rafiki/blob/master/dockerfiles/worker.Dockerfile>_,
+Alternatively, you can build a custom Docker image that extends ``rafikiai/rafiki_worker``,
 installing the required dependencies for your model. This is configurable with ``docker_image``) option
 during model creation.
 
