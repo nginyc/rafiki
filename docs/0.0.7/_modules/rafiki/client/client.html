@@ -261,9 +261,24 @@
 <span class="sd">        and ``&lt;dependency_version&gt;`` corresponds to the version of the PyPI package (e.g. ``1.12.0``). These dependencies </span>
 <span class="sd">        will be lazily installed on top of the worker&#39;s Docker image before the submitted model&#39;s code is executed.</span>
 
-<span class="sd">        If the model is to be run on GPU, Rafiki will make a best-effort attempt to map dependencies to their </span>
-<span class="sd">        GPU-enabled versions, if required. For example, ``{ &#39;tensorflow&#39;: &#39;1.12.0&#39; }`` will be installed </span>
-<span class="sd">        as ``{ &#39;tensorflow-gpu&#39;: &#39;1.12.0&#39; }``.</span>
+<span class="sd">        If the model is to be run on GPU, Rafiki could map dependencies to their GPU-enabled versions, if required. </span>
+<span class="sd">        For example, ``{ &#39;tensorflow&#39;: &#39;1.12.0&#39; }`` will be installed as ``{ &#39;tensorflow-gpu&#39;: &#39;1.12.0&#39; }``.</span>
+
+<span class="sd">        Rafiki could also parse specific dependency names to install certain non-PyPI packages. </span>
+<span class="sd">        For example, ``{ &#39;singa&#39;: &#39;1.1.1&#39; }`` will be installed as ``singa-cpu=1.1.1`` or ``singa-gpu=1.1.1`` using ``conda``.</span>
+
+<span class="sd">        Refer to the list of officially supported dependencies below. For dependencies that are not listed,</span>
+<span class="sd">        they will be installed as PyPI packages of the specified name and version.</span>
+
+<span class="sd">        =====================       =====================</span>
+<span class="sd">        **Dependency**              **Installation Command**</span>
+<span class="sd">        ---------------------       ---------------------        </span>
+<span class="sd">        ``tensorflow``              ``pip install tensorflow==${ver}`` or ``pip install tensorflow-gpu==${ver}``</span>
+<span class="sd">        ``singa``                   ``conda install -c nusdbsystem singa-cpu=${ver}`` or ``conda install -c nusdbsystem singa-gpu=${ver}``</span>
+<span class="sd">        ``Keras``                   ``pip install Keras==${ver}``</span>
+<span class="sd">        ``scikit-learn``            ``pip install scikit-learn==${ver}``</span>
+<span class="sd">        ``torch``                   ``pip install torch==${ver}``</span>
+<span class="sd">        =====================       =====================</span>
 
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_file_path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span>
