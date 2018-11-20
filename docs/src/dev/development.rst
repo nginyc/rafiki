@@ -74,11 +74,12 @@ To push the Rafiki's latest images to Docker Hub (e.g. to reflect the latest cod
 Building Rafiki's Documentation
 --------------------------------------------------------------------
 
-Rafiki uses `Sphinx documentation <http://www.sphinx-doc.org>`_ and hosts the documentation with `Github Pages <https://pages.github.com/>`_ on the `gh-pages branch <https://github.com/nginyc/rafiki/tree/gh-pages>`_. Build & view Rafiki's Sphinx documentation on your machine with the following commands:
+Rafiki uses `Sphinx documentation <http://www.sphinx-doc.org>`_ and hosts the documentation with `Github Pages <https://pages.github.com/>`_ on the `gh-pages branch <https://github.com/nginyc/rafiki/tree/gh-pages>`_. 
+Build & view Rafiki's Sphinx documentation on your machine with the following commands:
 
     .. code-block:: shell
 
-        bash scripts/build_docs.sh
+        bash scripts/build_docs.sh latest
         open docs/index.html
 
 Troubleshooting
