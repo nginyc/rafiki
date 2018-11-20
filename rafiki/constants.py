@@ -7,6 +7,7 @@ class ModelDependency():
     KERAS = 'Keras'
     SCIKIT_LEARN = 'scikit-learn'
     PYTORCH = 'torch'
+    SINGA = 'singa'
 
 class InferenceJobStatus():
     STARTED = 'STARTED'
