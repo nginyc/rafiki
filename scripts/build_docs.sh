@@ -1,7 +1,9 @@
 if ! [ -z "$1" ]
 then
-    RAFIKI_VERSION=$1
-fi
+    DOCS_DIR=$1
+else
+    DOCS_DIR=$RAFIKI_VERSION
+fi 
 
 pip install sphinx sphinx_rtd_theme
-sphinx-build -b html . docs/$RAFIKI_VERSION/
+sphinx-build -b html . docs/$DOCS_DIR/
