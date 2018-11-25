@@ -21,7 +21,7 @@ Quick Start
 This guide assumes you have deployed your an empty instance of Rafiki and you want to do a *full* train-inference flow, 
 including preparation of dataset and adding of models to Rafiki. Below, the sequence of examples submit the 
 `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference. 
-Alternatively, after installing Rafiki Client's dependencies, you can run `./examples/scripts/client-quickstart.py <https://github.com/nginyc/rafiki/blob/master/examples/scripts/client-quickstart.py>`_.
+Alternatively, after installing Rafiki Client's dependencies, you can run `./examples/scripts/client_quickstart.py <https://github.com/nginyc/rafiki/blob/master/examples/scripts/client_quickstart.py>`_.
 
 .. note::
 
