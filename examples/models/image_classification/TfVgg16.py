@@ -73,7 +73,7 @@ class TfVgg16(BaseModel):
         dataset = self.utils.load_dataset_of_image_files(dataset_uri, image_size=[48, 48])
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
-        images = np.dstack([images] * 3)
+        images = np.stack([images] * 3, axis=-1)
         classes = np.asarray(classes)
 
         with self._graph.as_default():
@@ -82,10 +82,11 @@ class TfVgg16(BaseModel):
         return accuracy
 
     def predict(self, queries):
-        X = self.utils.resize_as_images(queries, image_size=[48, 48])
+        images = self.utils.resize_as_images(queries, image_size=[48, 48])
+        images = np.stack([images] * 3, axis=-1)
         with self._graph.as_default():
             with self._sess.as_default():
-                probs = self._model.predict(X)
+                probs = self._model.predict(images)
                 
         return probs.tolist()
     
@@ -149,7 +150,7 @@ if __name__ == '__main__':
         model_class='TfVgg16',
         task=TaskType.IMAGE_CLASSIFICATION,
         dependencies={
-            ModelDependency.TENSORFLOW: '1.4.1'
+            ModelDependency.TENSORFLOW: '1.12.0'
         },
         train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
         test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
