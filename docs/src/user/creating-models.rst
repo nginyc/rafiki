@@ -57,7 +57,14 @@ Example: Testing Models for ``IMAGE_CLASSIFICATION``
 
         python examples/datasets/image_classification/load_mnist_format.py
 
-2. Test the sample models in ``./examples/models/image_classification`` with :meth:`rafiki.model.test_model_class`:
+2. Install the Python dependencies for the sample models:
+
+    .. code-block:: shell
+
+        pip install scikit-learn==0.20.0
+        pip install tensorflow==1.12.0
+
+3. Test the sample models in ``./examples/models/image_classification`` with :meth:`rafiki.model.test_model_class`:
 
     .. code-block:: shell
 
@@ -74,7 +81,13 @@ Example: Testing Models for ``POS_TAGGING``
 
         python examples/datasets/pos_tagging/load_ptb_format.py
 
-2. Test the sample models in ``./examples/models/pos_tagging`` with :meth:`rafiki.model.test_model_class`:
+2. Install the Python dependencies for the sample models:
+
+    .. code-block:: shell
+
+        pip install torch==0.4.1
+
+3. Test the sample models in ``./examples/models/pos_tagging`` with :meth:`rafiki.model.test_model_class`:
 
     .. code-block:: shell
 
