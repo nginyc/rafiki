@@ -18,14 +18,12 @@ class BigramHmm(BaseModel):
     '''
     Implements Bigram Hidden Markov Model (HMM) for POS tagging
     '''
+    @staticmethod
+    def get_knob_config():
+        return {}
 
-    def get_knob_config(self):
-        return {
-            'knobs': {}
-        }
-
-    def init(self, knobs):
-        pass
+    def __init__(self, **knobs):
+        super().__init__(**knobs)
 
     def train(self, dataset_uri):
         dataset = self.utils.load_dataset_of_corpus(dataset_uri)

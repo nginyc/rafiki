@@ -5,34 +5,28 @@ import os
 import base64
 import numpy as np
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
+from rafiki.config import APP_MODE
+from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
+                        IntegerKnob, CategoricalKnob
 from rafiki.constants import TaskType, ModelDependency
 
 class SkDt(BaseModel):
     '''
     Implements a decision tree classifier on Scikit-Learn for simple image classification
     '''
-
-    def get_knob_config(self):
+    @staticmethod
+    def get_knob_config():
         return {
-            'knobs': {
-                'max_depth': {
-                    'type': 'int',
-                    'range': [2, 8]
-                },
-                'criterion': {
-                    'type': 'string',
-                    'values': ['gini', 'entropy']
-                },
-            }
+            'max_depth': IntegerKnob(2, 16 if APP_MODE != 'DEV' else 8),
+            'criterion': CategoricalKnob(['gini', 'entropy'])
         }
 
-    def init(self, knobs):
-        self._max_depth = knobs.get('max_depth') 
-        self._criterion = knobs.get('criterion') 
+    def __init__(self, **knobs):
+        super().__init__(**knobs)
+        self._knobs = knobs
         self._clf = self._build_classifier(
-            self._max_depth,
-            self._criterion
+            self._knobs.get('max_depth'),
+            self._knobs.get('criterion')
         )
         
     def train(self, dataset_uri):
