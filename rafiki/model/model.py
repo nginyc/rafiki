@@ -268,40 +268,54 @@ def load_model_class(model_file_bytes, model_class):
     return clazz
 
 def parse_model_install_command(dependencies, enable_gpu=False):
+    conda_env = os.environ.get('CONDA_ENVIORNMENT')
     commands = []
 
-    # Determine PIP packages to install
-    pip_packages = []
+    # Determine install commands for each dependency
     for (dep, ver) in dependencies.items():
         if dep == ModelDependency.KERAS:
-            pip_packages.append('Keras=={}'.format(ver))
+            commands.append('pip install Keras=={}'.format(ver))
         elif dep == ModelDependency.PYTORCH:
-            pip_packages.append('torch=={}'.format(ver))
+            commands.append('pip install torch=={}'.format(ver))
         elif dep == ModelDependency.SCIKIT_LEARN:
-            pip_packages.append('scikit-learn=={}'.format(ver))
+            commands.append('pip install scikit-learn=={}'.format(ver))
         elif dep == ModelDependency.TENSORFLOW:
             if enable_gpu:
-                pip_packages.append('tensorflow-gpu=={}'.format(ver))
+                commands.append('pip install tensorflow-gpu=={}'.format(ver))
             else:
-                pip_packages.append('tensorflow=={}'.format(ver))
-    
-    if len(pip_packages) > 0:
-        commands.append('pip install {};'.format(' '.join(pip_packages)))
+                commands.append('pip install tensorflow=={}'.format(ver))
+        elif dep == ModelDependency.SINGA:
+            options = '-y -c nusdbsystem'
+            if conda_env is not None:
+                options += ' -n {}'.format(conda_env)
+            if enable_gpu:
+                commands.append('conda install {} singa-gpu={}'.format(options, ver))
+            else:
+                commands.append('conda install {} singa-cpu={}'.format(options, ver))
+        else:
+            # Assume that dependency is the exact PIP package name
+            commands.append('pip install {}=={}'.format(dep, ver))
 
-    return ' '.join(commands)
+    return '; '.join(commands)
 
 def _check_dependencies(py_model_class, dependencies):
     for (dep, ver) in dependencies.items():
-        # Warn that TF models need to cater for GPU sharing
-        if dep == ModelDependency.TENSORFLOW:
+        if dep == ModelDependency.KERAS:
+            _warn('Keras models can enable GPU usage with by adding a `tensorflow` dependency.')
+        elif dep == ModelDependency.PYTORCH:
+            _info('PIP package `{}=={}` will be installed'.format(dep, ver))
+        elif dep == ModelDependency.SCIKIT_LEARN:
+            _info('PIP package `{}=={}` will be installed'.format(dep, ver))
+        elif dep == ModelDependency.TENSORFLOW:
+            # Warn that Keras models should additionally depend on TF for GPU usage
             _info('`tensorflow-gpu` of the same version will be installed if GPU is available during training.')
             _warn('TensorFlow models must cater for GPU-sharing with ' \
                     + '`config.gpu_options.allow_growth = True` (ref: https://www.tensorflow.org/guide/using_gpu#allowing_gpu_memory_growth).')
-
-        # Warn that Keras models should additionally depend on TF for GPU usage
-        elif dep == ModelDependency.KERAS:
-            _warn('Keras models can enable GPU usage with by adding a `tensorflow` dependency.')
-
+        elif dep == ModelDependency.SINGA:
+            _info('Conda packages `singa-gpu` or `singa-cpu` will be installed, depending on GPU availablility during training.')
+        else:
+            _info('PIP package `{}=={}` will be installed'.format(dep, ver))
+        
 def _check_methods(py_model_class):
     model_inst = py_model_class()
     if getattr(model_inst, 'get_predict_label_mapping', None) is not None:

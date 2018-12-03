@@ -24,6 +24,7 @@ export PREDICTOR_PORT=3003
 export ADMIN_WEB_HOST=rafiki_admin_web
 export LOCAL_WORKDIR_PATH=$PWD
 export DOCKER_WORKDIR_PATH=/root/rafiki
+export CONDA_ENVIORNMENT=rafiki
 
 # Docker images for Rafiki's custom components
 export RAFIKI_IMAGE_ADMIN=rafikiai/rafiki_admin
