@@ -29,7 +29,7 @@ class SkSvm(BaseModel):
         self._clf = self._build_classifier(
             knobs.get('max_iter'),
             knobs.get('kernel'),
-            knobs.get('gamma') ,
+            knobs.get('gamma'),
             knobs.get('C')
         )
         

@@ -25,8 +25,8 @@ class SkDt(BaseModel):
         super().__init__(**knobs)
         self._knobs = knobs
         self._clf = self._build_classifier(
-            self._knobs.get('max_depth'),
-            self._knobs.get('criterion')
+            knobs.get('max_depth'),
+            knobs.get('criterion')
         )
         
     def train(self, dataset_uri):

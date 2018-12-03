@@ -27,19 +27,28 @@ class BaseModel(abc.ABC):
     '''
     Rafiki's base model class that Rafiki models should extend. 
     Rafiki models should implement all abstract methods according to their associated tasks' specifications,
-    including the static method `get_knob_config()`.
+    together with the static method ``get_knob_config()``.
+
+    In the model's ``__init__`` method, call ``super().__init__(**knobs)`` as the first line, 
+    followed by the model's initialization logic. The model should be initialize itself with ``knobs``, 
+    a set of generated knob values for the instance, and possibly save the knobs' values as 
+    attribute(s) of the model instance. These knob values will be chosen by Rafiki based on the model's knob config. 
+    
+    For example:
+
+    ::
+
+        def __init__(self, **knobs):
+            super().__init__(**knobs)
+            self.__dict__.update(knobs)
+            ...
+            self._build_model(self.knob1, self.knob2)
+
+
+    :param knobs: Dictionary of knob values for this model instance
+    :type knobs: dict[str, any]
     '''   
-
     def __init__(self, **knobs):
-        '''
-        Initialize a model instance with generated knob values. 
-        These knob values will be chosen by Rafiki based on the model's knob config.
-        Call `super().__init__(**knobs)` as the first line of the model's `__init__` method, 
-        followed by the model's initialization logic.
-
-        :param knobs: Dictionary of knob values for this model instance
-        :type knobs: dict[str, any]
-        '''
         self.utils = ModelUtils()
 
     @staticmethod

@@ -6,9 +6,10 @@ Creating Models
 
 .. contents:: Table of Contents
 
-
-To create a model on Rafiki, use the :meth:`rafiki.client.Client.create_model` method.
-
+To create a model, you will need to submit a model class that conforms to the specification
+by :class:`rafiki.model.BaseModel`, written in a `single` Python file.
+The model's implementation should conform to a specific task (see :ref:`tasks`).
+To submit the model to Rafiki, use the :meth:`rafiki.client.Client.create_model` method.
 
 Model Environment
 --------------------------------------------------------------------
