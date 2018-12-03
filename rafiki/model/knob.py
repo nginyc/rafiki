@@ -1,18 +1,46 @@
 import abc
-
-# TODO: Add documentation for each knob
+import json
 
 class BaseKnob(abc.ABC):
+    '''
+    The base class for a knob type.
+    '''
+
     # TODO: Support conditional and validation logic
-    pass
+
+    def __init__(self, knob_args={}):
+        self._knob_args = knob_args
+
+    def to_json(self):
+        return json.dumps({
+            'type': self.__class__.__name__,
+            'args': self._knob_args
+        })
+
+    @classmethod
+    def from_json(cls, json_str):
+        json_dict = json.loads(json_str)
+
+        if 'type' not in json_dict or 'args' not in json_dict:
+            raise ValueError('Invalid JSON representation of knob: {}.'.format(json_str))
+
+        knob_type = json_dict['type']
+        knob_args = json_dict['args']
+        knob_classes = [CategoricalKnob, IntegerKnob, FloatKnob]
+        for clazz in knob_classes:
+            if clazz.__name__ == knob_type:
+                return clazz(**knob_args)
+
+        raise ValueError('Invalid knob type: {}'.format(knob_type))
 
 class CategoricalKnob(BaseKnob):
     '''
-    Knob representing a categorical value of type `int`, `float`, `bool` or `str`.
-    A generated value of this knob must be an element of `values`.
+    Knob type representing a categorical value of type ``int``, ``float``, ``bool`` or ``str``.
+    A generated value of this knob would be an element of ``values``.
     '''
-
     def __init__(self, values):
+        knob_args = { 'values': values }
+        super().__init__(knob_args)
         self._values = values
         (self._value_type) = self._validate_values(values)
 
@@ -47,11 +75,13 @@ class CategoricalKnob(BaseKnob):
 
 class IntegerKnob(BaseKnob):
     '''
-    Knob representing any `int` value within a specific interval [`value_min`, `value_max`].
-    `is_exp` specifies whether the knob value should be scaled exponentially.
+    Knob type epresenting `any` ``int`` value within a specific interval [``value_min``, ``value_max``].
+    ``is_exp`` specifies whether the knob value should be scaled exponentially.
     '''
 
     def __init__(self, value_min, value_max, is_exp=False):
+        knob_args = { 'value_min': value_min, 'value_max': value_max, 'is_exp': is_exp }
+        super().__init__(knob_args)
         self._validate_values(value_min, value_max)
         self._value_min = value_min
         self._value_max = value_max
@@ -83,11 +113,13 @@ class IntegerKnob(BaseKnob):
 
 class FloatKnob(BaseKnob):
     '''
-    Knob representing any `float` value within a specific interval [`value_min`, `value_max`].
-    `is_exp` specifies whether the knob value should be scaled exponentially.
+    Knob type representing `any` ``float`` value within a specific interval [``value_min``, ``value_max``].
+    ``is_exp`` specifies whether the knob value should be scaled exponentially.
     '''
 
     def __init__(self, value_min, value_max, is_exp=False):
+        knob_args = { 'value_min': value_min, 'value_max': value_max, 'is_exp': is_exp }
+        super().__init__(knob_args)
         self._validate_values(value_min, value_max)
         self._value_min = value_min
         self._value_max = value_max
@@ -115,4 +147,19 @@ class FloatKnob(BaseKnob):
 
         if value_min > value_max:
             raise ValueError('`value_max` should be at least `value_min`')
-        
+
+
+def deserialize_knob_config(knob_config_str):
+    knob_config = {
+        name: BaseKnob.from_json(knob_str)
+        for (name, knob_str) in json.loads(knob_config_str).items()
+    }
+    return knob_config
+
+def serialize_knob_config(knob_config):
+    knob_config_str = json.dumps({
+        name: knob.to_json()
+        for (name, knob) in knob_config.items()
+    })
+    return knob_config_str
+    

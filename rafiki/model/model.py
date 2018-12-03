@@ -13,7 +13,7 @@ from rafiki.constants import TaskType, ModelDependency
 
 from .dataset import ModelDatasetUtils
 from .log import ModelLogUtils
-from .knob import BaseKnob
+from .knob import BaseKnob, serialize_knob_config, deserialize_knob_config
 
 class InvalidModelClassException(Exception): pass
 class InvalidModelParamsException(Exception): pass
@@ -309,6 +309,10 @@ def _check_knob_config(knob_config):
     if not isinstance(knob_config, dict) or \
         any([(not isinstance(name, str) or not isinstance(knob, BaseKnob)) for (name, knob) in knob_config.items()]):
         raise Exception('Static method `get_knob_config()` should return a dict[str, BaseKnob]')
+
+    # Try serializing and deserialize knob config
+    knob_config_str = serialize_knob_config(knob_config)
+    knob_config = deserialize_knob_config(knob_config_str)
 
 def _info(msg):
     msg_color = '\033[94m'

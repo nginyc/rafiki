@@ -21,8 +21,8 @@ ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 # Install python dependencies
 COPY rafiki/utils/requirements.txt utils/requirements.txt
 RUN pip install -r utils/requirements.txt
+COPY rafiki/model/requirements.txt model/requirements.txt
 RUN pip install -r model/requirements.txt
-COPY rafiki/container/requirements.txt container/requirements.txt
 COPY rafiki/advisor/requirements.txt advisor/requirements.txt
 RUN pip install -r advisor/requirements.txt
 

@@ -7,7 +7,7 @@ import pprint
 
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
-from rafiki.model import load_model_class
+from rafiki.model import load_model_class, serialize_knob_config
 from rafiki.utils.log import JobLogger
 from rafiki.model import ModelLogUtilsLogger
 from rafiki.db import Database
@@ -188,9 +188,10 @@ class TrainWorker(object):
     def _create_advisor(self, clazz):
         # Retrieve knob config for model of worker 
         knob_config = clazz.get_knob_config()
+        knob_config_str = serialize_knob_config(knob_config)
 
         # Create advisor associated with worker
-        res = self._client.create_advisor(knob_config, advisor_id=self._service_id)
+        res = self._client.create_advisor(knob_config_str, advisor_id=self._service_id)
         advisor_id = res['id']
         return advisor_id
 
