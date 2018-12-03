@@ -247,9 +247,38 @@ If the Python file imports any external Python modules, you should list it in <c
 <code class="docutils literal notranslate"><span class="pre">&lt;dependency_name&gt;</span></code> corresponds to the name of the Python Package Index (PyPI) package (e.g. <code class="docutils literal notranslate"><span class="pre">tensorflow</span></code>)
 and <code class="docutils literal notranslate"><span class="pre">&lt;dependency_version&gt;</span></code> corresponds to the version of the PyPI package (e.g. <code class="docutils literal notranslate"><span class="pre">1.12.0</span></code>). These dependencies 
 will be lazily installed on top of the worker’s Docker image before the submitted model’s code is executed.</p>
-<p>If the model is to be run on GPU, Rafiki will make a best-effort attempt to map dependencies to their 
-GPU-enabled versions, if required. For example, <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">'tensorflow':</span> <span class="pre">'1.12.0'</span> <span class="pre">}</span></code> will be installed 
-as <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">'tensorflow-gpu':</span> <span class="pre">'1.12.0'</span> <span class="pre">}</span></code>.</p>
+<p>If the model is to be run on GPU, Rafiki could map dependencies to their GPU-enabled versions, if required. 
+For example, <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">'tensorflow':</span> <span class="pre">'1.12.0'</span> <span class="pre">}</span></code> will be installed as <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">'tensorflow-gpu':</span> <span class="pre">'1.12.0'</span> <span class="pre">}</span></code>.</p>
+<p>Rafiki could also parse specific dependency names to install certain non-PyPI packages. 
+For example, <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">'singa':</span> <span class="pre">'1.1.1'</span> <span class="pre">}</span></code> will be installed as <code class="docutils literal notranslate"><span class="pre">singa-cpu=1.1.1</span></code> or <code class="docutils literal notranslate"><span class="pre">singa-gpu=1.1.1</span></code> using <code class="docutils literal notranslate"><span class="pre">conda</span></code>.</p>
+<p>Refer to the list of officially supported dependencies below. For dependencies that are not listed,
+they will be installed as PyPI packages of the specified name and version.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="17%" />
+<col width="83%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Dependency</strong></td>
+<td><strong>Installation Command</strong></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">tensorflow</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">tensorflow==${ver}</span></code> or <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">tensorflow-gpu==${ver}</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">singa</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">-c</span> <span class="pre">nusdbsystem</span> <span class="pre">singa-cpu=${ver}</span></code> or <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">-c</span> <span class="pre">nusdbsystem</span> <span class="pre">singa-gpu=${ver}</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">Keras</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">Keras==${ver}</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">scikit-learn</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">scikit-learn==${ver}</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">torch</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">torch==${ver}</span></code></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">

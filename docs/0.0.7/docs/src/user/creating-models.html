@@ -233,6 +233,14 @@ during model creation.</p>
 </div>
 </div></blockquote>
 </li>
+<li><p class="first">Install the Python dependencies for the sample models:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install scikit-learn<span class="o">==</span><span class="m">0</span>.20.0
+pip install <span class="nv">tensorflow</span><span class="o">==</span><span class="m">1</span>.12.0
+</pre></div>
+</div>
+</div></blockquote>
+</li>
 <li><p class="first">Test the sample models in <code class="docutils literal notranslate"><span class="pre">./examples/models/image_classification</span></code> with <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.test_model_class" title="rafiki.model.test_model_class"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.test_model_class()</span></code></a>:</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python examples/models/image_classification/SkDt.py
@@ -249,6 +257,13 @@ python examples/models/image_classification/TfSingleHiddenLayer.py
 <li><p class="first">Download &amp; pre-process the subsample of the Penn Treebank dataset to the dataset format specified by <code class="docutils literal notranslate"><span class="pre">POS_TAGGING</span></code>:</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python examples/datasets/pos_tagging/load_ptb_format.py
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p class="first">Install the Python dependencies for the sample models:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install <span class="nv">torch</span><span class="o">==</span><span class="m">0</span>.4.1
 </pre></div>
 </div>
 </div></blockquote>
