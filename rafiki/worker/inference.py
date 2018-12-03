@@ -80,8 +80,7 @@ class InferenceWorker(object):
 
         # Load model based on trial
         clazz = load_model_class(model.model_file_bytes, model.model_class)
-        model_inst = clazz()
-        model_inst.init(trial.knobs)
+        model_inst = clazz(**trial.knobs)
 
         # Unpickle model parameters and load it
         parameters = pickle.loads(trial.parameters)

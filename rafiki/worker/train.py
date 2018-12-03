@@ -133,14 +133,12 @@ class TrainWorker(object):
 
     def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, 
                                     test_dataset_uri):
-        model_inst = clazz()
+        # Initialize model
+        model_inst = clazz(**knobs)
 
         # Insert model training logger
         model_logger = TrainModelLogUtilsLogger()
         model_inst.utils.set_logger(model_logger)
-
-        # Initialize model
-        model_inst.init(knobs)
 
         # Train model
         model_inst.train(train_dataset_uri)
@@ -189,8 +187,7 @@ class TrainWorker(object):
         
     def _create_advisor(self, clazz):
         # Retrieve knob config for model of worker 
-        model_inst = clazz()
-        knob_config = model_inst.get_knob_config()
+        knob_config = clazz.get_knob_config()
 
         # Create advisor associated with worker
         res = self._client.create_advisor(knob_config, advisor_id=self._service_id)

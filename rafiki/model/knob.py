@@ -47,7 +47,7 @@ class CategoricalKnob(BaseKnob):
 
 class IntegerKnob(BaseKnob):
     '''
-    Knob representing any `int` value within a specific interval (`value_min`, `value_max`).
+    Knob representing any `int` value within a specific interval [`value_min`, `value_max`].
     `is_exp` specifies whether the knob value should be scaled exponentially.
     '''
 
@@ -83,7 +83,7 @@ class IntegerKnob(BaseKnob):
 
 class FloatKnob(BaseKnob):
     '''
-    Knob representing any `float` value within a specific interval (`value_min`, `value_max`).
+    Knob representing any `float` value within a specific interval [`value_min`, `value_max`].
     `is_exp` specifies whether the knob value should be scaled exponentially.
     '''
 
