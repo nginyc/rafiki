@@ -39,7 +39,7 @@ class SkDt(BaseModel):
         # Compute train accuracy
         preds = self._clf.predict(X)
         accuracy = sum(y == preds) / len(y)
-        self.utils.log('Train accuracy: {}'.format(accuracy))
+        self.logger.log('Train accuracy: {}'.format(accuracy))
 
     def evaluate(self, dataset_uri):
         dataset = self.utils.load_dataset_of_image_files(dataset_uri)

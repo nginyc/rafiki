@@ -30,7 +30,7 @@ class BigramHmm(BaseModel):
         (sents_tokens, sents_tags) = zip(*[zip(*sent) for sent in dataset])
         self._num_tags = dataset.tag_num_classes[0]
         (self._trans_probs, self._emiss_probs) = self._compute_probs(self._num_tags, sents_tokens, sents_tags)
-        self.utils.log('No. of tags: {}'.format(self._num_tags))
+        self.logger.log('No. of tags: {}'.format(self._num_tags))
 
     def evaluate(self, dataset_uri):
         dataset = self.utils.load_dataset_of_corpus(dataset_uri)

@@ -64,7 +64,6 @@ class Service(Base):
     container_service_name = Column(String)
     container_service_id = Column(String)
 
-
 class TrainJob(Base):
     __tablename__ = 'train_job'
 
@@ -87,20 +86,27 @@ class TrainJobWorker(Base):
     train_job_id = Column(String, ForeignKey('train_job.id'))
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
 
-
 class Trial(Base):
     __tablename__ = 'trial'
 
     id = Column(String, primary_key=True, default=generate_uuid)
     knobs = Column(JSON, nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
-    train_job_id = Column(String, ForeignKey('train_job.id'), nullable=False)
+    train_job_id = Column(String, ForeignKey('train_job.id'), nullable=False, index=True)
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
     status = Column(String, nullable=False, default=TrialStatus.RUNNING)
     score = Column(Float, default=0)
     parameters = Column(Binary, default=None)
-    logs = Column(Binary, default=None)
     datetime_stopped = Column(DateTime, default=None)
+
+class TrialLog(Base):
+    __tablename__ = 'trial_log'
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    datetime = Column(DateTime, default=generate_datetime)
+    trial_id = Column(String, ForeignKey('trial.id'), nullable=False, index=True)
+    line = Column(String, nullable=False)
+    level = Column(String)
 
 class User(Base):
     __tablename__ = 'user'

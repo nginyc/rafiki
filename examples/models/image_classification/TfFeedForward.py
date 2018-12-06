@@ -35,20 +35,23 @@ class TfFeedForward(BaseModel):
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
         self._sess = tf.Session(graph=self._graph, config=config)
-        self._define_plots()
         
     def train(self, dataset_uri):
         im_sz = self._knobs.get('image_size')
         bs = self._knobs.get('batch_size')
         ep = self._knobs.get('epochs')
 
+        self.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
+
+        # Define 2 plots: Loss against time, loss against epochs
+        self.logger.define_loss_plot()
+        self.logger.define_plot('Loss Over Time', ['loss'])
+
         dataset = self.utils.load_dataset_of_image_files(dataset_uri, image_size=[im_sz, im_sz])
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
         classes = np.asarray(classes)
-
-        self.utils.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
         with self._graph.as_default():
             self._model = self._build_model(num_classes)
@@ -66,8 +69,8 @@ class TfFeedForward(BaseModel):
 
                 # Compute train accuracy
                 (loss, accuracy) = self._model.evaluate(images, classes)
-                self.utils.log('Train loss: {}'.format(loss))
-                self.utils.log('Train accuracy: {}'.format(accuracy))
+                self.logger.log('Train loss: {}'.format(loss))
+                self.logger.log('Train accuracy: {}'.format(accuracy))
 
     def evaluate(self, dataset_uri):
         im_sz = self._knobs.get('image_size')
@@ -80,7 +83,7 @@ class TfFeedForward(BaseModel):
         with self._graph.as_default():
             with self._sess.as_default():
                 (loss, accuracy) = self._model.evaluate(images, classes)
-                self.utils.log('Test loss: {}'.format(loss))
+                self.logger.log('Test loss: {}'.format(loss))
 
         return accuracy
 
@@ -134,12 +137,7 @@ class TfFeedForward(BaseModel):
 
     def _on_train_epoch_end(self, epoch, logs):
         loss = logs['loss']
-        self.utils.log_loss_metric(loss, epoch)
-
-    def _define_plots(self):
-        # Define 2 plots: Loss against time, loss against epochs
-        self.utils.define_loss_plot()
-        self.utils.define_plot('Loss Over Time', ['loss'])
+        self.logger.log_loss(loss, epoch)
 
     def _build_model(self, num_classes):
         units = self._knobs.get('hidden_layer_units')

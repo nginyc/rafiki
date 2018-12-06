@@ -12,16 +12,15 @@ from rafiki.predictor import ensemble_predictions
 from rafiki.constants import TaskType, ModelDependency
 
 from .dataset import ModelDatasetUtils
-from .log import ModelLogUtils
+from .log import ModelLogger
 from .knob import BaseKnob, serialize_knob_config, deserialize_knob_config
 
 class InvalidModelClassException(Exception): pass
 class InvalidModelParamsException(Exception): pass
 
-class ModelUtils(ModelDatasetUtils, ModelLogUtils):
+class ModelUtils(ModelDatasetUtils):
     def __init__(self):
         ModelDatasetUtils.__init__(self)
-        ModelLogUtils.__init__(self)
 
 class BaseModel(abc.ABC):
     '''
@@ -49,6 +48,7 @@ class BaseModel(abc.ABC):
     :type knobs: dict[str, any]
     '''   
     def __init__(self, **knobs):
+        self.logger = ModelLogger()
         self.utils = ModelUtils()
 
     @staticmethod

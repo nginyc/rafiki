@@ -35,21 +35,20 @@ class PyBiLstm(BaseModel):
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
-        self._define_plots()
 
     def train(self, dataset_uri):
         dataset = self.utils.load_dataset_of_corpus(dataset_uri)
         self._word_dict = self._extract_word_dict(dataset)
         self._tag_count = dataset.tag_num_classes[0] 
 
-        self.utils.log('No. of unique words: {}'.format(len(self._word_dict)))
-        self.utils.log('No. of tags: {}'.format(self._tag_count))
+        self.logger.log('No. of unique words: {}'.format(len(self._word_dict)))
+        self.logger.log('No. of tags: {}'.format(self._tag_count))
         
         (self._net, self._optimizer) = self._train(dataset)
         sents_tags = self._predict(dataset)
         acc = self._compute_accuracy(dataset, sents_tags)
 
-        self.utils.log('Train accuracy: {}'.format(acc))
+        self.logger.log('Train accuracy: {}'.format(acc))
 
     def evaluate(self, dataset_uri):
         dataset = self.utils.load_dataset_of_corpus(dataset_uri)
@@ -139,7 +138,7 @@ class PyBiLstm(BaseModel):
 
         Tensor = torch.LongTensor
         if torch.cuda.is_available():
-            self.utils.log('Using CUDA...')
+            self.logger.log('Using CUDA...')
             net = net.cuda()
             Tensor = torch.cuda.LongTensor
 
@@ -172,11 +171,15 @@ class PyBiLstm(BaseModel):
         null_tag = self._tag_count # Tag to ignore (from padding of sentences during batching)
         B = math.ceil(len(dataset) / N) # No. of batches
 
+        # Define 2 plots: Loss against time, loss against epochs
+        self.logger.define_loss_plot()
+        self.logger.define_plot('Loss Over Time', ['loss'])
+
         (net, optimizer) = self._create_model()
 
         Tensor = torch.LongTensor
         if torch.cuda.is_available():
-            self.utils.log('Using CUDA...')
+            self.logger.log('Using CUDA...')
             net = net.cuda()
             Tensor = torch.cuda.LongTensor
 
@@ -206,14 +209,9 @@ class PyBiLstm(BaseModel):
 
                 total_loss += loss.item()
 
-            self.utils.log_loss_metric(loss=(total_loss / B), epoch=epoch)
+            self.logger.log_loss(loss=(total_loss / B), epoch=epoch)
 
         return (net, optimizer)
-
-    def _define_plots(self):
-        # Define 2 plots: Loss against time, loss against epochs
-        self.utils.define_loss_plot()
-        self.utils.define_plot('Loss Over Time', ['loss'])
 
     def _compute_accuracy(self, dataset, sents_tags):
         total = 0

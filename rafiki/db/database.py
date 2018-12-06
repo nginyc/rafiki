@@ -7,7 +7,8 @@ from rafiki.constants import TrainJobStatus, \
     TrialStatus, ServiceStatus, InferenceJobStatus
 
 from .schema import Base, TrainJob, TrainJobWorker, \
-    InferenceJob, Trial, Model, User, Service, InferenceJobWorker
+    InferenceJob, Trial, Model, User, Service, InferenceJobWorker, \
+    TrialLog
 
 class Database(object):
     def __init__(self, 
@@ -199,11 +200,6 @@ class Database(object):
 
         return inference_jobs
 
-    def get_workers_of_inference_job(self, inference_job_id):
-        workers = self._session.query(InferenceJobWorker) \
-            .filter(InferenceJobWorker.inference_job_id == inference_job_id).all()
-        return workers
-
     ####################################
     # Inference Job Workers
     ####################################
@@ -335,10 +331,17 @@ class Database(object):
 
         return trial
 
+    def get_trial_logs(self, id):
+        trial_logs = self._session.query(TrialLog) \
+            .filter(TrialLog.trial_id == id) \
+            .all()
+            
+        return trial_logs
+
     def get_best_trials_of_train_job(self, train_job_id, max_count=3):
         trials = self._session.query(Trial) \
             .filter(Trial.train_job_id == train_job_id) \
-            .filter(Trial.status == TrainJobStatus.COMPLETED) \
+            .filter(Trial.status == TrialStatus.COMPLETED) \
             .order_by(Trial.score.desc()) \
             .limit(max_count).all()
 
@@ -354,8 +357,7 @@ class Database(object):
 
     def get_trials_of_train_job(self, train_job_id):
         trials = self._session.query(Trial) \
-            .join(TrainJob, Trial.train_job_id == TrainJob.id) \
-            .filter(TrainJob.id == train_job_id) \
+            .filter(Trial.train_job_id == train_job_id) \
             .order_by(Trial.datetime_started.desc()).all()
 
         return trials
@@ -366,14 +368,18 @@ class Database(object):
         self._session.add(trial)
         return trial
 
-    def mark_trial_as_complete(self, trial, score, parameters, logs):
+    def mark_trial_as_complete(self, trial, score, parameters):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
         trial.datetime_stopped = datetime.datetime.utcnow()
         trial.parameters = parameters
-        trial.logs = logs
         self._session.add(trial)
         return trial
+
+    def add_trial_log(self, trial, line, level):
+        trial_log = TrialLog(trial_id=trial.id, line=line, level=level)
+        self._session.add(trial_log)
+        return trial_log
 
     def mark_trial_as_terminated(self, trial):
         trial.status = TrialStatus.TERMINATED
@@ -418,5 +424,4 @@ class Database(object):
 
     def _define_tables(self):
         Base.metadata.create_all(bind=self._engine)
-        
 

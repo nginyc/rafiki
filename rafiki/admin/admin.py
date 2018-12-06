@@ -7,8 +7,8 @@ import pickle
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
+from rafiki.model import ModelLogger
 from rafiki.container import DockerSwarmContainerManager 
-from rafiki.utils.log import JobLogger
 
 from .services_manager import ServicesManager
 
@@ -256,10 +256,9 @@ class Admin(object):
         if trial is None:
             raise InvalidTrialException()
 
-        job_logger = JobLogger()
-        job_logger.import_logs(trial.logs)
-        (plots, metrics, messages) = job_logger.read_logs()
-        job_logger.destroy()
+        trial_logs = self._db.get_trial_logs(trial_id)
+        log_lines = [x.line for x in trial_logs]
+        (messages, metrics, plots) = ModelLogger.parse_logs(log_lines)
         
         return {
             'plots': plots,
