@@ -22,16 +22,22 @@ After implementing your model, it is highly recommended to use :meth:`rafiki.mod
 to test your model. This method simulates a full train-inference flow on your model, ensuring that 
 it is likely to work on Rafiki.
 
-
-Logging & Dataset Loading in Models
+Logging in Models
 --------------------------------------------------------------------
 
-:class:`rafiki.model.BaseModel` has a property ``utils`` that subclasses the model utility classes
-:class:`rafiki.model.log.ModelLogUtils` and :class:`rafiki.model.dataset.ModelDatasetUtils`. They 
-help with model logging & dataset loading respectively. 
+:class:`rafiki.model.BaseModel` has an attribute ``logger`` that is of the class :class:`rafiki.model.ModelLogger`. 
+It allows you to log messages and metrics while your model is being trained, and you can 
+define plots to visualize your model's training on Rafiki's Admin Web interface.
+
+.. seealso:: :ref:`using-admin-web` 
+
+Dataset Loading in Models
+--------------------------------------------------------------------
+
+:class:`rafiki.model.BaseModel` has an attribute ``utils`` that subclasses the model utility class
+:class:`rafiki.model.dataset.ModelDatasetUtils`. It helps with dataset loading. 
 
 Refer to the sample usage in the implementation of `./examples/models/image_classification/TfSingleHiddenLayer.py <https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/TfSingleHiddenLayer.py>`_.
-
 
 Model Environment
 --------------------------------------------------------------------

@@ -33,7 +33,7 @@ Utility Classes & Methods
 
 .. automethod:: rafiki.model.test_model_class
 
-.. autoclass:: rafiki.model.log.ModelLogUtils
+.. autoclass:: rafiki.model.ModelLogger
     :members:
 
 .. autoclass:: rafiki.model.dataset.ModelDatasetUtils
