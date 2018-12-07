@@ -305,6 +305,19 @@ def _check_model_inst(model_inst):
     if getattr(model_inst, 'utils', None) is None:
         raise Exception('`super().__init__(**knobs)` should be called as the first line of the model\'s `__init__` method.')
 
+    # Throw error when deprecated methods are called
+    def deprecated_func(desc):
+        def throw_error(*args, **kwargs):
+            raise AttributeError(desc)
+        
+        return throw_error
+        
+    model_inst.utils.log = deprecated_func('`self.utils.log(...)` has been changed to `self.logger.log(...)`')
+    model_inst.utils.log_metrics = deprecated_func('`self.utils.log_metrics(...)` has been changed to `self.logger.log(...)`')
+    model_inst.utils.define_plot = deprecated_func('`self.utils.define_plot(...)` has been renamed to `self.logger.define_plot(...)`')
+    model_inst.utils.define_loss_plot = deprecated_func('`self.utils.define_loss_plot(...)` has been renamed to `self.logger.define_loss_plot(...)`')
+    model_inst.utils.log_loss_metric = deprecated_func('`self.utils.log_loss_metric(...)` has been renamed to `self.logger.log_loss(...)`')
+
 def _check_knob_config(knob_config):
     if not isinstance(knob_config, dict) or \
         any([(not isinstance(name, str) or not isinstance(knob, BaseKnob)) for (name, knob) in knob_config.items()]):
