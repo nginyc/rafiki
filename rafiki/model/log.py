@@ -159,3 +159,5 @@ class ModelLoggerDebugHandler(logging.Handler):
         
     def _print(self, message):
         print('[{}]'.format(__name__), message)
+
+logger = ModelLogger()

@@ -7,7 +7,7 @@ import numpy as np
 
 from rafiki.config import APP_MODE
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, CategoricalKnob
+                        IntegerKnob, CategoricalKnob, dataset_utils, logger
 from rafiki.constants import TaskType, ModelDependency
 
 class SkDt(BaseModel):
@@ -30,7 +30,7 @@ class SkDt(BaseModel):
         )
         
     def train(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -39,10 +39,10 @@ class SkDt(BaseModel):
         # Compute train accuracy
         preds = self._clf.predict(X)
         accuracy = sum(y == preds) / len(y)
-        self.logger.log('Train accuracy: {}'.format(accuracy))
+        logger.log('Train accuracy: {}'.format(accuracy))
 
     def evaluate(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes

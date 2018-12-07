@@ -7,7 +7,7 @@ import pprint
 
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
-from rafiki.model import load_model_class, serialize_knob_config, LogType
+from rafiki.model import load_model_class, serialize_knob_config, logger as model_logger
 from rafiki.db import Database
 from rafiki.client import Client
 
@@ -145,11 +145,11 @@ class TrainWorker(object):
         log_handler = ModelLoggerHandler(handle_log)
         root_logger = logging.getLogger()
         root_logger.addHandler(log_handler)
-        logger = logging.getLogger('{}.trial'.format(__name__))
-        logger.setLevel(logging.INFO)
-        logger.propagate = False # Avoid duplicate logs in root logger
-        logger.addHandler(log_handler)
-        model_inst.logger.set_logger(logger)
+        py_model_logger = logging.getLogger('{}.trial'.format(__name__))
+        py_model_logger.setLevel(logging.INFO)
+        py_model_logger.propagate = False # Avoid duplicate logs in root logger
+        py_model_logger.addHandler(log_handler)
+        model_logger.set_logger(py_model_logger)
 
         # Train model
         model_inst.train(train_dataset_uri)

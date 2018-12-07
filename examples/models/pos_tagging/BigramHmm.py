@@ -8,7 +8,7 @@ import traceback
 import pprint
 import json
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
+from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, logger, dataset_utils
 from rafiki.constants import TaskType
 
 # Min numeric value
@@ -26,14 +26,14 @@ class BigramHmm(BaseModel):
         super().__init__(**knobs)
 
     def train(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_corpus(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_corpus(dataset_uri)
         (sents_tokens, sents_tags) = zip(*[zip(*sent) for sent in dataset])
         self._num_tags = dataset.tag_num_classes[0]
         (self._trans_probs, self._emiss_probs) = self._compute_probs(self._num_tags, sents_tokens, sents_tags)
-        self.logger.log('No. of tags: {}'.format(self._num_tags))
+        logger.log('No. of tags: {}'.format(self._num_tags))
 
     def evaluate(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_corpus(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_corpus(dataset_uri)
         (sents_tokens, sents_tags) = zip(*[zip(*sent) for sent in dataset])
         (sents_pred_tags) = self._tag_sents(self._num_tags, sents_tokens, self._trans_probs, self._emiss_probs)
         acc = self._compute_accuracy(sents_tags, sents_pred_tags)

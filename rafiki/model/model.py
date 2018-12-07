@@ -12,15 +12,10 @@ from rafiki.predictor import ensemble_predictions
 from rafiki.constants import TaskType, ModelDependency
 
 from .dataset import ModelDatasetUtils
-from .log import ModelLogger
 from .knob import BaseKnob, serialize_knob_config, deserialize_knob_config
 
 class InvalidModelClassException(Exception): pass
 class InvalidModelParamsException(Exception): pass
-
-class ModelUtils(ModelDatasetUtils):
-    def __init__(self):
-        ModelDatasetUtils.__init__(self)
 
 class BaseModel(abc.ABC):
     '''
@@ -48,8 +43,7 @@ class BaseModel(abc.ABC):
     :type knobs: dict[str, any]
     '''   
     def __init__(self, **knobs):
-        self.logger = ModelLogger()
-        self.utils = ModelUtils()
+        pass
 
     @staticmethod
     def get_knob_config():
@@ -291,9 +285,6 @@ def _check_model_class(py_model_class):
     if not issubclass(py_model_class, BaseModel):
         raise Exception('Model should extend `rafiki.model.BaseModel`')
 
-    if inspect.isfunction(getattr(py_model_class, 'get_predict_label_mapping', None)):
-        _warn('`get_predict_label_mapping` has been deprecated')
-    
     if inspect.isfunction(getattr(py_model_class, 'init', None)):
         _warn('`init` has been deprecated - use `__init__` for your model\'s initialization logic instead')
 
@@ -302,21 +293,25 @@ def _check_model_class(py_model_class):
         _warn('`get_knob_config` has been changed to a `@staticmethod`')
 
 def _check_model_inst(model_inst):
-    if getattr(model_inst, 'utils', None) is None:
-        raise Exception('`super().__init__(**knobs)` should be called as the first line of the model\'s `__init__` method.')
-
     # Throw error when deprecated methods are called
     def deprecated_func(desc):
         def throw_error(*args, **kwargs):
             raise AttributeError(desc)
         
         return throw_error
-        
-    model_inst.utils.log = deprecated_func('`self.utils.log(...)` has been changed to `self.logger.log(...)`')
-    model_inst.utils.log_metrics = deprecated_func('`self.utils.log_metrics(...)` has been changed to `self.logger.log(...)`')
-    model_inst.utils.define_plot = deprecated_func('`self.utils.define_plot(...)` has been renamed to `self.logger.define_plot(...)`')
-    model_inst.utils.define_loss_plot = deprecated_func('`self.utils.define_loss_plot(...)` has been renamed to `self.logger.define_loss_plot(...)`')
-    model_inst.utils.log_loss_metric = deprecated_func('`self.utils.log_loss_metric(...)` has been renamed to `self.logger.log_loss(...)`')
+
+    class DeprecatedModelUtils():
+        log = deprecated_func('`self.utils.log(...)` has been moved to `logger.log(...)`')
+        log_metrics = deprecated_func('`self.utils.log_metrics(...)` has been moved to `logger.log(...)`')
+        define_plot = deprecated_func('`self.utils.define_plot(...)` has been moved to `logger.define_plot(...)`')
+        define_loss_plot = deprecated_func('`self.utils.define_loss_plot(...)` has been moved to `logger.define_loss_plot(...)`')
+        log_loss_metric = deprecated_func('`self.utils.log_loss_metric(...)` has been moved to `logger.log_loss(...)`')
+        load_dataset_of_image_files = deprecated_func('`self.utils.load_dataset_of_image_files(...)` has been moved to `dataset_utils.load_dataset_of_image_files(...)`')
+        load_dataset_of_corpus = deprecated_func('`self.utils.load_dataset_of_corpus(...)` has been moved to `dataset_utils.load_dataset_of_corpus(...)`')
+        resize_as_images = deprecated_func('`self.utils.resize_as_images(...)` has been moved to `dataset_utils.resize_as_images(...)`')
+        download_dataset_from_uri = deprecated_func('`self.utils.download_dataset_from_uri(...)` has been moved to `dataset_utils.download_dataset_from_uri(...)`')
+
+    model_inst.utils = DeprecatedModelUtils()
 
 def _check_knob_config(knob_config):
     if not isinstance(knob_config, dict) or \

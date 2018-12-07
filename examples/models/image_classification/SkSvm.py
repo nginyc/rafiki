@@ -7,7 +7,7 @@ import numpy as np
 
 from rafiki.config import APP_MODE
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, CategoricalKnob, FloatKnob
+                        IntegerKnob, CategoricalKnob, FloatKnob, dataset_utils
 from rafiki.constants import TaskType, ModelDependency
 
 class SkSvm(BaseModel):
@@ -34,14 +34,14 @@ class SkSvm(BaseModel):
         )
         
     def train(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
         self._clf.fit(X, y)
 
     def evaluate(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes

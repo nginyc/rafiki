@@ -254,3 +254,4 @@ class ModelDatasetUtils():
         return dataset_path
 
 
+dataset_utils = ModelDatasetUtils()

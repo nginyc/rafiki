@@ -9,7 +9,7 @@ import base64
 
 from rafiki.config import APP_MODE
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, CategoricalKnob, FloatKnob
+                        IntegerKnob, CategoricalKnob, FloatKnob, dataset_utils, logger
 from rafiki.constants import TaskType, ModelDependency
 
 class TfFeedForward(BaseModel):
@@ -41,13 +41,13 @@ class TfFeedForward(BaseModel):
         bs = self._knobs.get('batch_size')
         ep = self._knobs.get('epochs')
 
-        self.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
+        logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
         # Define 2 plots: Loss against time, loss against epochs
-        self.logger.define_loss_plot()
-        self.logger.define_plot('Loss Over Time', ['loss'])
+        logger.define_loss_plot()
+        logger.define_plot('Loss Over Time', ['loss'])
 
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri, image_size=[im_sz, im_sz])
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[im_sz, im_sz])
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
@@ -69,13 +69,13 @@ class TfFeedForward(BaseModel):
 
                 # Compute train accuracy
                 (loss, accuracy) = self._model.evaluate(images, classes)
-                self.logger.log('Train loss: {}'.format(loss))
-                self.logger.log('Train accuracy: {}'.format(accuracy))
+                logger.log('Train loss: {}'.format(loss))
+                logger.log('Train accuracy: {}'.format(accuracy))
 
     def evaluate(self, dataset_uri):
         im_sz = self._knobs.get('image_size')
 
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri, image_size=[im_sz, im_sz])
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[im_sz, im_sz])
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
         classes = np.asarray(classes)
@@ -83,14 +83,14 @@ class TfFeedForward(BaseModel):
         with self._graph.as_default():
             with self._sess.as_default():
                 (loss, accuracy) = self._model.evaluate(images, classes)
-                self.logger.log('Test loss: {}'.format(loss))
+                logger.log('Test loss: {}'.format(loss))
 
         return accuracy
 
     def predict(self, queries):
         im_sz = self._knobs.get('image_size')
 
-        X = self.utils.resize_as_images(queries, image_size=[im_sz, im_sz])
+        X = dataset_utils.resize_as_images(queries, image_size=[im_sz, im_sz])
         with self._graph.as_default():
             with self._sess.as_default():
                 probs = self._model.predict(X)
@@ -137,7 +137,7 @@ class TfFeedForward(BaseModel):
 
     def _on_train_epoch_end(self, epoch, logs):
         loss = logs['loss']
-        self.logger.log_loss(loss, epoch)
+        logger.log_loss(loss, epoch)
 
     def _build_model(self, num_classes):
         units = self._knobs.get('hidden_layer_units')

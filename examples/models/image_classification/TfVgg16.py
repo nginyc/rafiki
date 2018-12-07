@@ -9,7 +9,7 @@ import abc
 from urllib.parse import urlparse, parse_qs 
 
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, FloatKnob, CategoricalKnob
+                        IntegerKnob, FloatKnob, CategoricalKnob, dataset_utils
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.config import APP_MODE
 
@@ -37,7 +37,7 @@ class TfVgg16(BaseModel):
         ep = self._knobs.get('epochs')
         bs = self._knobs.get('batch_size')
 
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri, image_size=[48, 48])
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[48, 48])
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
@@ -55,7 +55,7 @@ class TfVgg16(BaseModel):
                 )
 
     def evaluate(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri, image_size=[48, 48])
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[48, 48])
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
         images = np.stack([images] * 3, axis=-1)
@@ -67,7 +67,7 @@ class TfVgg16(BaseModel):
         return accuracy
 
     def predict(self, queries):
-        images = self.utils.resize_as_images(queries, image_size=[48, 48])
+        images = dataset_utils.resize_as_images(queries, image_size=[48, 48])
         images = np.stack([images] * 3, axis=-1)
         with self._graph.as_default():
             with self._sess.as_default():
