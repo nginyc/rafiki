@@ -12,6 +12,25 @@ class LogType():
     MESSAGE = 'MESSAGE'
 
 class ModelLogger():
+    '''
+    Allows models to log messages and metrics during model training, and 
+    define plots for visualization of model training.
+
+    To use this logger, import the global ``logger`` instance from the module ``rafiki.model``.
+
+    For example:
+
+    ::
+
+        from rafiki.model import logger
+        ...
+        def train(self, dataset_uri):
+            ...
+            logger.log('Starting model training...')
+            ...
+
+    '''
+    
     def __init__(self):        
         # By default, set a logging handler to print to stdout (for debugging)
         logger = logging.getLogger(__name__)

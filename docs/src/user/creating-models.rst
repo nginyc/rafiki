@@ -14,7 +14,8 @@ To submit the model to Rafiki, use the :meth:`rafiki.client.Client.create_model`
 Implementing Models
 --------------------------------------------------------------------
 
-Details on how to implement a model are located in the documentation of :class:`rafiki.model.BaseModel`.
+Full details on how to implement a model are located in the documentation of :class:`rafiki.model.BaseModel`,
+and sample model implementations are located in `./examples/models/ <https://github.com/nginyc/rafiki/tree/master/examples/models/>`_.
 
 In defining the hyperparameters (knobs) of a model, refer to the documentation at :ref:`knob-types` for the full list of knob types.
 
@@ -25,19 +26,21 @@ it is likely to work on Rafiki.
 Logging in Models
 --------------------------------------------------------------------
 
-:class:`rafiki.model.BaseModel` has an attribute ``logger`` that is of the class :class:`rafiki.model.ModelLogger`. 
-It allows you to log messages and metrics while your model is being trained, and you can 
+By importing the global ``logger`` instance in the ``rafiki.model`` module, 
+you can log messages and metrics while your model is being trained, and you can 
 define plots to visualize your model's training on Rafiki's Admin Web interface.
+
+Refer to :class:`rafiki.model.ModelLogger` for full usage instructions.
 
 .. seealso:: :ref:`using-admin-web` 
 
 Dataset Loading in Models
 --------------------------------------------------------------------
 
-:class:`rafiki.model.BaseModel` has an attribute ``utils`` that subclasses the model utility class
-:class:`rafiki.model.dataset.ModelDatasetUtils`. It helps with dataset loading. 
+The global ``dataset_utils`` instance in the ``rafiki.model`` module provides
+a set of built-in dataset loading methods for common dataset types on Rafiki.
 
-Refer to the sample usage in the implementation of `./examples/models/image_classification/TfSingleHiddenLayer.py <https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/TfSingleHiddenLayer.py>`_.
+Refer to :class:`rafiki.model.ModelDatasetUtils` for full usage instructions.
 
 Model Environment
 --------------------------------------------------------------------

@@ -36,9 +36,9 @@ Utility Classes & Methods
 .. autoclass:: rafiki.model.ModelLogger
     :members:
 
-.. autoclass:: rafiki.model.dataset.ModelDatasetUtils
+.. autoclass:: rafiki.model.ModelDatasetUtils
     :members:
 
-.. autoclass:: rafiki.model.dataset.ImageFilesDataset
+.. autoclass:: rafiki.model.ImageFilesDataset
 
-.. autoclass:: rafiki.model.dataset.CorpusDataset
+.. autoclass:: rafiki.model.CorpusDataset
