@@ -9,7 +9,7 @@ import base64
 
 from rafiki.config import APP_MODE
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, CategoricalKnob, FloatKnob, dataset_utils, logger
+                        IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, dataset_utils, logger
 from rafiki.constants import TaskType, ModelDependency
 
 class TfFeedForward(BaseModel):
@@ -25,7 +25,7 @@ class TfFeedForward(BaseModel):
             'hidden_layer_units': IntegerKnob(2, 128),
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
-            'image_size': CategoricalKnob([8, 16, 32]),
+            'image_size': FixedKnob(32)
         }
 
     def __init__(self, **knobs):

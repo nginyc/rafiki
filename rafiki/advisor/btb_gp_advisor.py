@@ -1,7 +1,7 @@
 from btb.tuning import GP
 from btb import HyperParameter, ParamTypes
 
-from rafiki.model import BaseKnob, FloatKnob, IntegerKnob, CategoricalKnob
+from rafiki.model import BaseKnob, FloatKnob, IntegerKnob, CategoricalKnob, FixedKnob
 from .advisor import BaseAdvisor
 
 class BtbGpAdvisor(BaseAdvisor):
@@ -40,6 +40,15 @@ def _knob_to_tunable(knob):
             return HyperParameter(ParamTypes.STRING, knob.values)
         elif knob.value_type is bool:
             return HyperParameter(ParamTypes.BOOL, knob.values)
+    elif isinstance(knob, FixedKnob):
+        if knob.value_type is int:
+            return HyperParameter(ParamTypes.INT_CAT, [knob.value])
+        elif knob.value_type is float:
+            return HyperParameter(ParamTypes.FLOAT_CAT, [knob.value])
+        elif knob.value_type is str:
+            return HyperParameter(ParamTypes.STRING, [knob.value])
+        elif knob.value_type is bool:
+            return HyperParameter(ParamTypes.BOOL, [knob.value])
     elif isinstance(knob, IntegerKnob):
         if knob.is_exp:
             return HyperParameter(ParamTypes.INT_EXP, [knob.value_min, knob.value_max])
@@ -50,3 +59,4 @@ def _knob_to_tunable(knob):
             return HyperParameter(ParamTypes.FLOAT_EXP, [knob.value_min, knob.value_max])
         else:
             return HyperParameter(ParamTypes.FLOAT, [knob.value_min, knob.value_max])
+    

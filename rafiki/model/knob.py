@@ -26,7 +26,7 @@ class BaseKnob(abc.ABC):
 
         knob_type = json_dict['type']
         knob_args = json_dict['args']
-        knob_classes = [CategoricalKnob, IntegerKnob, FloatKnob]
+        knob_classes = [CategoricalKnob, IntegerKnob, FloatKnob, FixedKnob]
         for clazz in knob_classes:
             if clazz.__name__ == knob_type:
                 return clazz(**knob_args)
@@ -71,6 +71,40 @@ class CategoricalKnob(BaseKnob):
         if any([not isinstance(x, value_type) for x in values]):
             raise TypeError('`values` should have elements of the same type')
 
+        return (value_type)
+
+class FixedKnob(BaseKnob):
+    '''
+    Knob type representing a single fixed value of type ``int``, ``float``, ``bool`` or ``str``.
+    Essentially, this represents a knob that does not require tuning.
+    '''
+    def __init__(self, value):
+        knob_args = { 'value': value }
+        super().__init__(knob_args)
+        self._value = value
+        (self._value_type) = self._validate_value(value)
+
+    @property
+    def value_type(self):
+        return self._value_type
+
+    @property
+    def value(self):
+        return self._value
+
+    @staticmethod
+    def _validate_value(value):
+        if isinstance(value, int):
+            value_type = int
+        elif isinstance(value, float):
+            value_type = float
+        elif isinstance(value, bool):
+            value_type = bool
+        elif isinstance(value, str):
+            value_type = str
+        else:
+            raise TypeError('Only the following types for `value` are supported: `int`, `float`, `bool`, `str`')
+        
         return (value_type)
 
 class IntegerKnob(BaseKnob):
