@@ -24,7 +24,7 @@ fi
 # Add node label that specifies no. of GPUs
 hostname=$(docker node inspect self | sed -n 's/"Hostname".*"\(.*\)".*/\1/p' | xargs)
 while true; do
-    read -p "No. of GPUs (0-9)? " gpus
+    read -p "No. of GPUs? (0-9) " gpus
     case $gpus in
         [0-9] ) break;;
         * ) echo "Please answer a integer from 0-9.";;
