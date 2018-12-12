@@ -1,0 +1,319 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Supported Tasks &mdash; Rafiki  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Supported Dataset Types" href="datasets.html" />
+    <link rel="prev" title="Creating Models" href="creating-models.html" /> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Rafiki
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.8
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">User Guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html">Quick Start (Model Developers)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html">Quick Start (Application Developers)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html">Quick Start (Application Users)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html">Quick Start (Rafiki Admins)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using-admin-web.html">Using Rafiki’s Admin Web</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-models.html">Creating Models</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Supported Tasks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#image-classification">IMAGE_CLASSIFICATION</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#dataset-type">Dataset Type</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#query-format">Query Format</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#prediction-format">Prediction Format</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#pos-tagging">POS_TAGGING</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1">Dataset Type</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2">Query Format</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3">Prediction Format</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="datasets.html">Supported Dataset Types</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dev/index.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../python/index.html">Python Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Rafiki</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">User Guide</a> &raquo;</li>
+        
+      <li>Supported Tasks</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../../_sources/docs/src/user/tasks.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="supported-tasks">
+<span id="tasks"></span><h1><a class="toc-backref" href="#id4">Supported Tasks</a><a class="headerlink" href="#supported-tasks" title="Permalink to this headline">¶</a></h1>
+<div class="contents topic" id="table-of-contents">
+<p class="topic-title first">Table of Contents</p>
+<ul class="simple">
+<li><a class="reference internal" href="#supported-tasks" id="id4">Supported Tasks</a><ul>
+<li><a class="reference internal" href="#image-classification" id="id5">IMAGE_CLASSIFICATION</a><ul>
+<li><a class="reference internal" href="#dataset-type" id="id6">Dataset Type</a></li>
+<li><a class="reference internal" href="#query-format" id="id7">Query Format</a></li>
+<li><a class="reference internal" href="#prediction-format" id="id8">Prediction Format</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pos-tagging" id="id9">POS_TAGGING</a><ul>
+<li><a class="reference internal" href="#id1" id="id10">Dataset Type</a></li>
+<li><a class="reference internal" href="#id2" id="id11">Query Format</a></li>
+<li><a class="reference internal" href="#id3" id="id12">Prediction Format</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<p>Each task has an associated <cite>Dataset Type</cite>, <cite>Query Format</cite> and <cite>Prediction Format</cite>.</p>
+<p>A task’s <cite>Dataset Type</cite> specifies the format of the data sources <code class="docutils literal notranslate"><span class="pre">train_dataset_uri</span></code> and  <code class="docutils literal notranslate"><span class="pre">test_dataset_uri</span></code> point to.
+Datasets are prepared by <cite>Application Developers</cite> when they create <cite>Train Jobs</cite>
+and received by <cite>Model Developers</cite> when they define <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.BaseModel.train" title="rafiki.model.BaseModel.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.BaseModel.train()</span></code></a> and <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.BaseModel.evaluate" title="rafiki.model.BaseModel.evaluate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.BaseModel.evaluate()</span></code></a>.</p>
+<p>A task’s <cite>Query Format</cite> specifies the format of queries when they are passed to models.
+Queries are generated by <cite>Application Users</cite> when they send queries to <cite>Inference Jobs</cite>
+and received by <cite>Model Developers</cite> when they define <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.BaseModel.predict" title="rafiki.model.BaseModel.predict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.BaseModel.predict()</span></code></a>.</p>
+<p>A task’s <cite>Prediction Format</cite> specifies the format of predictions made by models.
+Predictions are generated by <cite>Model Developers</cite> when they define <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.BaseModel.predict" title="rafiki.model.BaseModel.predict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.BaseModel.predict()</span></code></a>
+and received by <cite>App Users</cite> as predictions to their queries sent to <cite>Inference Jobs</cite></p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="quickstart-app-users.html#making-predictions"><span class="std std-ref">Making predictions</span></a></p>
+</div>
+<div class="section" id="image-classification">
+<h2><a class="toc-backref" href="#id5">IMAGE_CLASSIFICATION</a><a class="headerlink" href="#image-classification" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="dataset-type">
+<h3><a class="toc-backref" href="#id6">Dataset Type</a><a class="headerlink" href="#dataset-type" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference internal" href="datasets.html#dataset-type-image-files"><span class="std std-ref">IMAGE_FILES</span></a></p>
+<p>The train &amp; test dataset’s images should be have the same dimensions <code class="docutils literal notranslate"><span class="pre">W</span> <span class="pre">x</span> <span class="pre">H</span></code>.</p>
+</div>
+<div class="section" id="query-format">
+<h3><a class="toc-backref" href="#id7">Query Format</a><a class="headerlink" href="#query-format" title="Permalink to this headline">¶</a></h3>
+<p>A <code class="docutils literal notranslate"><span class="pre">W</span> <span class="pre">x</span> <span class="pre">H</span></code> 2D list representing the grayscale version of the query image.</p>
+</div>
+<div class="section" id="prediction-format">
+<h3><a class="toc-backref" href="#id8">Prediction Format</a><a class="headerlink" href="#prediction-format" title="Permalink to this headline">¶</a></h3>
+<p>A size-<code class="docutils literal notranslate"><span class="pre">k</span></code> list of floats, representing the probabilities of each class from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">-</span> <span class="pre">1</span></code>.</p>
+</div>
+</div>
+<div class="section" id="pos-tagging">
+<h2><a class="toc-backref" href="#id9">POS_TAGGING</a><a class="headerlink" href="#pos-tagging" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id1">
+<h3><a class="toc-backref" href="#id10">Dataset Type</a><a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference internal" href="datasets.html#dataset-type-corpus"><span class="std std-ref">CORPUS</span></a>, such that:</p>
+<ul class="simple">
+<li>Sentences are delimited by  <code class="docutils literal notranslate"><span class="pre">\n</span></code> tokens.</li>
+<li>There is only 1 tag column of <code class="docutils literal notranslate"><span class="pre">tag</span></code> corresponding to the POS tag of the token as an integer from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">-</span> <span class="pre">1</span></code>.</li>
+</ul>
+</div>
+<div class="section" id="id2">
+<h3><a class="toc-backref" href="#id11">Query Format</a><a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<p>A list of strings representing a sentence as a list of tokens in that sentence.</p>
+</div>
+<div class="section" id="id3">
+<h3><a class="toc-backref" href="#id12">Prediction Format</a><a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<p>A list of integers representing the list of predicted tag for each token, in sequence, for the sentence.</p>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="datasets.html" class="btn btn-neutral float-right" title="Supported Dataset Types" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="creating-models.html" class="btn btn-neutral" title="Creating Models" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, nginyc, cadmusthefounder, nudles.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
