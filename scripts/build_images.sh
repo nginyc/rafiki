@@ -8,21 +8,25 @@ title()
     echo "$edge"
 }
 
-build_image()
-{
-    docker build -t $1:$RAFIKI_VERSION -f $2 --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH $PWD || exit 1 
-}
-
 # Build Rafiki's images
 
 title "Building Rafiki Admin's image..."
-build_image $RAFIKI_IMAGE_ADMIN ./dockerfiles/admin.Dockerfile
+docker build -t $RAFIKI_IMAGE_ADMIN:$RAFIKI_VERSION -f ./dockerfiles/admin.Dockerfile \
+    --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH \
+    --build-arg CONDA_ENVIORNMENT=$CONDA_ENVIORNMENT $PWD || exit 1 
 title "Building Rafiki Advisor's image..."
-build_image $RAFIKI_IMAGE_ADVISOR ./dockerfiles/advisor.Dockerfile
+docker build -t $RAFIKI_IMAGE_ADVISOR:$RAFIKI_VERSION -f ./dockerfiles/advisor.Dockerfile \
+    --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH \
+    --build-arg CONDA_ENVIORNMENT=$CONDA_ENVIORNMENT $PWD || exit 1 
 title "Building Rafiki Worker's image..."
-build_image $RAFIKI_IMAGE_WORKER ./dockerfiles/worker.Dockerfile
+docker build -t $RAFIKI_IMAGE_WORKER:$RAFIKI_VERSION -f ./dockerfiles/worker.Dockerfile \
+    --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH \
+    --build-arg CONDA_ENVIORNMENT=$CONDA_ENVIORNMENT $PWD || exit 1 
 title "Building Rafiki Predictor's image..."
-build_image $RAFIKI_IMAGE_PREDICTOR ./dockerfiles/predictor.Dockerfile
+docker build -t $RAFIKI_IMAGE_PREDICTOR:$RAFIKI_VERSION -f ./dockerfiles/predictor.Dockerfile \
+    --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH \
+    --build-arg CONDA_ENVIORNMENT=$CONDA_ENVIORNMENT $PWD || exit 1 
 title "Building Rafiki Admin Web's image..."
-build_image $RAFIKI_IMAGE_ADMIN_WEB ./dockerfiles/admin_web.Dockerfile
+docker build -t $RAFIKI_IMAGE_ADMIN_WEB:$RAFIKI_VERSION -f ./dockerfiles/admin_web.Dockerfile \
+    --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH $PWD || exit 1 
 echo "Finished building all Rafiki's images successfully!"
