@@ -370,8 +370,7 @@ class Client(object):
         Creates a Rafiki advisor. If `advisor_id` is passed, it will create an advisor
         of that ID, or do nothing if an advisor of that ID has already been created.
 
-        :param knob_config: Knob configuration for advisor session
-        :type knob_config_str: Knob config, serialized
+        :param str knob_config_str: Serialized knob configuration for advisor session
         :param str advisor_id: ID of advisor to create
         '''
         data = self._post('/advisors', target='advisor',

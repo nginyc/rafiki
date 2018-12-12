@@ -27,6 +27,9 @@ Knob Classes
 .. autoclass:: rafiki.model.FloatKnob
     :members:
 
+.. autoclass:: rafiki.model.FixedKnob
+    :members:
+
 
 Utility Classes & Methods
 --------------------------------------------------------------------

@@ -57,7 +57,7 @@ prior to model training and inference. This is configurable with the ``dependenc
 during model creation. 
 
 Alternatively, you can build a custom Docker image that extends ``rafikiai/rafiki_worker``,
-installing the required dependencies for your model. This is configurable with ``docker_image``) option
+installing the required dependencies for your model. This is configurable with ``docker_image`` option
 during model creation.
 
 Models should run at least run on CPU-only machines and optionally leverage on a shared GPU, if it is available.

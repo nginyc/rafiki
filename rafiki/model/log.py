@@ -22,12 +22,19 @@ class ModelLogger():
 
     ::
 
-        from rafiki.model import logger
+        from rafiki.model import logger, BaseModel
         ...
-        def train(self, dataset_uri):
+        class MyModel(BaseModel):
             ...
-            logger.log('Starting model training...')
-            ...
+            def train(self, dataset_uri):
+                ...
+                logger.log('Starting model training...')
+                logger.define_plot('Precision & Recall', y_axis=['precision', 'recall'])
+                ...
+                logger.log(precision=0.1, recall=0.6, epoch=1)
+                ...
+                logger.log('Ending model training...')
+                ...
 
     '''
     
@@ -41,14 +48,14 @@ class ModelLogger():
     def define_loss_plot(self):
         '''
         Convenience method of defining a plot of ``loss`` against ``epoch``.
-        To be used with :meth:`rafiki.model.ModeLogger.log_loss`.
+        To be used with :meth:`rafiki.model.ModelLogger.log_loss`.
         '''
         self.define_plot('Loss Over Epochs', ['loss'], x_axis='epoch')
   
     def log_loss(self, loss, epoch):
         '''
         Convenience method for logging `loss` against `epoch`.
-        To be used with :meth:`rafiki.model.ModeLogger.define_loss_plot`..
+        To be used with :meth:`rafiki.model.ModelLogger.define_loss_plot`.
         '''
         self.log(loss=loss, epoch=epoch)
 
@@ -76,7 +83,8 @@ class ModelLogger():
         Logs a message and/or a set of metrics at a single point in time.
 
         Logged messages will be viewable on Rafiki's administrative UI. 
-        To visualize logged metrics on plots, a plot must be defined via :meth:`rafiki.model.ModeLogger.define_plot`.
+        
+        To visualize logged metrics on plots, a plot must be defined via :meth:`rafiki.model.ModelLogger.define_plot`.
 
         Only call this method in :meth:`rafiki.model.BaseModel.train` and :meth:`rafiki.model.BaseModel.evaluate`.
 
