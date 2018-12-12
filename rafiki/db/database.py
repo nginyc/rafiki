@@ -227,11 +227,12 @@ class Database(object):
     ####################################
 
     def create_service(self, service_type, container_manager_type, 
-                        docker_image):
+                        docker_image, requirements):
         service = Service(
             service_type=service_type,
             docker_image=docker_image,
-            container_manager_type=container_manager_type
+            container_manager_type=container_manager_type,
+            requirements=requirements
         )
         self._session.add(service)
         return service

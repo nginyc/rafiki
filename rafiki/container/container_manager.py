@@ -1,13 +1,20 @@
 import abc
 import os
 
+class InvalidServiceRequest(Exception):
+    pass
+
+class ServiceRequirement():
+    GPU = 'gpu'
+
 class ContainerManager(abc.ABC):
     def __init__(self, **kwargs):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def create_service(self, service_name, docker_image, 
-        replicas, args, environment_vars, mounts={}, publish_port=None):
+    def create_service(self, service_name, docker_image, replicas, 
+                        args, environment_vars, mounts={}, publish_port=None,
+                        requirements=[]):
         '''
             Creates a service with a set number of replicas.
 
@@ -23,7 +30,8 @@ class ContainerManager(abc.ABC):
                 mounts: {String: String} - Dict of host directory to container directory for mounting of volumes onto container
                 publish_port: (<host_port>, <container_port>) - host port (port to be published) to container port 
                     The service should then be reachable at the host port on the host
-
+                requirements: [ServiceRequirement] - List of requirements for the service
+                
             Returns {String: String} where
                 id: String - ID for the service created
                 hostname: String - Hostname for the service created (in the internal network)

@@ -1,6 +1,6 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, ForeignKey, Integer, Binary, DateTime
-from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.dialects.postgresql import JSON, ARRAY
 import uuid
 import datetime
 
@@ -63,6 +63,7 @@ class Service(Base):
     port = Column(Integer)
     container_service_name = Column(String)
     container_service_id = Column(String)
+    requirements = Column(ARRAY(String))
 
 class TrainJob(Base):
     __tablename__ = 'train_job'
