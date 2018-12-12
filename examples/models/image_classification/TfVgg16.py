@@ -8,7 +8,8 @@ import base64
 import abc
 from urllib.parse import urlparse, parse_qs 
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
+from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
+                        IntegerKnob, FloatKnob, CategoricalKnob, dataset_utils
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.config import APP_MODE
 
@@ -16,43 +17,27 @@ class TfVgg16(BaseModel):
     '''
     Implements VGG16 on Tensorflow for simple image classification
     '''
-
-    def get_knob_config(self):
-        epochs_range = [1, 20]
-        
-        if APP_MODE == 'DEV':
-            print('WARNING: In DEV mode, `epochs` is set to 1.')
-            epochs_range = [1, 1]
-
+    @staticmethod
+    def get_knob_config():
         return {
-            'knobs': {
-                'epochs': {
-                    'type': 'int',
-                    'range': epochs_range
-                },
-                'learning_rate': {
-                    'type': 'float_exp',
-                    'range': [1e-5, 1e-1]
-                },
-                'batch_size': {
-                    'type': 'int_cat',
-                    'values': [16, 32, 64, 128]
-                }
-            }
+            'epochs': IntegerKnob(1, 1 if APP_MODE != 'DEV' else 10),
+            'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
+            'batch_size': CategoricalKnob([16, 32, 64, 128]),
         }
 
-    def init(self, knobs):
-        self._batch_size = knobs.get('batch_size')
-        self._epochs = knobs.get('epochs')
-        self._learning_rate = knobs.get('learning_rate')
-
+    def __init__(self, **knobs):
+        super().__init__(**knobs)
+        self._knobs = knobs
         self._graph = tf.Graph()
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
         self._sess = tf.Session(graph=self._graph, config=config)
 
     def train(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri, image_size=[48, 48])
+        ep = self._knobs.get('epochs')
+        bs = self._knobs.get('batch_size')
+
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[48, 48])
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
@@ -65,12 +50,12 @@ class TfVgg16(BaseModel):
                 self._model.fit(
                     images, 
                     classes, 
-                    epochs=self._epochs, 
-                    batch_size=self._batch_size
+                    epochs=ep, 
+                    batch_size=bs
                 )
 
     def evaluate(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri, image_size=[48, 48])
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[48, 48])
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
         images = np.stack([images] * 3, axis=-1)
@@ -82,7 +67,7 @@ class TfVgg16(BaseModel):
         return accuracy
 
     def predict(self, queries):
-        images = self.utils.resize_as_images(queries, image_size=[48, 48])
+        images = dataset_utils.resize_as_images(queries, image_size=[48, 48])
         images = np.stack([images] * 3, axis=-1)
         with self._graph.as_default():
             with self._sess.as_default():
@@ -129,7 +114,8 @@ class TfVgg16(BaseModel):
                     self._model = keras.models.load_model(tmp.name)
                 
     def _build_model(self, num_classes):
-        learning_rate = self._learning_rate
+        lr = self._knobs.get('learning_rate')
+
         model = keras.applications.VGG16(
             include_top=True,
             input_shape=(48, 48, 3),
@@ -138,7 +124,7 @@ class TfVgg16(BaseModel):
         )
 
         model.compile(
-            optimizer=keras.optimizers.Adam(lr=learning_rate),
+            optimizer=keras.optimizers.Adam(lr=lr),
             loss='sparse_categorical_crossentropy',
             metrics=['accuracy']
         )

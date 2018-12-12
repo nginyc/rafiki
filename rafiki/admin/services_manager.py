@@ -8,7 +8,7 @@ from rafiki.constants import ServiceStatus, UserType, ServiceType, BudgetType
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, \
     TRAIN_WORKER_REPLICAS_PER_MODEL, INFERENCE_WORKER_REPLICAS_PER_TRIAL, \
     INFERENCE_MAX_BEST_TRIALS, SERVICE_STATUS_WAIT
-from rafiki.container import DockerSwarmContainerManager 
+from rafiki.container import DockerSwarmContainerManager, ServiceRequirement, InvalidServiceRequest
 from rafiki.model import parse_model_install_command
 
 logger = logging.getLogger(__name__)
@@ -185,11 +185,16 @@ class ServicesManager(object):
             **({'CUDA_VISIBLE_DEVICES': -1} if not enable_gpu else {}) # Hide GPU if not enabled
         }
 
+        requirements = []
+        if enable_gpu:
+            requirements.append(ServiceRequirement.GPU)
+
         service = self._create_service(
             service_type=service_type,
             docker_image=model.docker_image,
             replicas=replicas,
-            environment_vars=environment_vars
+            environment_vars=environment_vars,
+            requirements=requirements
         )
 
         self._db.create_train_job_worker(
@@ -241,14 +246,15 @@ class ServicesManager(object):
 
     def _create_service(self, service_type, docker_image,
                         replicas, environment_vars={}, args=[], 
-                        container_port=None):
+                        container_port=None, requirements=[]):
         
         # Create service in DB
         container_manager_type = type(self._container_manager).__name__
         service = self._db.create_service(
             container_manager_type=container_manager_type,
             service_type=service_type,
-            docker_image=docker_image
+            docker_image=docker_image,
+            requirements=requirements
         )
         self._db.commit()
 
@@ -284,7 +290,8 @@ class ServicesManager(object):
                 args=args,
                 environment_vars=environment_vars,
                 mounts=mounts,
-                publish_port=publish_port
+                publish_port=publish_port,
+                requirements=requirements
             )
             
             container_service_id = container_service['id']
@@ -303,11 +310,12 @@ class ServicesManager(object):
             )
             self._db.commit()
 
-        except Exception:
+        except Exception as e:
             logger.error('Error while creating service with ID {}'.format(service.id))
             logger.error(traceback.format_exc())
             self._db.mark_service_as_errored(service)
             self._db.commit()
+            raise e
 
         return service
 

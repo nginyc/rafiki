@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify
 import os
 import traceback
+import json
 
+from rafiki.model import deserialize_knob_config
 from rafiki.constants import UserType
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.utils.auth import generate_token, decode_token, UnauthorizedException, auth
@@ -40,6 +42,12 @@ def generate_user_token():
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def create_advisor(auth):
     params = get_request_params()
+
+    # Deserialize knob config
+    if 'knob_config_str' in params:
+        params['knob_config'] = deserialize_knob_config(params['knob_config_str'])
+        del params['knob_config_str']
+
     return jsonify(service.create_advisor(**params))
 
 @app.route('/advisors/<advisor_id>/propose', methods=['POST'])

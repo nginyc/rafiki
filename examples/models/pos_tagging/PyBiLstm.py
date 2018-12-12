@@ -12,7 +12,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data.dataset import Dataset
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
+from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
+                        IntegerKnob, FloatKnob, CategoricalKnob, logger, dataset_utils
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.config import APP_MODE
 
@@ -20,68 +21,37 @@ class PyBiLstm(BaseModel):
     '''
     Implements a Bidrectional LSTM model in Pytorch for POS tagging
     '''
-
-    def get_knob_config(self):
-        epochs_range = [10, 50]
-
-        if APP_MODE == 'DEV':
-            print('WARNING: In DEV mode, `epochs` is set to 10.')
-            epochs_range = [10, 10]
-        
+    @staticmethod
+    def get_knob_config():
         return {
-            'knobs': {
-                'epochs': {
-                    'type': 'int',
-                    'range': epochs_range
-                },
-                'batch_size': {
-                    'type': 'int_cat',
-                    'values': [16, 32, 64, 128]
-                },             
-                'word_embed_dims': {
-                    'type': 'int',
-                    'range': [16, 128]
-                },
-                'learning_rate': {
-                    'type': 'float_exp',
-                    'range': [1e-2, 1e-1]
-                },
-                'word_rnn_hidden_size': {
-                    'type': 'int',
-                    'range': [16, 128]
-                },
-                'word_dropout': {
-                    'type': 'float_exp',
-                    'range': [1e-3, 2e-1]
-                }
-            }
+            'epochs': IntegerKnob(10, 50 if APP_MODE != 'DEV' else 10),
+            'word_embed_dims': IntegerKnob(16, 128),
+            'word_rnn_hidden_size': IntegerKnob(16, 128),
+            'word_dropout': FloatKnob(1e-3, 2e-1, is_exp=True),
+            'learning_rate': FloatKnob(1e-2, 1e-1, is_exp=True),
+            'batch_size': CategoricalKnob([16, 32, 64, 128]),
         }
 
-    def init(self, knobs):
-        self._epochs = knobs.get('epochs')
-        self._word_embed_dims = knobs.get('word_embed_dims')
-        self._word_rnn_hidden_size = knobs.get('word_rnn_hidden_size')
-        self._word_dropout = knobs.get('word_dropout')
-        self._batch_size = knobs.get('batch_size')
-        self._learning_rate = knobs.get('learning_rate')
-        self._define_plots()
+    def __init__(self, **knobs):
+        super().__init__(**knobs)
+        self._knobs = knobs
 
     def train(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_corpus(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_corpus(dataset_uri)
         self._word_dict = self._extract_word_dict(dataset)
         self._tag_count = dataset.tag_num_classes[0] 
 
-        self.utils.log('No. of unique words: {}'.format(len(self._word_dict)))
-        self.utils.log('No. of tags: {}'.format(self._tag_count))
+        logger.log('No. of unique words: {}'.format(len(self._word_dict)))
+        logger.log('No. of tags: {}'.format(self._tag_count))
         
         (self._net, self._optimizer) = self._train(dataset)
         sents_tags = self._predict(dataset)
         acc = self._compute_accuracy(dataset, sents_tags)
 
-        self.utils.log('Train accuracy: {}'.format(acc))
+        logger.log('Train accuracy: {}'.format(acc))
 
     def evaluate(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_corpus(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_corpus(dataset_uri)
         sents_tags = self._predict(dataset)
         acc = self._compute_accuracy(dataset, sents_tags)
         return acc
@@ -160,7 +130,7 @@ class PyBiLstm(BaseModel):
         return (words_tsr, tags_tsr)
 
     def _predict(self, dataset):
-        N = self._batch_size
+        N = self._knobs.get('batch_size')
         net = self._net
         B = math.ceil(len(dataset) / N) # No. of batches
         word_count = len(self._word_dict)
@@ -168,7 +138,7 @@ class PyBiLstm(BaseModel):
 
         Tensor = torch.LongTensor
         if torch.cuda.is_available():
-            self.utils.log('Using CUDA...')
+            logger.log('Using CUDA...')
             net = net.cuda()
             Tensor = torch.cuda.LongTensor
 
@@ -196,22 +166,26 @@ class PyBiLstm(BaseModel):
         return sents_pred_tags
 
     def _train(self, dataset):
-        N = self._batch_size
-        epochs = self._epochs
+        N = self._knobs.get('batch_size')
+        ep = self._knobs.get('epochs')
         null_tag = self._tag_count # Tag to ignore (from padding of sentences during batching)
         B = math.ceil(len(dataset) / N) # No. of batches
+
+        # Define 2 plots: Loss against time, loss against epochs
+        logger.define_loss_plot()
+        logger.define_plot('Loss Over Time', ['loss'])
 
         (net, optimizer) = self._create_model()
 
         Tensor = torch.LongTensor
         if torch.cuda.is_available():
-            self.utils.log('Using CUDA...')
+            logger.log('Using CUDA...')
             net = net.cuda()
             Tensor = torch.cuda.LongTensor
 
         loss_func = nn.CrossEntropyLoss(ignore_index=null_tag)
 
-        for epoch in range(epochs):
+        for epoch in range(ep):
             total_loss = 0
             for i in range(B):
                 # Extract batch from dataset 
@@ -235,14 +209,9 @@ class PyBiLstm(BaseModel):
 
                 total_loss += loss.item()
 
-            self.utils.log_loss_metric(loss=(total_loss / B), epoch=epoch)
+            logger.log_loss(loss=(total_loss / B), epoch=epoch)
 
         return (net, optimizer)
-
-    def _define_plots(self):
-        # Define 2 plots: Loss against time, loss against epochs
-        self.utils.define_loss_plot()
-        self.utils.define_plot('Loss Over Time', ['loss'])
 
     def _compute_accuracy(self, dataset, sents_tags):
         total = 0
@@ -256,10 +225,15 @@ class PyBiLstm(BaseModel):
         return correct / total
 
     def _create_model(self):
+        word_embed_dims = self._knobs.get('word_embed_dims')
+        word_rnn_hidden_size = self._knobs.get('word_rnn_hidden_size')
+        word_dropout = self._knobs.get('word_dropout')
+        lr = self._knobs.get('learning_rate')
+
         word_count = len(self._word_dict)
         net =  PyNet(word_count + 1, self._tag_count + 1, \
-                self._word_embed_dims, self._word_rnn_hidden_size, self._word_dropout)
-        optimizer = optim.Adam(net.parameters(), lr=self._learning_rate)
+                word_embed_dims, word_rnn_hidden_size, word_dropout)
+        optimizer = optim.Adam(net.parameters(), lr=lr)
         return (net, optimizer)
 
 class PyNet(nn.Module):

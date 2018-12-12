@@ -7,9 +7,7 @@ import pprint
 
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
-from rafiki.model import load_model_class
-from rafiki.utils.log import JobLogger
-from rafiki.model import ModelLogUtilsLogger
+from rafiki.model import load_model_class, serialize_knob_config, logger as model_logger
 from rafiki.db import Database
 from rafiki.client import Client
 
@@ -77,9 +75,8 @@ class TrainWorker(object):
             logger.info('Received proposal of knobs from advisor:')
             logger.info(pprint.pformat(knobs))
             logger.info('Creating new trial in DB...')
-            trial = self._create_new_trial(model_id, train_job_id, knobs)
-            self._trial_id = trial.id
-            logger.info('Created trial of ID "{}" in DB'.format(trial.id))
+            self._trial_id = self._create_new_trial(model_id, train_job_id, knobs)
+            logger.info('Created trial of ID "{}" in DB'.format(self._trial_id))
 
             # Don't keep DB connection while training model
             self._db.disconnect()
@@ -89,14 +86,20 @@ class TrainWorker(object):
             try:
                 logger.info('Starting trial...')
                 logger.info('Training & evaluating model...')
-                (score, parameters, logs) = self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
-                                                                        test_dataset_uri)
+
+                def handle_log(log_line, log_lvl):
+                    with self._db:
+                        trial = self._db.get_trial(self._trial_id)
+                        self._db.add_trial_log(trial, log_line, log_lvl)
+
+                (score, parameters) = self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
+                                                                    test_dataset_uri, handle_log)
                 logger.info('Trial score: {}'.format(score))
                 
                 with self._db:
                     logger.info('Marking trial as complete in DB...')
                     trial = self._db.get_trial(self._trial_id)
-                    self._db.mark_trial_as_complete(trial, score, parameters, logs)
+                    self._db.mark_trial_as_complete(trial, score, parameters)
 
                 self._trial_id = None
             except Exception:
@@ -131,16 +134,22 @@ class TrainWorker(object):
             logger.error('Error marking trial as terminated:')
             logger.error(traceback.format_exc())
 
-    def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, 
-                                    test_dataset_uri):
-        model_inst = clazz()
-
-        # Insert model training logger
-        model_logger = TrainModelLogUtilsLogger()
-        model_inst.utils.set_logger(model_logger)
+    def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, \
+                                test_dataset_uri, handle_log):
 
         # Initialize model
-        model_inst.init(knobs)
+        model_inst = clazz(**knobs)
+
+        # Add logs handlers for trial, including adding handler to root logger 
+        # to handle logs emitted during model training with level above INFO
+        log_handler = ModelLoggerHandler(handle_log)
+        root_logger = logging.getLogger()
+        root_logger.addHandler(log_handler)
+        py_model_logger = logging.getLogger('{}.trial'.format(__name__))
+        py_model_logger.setLevel(logging.INFO)
+        py_model_logger.propagate = False # Avoid duplicate logs in root logger
+        py_model_logger.addHandler(log_handler)
+        model_logger.set_logger(py_model_logger)
 
         # Train model
         model_inst.train(train_dataset_uri)
@@ -148,16 +157,15 @@ class TrainWorker(object):
         # Evaluate model
         score = model_inst.evaluate(test_dataset_uri)
 
+        # Remove log handler for trial
+        root_logger.removeHandler(log_handler)
+
         # Dump and pickle model parameters
         parameters = model_inst.dump_parameters()
         parameters = pickle.dumps(parameters)
         model_inst.destroy()
 
-        # Export model logs
-        logs = model_logger.export_logs()
-        model_logger.destroy()
-
-        return (score, parameters, logs)
+        return (score, parameters)
 
     # Creates a new trial in the DB
     def _create_new_trial(self, model_id, train_job_id, knobs):
@@ -167,7 +175,7 @@ class TrainWorker(object):
             knobs=knobs
         )
         self._db.commit()
-        return trial
+        return trial.id
 
     # Gets proposal of a set of knob values from advisor
     def _get_proposal_from_advisor(self, advisor_id):
@@ -189,11 +197,11 @@ class TrainWorker(object):
         
     def _create_advisor(self, clazz):
         # Retrieve knob config for model of worker 
-        model_inst = clazz()
-        knob_config = model_inst.get_knob_config()
+        knob_config = clazz.get_knob_config()
+        knob_config_str = serialize_knob_config(knob_config)
 
         # Create advisor associated with worker
-        res = self._client.create_advisor(knob_config, advisor_id=self._service_id)
+        res = self._client.create_advisor(knob_config_str, advisor_id=self._service_id)
         advisor_id = res['id']
         return advisor_id
 
@@ -254,21 +262,13 @@ class TrainWorker(object):
         client.login(email=superadmin_email, password=superadmin_password)
         return client
 
-class TrainModelLogUtilsLogger(ModelLogUtilsLogger):
-    def __init__(self):
-        self._job_logger = JobLogger()
+class ModelLoggerHandler(logging.Handler):
+    def __init__(self, handle_log):
+        logging.Handler.__init__(self)
+        self._handle_log = handle_log
 
-    def log(self, message):
-        return self._job_logger.log(message)
-        
-    def define_plot(self, title, metrics, x_axis):
-        return self._job_logger.define_plot(title, metrics, x_axis)
-
-    def log_metrics(self, **kwargs):
-        return self._job_logger.log_metrics(**kwargs)
-
-    def export_logs(self):
-        return self._job_logger.export_logs()
-
-    def destroy(self):
-        return self._job_logger.destroy()
+    def emit(self, record):
+        log_line = record.msg
+        log_lvl = record.levelname
+        self._handle_log(log_line, log_lvl)
+      
