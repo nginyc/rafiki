@@ -46,8 +46,8 @@ class ServicesManager(object):
                 service = self._create_inference_job_worker(inference_job, trial, replicas)
                 worker_services.append(service)
 
-            # Ensure that predictor service is running
-            self._wait_until_services_running([predictor_service])
+            # Ensure that all services are running
+            self._wait_until_services_running([predictor_service, *worker_services])
 
             # Mark inference job as running
             self._db.mark_inference_job_as_running(inference_job)
@@ -85,8 +85,13 @@ class ServicesManager(object):
         # Create a worker service for each model
         models = self._db.get_models_of_task(train_job.task)
         model_to_replicas = self._compute_train_worker_replicas_for_models(models)
+        worker_services = []
         for (model, replicas) in model_to_replicas.items():
-            self._create_train_job_worker(train_job, model, replicas)
+            service = self._create_train_job_worker(train_job, model, replicas)
+            worker_services.append(service)
+
+        # Ensure that all services are running
+        self._wait_until_services_running(worker_services)
 
         # Mark train job as running
         self._db.mark_train_job_as_running(train_job)
