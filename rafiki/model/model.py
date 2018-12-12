@@ -279,6 +279,7 @@ def parse_model_install_command(dependencies, enable_gpu=False):
 
 def _check_dependencies(dependencies):
     for (dep, ver) in dependencies.items():
+        # Warn that Keras models should additionally depend on TF for GPU usage
         if dep == ModelDependency.KERAS:
             _warn('Keras models can enable GPU usage with by adding a `tensorflow` dependency.')
         elif dep == ModelDependency.PYTORCH:
@@ -290,9 +291,10 @@ def _check_dependencies(dependencies):
             _info('`tensorflow-gpu` of the same version will be installed if GPU is available during training.')
             _warn('TensorFlow models must cater for GPU-sharing with ' \
                     + '`config.gpu_options.allow_growth = True` (ref: https://www.tensorflow.org/guide/using_gpu#allowing_gpu_memory_growth).')
-        # Warn that Keras models should additionally depend on TF for GPU usage
-        elif dep == ModelDependency.KERAS:
-            _warn('Keras models can enable GPU usage with by adding a `tensorflow` dependency.')
+        elif dep == ModelDependency.SINGA:
+            _info('Conda packages `singa-gpu` or `singa-cpu` will be installed, depending on GPU availablility during training.')
+        else:
+            _info('PIP package `{}=={}` will be installed'.format(dep, ver))
 
 def _check_model_class(py_model_class):
     if not issubclass(py_model_class, BaseModel):
