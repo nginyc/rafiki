@@ -61,20 +61,19 @@ def wait_until_train_job_has_completed(client, app):
             pass
 
 # Returns `predictor_host` of inference job
-def wait_until_inference_job_is_running(client, app):
+def get_predictor_host(client, app):
     while True:
-        time.sleep(10)
         try:
             inference_job = client.get_running_inference_job(app)
             status = inference_job.get('status')
-            if status  == InferenceJobStatus.RUNNING:
+            if status == InferenceJobStatus.RUNNING:
                 return inference_job.get('predictor_host')
             elif status in [InferenceJobStatus.ERRORED, InferenceJobStatus.STOPPED]:
                 # Inference job has either errored or been stopped
                 return False
             else:
+                time.sleep(10)
                 continue
-
         except:
             pass
 
@@ -169,9 +168,7 @@ if __name__ == '__main__':
 
     print('Creating inference job for app "{}" on Rafiki...'.format(app))
     pprint.pprint(client.create_inference_job(app))
-
-    print('Waiting for inference job to be running...')
-    predictor_host = wait_until_inference_job_is_running(client, app)
+    predictor_host = get_predictor_host(client, app)
     if not predictor_host: raise Exception('Inference job has errored or stopped')
     print('Inference job is running!')
 

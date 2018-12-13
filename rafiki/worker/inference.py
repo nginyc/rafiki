@@ -34,11 +34,12 @@ class InferenceWorker(object):
         
         with self._db:
             (inference_job_id, trial_id) = self._read_worker_info()
+
+            # Add to inference job's set of running workers
+            self._cache.add_worker_of_inference_job(self._service_id, inference_job_id)
+
             self._model = self._load_model(trial_id)
 
-        # Add to inference job's set of running workers
-        self._cache.add_worker_of_inference_job(self._service_id, inference_job_id)
-            
         while True:
             (query_ids, queries) = \
                 self._cache.pop_queries_of_worker(self._service_id, INFERENCE_WORKER_PREDICT_BATCH_SIZE)
