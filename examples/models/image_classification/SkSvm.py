@@ -25,13 +25,8 @@ class SkSvm(BaseModel):
 
     def __init__(self, **knobs):
         super().__init__(**knobs)
-        self._knobs = knobs
-        self._clf = self._build_classifier(
-            knobs.get('max_iter'),
-            knobs.get('kernel'),
-            knobs.get('gamma'),
-            knobs.get('C')
-        )
+        self.__dict__.update(knobs)
+        self._clf = self._build_classifier(self.max_iter, self.kernel, self.gamma, self.C)
         
     def train(self, dataset_uri):
         dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)

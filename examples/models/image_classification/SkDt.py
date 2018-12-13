@@ -23,11 +23,8 @@ class SkDt(BaseModel):
 
     def __init__(self, **knobs):
         super().__init__(**knobs)
-        self._knobs = knobs
-        self._clf = self._build_classifier(
-            knobs.get('max_depth'),
-            knobs.get('criterion')
-        )
+        self.__dict__.update(knobs)
+        self._clf = self._build_classifier(self.max_depth, self.criterion)
         
     def train(self, dataset_uri):
         dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
