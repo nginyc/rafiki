@@ -58,7 +58,7 @@
             
             
               <div class="version">
-                0.0.7
+                0.0.8
               </div>
             
           
@@ -209,8 +209,20 @@
 <div class="section" id="adding-nodes-to-rafiki">
 <h2><a class="toc-backref" href="#id5">Adding Nodes to Rafiki</a><a class="headerlink" href="#adding-nodes-to-rafiki" title="Permalink to this headline">¶</a></h2>
 <p>Rafiki has with its dynamic stack (e.g. train workers, inference workes, predictors)
-running as <a class="reference external" href="https://docs.docker.com/engine/swarm/services/">Docker Swarm Services</a>.
-Horizontal scaling can be done by <a class="reference external" href="https://docs.docker.com/engine/swarm/join-nodes/">adding more nodes to the swarm</a>.</p>
+running as <a class="reference external" href="https://docs.docker.com/engine/swarm/services/">Docker Swarm Services</a>.</p>
+<p>Horizontal scaling can be done by adding more nodes to the swarm.</p>
+<p>Perform the following for <em>each</em> worker node to be added:</p>
+<ol class="arabic">
+<li><p class="first">Connect the node to the same network as the master, so that the node can <a class="reference external" href="https://docs.docker.com/engine/swarm/join-nodes/">join the master’s Docker Swarm</a>.</p>
+</li>
+<li><p class="first">Configure the node with the script:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/setup_node.sh
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ol>
 </div>
 <div class="section" id="exposing-rafiki-publicly">
 <h2><a class="toc-backref" href="#id6">Exposing Rafiki Publicly</a><a class="headerlink" href="#exposing-rafiki-publicly" title="Permalink to this headline">¶</a></h2>

@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.0.7
+                0.0.8
               </div>
             
           
@@ -150,76 +150,193 @@
 <span></span><span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
 <span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">logging</span>
 
-<span class="k">class</span> <span class="nc">DuplicatePlotException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span>
+<span class="n">MODEL_LOG_DATETIME_FORMAT</span> <span class="o">=</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">T%H:%M:%S&#39;</span>
 
-<div class="viewcode-block" id="ModelLogUtils"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.log.ModelLogUtils">[docs]</a><span class="k">class</span> <span class="nc">ModelLogUtils</span><span class="p">():</span>
+<span class="k">class</span> <span class="nc">LogType</span><span class="p">():</span>
+    <span class="n">PLOT</span> <span class="o">=</span> <span class="s1">&#39;PLOT&#39;</span>
+    <span class="n">METRICS</span> <span class="o">=</span> <span class="s1">&#39;METRICS&#39;</span>
+    <span class="n">MESSAGE</span> <span class="o">=</span> <span class="s1">&#39;MESSAGE&#39;</span>
+
+<div class="viewcode-block" id="ModelLogger"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelLogger">[docs]</a><span class="k">class</span> <span class="nc">ModelLogger</span><span class="p">():</span>
     <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Collection of utility methods for logging and plotting of messages &amp; metrics during training.</span>
-<span class="sd">    &#39;&#39;&#39;</span>   
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># Add logging to stdout for local debugging</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span> <span class="o">=</span> <span class="n">ModelLogUtilsLogger</span><span class="p">()</span>
+<span class="sd">    Allows models to log messages and metrics during model training, and </span>
+<span class="sd">    define plots for visualization of model training.</span>
 
-    <span class="k">def</span> <span class="nf">set_logger</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logger</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">ModelLogUtilsLogger</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;`logger` should subclass `ModelLogUtilsLogger`&#39;</span><span class="p">)</span>
-        
+<span class="sd">    To use this logger, import the global ``logger`` instance from the module ``rafiki.model``.</span>
+
+<span class="sd">    For example:</span>
+
+<span class="sd">    ::</span>
+
+<span class="sd">        from rafiki.model import logger, BaseModel</span>
+<span class="sd">        ...</span>
+<span class="sd">        class MyModel(BaseModel):</span>
+<span class="sd">            ...</span>
+<span class="sd">            def train(self, dataset_uri):</span>
+<span class="sd">                ...</span>
+<span class="sd">                logger.log(&#39;Starting model training...&#39;)</span>
+<span class="sd">                logger.define_plot(&#39;Precision &amp; Recall&#39;, [&#39;precision&#39;, &#39;recall&#39;], x_axis=&#39;epoch&#39;)</span>
+<span class="sd">                ...</span>
+<span class="sd">                logger.log(precision=0.1, recall=0.6, epoch=1)</span>
+<span class="sd">                ...</span>
+<span class="sd">                logger.log(&#39;Ending model training...&#39;)</span>
+<span class="sd">                ...</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>        
+        <span class="c1"># By default, set a logging handler to print to stdout (for debugging)</span>
+        <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">ModelLoggerDebugHandler</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span> <span class="o">=</span> <span class="n">logger</span>
 
-<div class="viewcode-block" id="ModelLogUtils.log"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.log.ModelLogUtils.log">[docs]</a>    <span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Logs a message for analysis of model training.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="ModelLogUtils.define_loss_plot"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.log.ModelLogUtils.define_loss_plot">[docs]</a>    <span class="k">def</span> <span class="nf">define_loss_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelLogger.define_loss_plot"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelLogger.define_loss_plot">[docs]</a>    <span class="k">def</span> <span class="nf">define_loss_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Convenience method of defining a plot of ``loss`` against ``epoch``.</span>
-<span class="sd">        To be used with ``log_loss_metric()``.</span>
+<span class="sd">        To be used with :meth:`rafiki.model.ModelLogger.log_loss`.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">define_plot</span><span class="p">(</span><span class="s1">&#39;Loss Over Epochs&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;loss&#39;</span><span class="p">],</span> <span class="n">x_axis</span><span class="o">=</span><span class="s1">&#39;epoch&#39;</span><span class="p">)</span></div>
   
-<div class="viewcode-block" id="ModelLogUtils.log_loss_metric"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.log.ModelLogUtils.log_loss_metric">[docs]</a>    <span class="k">def</span> <span class="nf">log_loss_metric</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">epoch</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelLogger.log_loss"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelLogger.log_loss">[docs]</a>    <span class="k">def</span> <span class="nf">log_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">epoch</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Convenience method for logging `loss` against `epoch`.</span>
-<span class="sd">        To be used with ``define_loss_plot()``.</span>
+<span class="sd">        To be used with :meth:`rafiki.model.ModelLogger.define_loss_plot`.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">log_metrics</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">loss</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">loss</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ModelLogUtils.define_plot"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.log.ModelLogUtils.define_plot">[docs]</a>    <span class="k">def</span> <span class="nf">define_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">metrics</span><span class="p">,</span> <span class="n">x_axis</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelLogger.define_plot"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelLogger.define_plot">[docs]</a>    <span class="k">def</span> <span class="nf">define_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">metrics</span><span class="p">,</span> <span class="n">x_axis</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Defines a plot for a set of metrics for analysis of model training.</span>
 <span class="sd">        By default, metrics will be plotted against time.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">define_plot</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">metrics</span><span class="p">,</span> <span class="n">x_axis</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ModelLogUtils.log_metrics"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.log.ModelLogUtils.log_metrics">[docs]</a>    <span class="k">def</span> <span class="nf">log_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="sd">        For example, a model&#39;s precision &amp; recall logged with e.g. ``log(precision=0.1, recall=0.6, epoch=1)``</span>
+<span class="sd">        can be visualized in the plots generated by</span>
+<span class="sd">        ``define_plot(&#39;Precision &amp; Recall&#39;, [&#39;precision&#39;, &#39;recall&#39;])`` (against time) or</span>
+<span class="sd">        ``define_plot(&#39;Precision &amp; Recall&#39;, [&#39;precision&#39;, &#39;recall&#39;], x_axis=&#39;epoch&#39;)`` (against epochs).</span>
+
+<span class="sd">        Only call this method in :meth:`rafiki.model.BaseModel.train`.</span>
+
+<span class="sd">        :param str title: Title of the plot</span>
+<span class="sd">        :param metrics: List of metrics that should be plotted on the y-axis</span>
+<span class="sd">        :type metrics: str[]</span>
+<span class="sd">        :param str x_axis: Metric that should be plotted on the x-axis, against all other metrics. Defaults to ``&#39;time&#39;``, which is automatically logged</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">LogType</span><span class="o">.</span><span class="n">PLOT</span><span class="p">,</span> <span class="p">{</span> <span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="n">title</span><span class="p">,</span> <span class="s1">&#39;metrics&#39;</span><span class="p">:</span> <span class="n">metrics</span><span class="p">,</span> <span class="s1">&#39;x_axis&#39;</span><span class="p">:</span> <span class="n">x_axis</span> <span class="p">})</span></div>
+
+<div class="viewcode-block" id="ModelLogger.log"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelLogger.log">[docs]</a>    <span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">metrics</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Logs metrics for a single point in time { &lt;metric&gt;: &lt;value&gt; }.</span>
-<span class="sd">        &lt;value&gt; should be a number.</span>
+<span class="sd">        Logs a message and/or a set of metrics at a single point in time.</span>
+
+<span class="sd">        Logged messages will be viewable on Rafiki&#39;s administrative UI. </span>
+<span class="sd">        </span>
+<span class="sd">        To visualize logged metrics on plots, a plot must be defined via :meth:`rafiki.model.ModelLogger.define_plot`.</span>
+
+<span class="sd">        Only call this method in :meth:`rafiki.model.BaseModel.train` and :meth:`rafiki.model.BaseModel.evaluate`.</span>
+
+<span class="sd">        :param str msg: Message to be logged</span>
+<span class="sd">        :param metrics: Set of metrics &amp; their values to be logged as ``{ &lt;metric&gt;: &lt;value&gt; }``, where ``&lt;value&gt;`` should be a number.</span>
+<span class="sd">        :type metrics: dict[str, int|float]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">log_metrics</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>
-
-<span class="k">class</span> <span class="nc">ModelLogUtilsLogger</span><span class="p">():</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_plots</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">msg</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">LogType</span><span class="o">.</span><span class="n">MESSAGE</span><span class="p">,</span> <span class="p">{</span> <span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="n">msg</span> <span class="p">})</span>
+        
+        <span class="k">if</span> <span class="n">metrics</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">LogType</span><span class="o">.</span><span class="n">METRICS</span><span class="p">,</span> <span class="n">metrics</span><span class="p">)</span></div>
     
-    <span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_print</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    <span class="c1"># Set the Python logger internally used.</span>
+    <span class="c1"># During model training, this method will be called by Rafiki to inject a Python logger </span>
+    <span class="c1"># to generate logs for an instance of model training.</span>
+    <span class="k">def</span> <span class="nf">set_logger</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logger</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span> <span class="o">=</span> <span class="n">logger</span>
 
-    <span class="k">def</span> <span class="nf">define_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">metrics</span><span class="p">,</span> <span class="n">x_axis</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">title</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plots</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">DuplicatePlotException</span><span class="p">(</span><span class="s1">&#39;Plot </span><span class="si">{}</span><span class="s1"> already defined&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">title</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_plots</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_print</span><span class="p">(</span><span class="s1">&#39;Plot with title `</span><span class="si">{}</span><span class="s1">` of </span><span class="si">{}</span><span class="s1"> against </span><span class="si">{}</span><span class="s1"> will be registered when this model is being trained on Rafiki&#39;</span> \
-            <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">metrics</span><span class="p">),</span> <span class="n">x_axis</span> <span class="ow">or</span> <span class="s1">&#39;time&#39;</span><span class="p">))</span>
+    <span class="k">def</span> <span class="nf">_log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">log_type</span><span class="p">,</span> <span class="n">log_dict</span><span class="o">=</span><span class="p">{}):</span>
+        <span class="n">log_dict</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">log_type</span>
+        <span class="n">log_dict</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">MODEL_LOG_DATETIME_FORMAT</span><span class="p">)</span>
+        <span class="n">log_line</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">log_dict</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">log_line</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">log_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_print</span><span class="p">(</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">=</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">metric</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">metric</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()]))</span>
+    <span class="nd">@staticmethod</span>
+    <span class="c1"># Parses a logged line into a dictionary.</span>
+    <span class="k">def</span> <span class="nf">parse_log_line</span><span class="p">(</span><span class="n">log_line</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">log_line</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{}</span>
 
+    <span class="nd">@staticmethod</span>
+    <span class="c1"># Parses logs into (messages, metrics, plots) for visualization.</span>
+    <span class="k">def</span> <span class="nf">parse_logs</span><span class="p">(</span><span class="n">log_lines</span><span class="p">):</span>
+        <span class="n">plots</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">metrics</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">messages</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">log_line</span> <span class="ow">in</span> <span class="n">log_lines</span><span class="p">:</span>
+            <span class="n">log_dict</span> <span class="o">=</span> <span class="n">ModelLogger</span><span class="o">.</span><span class="n">parse_log_line</span><span class="p">(</span><span class="n">log_line</span><span class="p">)</span>            
+
+            <span class="k">if</span> <span class="s1">&#39;time&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">log_dict</span> <span class="ow">or</span> <span class="s1">&#39;type&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">log_dict</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">log_datetime</span> <span class="o">=</span> <span class="n">log_dict</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span>
+            <span class="n">log_type</span> <span class="o">=</span> <span class="n">log_dict</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">log_dict</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">log_dict</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">log_type</span> <span class="o">==</span> <span class="n">LogType</span><span class="o">.</span><span class="n">MESSAGE</span><span class="p">:</span>
+                <span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">log_datetime</span><span class="p">,</span>
+                    <span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="n">log_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">)</span>
+                <span class="p">})</span>
+
+            <span class="k">elif</span> <span class="n">log_type</span> <span class="o">==</span> <span class="n">LogType</span><span class="o">.</span><span class="n">METRICS</span><span class="p">:</span>
+                <span class="n">metrics</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">log_datetime</span><span class="p">,</span>
+                    <span class="o">**</span><span class="n">log_dict</span>
+                <span class="p">})</span>
+
+            <span class="k">elif</span> <span class="n">log_type</span> <span class="o">==</span> <span class="n">LogType</span><span class="o">.</span><span class="n">PLOT</span><span class="p">:</span>
+                <span class="n">plots</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="o">**</span><span class="n">log_dict</span>
+                <span class="p">})</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">messages</span><span class="p">,</span> <span class="n">metrics</span><span class="p">,</span> <span class="n">plots</span><span class="p">)</span></div>
+
+<span class="k">class</span> <span class="nc">ModelLoggerDebugHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Handler</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">Handler</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">emit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+        <span class="n">log_line</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">msg</span>
+        <span class="n">log_dict</span> <span class="o">=</span> <span class="n">ModelLogger</span><span class="o">.</span><span class="n">parse_log_line</span><span class="p">(</span><span class="n">log_line</span><span class="p">)</span>
+        <span class="n">log_type</span> <span class="o">=</span> <span class="n">log_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">log_type</span> <span class="o">==</span> <span class="n">LogType</span><span class="o">.</span><span class="n">PLOT</span><span class="p">:</span>
+
+            <span class="n">title</span> <span class="o">=</span> <span class="n">log_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">)</span>
+            <span class="n">metrics</span> <span class="o">=</span> <span class="n">log_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;metrics&#39;</span><span class="p">)</span>
+            <span class="n">x_axis</span> <span class="o">=</span> <span class="n">log_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;x_axis&#39;</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_print</span><span class="p">(</span><span class="s1">&#39;Plot `</span><span class="si">{}</span><span class="s1">` of </span><span class="si">{}</span><span class="s1"> against </span><span class="si">{}</span><span class="s1"> will be registered when this model is being trained on Rafiki&#39;</span> \
+                <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">metrics</span><span class="p">),</span> <span class="n">x_axis</span> <span class="ow">or</span> <span class="s1">&#39;time&#39;</span><span class="p">))</span>
+
+        <span class="k">elif</span> <span class="n">log_type</span> <span class="o">==</span> <span class="n">LogType</span><span class="o">.</span><span class="n">METRICS</span><span class="p">:</span>
+            <span class="n">metrics_log</span> <span class="o">=</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">=</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">metric</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">metric</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="ow">in</span> <span class="n">log_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_print</span><span class="p">(</span><span class="s1">&#39;Metric(s) logged: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">metrics_log</span><span class="p">))</span>
+
+        <span class="k">elif</span> <span class="n">log_type</span> <span class="o">==</span> <span class="n">LogType</span><span class="o">.</span><span class="n">MESSAGE</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">log_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_print</span><span class="p">(</span><span class="n">log_line</span><span class="p">)</span>
+        
     <span class="k">def</span> <span class="nf">_print</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;[</span><span class="si">{}</span><span class="s1">]&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="vm">__name__</span><span class="p">),</span> <span class="n">message</span><span class="p">)</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">ModelLogger</span><span class="p">()</span>
 </pre></div>
 
            </div>

@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.0.7
+                0.0.8
               </div>
             
           
@@ -529,19 +529,18 @@
     <span class="c1"># Advisors</span>
     <span class="c1">####################################</span>
 
-<div class="viewcode-block" id="Client.create_advisor"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.create_advisor">[docs]</a>    <span class="k">def</span> <span class="nf">create_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">knob_config</span><span class="p">,</span> <span class="n">advisor_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.create_advisor"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.create_advisor">[docs]</a>    <span class="k">def</span> <span class="nf">create_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">knob_config_str</span><span class="p">,</span> <span class="n">advisor_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Creates a Rafiki advisor. If `advisor_id` is passed, it will create an advisor</span>
 <span class="sd">        of that ID, or do nothing if an advisor of that ID has already been created.</span>
 
-<span class="sd">        :param knob_config: Knob configuration for advisor session</span>
-<span class="sd">        :type knob_config: dict[str, any]</span>
+<span class="sd">        :param str knob_config_str: Serialized knob configuration for advisor session</span>
 <span class="sd">        :param str advisor_id: ID of advisor to create</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/advisors&#39;</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="s1">&#39;advisor&#39;</span><span class="p">,</span>
                             <span class="n">json</span><span class="o">=</span><span class="p">{</span>
                                 <span class="s1">&#39;advisor_id&#39;</span><span class="p">:</span> <span class="n">advisor_id</span><span class="p">,</span>
-                                <span class="s1">&#39;knob_config&#39;</span><span class="p">:</span> <span class="n">knob_config</span>
+                                <span class="s1">&#39;knob_config_str&#39;</span><span class="p">:</span> <span class="n">knob_config_str</span>
                             <span class="p">})</span>
         <span class="k">return</span> <span class="n">data</span></div>
 

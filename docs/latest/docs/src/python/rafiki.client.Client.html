@@ -58,7 +58,7 @@
             
             
               <div class="version">
-                0.0.7
+                0.0.8
               </div>
             
           
@@ -180,7 +180,7 @@ Rafiki Admin instance that the Client connects to.</p>
 </table>
 <dl class="method">
 <dt id="rafiki.client.Client.create_advisor">
-<code class="descname">create_advisor</code><span class="sig-paren">(</span><em>knob_config</em>, <em>advisor_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.create_advisor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_advisor" title="Permalink to this definition">¶</a></dt>
+<code class="descname">create_advisor</code><span class="sig-paren">(</span><em>knob_config_str</em>, <em>advisor_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.create_advisor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_advisor" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates a Rafiki advisor. If <cite>advisor_id</cite> is passed, it will create an advisor
 of that ID, or do nothing if an advisor of that ID has already been created.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -188,7 +188,7 @@ of that ID, or do nothing if an advisor of that ID has already been created.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>knob_config</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>any</em><em>]</em>) – Knob configuration for advisor session</li>
+<li><strong>knob_config_str</strong> (<em>str</em>) – Serialized knob configuration for advisor session</li>
 <li><strong>advisor_id</strong> (<em>str</em>) – ID of advisor to create</li>
 </ul>
 </td>

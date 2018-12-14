@@ -7,21 +7,17 @@ Quick Start
 
 .. note::
 
-    If you're a *Model Developer* just looking to contribute models to a running instance of Rafiki, refer to :ref:`quickstart-model-developers`.
-
-.. note::
-
-    If you're an *Application Developer* just looking to train and deploy models on a running instance of Rafiki, refer to :ref:`quickstart-app-developers`.
-
-.. note::
-
-    If you're an *Application User* just looking to make predictions to deployed models on a running instance of Rafiki, refer to :ref:`quickstart-app-users`.
+    - If you're a *Model Developer* just looking to contribute models to a running instance of Rafiki, refer to :ref:`quickstart-model-developers`.
+    - If you're an *Application Developer* just looking to train and deploy models on a running instance of Rafiki, refer to :ref:`quickstart-app-developers`.
+    - If you're an *Application User* just looking to make predictions to deployed models on a running instance of Rafiki, refer to :ref:`quickstart-app-users`.
 
 
-This guide assumes you have deployed your an empty instance of Rafiki and you want to do a *full* train-inference flow, 
-including preparation of dataset and adding of models to Rafiki. Below, the sequence of examples submit the 
-`Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference. 
-Alternatively, after installing Rafiki Client's dependencies, you can run `./examples/scripts/client_quickstart.py <https://github.com/nginyc/rafiki/blob/master/examples/scripts/client_quickstart.py>`_.
+This guide assumes you have deployed your an empty instance of Rafiki and you want to try a *full* train-inference flow, 
+including adding of models, submitting a train job and submitting a inference job to Rafiki.
+
+The sequence of examples below submits the `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference. 
+Alternatively, after installing the Rafiki Client's dependencies, you can refer and run the scripted version of this quickstart 
+`./examples/scripts/client_quickstart.py <https://github.com/nginyc/rafiki/blob/master/examples/scripts/client_quickstart.py>`_.
 
 .. note::
 

@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.0.7
+                0.0.8
               </div>
             
           
@@ -154,75 +154,56 @@
 <span class="kn">import</span> <span class="nn">pickle</span>
 <span class="kn">import</span> <span class="nn">uuid</span>
 <span class="kn">from</span> <span class="nn">importlib</span> <span class="k">import</span> <span class="n">import_module</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
 
 <span class="kn">from</span> <span class="nn">rafiki.advisor</span> <span class="k">import</span> <span class="n">Advisor</span><span class="p">,</span> <span class="n">AdvisorType</span>
 <span class="kn">from</span> <span class="nn">rafiki.predictor</span> <span class="k">import</span> <span class="n">ensemble_predictions</span>
 <span class="kn">from</span> <span class="nn">rafiki.constants</span> <span class="k">import</span> <span class="n">TaskType</span><span class="p">,</span> <span class="n">ModelDependency</span>
 
 <span class="kn">from</span> <span class="nn">.dataset</span> <span class="k">import</span> <span class="n">ModelDatasetUtils</span>
-<span class="kn">from</span> <span class="nn">.log</span> <span class="k">import</span> <span class="n">ModelLogUtils</span>
+<span class="kn">from</span> <span class="nn">.knob</span> <span class="k">import</span> <span class="n">BaseKnob</span><span class="p">,</span> <span class="n">serialize_knob_config</span><span class="p">,</span> <span class="n">deserialize_knob_config</span>
 
 <span class="k">class</span> <span class="nc">InvalidModelClassException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span>
 <span class="k">class</span> <span class="nc">InvalidModelParamsException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span>
 
-<span class="k">class</span> <span class="nc">ModelUtils</span><span class="p">(</span><span class="n">ModelDatasetUtils</span><span class="p">,</span> <span class="n">ModelLogUtils</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">ModelDatasetUtils</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-        <span class="n">ModelLogUtils</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-
 <div class="viewcode-block" id="BaseModel"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.BaseModel">[docs]</a><span class="k">class</span> <span class="nc">BaseModel</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Rafiki&#39;s base model class that Rafiki models should extend. </span>
-<span class="sd">    Rafiki models should implement all abstract methods according to their associated tasks&#39; specifications.</span>
+<span class="sd">    Rafiki models should implement all abstract methods according to their associated tasks&#39; specifications,</span>
+<span class="sd">    together with the static method ``get_knob_config()``.</span>
+
+<span class="sd">    In the model&#39;s ``__init__`` method, call ``super().__init__(**knobs)`` as the first line, </span>
+<span class="sd">    followed by the model&#39;s initialization logic. The model should be initialize itself with ``knobs``, </span>
+<span class="sd">    a set of generated knob values for the instance, and possibly save the knobs&#39; values as </span>
+<span class="sd">    attribute(s) of the model instance. These knob values will be chosen by Rafiki based on the model&#39;s knob config. </span>
+<span class="sd">    </span>
+<span class="sd">    For example:</span>
+
+<span class="sd">    ::</span>
+
+<span class="sd">        def __init__(self, **knobs):</span>
+<span class="sd">            super().__init__(**knobs)</span>
+<span class="sd">            self.__dict__.update(knobs)</span>
+<span class="sd">            ...</span>
+<span class="sd">            self._build_model(self.knob1, self.knob2)</span>
+
+
+<span class="sd">    :param knobs: Dictionary of knob values for this model instance</span>
+<span class="sd">    :type knobs: dict[str, any]</span>
 <span class="sd">    &#39;&#39;&#39;</span>   
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">knobs</span><span class="p">):</span>
+        <span class="k">pass</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">utils</span> <span class="o">=</span> <span class="n">ModelUtils</span><span class="p">()</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-
-<div class="viewcode-block" id="BaseModel.get_knob_config"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.BaseModel.get_knob_config">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
-    <span class="k">def</span> <span class="nf">get_knob_config</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="BaseModel.get_knob_config"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.BaseModel.get_knob_config">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_knob_config</span><span class="p">():</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Return a dictionary defining this model&#39;s knob configuration </span>
+<span class="sd">        Return a dictionary defining this model class&#39; knob configuration </span>
 <span class="sd">        (i.e. list of knob names, their data types and their ranges).</span>
 
 <span class="sd">        :returns: Dictionary defining this model&#39;s knob configuration </span>
-<span class="sd">        :rtype:</span>
-<span class="sd">            ::</span>
-
-<span class="sd">                {</span>
-<span class="sd">                    &#39;knobs&#39;: {</span>
-<span class="sd">                        &#39;hidden_layer_units&#39;: {</span>
-<span class="sd">                            &#39;type&#39;: &#39;int&#39;,</span>
-<span class="sd">                            &#39;range&#39;: [2, 128]</span>
-<span class="sd">                        },</span>
-<span class="sd">                        &#39;epochs&#39;: {</span>
-<span class="sd">                            &#39;type&#39;: &#39;int&#39;,</span>
-<span class="sd">                            &#39;range&#39;: [1, 100]</span>
-<span class="sd">                        },</span>
-<span class="sd">                        &#39;learning_rate&#39;: {</span>
-<span class="sd">                            &#39;type&#39;: &#39;float_exp&#39;,</span>
-<span class="sd">                            &#39;range&#39;: [1e-5, 1e-1]</span>
-<span class="sd">                        },</span>
-<span class="sd">                        &#39;batch_size&#39;: {</span>
-<span class="sd">                            &#39;type&#39;: &#39;int_cat&#39;,</span>
-<span class="sd">                            &#39;values&#39;: [1, 2, 4, 8, 16, 32, 64, 128]</span>
-<span class="sd">                        }</span>
-<span class="sd">                    }</span>
-<span class="sd">                }</span>
-<span class="sd">            </span>
+<span class="sd">        :rtype: dict[str, rafiki.model.BaseKnob]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
-
-<div class="viewcode-block" id="BaseModel.init"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.BaseModel.init">[docs]</a>    <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">knobs</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Initialize the model with a dictionary of knob values. </span>
-<span class="sd">        These knob values will be chosen by Rafiki based on the model&#39;s knob config.</span>
-
-<span class="sd">        :param knobs: Dictionary of knob values for this model instance</span>
-<span class="sd">        :type knobs: dict[str, any]</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">pass</span></div>
 
 <div class="viewcode-block" id="BaseModel.train"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.BaseModel.train">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
     <span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">):</span>
@@ -313,7 +294,9 @@
 <span class="sd">    :returns: The trained model</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing model installation...&#39;</span><span class="p">)</span>
+        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Installing &amp; checking model dependencies...&#39;</span><span class="p">)</span>
+        <span class="n">_check_dependencies</span><span class="p">(</span><span class="n">dependencies</span><span class="p">)</span>
+
         <span class="c1"># Test installation</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dependencies</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;`dependencies` should be a dict[str, str]&#39;</span><span class="p">)</span>
@@ -322,30 +305,24 @@
         <span class="n">exit_code</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="n">install_command</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">exit_code</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span> <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Error in installing model dependencies&#39;</span><span class="p">)</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing loading of model...&#39;</span><span class="p">)</span>
+        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking loading of model &amp; model definition...&#39;</span><span class="p">)</span>
         <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_file_path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span>
         <span class="n">model_file_bytes</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-        <span class="n">py_model_class</span> <span class="o">=</span> <span class="n">load_model_class</span><span class="p">(</span><span class="n">model_file_bytes</span><span class="p">,</span> <span class="n">model_class</span><span class="p">)</span>
-        <span class="n">model_inst</span> <span class="o">=</span> <span class="n">py_model_class</span><span class="p">()</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model_inst</span><span class="p">,</span> <span class="n">BaseModel</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Model should extend `rafiki.model.BaseModel`&#39;</span><span class="p">)</span>
+        <span class="n">py_model_class</span> <span class="o">=</span> <span class="n">load_model_class</span><span class="p">(</span><span class="n">model_file_bytes</span><span class="p">,</span> <span class="n">model_class</span><span class="p">,</span> <span class="n">temp_mod_name</span><span class="o">=</span><span class="s1">&#39;your-model-file-temp&#39;</span><span class="p">)</span>
+        <span class="n">_check_model_class</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">)</span>
 
-        <span class="n">knob_config</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">get_knob_config</span><span class="p">()</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">knob_config</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;`get_knob_config()` should return a dict[str, any]&#39;</span><span class="p">)</span>
+        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking model knob configuration...&#39;</span><span class="p">)</span>
+        <span class="n">knob_config</span> <span class="o">=</span> <span class="n">py_model_class</span><span class="o">.</span><span class="n">get_knob_config</span><span class="p">()</span>
+        <span class="n">_check_knob_config</span><span class="p">(</span><span class="n">knob_config</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="s1">&#39;knobs&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">knob_config</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;`knob_config` should have a </span><span class="se">\&#39;</span><span class="s1">knobs</span><span class="se">\&#39;</span><span class="s1"> key&#39;</span><span class="p">)</span>
-
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Checking model dependencies &amp; methods...&#39;</span><span class="p">)</span>
-        <span class="n">_check_dependencies</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">,</span> <span class="n">dependencies</span><span class="p">)</span>
-        <span class="n">_check_methods</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">)</span>
-
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing training &amp; evaluation of model...&#39;</span><span class="p">)</span>
+        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking model initialization...&#39;</span><span class="p">)</span>
         <span class="n">advisor</span> <span class="o">=</span> <span class="n">Advisor</span><span class="p">(</span><span class="n">knob_config</span><span class="p">,</span> <span class="n">advisor_type</span><span class="o">=</span><span class="n">AdvisorType</span><span class="o">.</span><span class="n">BTB_GP</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">knobs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">knobs</span> <span class="o">=</span> <span class="n">advisor</span><span class="o">.</span><span class="n">propose</span><span class="p">()</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Using knobs: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">knobs</span><span class="p">))</span>
-        <span class="n">model_inst</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">knobs</span><span class="p">)</span>
+        <span class="n">model_inst</span> <span class="o">=</span> <span class="n">py_model_class</span><span class="p">(</span><span class="o">**</span><span class="n">knobs</span><span class="p">)</span>
+        <span class="n">_check_model_inst</span><span class="p">(</span><span class="n">model_inst</span><span class="p">)</span>
+
+        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking training &amp; evaluation of model...&#39;</span><span class="p">)</span>
         <span class="n">model_inst</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">train_dataset_uri</span><span class="p">)</span>
         <span class="n">score</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">test_dataset_uri</span><span class="p">)</span>
 
@@ -354,7 +331,7 @@
 
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Score: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">score</span><span class="p">))</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing dumping of parameters of model...&#39;</span><span class="p">)</span>
+        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking dumping of parameters of model...&#39;</span><span class="p">)</span>
         <span class="n">parameters</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">dump_parameters</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
@@ -367,13 +344,12 @@
             <span class="n">traceback</span><span class="o">.</span><span class="n">print_stack</span><span class="p">()</span>
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;`parameters` should be serializable by `pickle`&#39;</span><span class="p">)</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing loading of parameters of model...&#39;</span><span class="p">)</span>
+        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking loading of parameters of model...&#39;</span><span class="p">)</span>
         <span class="n">model_inst</span><span class="o">.</span><span class="n">destroy</span><span class="p">()</span>
-        <span class="n">model_inst</span> <span class="o">=</span> <span class="n">py_model_class</span><span class="p">()</span>
-        <span class="n">model_inst</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">knobs</span><span class="p">)</span>
+        <span class="n">model_inst</span> <span class="o">=</span> <span class="n">py_model_class</span><span class="p">(</span><span class="o">**</span><span class="n">knobs</span><span class="p">)</span>
         <span class="n">model_inst</span><span class="o">.</span><span class="n">load_parameters</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing predictions with model...&#39;</span><span class="p">)</span>
+        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking predictions with model...&#39;</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Using queries: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">queries</span><span class="p">))</span>
         <span class="n">predictions</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">queries</span><span class="p">)</span>
 
@@ -388,15 +364,18 @@
         <span class="n">predictions</span> <span class="o">=</span> <span class="n">ensemble_predictions</span><span class="p">([</span><span class="n">predictions</span><span class="p">],</span> <span class="n">task</span><span class="p">)</span>
 
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Predictions: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">predictions</span><span class="p">))</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;The model definition is valid!&#39;</span><span class="p">)</span>
+
+        <span class="n">_info</span><span class="p">(</span><span class="s1">&#39;The model definition is valid!&#39;</span><span class="p">)</span>
     
         <span class="k">return</span> <span class="n">model_inst</span>
 
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 
-<span class="k">def</span> <span class="nf">load_model_class</span><span class="p">(</span><span class="n">model_file_bytes</span><span class="p">,</span> <span class="n">model_class</span><span class="p">):</span>
-    <span class="n">temp_mod_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+<span class="k">def</span> <span class="nf">load_model_class</span><span class="p">(</span><span class="n">model_file_bytes</span><span class="p">,</span> <span class="n">model_class</span><span class="p">,</span> <span class="n">temp_mod_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">temp_mod_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">temp_mod_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+
     <span class="n">temp_model_file_name</span> <span class="o">=</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.py&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">temp_mod_name</span><span class="p">)</span>
 
     <span class="c1"># Temporarily save the model file to disk</span>
@@ -447,8 +426,9 @@
 
     <span class="k">return</span> <span class="s1">&#39;; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">commands</span><span class="p">)</span>
 
-<span class="k">def</span> <span class="nf">_check_dependencies</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">,</span> <span class="n">dependencies</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_check_dependencies</span><span class="p">(</span><span class="n">dependencies</span><span class="p">):</span>
     <span class="k">for</span> <span class="p">(</span><span class="n">dep</span><span class="p">,</span> <span class="n">ver</span><span class="p">)</span> <span class="ow">in</span> <span class="n">dependencies</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="c1"># Warn that Keras models should additionally depend on TF for GPU usage</span>
         <span class="k">if</span> <span class="n">dep</span> <span class="o">==</span> <span class="n">ModelDependency</span><span class="o">.</span><span class="n">KERAS</span><span class="p">:</span>
             <span class="n">_warn</span><span class="p">(</span><span class="s1">&#39;Keras models can enable GPU usage with by adding a `tensorflow` dependency.&#39;</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">dep</span> <span class="o">==</span> <span class="n">ModelDependency</span><span class="o">.</span><span class="n">PYTORCH</span><span class="p">:</span>
@@ -464,16 +444,57 @@
             <span class="n">_info</span><span class="p">(</span><span class="s1">&#39;Conda packages `singa-gpu` or `singa-cpu` will be installed, depending on GPU availablility during training.&#39;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">_info</span><span class="p">(</span><span class="s1">&#39;PIP package `</span><span class="si">{}</span><span class="s1">==</span><span class="si">{}</span><span class="s1">` will be installed&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dep</span><span class="p">,</span> <span class="n">ver</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">_check_model_class</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">,</span> <span class="n">BaseModel</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Model should extend `rafiki.model.BaseModel`&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isfunction</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">,</span> <span class="s1">&#39;init&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)):</span>
+        <span class="n">_warn</span><span class="p">(</span><span class="s1">&#39;`init` has been deprecated - use `__init__` for your model</span><span class="se">\&#39;</span><span class="s1">s initialization logic instead&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isfunction</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">,</span> <span class="s1">&#39;get_knob_config&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span> <span class="ow">and</span> \
+        <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">py_model_class</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;get_knob_config&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="nb">staticmethod</span><span class="p">):</span>
+        <span class="n">_warn</span><span class="p">(</span><span class="s1">&#39;`get_knob_config` has been changed to a `@staticmethod`&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_check_model_inst</span><span class="p">(</span><span class="n">model_inst</span><span class="p">):</span>
+    <span class="c1"># Throw error when deprecated methods are called</span>
+    <span class="k">def</span> <span class="nf">deprecated_func</span><span class="p">(</span><span class="n">desc</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">throw_error</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">desc</span><span class="p">)</span>
         
-<span class="k">def</span> <span class="nf">_check_methods</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">):</span>
-    <span class="n">model_inst</span> <span class="o">=</span> <span class="n">py_model_class</span><span class="p">()</span>
-    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model_inst</span><span class="p">,</span> <span class="s1">&#39;get_predict_label_mapping&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">_warn</span><span class="p">(</span><span class="s1">&#39;`get_predict_label_mapping` has been deprecated&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">throw_error</span>
+
+    <span class="k">class</span> <span class="nc">DeprecatedModelUtils</span><span class="p">():</span>
+        <span class="n">log</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.log(...)` has been moved to `logger.log(...)`&#39;</span><span class="p">)</span>
+        <span class="n">log_metrics</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.log_metrics(...)` has been moved to `logger.log(...)`&#39;</span><span class="p">)</span>
+        <span class="n">define_plot</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.define_plot(...)` has been moved to `logger.define_plot(...)`&#39;</span><span class="p">)</span>
+        <span class="n">define_loss_plot</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.define_loss_plot(...)` has been moved to `logger.define_loss_plot(...)`&#39;</span><span class="p">)</span>
+        <span class="n">log_loss_metric</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.log_loss_metric(...)` has been moved to `logger.log_loss(...)`&#39;</span><span class="p">)</span>
+        <span class="n">load_dataset_of_image_files</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.load_dataset_of_image_files(...)` has been moved to `dataset_utils.load_dataset_of_image_files(...)`&#39;</span><span class="p">)</span>
+        <span class="n">load_dataset_of_corpus</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.load_dataset_of_corpus(...)` has been moved to `dataset_utils.load_dataset_of_corpus(...)`&#39;</span><span class="p">)</span>
+        <span class="n">resize_as_images</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.resize_as_images(...)` has been moved to `dataset_utils.resize_as_images(...)`&#39;</span><span class="p">)</span>
+        <span class="n">download_dataset_from_uri</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.download_dataset_from_uri(...)` has been moved to `dataset_utils.download_dataset_from_uri(...)`&#39;</span><span class="p">)</span>
+
+    <span class="n">model_inst</span><span class="o">.</span><span class="n">utils</span> <span class="o">=</span> <span class="n">DeprecatedModelUtils</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">_check_knob_config</span><span class="p">(</span><span class="n">knob_config</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">knob_config</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> \
+        <span class="nb">any</span><span class="p">([(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">knob</span><span class="p">,</span> <span class="n">BaseKnob</span><span class="p">))</span> <span class="k">for</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">knob</span><span class="p">)</span> <span class="ow">in</span> <span class="n">knob_config</span><span class="o">.</span><span class="n">items</span><span class="p">()]):</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Static method `get_knob_config()` should return a dict[str, BaseKnob]&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Try serializing and deserialize knob config</span>
+    <span class="n">knob_config_str</span> <span class="o">=</span> <span class="n">serialize_knob_config</span><span class="p">(</span><span class="n">knob_config</span><span class="p">)</span>
+    <span class="n">knob_config</span> <span class="o">=</span> <span class="n">deserialize_knob_config</span><span class="p">(</span><span class="n">knob_config_str</span><span class="p">)</span>
 
 <span class="k">def</span> <span class="nf">_info</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
     <span class="n">msg_color</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[94m&#39;</span>
     <span class="n">end_color</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[0m&#39;</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">INFO: </span><span class="si">{}{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg_color</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">end_color</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}{}{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg_color</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">end_color</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">_print_header</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;-&#39;</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="o">+</span> <span class="mi">4</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;| </span><span class="si">{}</span><span class="s1"> |&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;-&#39;</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="o">+</span> <span class="mi">4</span><span class="p">))</span>
 
 <span class="k">def</span> <span class="nf">_warn</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
     <span class="n">msg_color</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[93m&#39;</span>

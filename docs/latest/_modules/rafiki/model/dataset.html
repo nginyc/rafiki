@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.0.7
+                0.0.8
               </div>
             
           
@@ -171,6 +171,103 @@
 <span class="k">class</span> <span class="nc">InvalidDatasetTypeException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span> 
 <span class="k">class</span> <span class="nc">InvalidDatasetFormatException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span> 
 
+<div class="viewcode-block" id="ModelDatasetUtils"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils">[docs]</a><span class="k">class</span> <span class="nc">ModelDatasetUtils</span><span class="p">():</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Collection of utility methods to help with the loading of datasets.</span>
+
+<span class="sd">    To use these utility methods, import the global ``dataset_utils`` instance from the module ``rafiki.model``.</span>
+
+<span class="sd">    For example:</span>
+
+<span class="sd">    ::</span>
+
+<span class="sd">        from rafiki.model import dataset_utils</span>
+<span class="sd">        ...</span>
+<span class="sd">        def train(self, dataset_uri):</span>
+<span class="sd">            ...</span>
+<span class="sd">            dataset_utils.load_dataset_of_image_files(dataset_uri)</span>
+<span class="sd">            ...</span>
+<span class="sd">    &#39;&#39;&#39;</span>   
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Caches downloaded datasets</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_uri_to_path</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="ModelDatasetUtils.load_dataset_of_corpus"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.load_dataset_of_corpus">[docs]</a>    <span class="k">def</span> <span class="nf">load_dataset_of_corpus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;tag&#39;</span><span class="p">],</span> <span class="n">split_by</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">n&#39;</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">            Loads dataset with type `CORPUS`.</span>
+<span class="sd">            </span>
+<span class="sd">            :param str dataset_uri: URI of the dataset file</span>
+<span class="sd">            :returns: An instance of ``CorpusDataset``.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">dataset_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">download_dataset_from_uri</span><span class="p">(</span><span class="n">dataset_uri</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">CorpusDataset</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">tags</span><span class="p">,</span> <span class="n">split_by</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ModelDatasetUtils.load_dataset_of_image_files"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.load_dataset_of_image_files">[docs]</a>    <span class="k">def</span> <span class="nf">load_dataset_of_image_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">,</span> <span class="n">image_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">            Loads dataset with type `IMAGE_FILES`.</span>
+
+<span class="sd">            :param str dataset_uri: URI of the dataset file</span>
+<span class="sd">            :param str image_size: dimensions to resize all images to (None for no resizing)</span>
+<span class="sd">            :returns: An instance of ``ImageFilesDataset``.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">dataset_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">download_dataset_from_uri</span><span class="p">(</span><span class="n">dataset_uri</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ImageFilesDataset</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">image_size</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ModelDatasetUtils.resize_as_images"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.resize_as_images">[docs]</a>    <span class="k">def</span> <span class="nf">resize_as_images</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">images</span><span class="p">,</span> <span class="n">image_size</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">            Resize a list of N grayscale images to another size.</span>
+
+<span class="sd">            :param int[][][] images: images to resize as a N x 2D lists (grayscale)</span>
+<span class="sd">            :param int image_size: dimensions to resize all images to (None for no resizing)</span>
+<span class="sd">            :returns: images as N x 2D numpy arrays</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">images</span><span class="p">]</span>
+        <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">image_size</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">images</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">images</span><span class="p">)</span></div>
+                
+<div class="viewcode-block" id="ModelDatasetUtils.download_dataset_from_uri"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.download_dataset_from_uri">[docs]</a>    <span class="k">def</span> <span class="nf">download_dataset_from_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">            Maybe download the dataset at URI, ensuring that the dataset ends up in the local filesystem.</span>
+
+<span class="sd">            :param str dataset_uri: URI of the dataset file</span>
+<span class="sd">            :returns: file path of the dataset file in the local filesystem</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">dataset_uri</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_uri_to_path</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_uri_to_path</span><span class="p">[</span><span class="n">dataset_uri</span><span class="p">]</span>
+
+        <span class="n">dataset_path</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="n">parsed_uri</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">dataset_uri</span><span class="p">)</span>
+        <span class="n">protocol</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{uri.scheme}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">uri</span><span class="o">=</span><span class="n">parsed_uri</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+        <span class="c1"># Download dataset over HTTP/HTTPS</span>
+        <span class="k">if</span> <span class="n">protocol</span> <span class="o">==</span> <span class="s1">&#39;http&#39;</span> <span class="ow">or</span> <span class="n">protocol</span> <span class="o">==</span> <span class="s1">&#39;https&#39;</span><span class="p">:</span>
+
+            <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dataset_uri</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">temp_file</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+            <span class="c1"># Show a progress bar while downloading</span>
+            <span class="n">total_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;content-length&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">));</span> 
+            <span class="n">block_size</span> <span class="o">=</span> <span class="mi">1024</span>
+            <span class="n">iters</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">total_size</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">)</span> 
+            <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">iter_content</span><span class="p">(</span><span class="n">block_size</span><span class="p">),</span> <span class="n">total</span><span class="o">=</span><span class="n">iters</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;KB&#39;</span><span class="p">):</span>
+                <span class="n">temp_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                
+            <span class="n">temp_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            
+            <span class="n">dataset_path</span> <span class="o">=</span> <span class="n">temp_file</span><span class="o">.</span><span class="n">name</span>
+
+        <span class="c1"># Assume it is on filesystem</span>
+        <span class="k">elif</span> <span class="n">protocol</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="ow">or</span> <span class="n">protocol</span> <span class="o">==</span> <span class="s1">&#39;file&#39;</span><span class="p">:</span>
+            <span class="n">dataset_path</span> <span class="o">=</span> <span class="n">dataset_uri</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidDatasetProtocolException</span><span class="p">()</span>
+
+        <span class="c1"># Cache dataset path to possibly prevent re-downloading</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_uri_to_path</span><span class="p">[</span><span class="n">dataset_uri</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset_path</span>
+        <span class="k">return</span> <span class="n">dataset_path</span></div></div>
+
 <span class="k">class</span> <span class="nc">ModelDataset</span><span class="p">():</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Abstract that helps loading of dataset of a specific type</span>
@@ -189,7 +286,7 @@
     <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span>
 
-<div class="viewcode-block" id="CorpusDataset"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.dataset.CorpusDataset">[docs]</a><span class="k">class</span> <span class="nc">CorpusDataset</span><span class="p">(</span><span class="n">ModelDataset</span><span class="p">):</span>
+<div class="viewcode-block" id="CorpusDataset"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.CorpusDataset">[docs]</a><span class="k">class</span> <span class="nc">CorpusDataset</span><span class="p">(</span><span class="n">ModelDataset</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Class that helps loading of dataset with type `CORPUS`</span>
 
@@ -260,7 +357,7 @@
 
         <span class="k">return</span> <span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">tag_num_classes</span><span class="p">,</span> <span class="n">max_token_len</span><span class="p">,</span> <span class="n">max_sent_len</span><span class="p">,</span> <span class="n">sents</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ImageFilesDataset"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.dataset.ImageFilesDataset">[docs]</a><span class="k">class</span> <span class="nc">ImageFilesDataset</span><span class="p">(</span><span class="n">ModelDataset</span><span class="p">):</span>
+<div class="viewcode-block" id="ImageFilesDataset"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ImageFilesDataset">[docs]</a><span class="k">class</span> <span class="nc">ImageFilesDataset</span><span class="p">(</span><span class="n">ModelDataset</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Class that helps loading of dataset with type `IMAGE_FILES`</span>
 <span class="sd">    </span>
@@ -319,90 +416,7 @@
 
         <span class="k">return</span> <span class="p">(</span><span class="n">num_samples</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">,</span> <span class="n">image_paths</span><span class="p">,</span> <span class="n">image_classes</span><span class="p">,</span> <span class="n">dataset_dir</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ModelDatasetUtils"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.dataset.ModelDatasetUtils">[docs]</a><span class="k">class</span> <span class="nc">ModelDatasetUtils</span><span class="p">():</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Collection of utility methods to help with the loading of datasets</span>
-<span class="sd">    &#39;&#39;&#39;</span>   
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># Caches downloaded datasets</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_uri_to_path</span> <span class="o">=</span> <span class="p">{}</span>
-
-<div class="viewcode-block" id="ModelDatasetUtils.load_dataset_of_corpus"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.dataset.ModelDatasetUtils.load_dataset_of_corpus">[docs]</a>    <span class="k">def</span> <span class="nf">load_dataset_of_corpus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;tag&#39;</span><span class="p">],</span> <span class="n">split_by</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">n&#39;</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">            Loads dataset with type `CORPUS`.</span>
-<span class="sd">            </span>
-<span class="sd">            :param str dataset_uri: URI of the dataset file</span>
-<span class="sd">            :returns: An instance of ``CorpusDataset``.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">dataset_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">download_dataset_from_uri</span><span class="p">(</span><span class="n">dataset_uri</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">CorpusDataset</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">tags</span><span class="p">,</span> <span class="n">split_by</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="ModelDatasetUtils.load_dataset_of_image_files"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.dataset.ModelDatasetUtils.load_dataset_of_image_files">[docs]</a>    <span class="k">def</span> <span class="nf">load_dataset_of_image_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">,</span> <span class="n">image_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">            Loads dataset with type `IMAGE_FILES`.</span>
-
-<span class="sd">            :param str dataset_uri: URI of the dataset file</span>
-<span class="sd">            :param str image_size: dimensions to resize all images to (None for no resizing)</span>
-<span class="sd">            :returns: An instance of ``ImageFilesDataset``.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">dataset_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">download_dataset_from_uri</span><span class="p">(</span><span class="n">dataset_uri</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">ImageFilesDataset</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">image_size</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="ModelDatasetUtils.resize_as_images"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.dataset.ModelDatasetUtils.resize_as_images">[docs]</a>    <span class="k">def</span> <span class="nf">resize_as_images</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">images</span><span class="p">,</span> <span class="n">image_size</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">            Resize a list of N grayscale images to another size.</span>
-
-<span class="sd">            :param int[][][] images: images to resize as a N x 2D lists (grayscale)</span>
-<span class="sd">            :param int image_size: dimensions to resize all images to (None for no resizing)</span>
-<span class="sd">            :returns: images as N x 2D numpy arrays</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">images</span><span class="p">]</span>
-        <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">image_size</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">images</span><span class="p">]</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">images</span><span class="p">)</span></div>
-                
-<div class="viewcode-block" id="ModelDatasetUtils.download_dataset_from_uri"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.dataset.ModelDatasetUtils.download_dataset_from_uri">[docs]</a>    <span class="k">def</span> <span class="nf">download_dataset_from_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">            Maybe download the dataset at URI, ensuring that the dataset ends up in the local filesystem.</span>
-
-<span class="sd">            :param str dataset_uri: URI of the dataset file</span>
-<span class="sd">            :returns: file path of the dataset file in the local filesystem</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">if</span> <span class="n">dataset_uri</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_uri_to_path</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_uri_to_path</span><span class="p">[</span><span class="n">dataset_uri</span><span class="p">]</span>
-
-        <span class="n">dataset_path</span> <span class="o">=</span> <span class="kc">None</span>
-
-        <span class="n">parsed_uri</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">dataset_uri</span><span class="p">)</span>
-        <span class="n">protocol</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{uri.scheme}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">uri</span><span class="o">=</span><span class="n">parsed_uri</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-
-        <span class="c1"># Download dataset over HTTP/HTTPS</span>
-        <span class="k">if</span> <span class="n">protocol</span> <span class="o">==</span> <span class="s1">&#39;http&#39;</span> <span class="ow">or</span> <span class="n">protocol</span> <span class="o">==</span> <span class="s1">&#39;https&#39;</span><span class="p">:</span>
-
-            <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dataset_uri</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="n">temp_file</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-
-            <span class="c1"># Show a progress bar while downloading</span>
-            <span class="n">total_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;content-length&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">));</span> 
-            <span class="n">block_size</span> <span class="o">=</span> <span class="mi">1024</span>
-            <span class="n">iters</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">total_size</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">)</span> 
-            <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">iter_content</span><span class="p">(</span><span class="n">block_size</span><span class="p">),</span> <span class="n">total</span><span class="o">=</span><span class="n">iters</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;KB&#39;</span><span class="p">):</span>
-                <span class="n">temp_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-                
-            <span class="n">temp_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-            
-            <span class="n">dataset_path</span> <span class="o">=</span> <span class="n">temp_file</span><span class="o">.</span><span class="n">name</span>
-
-        <span class="c1"># Assume it is on filesystem</span>
-        <span class="k">elif</span> <span class="n">protocol</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="ow">or</span> <span class="n">protocol</span> <span class="o">==</span> <span class="s1">&#39;file&#39;</span><span class="p">:</span>
-            <span class="n">dataset_path</span> <span class="o">=</span> <span class="n">dataset_uri</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">InvalidDatasetProtocolException</span><span class="p">()</span>
-
-        <span class="c1"># Cache dataset path to possibly prevent re-downloading</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_uri_to_path</span><span class="p">[</span><span class="n">dataset_uri</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset_path</span>
-        <span class="k">return</span> <span class="n">dataset_path</span></div></div>
-
-
+<span class="n">dataset_utils</span> <span class="o">=</span> <span class="n">ModelDatasetUtils</span><span class="p">()</span>
 </pre></div>
 
            </div>

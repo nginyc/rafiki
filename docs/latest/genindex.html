@@ -57,7 +57,7 @@
             
             
               <div class="version">
-                0.0.7
+                0.0.8
               </div>
             
           
@@ -170,10 +170,12 @@
 <h2 id="B">B</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.BaseModel">BaseModel (class in rafiki.model)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.BaseKnob">BaseKnob (class in rafiki.model)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.BaseModel">BaseModel (class in rafiki.model)</a>
+</li>
       <li><a href="docs/src/python/rafiki.constants.html#rafiki.constants.BudgetType">BudgetType (class in rafiki.constants)</a>
 </li>
   </ul></td>
@@ -182,9 +184,11 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.CategoricalKnob">CategoricalKnob (class in rafiki.model)</a>
+</li>
       <li><a href="docs/src/python/rafiki.client.Client.html#rafiki.client.Client">Client (class in rafiki.client)</a>
 </li>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.dataset.CorpusDataset">CorpusDataset (class in rafiki.model.dataset)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.CorpusDataset">CorpusDataset (class in rafiki.model)</a>
 </li>
       <li><a href="docs/src/python/rafiki.client.Client.html#rafiki.client.Client.create_advisor">create_advisor() (rafiki.client.Client method)</a>
 </li>
@@ -206,9 +210,9 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="docs/src/python/rafiki.constants.html#rafiki.constants.DatasetType">DatasetType (class in rafiki.constants)</a>
 </li>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.log.ModelLogUtils.define_loss_plot">define_loss_plot() (rafiki.model.log.ModelLogUtils method)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.ModelLogger.define_loss_plot">define_loss_plot() (rafiki.model.ModelLogger method)</a>
 </li>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.log.ModelLogUtils.define_plot">define_plot() (rafiki.model.log.ModelLogUtils method)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.ModelLogger.define_plot">define_plot() (rafiki.model.ModelLogger method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -216,7 +220,7 @@
 </li>
       <li><a href="docs/src/python/rafiki.model.html#rafiki.model.BaseModel.destroy">destroy() (rafiki.model.BaseModel method)</a>
 </li>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.dataset.ModelDatasetUtils.download_dataset_from_uri">download_dataset_from_uri() (rafiki.model.dataset.ModelDatasetUtils method)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.download_dataset_from_uri">download_dataset_from_uri() (rafiki.model.ModelDatasetUtils method)</a>
 </li>
       <li><a href="docs/src/python/rafiki.model.html#rafiki.model.BaseModel.dump_parameters">dump_parameters() (rafiki.model.BaseModel method)</a>
 </li>
@@ -237,6 +241,12 @@
       <li><a href="docs/src/python/rafiki.client.Client.html#rafiki.client.Client.feedback_to_advisor">feedback_to_advisor() (rafiki.client.Client method)</a>
 </li>
   </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.FixedKnob">FixedKnob (class in rafiki.model)</a>
+</li>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.FloatKnob">FloatKnob (class in rafiki.model)</a>
+</li>
+  </ul></td>
 </tr></table>
 
 <h2 id="G">G</h2>
@@ -252,7 +262,7 @@
 </li>
       <li><a href="docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_inference_jobs_of_app">get_inference_jobs_of_app() (rafiki.client.Client method)</a>
 </li>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.BaseModel.get_knob_config">get_knob_config() (rafiki.model.BaseModel method)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.BaseModel.get_knob_config">get_knob_config() (rafiki.model.BaseModel static method)</a>
 </li>
       <li><a href="docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_models">get_models() (rafiki.client.Client method)</a>
 </li>
@@ -280,13 +290,13 @@
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.dataset.ImageFilesDataset">ImageFilesDataset (class in rafiki.model.dataset)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.ImageFilesDataset">ImageFilesDataset (class in rafiki.model)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="docs/src/python/rafiki.constants.html#rafiki.constants.InferenceJobStatus">InferenceJobStatus (class in rafiki.constants)</a>
 </li>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.BaseModel.init">init() (rafiki.model.BaseModel method)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.IntegerKnob">IntegerKnob (class in rafiki.model)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -294,19 +304,17 @@
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.dataset.ModelDatasetUtils.load_dataset_of_corpus">load_dataset_of_corpus() (rafiki.model.dataset.ModelDatasetUtils method)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.load_dataset_of_corpus">load_dataset_of_corpus() (rafiki.model.ModelDatasetUtils method)</a>
 </li>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.dataset.ModelDatasetUtils.load_dataset_of_image_files">load_dataset_of_image_files() (rafiki.model.dataset.ModelDatasetUtils method)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.load_dataset_of_image_files">load_dataset_of_image_files() (rafiki.model.ModelDatasetUtils method)</a>
 </li>
       <li><a href="docs/src/python/rafiki.model.html#rafiki.model.BaseModel.load_parameters">load_parameters() (rafiki.model.BaseModel method)</a>
 </li>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.log.ModelLogUtils.log">log() (rafiki.model.log.ModelLogUtils method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.log.ModelLogUtils.log_loss_metric">log_loss_metric() (rafiki.model.log.ModelLogUtils method)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.ModelLogger.log">log() (rafiki.model.ModelLogger method)</a>
 </li>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.log.ModelLogUtils.log_metrics">log_metrics() (rafiki.model.log.ModelLogUtils method)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.ModelLogger.log_loss">log_loss() (rafiki.model.ModelLogger method)</a>
 </li>
       <li><a href="docs/src/python/rafiki.client.Client.html#rafiki.client.Client.login">login() (rafiki.client.Client method)</a>
 </li>
@@ -318,11 +326,11 @@
 <h2 id="M">M</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.dataset.ModelDatasetUtils">ModelDatasetUtils (class in rafiki.model.dataset)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils">ModelDatasetUtils (class in rafiki.model)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.log.ModelLogUtils">ModelLogUtils (class in rafiki.model.log)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.ModelLogger">ModelLogger (class in rafiki.model)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -338,7 +346,7 @@
 <h2 id="R">R</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.dataset.ModelDatasetUtils.resize_as_images">resize_as_images() (rafiki.model.dataset.ModelDatasetUtils method)</a>
+      <li><a href="docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.resize_as_images">resize_as_images() (rafiki.model.ModelDatasetUtils method)</a>
 </li>
   </ul></td>
 </tr></table>
