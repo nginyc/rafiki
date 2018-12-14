@@ -5,7 +5,7 @@ import requests
 from rafiki.client import Client
 from rafiki.constants import TaskType, BudgetType, UserType, ModelDependency
 from examples.scripts.client_quickstart import create_user, create_model, \
-    create_train_job, wait_until_inference_job_is_running, wait_until_train_job_has_completed, \
+    create_train_job, get_predictor_host, wait_until_train_job_has_completed, \
     make_predictions, RAFIKI_HOST, ADMIN_PORT, ADMIN_WEB_PORT, SUPERADMIN_EMAIL, MODEL_DEVELOPER_EMAIL, \
     APP_DEVELOPER_EMAIL, USER_PASSWORD, ENABLE_GPU
 
@@ -55,9 +55,7 @@ if __name__ == '__main__':
 
     print('Creating inference job for app "{}" on Rafiki...'.format(app))
     pprint.pprint(client.create_inference_job(app))
-
-    print('Waiting for inference job to be running...')
-    predictor_host = wait_until_inference_job_is_running(client, app)
+    predictor_host = get_predictor_host(client, app)
     if not predictor_host: raise Exception('Inference job has errored or stopped')
     print('Inference job is running!')
 

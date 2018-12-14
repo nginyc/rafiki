@@ -33,6 +33,11 @@ ensure_stable()
 title "Creating Docker swarm for Rafiki..."
 bash $FILE_DIR/create_docker_swarm.sh
 
+# Setup node for Rafiki
+
+title "Setting up node for Rafiki..."
+bash $FILE_DIR/setup_node.sh manager
+
 # Pull images from Docker Hub
 
 title "Pulling images for Rafiki from Docker Hub..."

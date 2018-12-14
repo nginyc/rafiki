@@ -380,19 +380,18 @@ class Client(object):
     # Advisors
     ####################################
 
-    def create_advisor(self, knob_config, advisor_id=None):
+    def create_advisor(self, knob_config_str, advisor_id=None):
         '''
         Creates a Rafiki advisor. If `advisor_id` is passed, it will create an advisor
         of that ID, or do nothing if an advisor of that ID has already been created.
 
-        :param knob_config: Knob configuration for advisor session
-        :type knob_config: dict[str, any]
+        :param str knob_config_str: Serialized knob configuration for advisor session
         :param str advisor_id: ID of advisor to create
         '''
         data = self._post('/advisors', target='advisor',
                             json={
                                 'advisor_id': advisor_id,
-                                'knob_config': knob_config
+                                'knob_config_str': knob_config_str
                             })
         return data
 

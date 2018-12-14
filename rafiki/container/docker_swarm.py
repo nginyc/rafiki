@@ -4,7 +4,7 @@ import time
 import docker
 import logging
 
-from .container_manager import ContainerManager
+from .container_manager import ContainerManager, ServiceRequirement, InvalidServiceRequest
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,9 @@ class DockerSwarmContainerManager(ContainerManager):
         self._client = docker.from_env()
 
     def create_service(self, service_name, docker_image, replicas, 
-                        args, environment_vars, mounts={}, publish_port=None):
+                        args, environment_vars, mounts={}, publish_port=None,
+                        requirements=[]):
+            
         env = [
             '{}={}'.format(k, v)
             for (k, v) in environment_vars.items()
@@ -38,6 +40,16 @@ class DockerSwarmContainerManager(ContainerManager):
                 'PublishedPort': published_port, 
                 'TargetPort': container_port
             }]
+
+        # Gather list of constraints
+        constraints = []
+        if ServiceRequirement.GPU in requirements:
+            # Check if there are nodes with GPU, raise error otherwise
+            has_gpu = self._if_any_node_has_gpu()
+            if not has_gpu:
+                raise InvalidServiceRequest('There are no nodes with GPU to deploy the service on')
+
+            constraints.append('node.labels.gpu!=0')
         
         service = self._client.services.create(
             image=docker_image,
@@ -50,6 +62,7 @@ class DockerSwarmContainerManager(ContainerManager):
             restart_policy={
                 'Condition': 'on-failure'
             },
+            constraints=constraints,
             endpoint_spec={
                 'Ports': ports_list
             },
@@ -84,5 +97,13 @@ class DockerSwarmContainerManager(ContainerManager):
         service.remove()
 
         logger.info('Deleted service of ID {}'.format(service_id))
-        
-        
+                
+    def _if_any_node_has_gpu(self):
+        nodes = self._client.nodes.list()
+        has_gpu = False
+        for node in nodes:
+            gpu = int(node.attrs.get('Spec', {}).get('Labels', {}).get('gpu', 0))
+            if gpu > 0:
+                has_gpu = True
+
+        return has_gpu

@@ -6,9 +6,41 @@ Creating Models
 
 .. contents:: Table of Contents
 
+To create a model, you will need to submit a model class that conforms to the specification
+by :class:`rafiki.model.BaseModel`, written in a `single` Python file.
+The model's implementation should conform to a specific task (see :ref:`tasks`).
+To submit the model to Rafiki, use the :meth:`rafiki.client.Client.create_model` method.
 
-To create a model on Rafiki, use the :meth:`rafiki.client.Client.create_model` method.
+Implementing Models
+--------------------------------------------------------------------
 
+Full details on how to implement a model are located in the documentation of :class:`rafiki.model.BaseModel`,
+and sample model implementations are located in `./examples/models/ <https://github.com/nginyc/rafiki/tree/master/examples/models/>`_.
+
+In defining the hyperparameters (knobs) of a model, refer to the documentation at :ref:`knob-types` for the full list of knob types.
+
+After implementing your model, it is highly recommended to use :meth:`rafiki.model.test_model_class` 
+to test your model. This method simulates a full train-inference flow on your model, ensuring that 
+it is likely to work on Rafiki.
+
+Logging in Models
+--------------------------------------------------------------------
+
+By importing the global ``logger`` instance in the ``rafiki.model`` module, 
+you can log messages and metrics while your model is being trained, and you can 
+define plots to visualize your model's training on Rafiki's Admin Web interface.
+
+Refer to :class:`rafiki.model.ModelLogger` for full usage instructions.
+
+.. seealso:: :ref:`using-admin-web` 
+
+Dataset Loading in Models
+--------------------------------------------------------------------
+
+The global ``dataset_utils`` instance in the ``rafiki.model`` module provides
+a set of built-in dataset loading methods for common dataset types on Rafiki.
+
+Refer to :class:`rafiki.model.ModelDatasetUtils` for full usage instructions.
 
 Model Environment
 --------------------------------------------------------------------
@@ -25,21 +57,20 @@ prior to model training and inference. This is configurable with the ``dependenc
 during model creation. 
 
 Alternatively, you can build a custom Docker image that extends ``rafikiai/rafiki_worker``,
-installing the required dependencies for your model. This is configurable with ``docker_image``) option
+installing the required dependencies for your model. This is configurable with ``docker_image`` option
 during model creation.
 
 Models should run at least run on CPU-only machines and optionally leverage on a shared GPU, if it is available.
 
 Refer to the parameters of :meth:`rafiki.client.Client.create_model` for configuring how your model runs on Rafiki.
 
-Testing Models
+Sample Models
 --------------------------------------------------------------------
 
 To illustrate how to write models on Rafiki, we have written the following:
 
     - Sample pre-processing logic to convert common dataset formats to Rafiki's own dataset formats in `./examples/datasets/ <https://github.com/nginyc/rafiki/tree/master/examples/datasets/>`_ 
     - Sample models in `./examples/models/ <https://github.com/nginyc/rafiki/tree/master/examples/models/>`_
-    - A method :meth:`rafiki.model.test_model_class` that simulates a full train-inference flow on any Rafiki model 
 
 To start testing your model, first install the Python dependencies at ``rafiki/model/requirements.txt``:
 
@@ -93,13 +124,3 @@ Example: Testing Models for ``POS_TAGGING``
 
         python examples/models/pos_tagging/BigramHmm.py
         python examples/models/pos_tagging/PyBiLstm.py
-
-
-Model Logging & Dataset Loading
---------------------------------------------------------------------
-
-:class:`rafiki.model.BaseModel` has a property ``utils`` that subclasses the model utility classes
-:class:`rafiki.model.log.ModelLogUtils` and :class:`rafiki.model.dataset.ModelDatasetUtils`. They 
-help with model logging & dataset loading respectively. 
-
-Refer to the sample usage in the implementation of `./examples/models/image_classification/TfSingleHiddenLayer.py <https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/TfSingleHiddenLayer.py>`_.

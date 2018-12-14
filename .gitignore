@@ -26,3 +26,7 @@ data/*
 *.log
 logs/*
 !logs/.gitkeep
+
+# IPython notebooks
+.ipynb_checkpoints/*
+*.ipynb

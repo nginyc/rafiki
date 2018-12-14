@@ -5,57 +5,38 @@ import os
 import base64
 import numpy as np
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
+from rafiki.config import APP_MODE
+from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
+                        IntegerKnob, CategoricalKnob, FloatKnob, dataset_utils
 from rafiki.constants import TaskType, ModelDependency
 
 class SkSvm(BaseModel):
     '''
     Implements a SVM on Scikit-Learn for simple image classification
     '''
-
-    def get_knob_config(self):
+    @staticmethod
+    def get_knob_config():
         return {
-            'knobs': {
-                'max_iter': {
-                    'type': 'int',
-                    'range': [10, 10]
-                },
-                'kernel': {
-                    'type': 'string',
-                    'values': ['rbf', 'linear']
-                },
-                'gamma': {
-                    'type': 'string',
-                    'values': ['scale', 'auto']
-                },
-                'C': {
-                    'type': 'float_exp',
-                    'range': [1e-2, 1e2]
-                }
-            }
+            'max_iter': IntegerKnob(10, 40 if APP_MODE != 'DEV' else 10),
+            'kernel': CategoricalKnob(['rbf', 'linear']),
+            'gamma': CategoricalKnob(['scale', 'auto']),
+            'C': FloatKnob(1e-2, 1e2, is_exp=True)
         }
 
-    def init(self, knobs):
-        self._max_iter = knobs.get('max_iter') 
-        self._kernel = knobs.get('kernel') 
-        self._gamma = knobs.get('gamma') 
-        self._C = knobs.get('C') 
-        self._clf = self._build_classifier(
-            self._max_iter,
-            self._kernel,
-            self._gamma,
-            self._C
-        )
+    def __init__(self, **knobs):
+        super().__init__(**knobs)
+        self.__dict__.update(knobs)
+        self._clf = self._build_classifier(self.max_iter, self.kernel, self.gamma, self.C)
         
     def train(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
         self._clf.fit(X, y)
 
     def evaluate(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes

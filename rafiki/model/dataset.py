@@ -22,6 +22,103 @@ class InvalidDatasetProtocolException(Exception): pass
 class InvalidDatasetTypeException(Exception): pass 
 class InvalidDatasetFormatException(Exception): pass 
 
+class ModelDatasetUtils():
+    '''
+    Collection of utility methods to help with the loading of datasets.
+
+    To use these utility methods, import the global ``dataset_utils`` instance from the module ``rafiki.model``.
+
+    For example:
+
+    ::
+
+        from rafiki.model import dataset_utils
+        ...
+        def train(self, dataset_uri):
+            ...
+            dataset_utils.load_dataset_of_image_files(dataset_uri)
+            ...
+    '''   
+    
+    def __init__(self):
+        # Caches downloaded datasets
+        self._dataset_uri_to_path = {}
+
+    def load_dataset_of_corpus(self, dataset_uri, tags=['tag'], split_by='\\n'):
+        '''
+            Loads dataset with type `CORPUS`.
+            
+            :param str dataset_uri: URI of the dataset file
+            :returns: An instance of ``CorpusDataset``.
+        '''
+        dataset_path = self.download_dataset_from_uri(dataset_uri)
+        return CorpusDataset(dataset_path, tags, split_by)
+
+    def load_dataset_of_image_files(self, dataset_uri, image_size=None):
+        '''
+            Loads dataset with type `IMAGE_FILES`.
+
+            :param str dataset_uri: URI of the dataset file
+            :param str image_size: dimensions to resize all images to (None for no resizing)
+            :returns: An instance of ``ImageFilesDataset``.
+        '''
+        dataset_path = self.download_dataset_from_uri(dataset_uri)
+        return ImageFilesDataset(dataset_path, image_size)
+
+    def resize_as_images(self, images, image_size):
+        '''
+            Resize a list of N grayscale images to another size.
+
+            :param int[][][] images: images to resize as a N x 2D lists (grayscale)
+            :param int image_size: dimensions to resize all images to (None for no resizing)
+            :returns: images as N x 2D numpy arrays
+        '''
+        images = [Image.fromarray(np.asarray(x, dtype=np.uint8)) for x in images]
+        images = [np.asarray(x.resize(image_size)) for x in images]
+        return np.asarray(images)
+                
+    def download_dataset_from_uri(self, dataset_uri):
+        '''
+            Maybe download the dataset at URI, ensuring that the dataset ends up in the local filesystem.
+
+            :param str dataset_uri: URI of the dataset file
+            :returns: file path of the dataset file in the local filesystem
+        '''
+        if dataset_uri in self._dataset_uri_to_path:
+            return self._dataset_uri_to_path[dataset_uri]
+
+        dataset_path = None
+
+        parsed_uri = urlparse(dataset_uri)
+        protocol = '{uri.scheme}'.format(uri=parsed_uri).lower().strip()
+
+        # Download dataset over HTTP/HTTPS
+        if protocol == 'http' or protocol == 'https':
+
+            r = requests.get(dataset_uri, stream=True)
+            temp_file = tempfile.NamedTemporaryFile(delete=False)
+
+            # Show a progress bar while downloading
+            total_size = int(r.headers.get('content-length', 0)); 
+            block_size = 1024
+            iters = math.ceil(total_size / block_size) 
+            for data in tqdm(r.iter_content(block_size), total=iters, unit='KB'):
+                temp_file.write(data)
+                
+            temp_file.close()
+            
+            dataset_path = temp_file.name
+
+        # Assume it is on filesystem
+        elif protocol == '' or protocol == 'file':
+            dataset_path = dataset_uri
+        else:
+            raise InvalidDatasetProtocolException()
+
+        # Cache dataset path to possibly prevent re-downloading
+        self._dataset_uri_to_path[dataset_uri] = dataset_path
+        return dataset_path
+
 class ModelDataset():
     '''
     Abstract that helps loading of dataset of a specific type
@@ -170,87 +267,4 @@ class ImageFilesDataset(ModelDataset):
 
         return (num_samples, num_classes, image_paths, image_classes, dataset_dir)
 
-class ModelDatasetUtils():
-    '''
-    Collection of utility methods to help with the loading of datasets
-    '''   
-    def __init__(self):
-        # Caches downloaded datasets
-        self._dataset_uri_to_path = {}
-
-    def load_dataset_of_corpus(self, dataset_uri, tags=['tag'], split_by='\\n'):
-        '''
-            Loads dataset with type `CORPUS`.
-            
-            :param str dataset_uri: URI of the dataset file
-            :returns: An instance of ``CorpusDataset``.
-        '''
-        dataset_path = self.download_dataset_from_uri(dataset_uri)
-        return CorpusDataset(dataset_path, tags, split_by)
-
-    def load_dataset_of_image_files(self, dataset_uri, image_size=None):
-        '''
-            Loads dataset with type `IMAGE_FILES`.
-
-            :param str dataset_uri: URI of the dataset file
-            :param str image_size: dimensions to resize all images to (None for no resizing)
-            :returns: An instance of ``ImageFilesDataset``.
-        '''
-        dataset_path = self.download_dataset_from_uri(dataset_uri)
-        return ImageFilesDataset(dataset_path, image_size)
-
-    def resize_as_images(self, images, image_size):
-        '''
-            Resize a list of N grayscale images to another size.
-
-            :param int[][][] images: images to resize as a N x 2D lists (grayscale)
-            :param int image_size: dimensions to resize all images to (None for no resizing)
-            :returns: images as N x 2D numpy arrays
-        '''
-        images = [Image.fromarray(np.asarray(x, dtype=np.uint8)) for x in images]
-        images = [np.asarray(x.resize(image_size)) for x in images]
-        return np.asarray(images)
-                
-    def download_dataset_from_uri(self, dataset_uri):
-        '''
-            Maybe download the dataset at URI, ensuring that the dataset ends up in the local filesystem.
-
-            :param str dataset_uri: URI of the dataset file
-            :returns: file path of the dataset file in the local filesystem
-        '''
-        if dataset_uri in self._dataset_uri_to_path:
-            return self._dataset_uri_to_path[dataset_uri]
-
-        dataset_path = None
-
-        parsed_uri = urlparse(dataset_uri)
-        protocol = '{uri.scheme}'.format(uri=parsed_uri).lower().strip()
-
-        # Download dataset over HTTP/HTTPS
-        if protocol == 'http' or protocol == 'https':
-
-            r = requests.get(dataset_uri, stream=True)
-            temp_file = tempfile.NamedTemporaryFile(delete=False)
-
-            # Show a progress bar while downloading
-            total_size = int(r.headers.get('content-length', 0)); 
-            block_size = 1024
-            iters = math.ceil(total_size / block_size) 
-            for data in tqdm(r.iter_content(block_size), total=iters, unit='KB'):
-                temp_file.write(data)
-                
-            temp_file.close()
-            
-            dataset_path = temp_file.name
-
-        # Assume it is on filesystem
-        elif protocol == '' or protocol == 'file':
-            dataset_path = dataset_uri
-        else:
-            raise InvalidDatasetProtocolException()
-
-        # Cache dataset path to possibly prevent re-downloading
-        self._dataset_uri_to_path[dataset_uri] = dataset_path
-        return dataset_path
-
-
+dataset_utils = ModelDatasetUtils()

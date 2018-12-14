@@ -5,75 +5,56 @@ import traceback
 import pickle
 import uuid
 from importlib import import_module
+import inspect
 
 from rafiki.advisor import Advisor, AdvisorType
 from rafiki.predictor import ensemble_predictions
 from rafiki.constants import TaskType, ModelDependency
 
 from .dataset import ModelDatasetUtils
-from .log import ModelLogUtils
+from .knob import BaseKnob, serialize_knob_config, deserialize_knob_config
 
 class InvalidModelClassException(Exception): pass
 class InvalidModelParamsException(Exception): pass
 
-class ModelUtils(ModelDatasetUtils, ModelLogUtils):
-    def __init__(self):
-        ModelDatasetUtils.__init__(self)
-        ModelLogUtils.__init__(self)
-
 class BaseModel(abc.ABC):
     '''
     Rafiki's base model class that Rafiki models should extend. 
-    Rafiki models should implement all abstract methods according to their associated tasks' specifications.
+    Rafiki models should implement all abstract methods according to their associated tasks' specifications,
+    together with the static method ``get_knob_config()``.
+
+    In the model's ``__init__`` method, call ``super().__init__(**knobs)`` as the first line, 
+    followed by the model's initialization logic. The model should be initialize itself with ``knobs``, 
+    a set of generated knob values for the instance, and possibly save the knobs' values as 
+    attribute(s) of the model instance. These knob values will be chosen by Rafiki based on the model's knob config. 
+    
+    For example:
+
+    ::
+
+        def __init__(self, **knobs):
+            super().__init__(**knobs)
+            self.__dict__.update(knobs)
+            ...
+            self._build_model(self.knob1, self.knob2)
+
+
+    :param knobs: Dictionary of knob values for this model instance
+    :type knobs: dict[str, any]
     '''   
+    def __init__(self, **knobs):
+        pass
 
-    def __init__(self):
-        self.utils = ModelUtils()
-        super().__init__()
-
-    @abc.abstractmethod
-    def get_knob_config(self):
+    @staticmethod
+    def get_knob_config():
         '''
-        Return a dictionary defining this model's knob configuration 
+        Return a dictionary defining this model class' knob configuration 
         (i.e. list of knob names, their data types and their ranges).
 
         :returns: Dictionary defining this model's knob configuration 
-        :rtype:
-            ::
-
-                {
-                    'knobs': {
-                        'hidden_layer_units': {
-                            'type': 'int',
-                            'range': [2, 128]
-                        },
-                        'epochs': {
-                            'type': 'int',
-                            'range': [1, 100]
-                        },
-                        'learning_rate': {
-                            'type': 'float_exp',
-                            'range': [1e-5, 1e-1]
-                        },
-                        'batch_size': {
-                            'type': 'int_cat',
-                            'values': [1, 2, 4, 8, 16, 32, 64, 128]
-                        }
-                    }
-                }
-            
+        :rtype: dict[str, rafiki.model.BaseKnob]
         '''
         raise NotImplementedError()
-
-    def init(self, knobs):
-        '''
-        Initialize the model with a dictionary of knob values. 
-        These knob values will be chosen by Rafiki based on the model's knob config.
-
-        :param knobs: Dictionary of knob values for this model instance
-        :type knobs: dict[str, any]
-        '''
-        pass
 
     @abc.abstractmethod
     def train(self, dataset_uri):
@@ -164,7 +145,9 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
     :returns: The trained model
     '''
     try:
-        print('Testing model installation...')
+        _print_header('Installing & checking model dependencies...')
+        _check_dependencies(dependencies)
+
         # Test installation
         if not isinstance(dependencies, dict):
             raise Exception('`dependencies` should be a dict[str, str]')
@@ -173,30 +156,24 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         exit_code = os.system(install_command)
         if exit_code != 0: raise Exception('Error in installing model dependencies')
 
-        print('Testing loading of model...')
+        _print_header('Checking loading of model & model definition...')
         f = open(model_file_path, 'rb')
         model_file_bytes = f.read()
-        py_model_class = load_model_class(model_file_bytes, model_class)
-        model_inst = py_model_class()
-        if not isinstance(model_inst, BaseModel):
-            raise Exception('Model should extend `rafiki.model.BaseModel`')
+        py_model_class = load_model_class(model_file_bytes, model_class, temp_mod_name='your-model-file-temp')
+        _check_model_class(py_model_class)
 
-        knob_config = model_inst.get_knob_config()
-        if not isinstance(knob_config, dict):
-            raise Exception('`get_knob_config()` should return a dict[str, any]')
+        _print_header('Checking model knob configuration...')
+        knob_config = py_model_class.get_knob_config()
+        _check_knob_config(knob_config)
 
-        if 'knobs' not in knob_config:
-            raise Exception('`knob_config` should have a \'knobs\' key')
-
-        print('Checking model dependencies & methods...')
-        _check_dependencies(py_model_class, dependencies)
-        _check_methods(py_model_class)
-
-        print('Testing training & evaluation of model...')
+        _print_header('Checking model initialization...')
         advisor = Advisor(knob_config, advisor_type=AdvisorType.BTB_GP)
         if knobs is None: knobs = advisor.propose()
         print('Using knobs: {}'.format(knobs))
-        model_inst.init(knobs)
+        model_inst = py_model_class(**knobs)
+        _check_model_inst(model_inst)
+
+        _print_header('Checking training & evaluation of model...')
         model_inst.train(train_dataset_uri)
         score = model_inst.evaluate(test_dataset_uri)
 
@@ -205,7 +182,7 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
 
         print('Score: {}'.format(score))
 
-        print('Testing dumping of parameters of model...')
+        _print_header('Checking dumping of parameters of model...')
         parameters = model_inst.dump_parameters()
 
         if not isinstance(parameters, dict):
@@ -218,13 +195,12 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
             traceback.print_stack()
             raise Exception('`parameters` should be serializable by `pickle`')
 
-        print('Testing loading of parameters of model...')
+        _print_header('Checking loading of parameters of model...')
         model_inst.destroy()
-        model_inst = py_model_class()
-        model_inst.init(knobs)
+        model_inst = py_model_class(**knobs)
         model_inst.load_parameters(parameters)
 
-        print('Testing predictions with model...')
+        _print_header('Checking predictions with model...')
         print('Using queries: {}'.format(queries))
         predictions = model_inst.predict(queries)
 
@@ -239,15 +215,18 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         predictions = ensemble_predictions([predictions], task)
 
         print('Predictions: {}'.format(predictions))
-        print('The model definition is valid!')
+
+        _info('The model definition is valid!')
     
         return model_inst
 
     except Exception as e:
         raise InvalidModelClassException(e)
 
-def load_model_class(model_file_bytes, model_class):
-    temp_mod_name = str(uuid.uuid4())
+def load_model_class(model_file_bytes, model_class, temp_mod_name=None):
+    if temp_mod_name is None:
+        temp_mod_name = str(uuid.uuid4())
+
     temp_model_file_name ='{}.py'.format(temp_mod_name)
 
     # Temporarily save the model file to disk
@@ -298,8 +277,9 @@ def parse_model_install_command(dependencies, enable_gpu=False):
 
     return '; '.join(commands)
 
-def _check_dependencies(py_model_class, dependencies):
+def _check_dependencies(dependencies):
     for (dep, ver) in dependencies.items():
+        # Warn that Keras models should additionally depend on TF for GPU usage
         if dep == ModelDependency.KERAS:
             _warn('Keras models can enable GPU usage with by adding a `tensorflow` dependency.')
         elif dep == ModelDependency.PYTORCH:
@@ -315,16 +295,57 @@ def _check_dependencies(py_model_class, dependencies):
             _info('Conda packages `singa-gpu` or `singa-cpu` will be installed, depending on GPU availablility during training.')
         else:
             _info('PIP package `{}=={}` will be installed'.format(dep, ver))
+
+def _check_model_class(py_model_class):
+    if not issubclass(py_model_class, BaseModel):
+        raise Exception('Model should extend `rafiki.model.BaseModel`')
+
+    if inspect.isfunction(getattr(py_model_class, 'init', None)):
+        _warn('`init` has been deprecated - use `__init__` for your model\'s initialization logic instead')
+
+    if inspect.isfunction(getattr(py_model_class, 'get_knob_config', None)) and \
+        not isinstance(py_model_class.__dict__.get('get_knob_config', None), staticmethod):
+        _warn('`get_knob_config` has been changed to a `@staticmethod`')
+
+def _check_model_inst(model_inst):
+    # Throw error when deprecated methods are called
+    def deprecated_func(desc):
+        def throw_error(*args, **kwargs):
+            raise AttributeError(desc)
         
-def _check_methods(py_model_class):
-    model_inst = py_model_class()
-    if getattr(model_inst, 'get_predict_label_mapping', None) is not None:
-        _warn('`get_predict_label_mapping` has been deprecated')
+        return throw_error
+
+    class DeprecatedModelUtils():
+        log = deprecated_func('`self.utils.log(...)` has been moved to `logger.log(...)`')
+        log_metrics = deprecated_func('`self.utils.log_metrics(...)` has been moved to `logger.log(...)`')
+        define_plot = deprecated_func('`self.utils.define_plot(...)` has been moved to `logger.define_plot(...)`')
+        define_loss_plot = deprecated_func('`self.utils.define_loss_plot(...)` has been moved to `logger.define_loss_plot(...)`')
+        log_loss_metric = deprecated_func('`self.utils.log_loss_metric(...)` has been moved to `logger.log_loss(...)`')
+        load_dataset_of_image_files = deprecated_func('`self.utils.load_dataset_of_image_files(...)` has been moved to `dataset_utils.load_dataset_of_image_files(...)`')
+        load_dataset_of_corpus = deprecated_func('`self.utils.load_dataset_of_corpus(...)` has been moved to `dataset_utils.load_dataset_of_corpus(...)`')
+        resize_as_images = deprecated_func('`self.utils.resize_as_images(...)` has been moved to `dataset_utils.resize_as_images(...)`')
+        download_dataset_from_uri = deprecated_func('`self.utils.download_dataset_from_uri(...)` has been moved to `dataset_utils.download_dataset_from_uri(...)`')
+
+    model_inst.utils = DeprecatedModelUtils()
+
+def _check_knob_config(knob_config):
+    if not isinstance(knob_config, dict) or \
+        any([(not isinstance(name, str) or not isinstance(knob, BaseKnob)) for (name, knob) in knob_config.items()]):
+        raise Exception('Static method `get_knob_config()` should return a dict[str, BaseKnob]')
+
+    # Try serializing and deserialize knob config
+    knob_config_str = serialize_knob_config(knob_config)
+    knob_config = deserialize_knob_config(knob_config_str)
 
 def _info(msg):
     msg_color = '\033[94m'
     end_color = '\033[0m'
-    print('{}INFO: {}{}'.format(msg_color, msg, end_color))
+    print('{}{}{}'.format(msg_color, msg, end_color))
+
+def _print_header(msg):
+    print('-' * (len(msg) + 4))
+    print('| {} |'.format(msg))
+    print('-' * (len(msg) + 4))
 
 def _warn(msg):
     msg_color = '\033[93m'

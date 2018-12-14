@@ -36,7 +36,19 @@ Adding Nodes to Rafiki
 
 Rafiki has with its dynamic stack (e.g. train workers, inference workes, predictors) 
 running as `Docker Swarm Services <https://docs.docker.com/engine/swarm/services/>`_.
-Horizontal scaling can be done by `adding more nodes to the swarm <https://docs.docker.com/engine/swarm/join-nodes/>`_.
+
+Horizontal scaling can be done by adding more nodes to the swarm. 
+
+Perform the following for *each* worker node to be added:
+
+1. Connect the node to the same network as the master, so that the node can `join the master's Docker Swarm <https://docs.docker.com/engine/swarm/join-nodes/>`_.
+
+2. Configure the node with the script:
+
+    .. code-block:: shell
+
+        bash scripts/setup_node.sh
+
 
 Exposing Rafiki Publicly
 --------------------------------------------------------------------

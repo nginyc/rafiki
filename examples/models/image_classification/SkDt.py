@@ -5,38 +5,29 @@ import os
 import base64
 import numpy as np
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class
+from rafiki.config import APP_MODE
+from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
+                        IntegerKnob, CategoricalKnob, dataset_utils, logger
 from rafiki.constants import TaskType, ModelDependency
 
 class SkDt(BaseModel):
     '''
     Implements a decision tree classifier on Scikit-Learn for simple image classification
     '''
-
-    def get_knob_config(self):
+    @staticmethod
+    def get_knob_config():
         return {
-            'knobs': {
-                'max_depth': {
-                    'type': 'int',
-                    'range': [2, 8]
-                },
-                'criterion': {
-                    'type': 'string',
-                    'values': ['gini', 'entropy']
-                },
-            }
+            'max_depth': IntegerKnob(2, 16 if APP_MODE != 'DEV' else 8),
+            'criterion': CategoricalKnob(['gini', 'entropy'])
         }
 
-    def init(self, knobs):
-        self._max_depth = knobs.get('max_depth') 
-        self._criterion = knobs.get('criterion') 
-        self._clf = self._build_classifier(
-            self._max_depth,
-            self._criterion
-        )
-        
+    def __init__(self, **knobs):
+        super().__init__(**knobs)
+        self.__dict__.update(knobs)
+        self._clf = self._build_classifier(self.max_depth, self.criterion)
+       
     def train(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -45,10 +36,10 @@ class SkDt(BaseModel):
         # Compute train accuracy
         preds = self._clf.predict(X)
         accuracy = sum(y == preds) / len(y)
-        self.utils.log('Train accuracy: {}'.format(accuracy))
+        logger.log('Train accuracy: {}'.format(accuracy))
 
     def evaluate(self, dataset_uri):
-        dataset = self.utils.load_dataset_of_image_files(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes

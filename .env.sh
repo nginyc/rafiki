@@ -1,6 +1,6 @@
 # Core configuration for Rafiki
 export DOCKER_NETWORK=rafiki
-export RAFIKI_VERSION=0.0.7
+export RAFIKI_VERSION=0.0.8
 export RAFIKI_IP_ADDRESS=127.0.0.1
 export ADMIN_EXT_PORT=3000
 export ADMIN_WEB_EXT_PORT=3001
