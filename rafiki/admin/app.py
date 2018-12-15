@@ -160,7 +160,7 @@ def get_trial_parameters(auth, trial_id):
 
     with admin:
         parameters = admin.get_trial_parameters(trial_id, **params)
-        
+
     res = make_response(parameters)
     res.headers.set('Content-Type', 'application/octet-stream')
     return res
@@ -247,6 +247,27 @@ def create_model(auth):
 
     with admin:
         return jsonify(admin.create_model(auth['user_id'], **params))
+
+@app.route('/models/<name>/model_file', methods=['GET'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER])
+def get_model_file(auth, name):
+    admin = get_admin()
+    params = get_request_params()
+
+    with admin:
+        model_file = admin.get_model_file(name, **params)
+
+    res = make_response(model_file)
+    res.headers.set('Content-Type', 'application/octet-stream')
+    return res
+
+@app.route('/models/<name>', methods=['GET'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER])
+def get_model(auth, name):
+    admin = get_admin()
+    params = get_request_params()
+    with admin:
+        return jsonify(admin.get_model(name, **params))
 
 @app.route('/models', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER])
