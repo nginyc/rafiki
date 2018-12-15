@@ -38,6 +38,9 @@ class Client(object):
 
         :param str email: User's email
         :param str password: User's password
+
+        :returns: Logged-in user as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._post('/tokens', json={
             'email': email,
@@ -57,7 +60,8 @@ class Client(object):
         '''
         Gets currently logged in user's data.
 
-        :returns: Dictionary of shape `{ id, user_type }`, or `None` if client is not logged in
+        :returns: Current user as dictionary, or `None` if client is not logged in
+        :rtype: dict[str, any]
         '''
         return self._user
 
@@ -82,6 +86,9 @@ class Client(object):
         :param str password: The new user's password
         :param user_type: The new user's type
         :type user_type: :class:`rafiki.constants.UserType` 
+
+        :returns: Created user as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._post('/users', json={
             'email': email,
@@ -107,6 +114,8 @@ class Client(object):
         :param dependencies: List of dependencies & their versions
         :type dependencies: dict[str, str]
         :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
+        :returns: Created model as dictionary
+        :rtype: dict[str, any]
 
         ``model_file_path`` should point to a file that contains all necessary Python code for the model's implementation. 
         If the Python file imports any external Python modules, you should list it in ``dependencies`` or create a custom
@@ -160,6 +169,8 @@ class Client(object):
         Retrieves details of a single model.
 
         :param str name: Name of model
+        :returns: Details of model as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._get('/models/{}'.format(name))
         return data
@@ -167,6 +178,9 @@ class Client(object):
     def get_models(self):
         '''
         Lists all models on Rafiki.
+
+        :returns: Details of models as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/models')
         return data
@@ -176,6 +190,8 @@ class Client(object):
         Lists all models associated to a task on Rafiki.
 
         :param str task: Task name
+        :returns: Details of models as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/models', params={
             'task': task
@@ -188,6 +204,8 @@ class Client(object):
 
         :param str name: Name of model
         :param str model_file_path: Absolute/relative path to save the Python script to
+        :returns: Details of model as dictionary
+        :rtype: dict[str, any]
         '''
         model_file_bytes = self._get('/models/{}/model_file'.format(name))
 
@@ -226,6 +244,8 @@ class Client(object):
         :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task
         :param budget: budget for the train job
         :type budget: dict[:class:`rafiki.constants.BudgetType`, int]
+        :returns: Created train job as dictionary
+        :rtype: dict[str, any]
 
         ``budget`` should be a dictionary of ``{ <budget_type>: <budget_amount> }``, where 
         ``<budget_type>`` is one of :class:`rafiki.constants.BudgetType` and 
@@ -255,6 +275,8 @@ class Client(object):
         Lists all train jobs associated to an user on Rafiki.
 
         :param str user_id: ID of the user
+        :returns: Details of train jobs as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/train_jobs', params={ 
             'user_id': user_id
@@ -266,6 +288,8 @@ class Client(object):
         Lists all train jobs associated to an app on Rafiki.
 
         :param str app: Name of the app
+        :returns: Details of train jobs as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/train_jobs/{}'.format(app))
         return data
@@ -277,6 +301,8 @@ class Client(object):
 
         :param str app: Name of the app
         :param int app_version: Version of the app (-1 for latest version)
+        :returns: Details of train job as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._get('/train_jobs/{}/{}'.format(app, app_version))
         return data
@@ -289,6 +315,8 @@ class Client(object):
         :param str app: Name of the app
         :param int app_version: Version of the app (-1 for latest version)
         :param int max_count: Maximum number of trials to return
+        :returns: Details of trials as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/train_jobs/{}/{}/trials'.format(app, app_version), params={
             'type': 'best',
@@ -303,6 +331,8 @@ class Client(object):
 
         :param str app: Name of the app
         :param int app_version: Version of the app (-1 for latest version)
+        :returns: Details of trials as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/train_jobs/{}/{}/trials'.format(app, app_version))
         return data
@@ -314,6 +344,8 @@ class Client(object):
 
         :param str app: Name of the app
         :param int app_version: Version of the app (-1 for latest version)
+        :returns: Stopped train job as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._post('/train_jobs/{}/{}/stop'.format(app, app_version))
         return data
@@ -332,6 +364,8 @@ class Client(object):
         Gets a specific trial.
 
         :param str trial_id: ID of trial
+        :returns: Details of trial as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._get('/trials/{}'.format(trial_id))
         return data
@@ -341,6 +375,8 @@ class Client(object):
         Gets the logs for a specific trial.
 
         :param str trial_id: ID of trial
+        :returns: Logs of trial as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._get('/trials/{}/logs'.format(trial_id))
         return data
@@ -350,8 +386,8 @@ class Client(object):
         Gets parameters of the model associated with the trial.
 
         :param str trial_id: ID of trial
-        :rtype: dict[str, any]
         :returns: Parameters of the *trained* model associated with the trial
+        :rtype: dict[str, any]
         '''
         data = self._get('/trials/{}/parameters'.format(trial_id))
         parameters = pickle.loads(data)
@@ -394,6 +430,8 @@ class Client(object):
 
         :param str app: Name of the app identifying the train job to use
         :param str app_version: Version of the app identifying the train job to use
+        :returns: Created inference job as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._post('/inference_jobs', json={
             'app': app,
@@ -406,6 +444,8 @@ class Client(object):
         Lists all inference jobs associated to an user on Rafiki.
 
         :param str user_id: ID of the user
+        :returns: Details of inference jobs as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/inference_jobs', params={ 
             'user_id': user_id
@@ -417,6 +457,8 @@ class Client(object):
         Lists all inference jobs associated to an app on Rafiki.
 
         :param str app: Name of the app
+        :returns: Details of inference jobs as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/inference_jobs/{}'.format(app))
         return data
@@ -428,6 +470,8 @@ class Client(object):
 
         :param str app: Name of the app 
         :param int app_version: Version of the app (-1 for latest version)
+        :returns: Details of inference job as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._get('/inference_jobs/{}/{}'.format(app, app_version))
         return data
@@ -438,6 +482,8 @@ class Client(object):
 
         :param str app: Name of the app
         :param int app_version: Version of the app (-1 for latest version)
+        :returns: Stopped inference job as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._post('/inference_jobs/{}/{}/stop'.format(app, app_version))
         return data
@@ -453,6 +499,8 @@ class Client(object):
 
         :param str knob_config_str: Serialized knob configuration for advisor session
         :param str advisor_id: ID of advisor to create
+        :returns: Created advisor as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._post('/advisors', target='advisor',
                             json={
@@ -467,6 +515,7 @@ class Client(object):
 
         :param str advisor_id: ID of target advisor
         :returns: Knobs as `dict[<knob_name>, <knob_value>]`
+        :rtype: dict[str, any]
         '''
         data = self._post('/advisors/{}/propose'.format(advisor_id), target='advisor')
         return data
@@ -478,9 +527,9 @@ class Client(object):
 
         :param str advisor_id: ID of target advisor
         :param str knobs: Knobs to give feedback on
-        :rtype: dict[<knob_name>, <knob_value>]
         :param float score: Score of the knobs, the higher the number, the better the set of knobs
         :returns: Knobs as `dict[<knob_name>, <knob_value>]`
+        :rtype: dict[str, any]
         '''
         data = self._post('/advisors/{}/feedback'.format(advisor_id), 
                         target='advisor', json={
@@ -494,6 +543,8 @@ class Client(object):
         Deletes a Rafiki advisor.
 
         :param str advisor_id: ID of target advisor
+        :returns: Deleted advisor as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._delete('/advisors/{}'.format(advisor_id), target='advisor')
         return data
