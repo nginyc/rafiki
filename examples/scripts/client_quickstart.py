@@ -151,9 +151,6 @@ if __name__ == '__main__':
                 'SkDt', dependencies={ ModelDependency.SCIKIT_LEARN: '0.20.0' }, \
                 access_right=ModelAccessRight.PRIVATE)
 
-    # print('Logging in as app developer...')
-    # client.login(email=APP_DEVELOPER_EMAIL, password=USER_PASSWORD)
-
     # print('Creating train job for app "{}" on Rafiki...'.format(app)) 
     # (train_job, train_job_web_url) = create_train_job(client, app, task, train_dataset_uri, \
     #                                                 test_dataset_uri, enable_gpu=ENABLE_GPU)
