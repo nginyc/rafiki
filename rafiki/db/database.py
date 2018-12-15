@@ -284,7 +284,12 @@ class Database(object):
     # Models
     ####################################
 
+<<<<<<< HEAD
     def create_model(self, user_id, name, task, model_file_bytes, model_class, docker_image, dependencies, access_right):
+=======
+    def create_model(self, user_id, name, task, model_file_bytes, 
+                    model_class, docker_image, dependencies):
+>>>>>>> download_models
         model = Model(
             user_id=user_id,
             name=name,
@@ -328,8 +333,9 @@ class Database(object):
         models = public_models + private_models
         return models
 
-    def get_model(self, id):
-        model = self._session.query(Model).get(id)
+    def get_model_by_name(self, name):
+        model = self._session.query(Model) \
+            .filter(Model.name == name).first()
         return model
 
     ####################################
@@ -360,7 +366,7 @@ class Database(object):
             .all()
             
         return trial_logs
-
+    
     def get_best_trials_of_train_job(self, train_job_id, max_count=3):
         trials = self._session.query(Trial) \
             .filter(Trial.train_job_id == train_job_id) \

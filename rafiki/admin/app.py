@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, g
+from flask import Flask, request, jsonify, g, make_response
 from flask_cors import CORS
 import os
 import traceback
@@ -152,6 +152,19 @@ def get_trial_logs(auth, trial_id):
     with admin:
         return jsonify(admin.get_trial_logs(trial_id, **params))
 
+@app.route('/trials/<trial_id>/parameters', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def get_trial_parameters(auth, trial_id):
+    admin = get_admin()
+    params = get_request_params()
+
+    with admin:
+        parameters = admin.get_trial_parameters(trial_id, **params)
+
+    res = make_response(parameters)
+    res.headers.set('Content-Type', 'application/octet-stream')
+    return res
+
 @app.route('/trials/<trial_id>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
 def get_trial(auth, trial_id):
@@ -188,7 +201,7 @@ def get_inference_jobs(auth):
             return jsonify(admin.get_inference_jobs_by_user(params['user_id']))
 
 @app.route('/inference_jobs/<app>', methods=['GET'])
-@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER,  UserType.APP_DEVELOPER])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
 def get_inference_jobs_of_app(auth, app):
     admin = get_admin()
     params = get_request_params()
@@ -235,8 +248,29 @@ def create_model(auth):
     with admin:
         return jsonify(admin.create_model(auth['user_id'], **params))
 
+@app.route('/models/<name>/model_file', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def get_model_file(auth, name):
+    admin = get_admin()
+    params = get_request_params()
+
+    with admin:
+        model_file = admin.get_model_file(name, **params)
+
+    res = make_response(model_file)
+    res.headers.set('Content-Type', 'application/octet-stream')
+    return res
+
+@app.route('/models/<name>', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def get_model(auth, name):
+    admin = get_admin()
+    params = get_request_params()
+    with admin:
+        return jsonify(admin.get_model(name, **params))
+
 @app.route('/models', methods=['GET'])
-@auth([UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
 def get_models(auth):
     admin = get_admin()
     params = get_request_params()
@@ -275,6 +309,7 @@ def get_request_params():
     return params
 
 def get_admin():
+    # Allow multiple threads to each have their own instance of admin
     if not hasattr(g, 'admin'):
         g.admin = Admin()
     

@@ -34,8 +34,8 @@ export RAFIKI_IMAGE_WORKER=rafikiai/rafiki_worker
 export RAFIKI_IMAGE_PREDICTOR=rafikiai/rafiki_predictor
 
 # Docker images for dependent services
-export IMAGE_POSTGRES=postgres:10.5
-export IMAGE_REDIS=redis:5.0-rc
+export IMAGE_POSTGRES=postgres:10.6-alpine
+export IMAGE_REDIS=redis:5.0.3-alpine3.8
 
 # Utility configuration
 export PYTHONPATH=$PWD # Ensures that `rafiki` module can be imported at project root
