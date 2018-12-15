@@ -2,7 +2,6 @@ import os
 import logging
 import traceback
 import bcrypt
-import pickle
 
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus
@@ -265,6 +264,13 @@ class Admin(object):
             'metrics': metrics,
             'messages': messages
         }
+
+    def get_trial_parameters(self, trial_id):
+        trial = self._db.get_trial(trial_id)
+        if trial is None:
+            raise InvalidTrialException()
+
+        return trial.parameters
 
     ####################################
     # Inference Job

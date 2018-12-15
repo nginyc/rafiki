@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, g
+from flask import Flask, request, jsonify, g, make_response
 from flask_cors import CORS
 import os
 import traceback
@@ -152,6 +152,19 @@ def get_trial_logs(auth, trial_id):
     with admin:
         return jsonify(admin.get_trial_logs(trial_id, **params))
 
+@app.route('/trials/<trial_id>/parameters', methods=['GET'])
+@auth([UserType.ADMIN, UserType.APP_DEVELOPER])
+def get_trial_parameters(auth, trial_id):
+    admin = get_admin()
+    params = get_request_params()
+
+    with admin:
+        parameters = admin.get_trial_parameters(trial_id, **params)
+        
+    res = make_response(parameters)
+    res.headers.set('Content-Type', 'application/octet-stream')
+    return res
+
 @app.route('/trials/<trial_id>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def get_trial(auth, trial_id):
@@ -275,6 +288,7 @@ def get_request_params():
     return params
 
 def get_admin():
+    # Allow multiple threads to each have their own instance of admin
     if not hasattr(g, 'admin'):
         g.admin = Admin()
     

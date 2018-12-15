@@ -1,8 +1,12 @@
 import requests
 import json
 import pprint
+import pickle
 
 from rafiki.constants import BudgetType
+
+class RafikiConnectionError(ConnectionError):
+    pass
 
 class Client(object):
 
@@ -312,6 +316,35 @@ class Client(object):
         data = self._get('/trials/{}/logs'.format(trial_id))
         return data
 
+    def get_trial_parameters(self, trial_id):
+        '''
+        Gets parameters of the model associated with the trial.
+
+        :param str trial_id: ID of trial
+        '''
+        data = self._get('/trials/{}/parameters'.format(trial_id))
+        parameters = pickle.loads(data)
+        return parameters
+
+    def load_trial_model(self, trial_id, ModelClass):
+        '''
+        Loads an instance of the given model class with the trial's knobs & parameters.
+        The model class must be separately imported and passed into this method, 
+        and must conincide with the trial's model class.
+        Wraps :meth:`get_trial_parameters` and :meth:`get_trial`.
+
+        :param str trial_id: ID of trial
+        :param class ModelClass: model class that conincides with the trial's model class
+        :rtype: dict[<knob_name>, <knob_value>]
+        :returns: A *trained* model instance of ``ModelClass``, loaded with the trial's knobs and parameters
+        '''
+        data = self.get_trial(trial_id)
+        knobs = data.get('knobs')
+        parameters = self.get_trial_parameters(trial_id)
+        model_inst = ModelClass(**knobs)
+        model_inst.load_parameters(parameters)
+        return model_inst
+
     ####################################
     # Inference Jobs
     ####################################
@@ -478,16 +511,21 @@ class Client(object):
         elif target == 'advisor':
             url = 'http://{}:{}{}'.format(self._advisor_host, self._advisor_port, path)
         else:
-            raise Exception('Invalid URL target: {}'.format(target))
+            raise RafikiConnectionError('Invalid URL target: {}'.format(target))
 
         return url
 
     def _parse_response(self, res):
         if res.status_code != 200:
-            raise Exception(res.text)
+            raise RafikiConnectionError(res.text)
 
-        data = res.json()
-        return data
+        content_type = res.headers.get('content-type')
+        if content_type == 'application/json':
+            return res.json()
+        elif content_type == 'application/octet-stream':
+            return res.content
+        else:
+            raise RafikiConnectionError('Invalid response content type: {}'.format(content_type))
 
     def _get_headers(self):
         if self._token is not None:
