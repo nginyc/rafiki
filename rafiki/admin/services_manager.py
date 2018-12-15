@@ -6,7 +6,7 @@ import time
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType, BudgetType
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, \
-    TRAIN_WORKER_REPLICAS_PER_MODEL, INFERENCE_WORKER_REPLICAS_PER_TRIAL, \
+    TRAIN_WORKER_REPLICAS_PER_SUB_TRAIN_JOB, INFERENCE_WORKER_REPLICAS_PER_TRIAL, \
     INFERENCE_MAX_BEST_TRIALS, SERVICE_STATUS_WAIT
 from rafiki.container import DockerSwarmContainerManager, ServiceRequirement, InvalidServiceRequest
 from rafiki.model import parse_model_install_command
@@ -81,20 +81,21 @@ class ServicesManager(object):
 
     def create_train_services(self, train_job_id):
         train_job = self._db.get_train_job(train_job_id)
+        sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(train_job_id)
         
         # Create a worker service for each model
-        models = self._db.get_models_of_task(train_job.user_id, train_job.task)
-        model_to_replicas = self._compute_train_worker_replicas_for_models(models)
+        sub_train_job_to_replicas = self._compute_train_worker_replicas_for_sub_train_jobs(sub_train_jobs)
         worker_services = []
-        for (model, replicas) in model_to_replicas.items():
-            service = self._create_train_job_worker(train_job, model, replicas)
+        for (sub_train_job, replicas) in sub_train_job_to_replicas.items():
+            service = self._create_train_job_worker(train_job, sub_train_job, replicas)
             worker_services.append(service)
 
         # Ensure that all services are running
         self._wait_until_services_running(worker_services)
 
-        # Mark train job as running
-        self._db.mark_train_job_as_running(train_job)
+        # Mark sub train job as running
+        for sub_train_job in sub_train_jobs:
+            self._db.mark_sub_train_job_as_running(sub_train_job)
         self._db.commit()
 
         return train_job
@@ -119,7 +120,8 @@ class ServicesManager(object):
     ####################################
 
     def _create_inference_job_worker(self, inference_job, trial, replicas):
-        model = self._db.get_model(trial.model_id)
+        sub_train_job = self._db.get_sub_train_job(trial.sub_train_job_id)
+        model = self._db.get_model(sub_train_job.model_id)
         service_type = ServiceType.INFERENCE
         install_command = parse_model_install_command(model.dependencies, enable_gpu=False)
         environment_vars = {
@@ -172,9 +174,10 @@ class ServicesManager(object):
 
         return service
 
-    def _create_train_job_worker(self, train_job, model, replicas):
+    def _create_train_job_worker(self, train_job, sub_train_job, replicas):
+        model = self._db.get_model(sub_train_job.model_id)
         service_type = ServiceType.TRAIN
-        enable_gpu = int(train_job.budget.get(BudgetType.ENABLE_GPU, 0)) > 0
+        enable_gpu = int(sub_train_job.budget.get(BudgetType.ENABLE_GPU, 0)) > 0
         install_command = parse_model_install_command(model.dependencies, enable_gpu=enable_gpu)
         environment_vars = {
             'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
@@ -205,7 +208,7 @@ class ServicesManager(object):
         self._db.create_train_job_worker(
             service_id=service.id,
             train_job_id=train_job.id,
-            model_id=model.id
+            sub_train_job_id=sub_train_job.id
         )
         self._db.commit()
 
@@ -214,19 +217,19 @@ class ServicesManager(object):
     def _stop_train_job_worker(self, worker):
         service = self._db.get_service(worker.service_id)
         self._stop_service(service)
-        train_job = self._db.get_train_job(worker.train_job_id)
-        self._update_train_job_status(train_job)
+        sub_train_job = self._db.get_sub_train_job(worker.sub_train_job_id)
+        self._update_sub_train_job_status(sub_train_job)
 
-    def _update_train_job_status(self, train_job):
-        workers = self._db.get_workers_of_train_job(train_job.id)
+    def _update_sub_train_job_status(self, sub_train_job):
+        workers = self._db.get_workers_of_sub_train_job(sub_train_job.id)
         services = [self._db.get_service(x.service_id) for x in workers]
         
-        # If all workers for the train job have stopped, stop train job as well
+        # If all workers for the sub train job have stopped, stop sub train job as well
         if next((
             x for x in services 
             if x.status in [ServiceStatus.RUNNING, ServiceStatus.STARTED, ServiceStatus.DEPLOYING]
         ), None) is None:
-            self._db.mark_train_job_as_complete(train_job)
+            self._db.mark_sub_train_job_as_complete(sub_train_job)
             self._db.commit()
 
     def _stop_service(self, service):
@@ -338,17 +341,19 @@ class ServicesManager(object):
         return port
 
     def _get_best_trials_for_inference(self, inference_job):
-        best_trials = self._db.get_best_trials_of_train_job(
-            inference_job.train_job_id, 
-            max_count=INFERENCE_MAX_BEST_TRIALS
-        )
+        sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(inference_job.train_job_id)
+        best_trials = []
+        for sub_train_job in sub_train_jobs:
+            best_trials += self._db.get_best_trials_of_sub_train_job(sub_train_job.id, \
+                                    max_count=INFERENCE_MAX_BEST_TRIALS)
+
         return best_trials
 
-    def _compute_train_worker_replicas_for_models(self, models):
+    def _compute_train_worker_replicas_for_sub_train_jobs(self, sub_train_jobs):
         # TODO: Improve provisioning algorithm
         return {
-            model : TRAIN_WORKER_REPLICAS_PER_MODEL
-            for model in models
+            sub_train_job : TRAIN_WORKER_REPLICAS_PER_SUB_TRAIN_JOB
+            for sub_train_job in sub_train_jobs
         }
 
     def _compute_inference_worker_replicas_for_trials(self, trials):

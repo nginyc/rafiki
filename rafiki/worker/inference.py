@@ -77,7 +77,8 @@ class InferenceWorker(object):
 
     def _load_model(self, trial_id):
         trial = self._db.get_trial(trial_id)
-        model = self._db.get_model(trial.model_id)
+        sub_train_job = self._db.get_sub_train_job(trial.sub_train_job_id)
+        model = self._db.get_model(sub_train_job.model_id)
 
         # Load model based on trial
         clazz = load_model_class(model.model_file_bytes, model.model_class)

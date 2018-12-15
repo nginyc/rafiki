@@ -217,20 +217,19 @@ class Client(object):
     ####################################
     
     def create_train_job(self, app, task, train_dataset_uri,
-                        test_dataset_uri, budget=None):
+                        test_dataset_uri, models):
         '''
         Creates and starts a train job on Rafiki. 
         A train job is uniquely identified by its associated app and the app version (returned in output).
         
-        Only admins & app developers can manage train jobs.
+        Only admins, model developers and app developers can manage train jobs.
 
         :param str app: Name of the app associated with the train job
         :param str task: Task associated with the train job, 
             the train job will train models associated with the task
         :param str train_dataset_uri: URI of the train dataset in a format specified by the task
         :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task
-        :param budget: budget for the train job
-        :type budget: dict[:class:`rafiki.constants.BudgetType`, int]
+        :param models: models to use for the train job. List of dictionaries containing model name and budget.
 
         ``budget`` should be a dictionary of ``{ <budget_type>: <budget_amount> }``, where 
         ``<budget_type>`` is one of :class:`rafiki.constants.BudgetType` and 
@@ -251,7 +250,7 @@ class Client(object):
             'task': task,
             'train_dataset_uri': train_dataset_uri,
             'test_dataset_uri': test_dataset_uri,
-            'budget': budget
+            'models': models
         })
         return data
 
@@ -286,7 +285,7 @@ class Client(object):
         data = self._get('/train_jobs/{}/{}'.format(app, app_version))
         return data
 
-    def get_best_trials_of_train_job(self, app, app_version=-1, max_count=3):
+    def get_best_trials_of_train_job(self, app, app_version=-1, max_count=2):
         '''
         Lists the best scoring trials of the train job identified by an app and an app version,
         ordered by descending score.

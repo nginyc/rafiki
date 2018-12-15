@@ -32,13 +32,8 @@ def create_model(client, name, task, model_file_path, model_class, dependencies,
         # print(traceback.format_exc())
         print('Failed to create model "{}" - maybe it already exists?'.format(name))
 
-def create_train_job(client, app, task, train_dataset_uri, test_dataset_uri, enable_gpu=0):
-    budget = {
-        BudgetType.MODEL_TRIAL_COUNT: 2,
-        BudgetType.ENABLE_GPU: enable_gpu
-    }
-
-    train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, budget=budget)
+def create_train_job(client, app, task, train_dataset_uri, test_dataset_uri, models):
+    train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, models)
 
     app = train_job.get('app')
     app_version = train_job.get('app_version')
@@ -54,7 +49,7 @@ def wait_until_train_job_has_completed(client, app):
             if status == TrainJobStatus.COMPLETED:
                 # Train job completed!
                 return True
-            elif status != TrainJobStatus.RUNNING:
+            elif status == TrainJobStatus.STOPPED:
                 # Train job has either errored or been stopped
                 return False
             else:
@@ -151,34 +146,50 @@ if __name__ == '__main__':
                 'SkDt', dependencies={ ModelDependency.SCIKIT_LEARN: '0.20.0' }, \
                 access_right=ModelAccessRight.PRIVATE)
 
-    # print('Creating train job for app "{}" on Rafiki...'.format(app)) 
-    # (train_job, train_job_web_url) = create_train_job(client, app, task, train_dataset_uri, \
-    #                                                 test_dataset_uri, enable_gpu=ENABLE_GPU)
-    # pprint.pprint(train_job)
+    print('Creating train job for app "{}" on Rafiki...'.format(app)) 
+    models = [
+        {
+            'name': 'TfFeedForward',
+            'budget': {
+                BudgetType.MODEL_TRIAL_COUNT: 1,
+                BudgetType.ENABLE_GPU: ENABLE_GPU
+            }
+        },
+        {
+            'name': 'SkDt',
+            'budget': {
+                BudgetType.MODEL_TRIAL_COUNT: 1,
+                BudgetType.ENABLE_GPU: ENABLE_GPU
+            }
+        }
+    ]
+    (train_job, train_job_web_url) = create_train_job(client, app, task, train_dataset_uri, \
+                                                    test_dataset_uri, models)
+    pprint.pprint(train_job)
 
-    # print('Waiting for train job to complete...')
-    # print('You can view the status of the train job at {}'.format(train_job_web_url))
-    # print('Login as an app developer with email "{}" and password "{}"'.format(APP_DEVELOPER_EMAIL, USER_PASSWORD)) 
-    # print('This might take a few minutes')
-    # result = wait_until_train_job_has_completed(client, app)
-    # if not result: raise Exception('Train job has errored or stopped')
-    # print('Train job has been completed!')
+    print('Waiting for train job to complete...')
+    print('You can view the status of the train job at {}'.format(train_job_web_url))
+    print('Login as an app developer with email "{}" and password "{}"'.format(APP_DEVELOPER_EMAIL, USER_PASSWORD)) 
+    print('This might take a few minutes')
+    result = wait_until_train_job_has_completed(client, app)
+    if not result: raise Exception('Train job has errored or stopped')
+    print('Train job has been completed!')
 
-    # print('Listing best trials of latest train job for app "{}"...'.format(app))
-    # pprint.pprint(client.get_best_trials_of_train_job(app))
+    print('Listing best trials of latest train job for app "{}"...'.format(app))
+    pprint.pprint(client.get_best_trials_of_train_job(app))
 
-    # print('Creating inference job for app "{}" on Rafiki...'.format(app))
-    # pprint.pprint(client.create_inference_job(app))
-    # predictor_host = get_predictor_host(client, app)
-    # if not predictor_host: raise Exception('Inference job has errored or stopped')
-    # print('Inference job is running!')
+    print('Creating inference job for app "{}" on Rafiki...'.format(app))
+    pprint.pprint(client.create_inference_job(app))
+    predictor_host = get_predictor_host(client, app)
+    if not predictor_host: raise Exception('Inference job has errored or stopped')
+    print('Inference job is running!')
 
-    # print('Making predictions for queries:')
-    # print(queries)
-    # predictions = make_predictions(client, predictor_host, queries)
-    # print('Predictions are:')
-    # print(predictions)
+    print('Making predictions for queries:')
+    print(queries)
+    predictions = make_predictions(client, predictor_host, queries)
+    print('Predictions are:')
+    print(predictions)
 
-    # print('Stopping inference job...')
-    # pprint.pprint(client.stop_inference_job(app))
+    print('Stopping inference job...')
+    pprint.pprint(client.stop_inference_job(app))
 
