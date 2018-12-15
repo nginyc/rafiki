@@ -284,7 +284,8 @@ class Database(object):
     # Models
     ####################################
 
-    def create_model(self, user_id, name, task, model_file_bytes, model_class, docker_image, dependencies):
+    def create_model(self, user_id, name, task, model_file_bytes, 
+                    model_class, docker_image, dependencies):
         model = Model(
             user_id=user_id,
             name=name,
@@ -305,6 +306,11 @@ class Database(object):
 
     def get_model(self, id):
         model = self._session.query(Model).get(id)
+        return model
+
+    def get_model_by_name(self, name):
+        model = self._session.query(Model) \
+            .filter(Model.name == name).first()
         return model
 
     def get_models(self):
@@ -338,7 +344,7 @@ class Database(object):
             .all()
             
         return trial_logs
-
+    
     def get_best_trials_of_train_job(self, train_job_id, max_count=3):
         trials = self._session.query(Trial) \
             .filter(Trial.train_job_id == train_job_id) \

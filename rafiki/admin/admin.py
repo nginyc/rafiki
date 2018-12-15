@@ -2,7 +2,6 @@ import os
 import logging
 import traceback
 import bcrypt
-import pickle
 
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus
@@ -14,14 +13,15 @@ from .services_manager import ServicesManager
 
 logger = logging.getLogger(__name__)
 
-class UserExistsException(Exception): pass
-class InvalidUserException(Exception): pass
-class InvalidPasswordException(Exception): pass
-class InvalidRunningInferenceJobException(Exception): pass
-class InvalidTrainJobException(Exception): pass
-class InvalidTrialException(Exception): pass
-class RunningInferenceJobExistsException(Exception): pass
-class NoModelsForTaskException(Exception): pass
+class UserExistsError(Exception): pass
+class InvalidUserError(Exception): pass
+class InvalidPasswordError(Exception): pass
+class InvalidRunningInferenceJobError(Exception): pass
+class InvalidModelError(Exception): pass
+class InvalidTrainJobError(Exception): pass
+class InvalidTrialError(Exception): pass
+class RunningInferenceJobExistsError(Exception): pass
+class NoModelsForTaskError(Exception): pass
 
 class Admin(object):
     def __init__(self, db=None, container_manager=None):
@@ -48,10 +48,10 @@ class Admin(object):
         user = self._db.get_user_by_email(email)
 
         if not user: 
-            raise InvalidUserException()
+            raise InvalidUserError()
         
         if not self._if_hash_matches_password(password, user.password_hash):
-            raise InvalidPasswordException()
+            raise InvalidPasswordError()
 
         return {
             'id': user.id,
@@ -78,7 +78,7 @@ class Admin(object):
         # Ensure that there are models associated with task
         models = self._db.get_models_of_task(task)
         if len(models) == 0:
-            raise NoModelsForTaskException()
+            raise NoModelsForTaskError()
 
         train_job = self._db.create_train_job(
             user_id=user_id,
@@ -102,7 +102,7 @@ class Admin(object):
     def stop_train_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
         if train_job is None:
-            raise InvalidTrainJobException()
+            raise InvalidTrainJobError()
 
         self._services_manager.stop_train_services(train_job.id)
 
@@ -115,7 +115,7 @@ class Admin(object):
     def get_train_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
         if train_job is None:
-            raise InvalidTrainJobException()
+            raise InvalidTrainJobError()
 
         workers = self._db.get_workers_of_train_job(train_job.id)
         services = [self._db.get_service(x.service_id) for x in workers]
@@ -167,7 +167,7 @@ class Admin(object):
     def get_best_trials_of_train_job(self, app, app_version=-1, max_count=3):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
         if train_job is None:
-            raise InvalidTrainJobException()
+            raise InvalidTrainJobError()
 
         best_trials = self._db.get_best_trials_of_train_job(train_job.id, max_count=max_count)
         best_trials_models = [self._db.get_model(x.model_id) for x in best_trials]
@@ -204,7 +204,7 @@ class Admin(object):
     def get_trials_of_train_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
         if train_job is None:
-            raise InvalidTrainJobException()
+            raise InvalidTrainJobError()
 
         trials = self._db.get_trials_of_train_job(train_job.id)
         trials_models = [self._db.get_model(x.model_id) for x in trials]
@@ -238,7 +238,7 @@ class Admin(object):
         model = self._db.get_model(trial.model_id)
         
         if trial is None:
-            raise InvalidTrialException()
+            raise InvalidTrialError()
 
         return {
             'id': trial.id,
@@ -254,7 +254,7 @@ class Admin(object):
     def get_trial_logs(self, trial_id):
         trial = self._db.get_trial(trial_id)
         if trial is None:
-            raise InvalidTrialException()
+            raise InvalidTrialError()
 
         trial_logs = self._db.get_trial_logs(trial_id)
         log_lines = [x.line for x in trial_logs]
@@ -266,6 +266,13 @@ class Admin(object):
             'messages': messages
         }
 
+    def get_trial_parameters(self, trial_id):
+        trial = self._db.get_trial(trial_id)
+        if trial is None:
+            raise InvalidTrialError()
+
+        return trial.parameters
+
     ####################################
     # Inference Job
     ####################################
@@ -273,15 +280,15 @@ class Admin(object):
     def create_inference_job(self, user_id, app, app_version):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
         if train_job is None:
-            raise InvalidTrainJobException('Have you started a train job for this app?')
+            raise InvalidTrainJobError('Have you started a train job for this app?')
 
         if train_job.status != TrainJobStatus.COMPLETED:
-            raise InvalidTrainJobException('Train job has not completed.')
+            raise InvalidTrainJobError('Train job has not completed.')
 
         # Ensure only 1 running inference job for 1 train job
         inference_job = self._db.get_running_inference_job_by_train_job(train_job.id)
         if inference_job is not None:
-            raise RunningInferenceJobExistsException()
+            raise RunningInferenceJobExistsError()
 
         inference_job = self._db.create_inference_job(
             user_id=user_id,
@@ -303,11 +310,11 @@ class Admin(object):
     def stop_inference_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
         if train_job is None:
-            raise InvalidRunningInferenceJobException()
+            raise InvalidRunningInferenceJobError()
 
         inference_job = self._db.get_running_inference_job_by_train_job(train_job.id)
         if inference_job is None:
-            raise InvalidRunningInferenceJobException()
+            raise InvalidRunningInferenceJobError()
 
         inference_job = self._services_manager.stop_inference_services(inference_job.id)
         return {
@@ -320,11 +327,11 @@ class Admin(object):
     def get_running_inference_job(self, app, app_version=-1):
         train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
         if train_job is None:
-            raise InvalidRunningInferenceJobException()
+            raise InvalidRunningInferenceJobError()
 
         inference_job = self._db.get_running_inference_job_by_train_job(train_job.id)
         if inference_job is None:
-            raise InvalidRunningInferenceJobException()
+            raise InvalidRunningInferenceJobError()
             
         workers = self._db.get_workers_of_inference_job(inference_job.id)
         services = [self._db.get_service(x.service_id) for x in workers]
@@ -405,6 +412,8 @@ class Admin(object):
 
     def create_model(self, user_id, name, task, model_file_bytes, 
                     model_class, dependencies={}, docker_image=None):
+        
+        # TODO: Handle duplicate model names
         model = self._db.create_model(
             user_id=user_id,
             name=name,
@@ -418,6 +427,28 @@ class Admin(object):
         return {
             'name': model.name 
         }
+
+    def get_model(self, name):
+        model = self._db.get_model_by_name(name)
+        if model is None:
+            raise InvalidModelError()
+
+        return {
+            'name': model.name,
+            'task': model.task,
+            'model_class': model.model_class,
+            'datetime_created': model.datetime_created,
+            'user_id': model.user_id,
+            'docker_image': model.docker_image,
+            'dependencies': model.dependencies
+        }
+
+    def get_model_file(self, name):
+        model = self._db.get_model_by_name(name)
+        if model is None:
+            raise InvalidModelError()
+
+        return model.model_file_bytes
 
     def get_models(self):
         models = self._db.get_models()
@@ -463,7 +494,7 @@ class Admin(object):
                 password=SUPERADMIN_PASSWORD,
                 user_type=UserType.SUPERADMIN
             )
-        except UserExistsException:
+        except UserExistsError:
             logger.info('Skipping superadmin creation as it already exists...')
 
     def _hash_password(self, password):
@@ -478,7 +509,7 @@ class Admin(object):
         user = self._db.get_user_by_email(email)
 
         if user is not None:
-            raise UserExistsException()
+            raise UserExistsError()
 
         user = self._db.create_user(email, password_hash, user_type)
         self._db.commit()

@@ -1,8 +1,13 @@
 import requests
 import json
 import pprint
+import pickle
+import os
 
 from rafiki.constants import BudgetType
+
+class RafikiConnectionError(ConnectionError):
+    pass
 
 class Client(object):
 
@@ -150,6 +155,15 @@ class Client(object):
         )
         return data
 
+    def get_model(self, name):
+        '''
+        Retrieves details of a single model.
+
+        :param str name: Name of model
+        '''
+        data = self._get('/models/{}'.format(name))
+        return data
+
     def get_models(self):
         '''
         Lists all models on Rafiki.
@@ -168,16 +182,37 @@ class Client(object):
         })
         return data
 
+    def download_model_file(self, name, model_file_path):
+        '''
+        Downloads the Python script containing the model's class to the local filesystem.
+
+        :param str name: Name of model
+        :param str model_file_path: Absolute/relative path to save the Python script to
+        '''
+        model_file_bytes = self._get('/models/{}/model_file'.format(name))
+
+        with open(model_file_path, 'wb') as f:
+            f.write(model_file_bytes)
+
+        data = self.get_model(name)
+        dependencies = data.get('dependencies')
+        model_class = data.get('model_class')
+
+        print('Model file downloaded to "{}"!'.format(os.path.join(os.getcwd(), model_file_path)))
+        
+        if dependencies:
+            print('You\'ll need to install the following model dependencies locally: {}'.format(dependencies))
+
+        print('From the file, import the model class `{}`.'.format(model_class))
+
+        return data
+
     ####################################
     # Train Jobs
     ####################################
     
-    def create_train_job(self, 
-                        app, 
-                        task, 
-                        train_dataset_uri,
-                        test_dataset_uri, 
-                        budget=None):
+    def create_train_job(self, app, task, train_dataset_uri,
+                        test_dataset_uri, budget=None):
         '''
         Creates and starts a train job on Rafiki. 
         A train job is uniquely identified by its associated app and the app version (returned in output).
@@ -283,10 +318,8 @@ class Client(object):
         data = self._post('/train_jobs/{}/{}/stop'.format(app, app_version))
         return data
 
+    # Rafiki-internal method
     def stop_train_job_worker(self, service_id):
-        '''
-        Rafiki-internal method
-        '''
         data = self._post('/train_job_workers/{}/stop'.format(service_id))
         return data
 
@@ -311,6 +344,39 @@ class Client(object):
         '''
         data = self._get('/trials/{}/logs'.format(trial_id))
         return data
+
+    def get_trial_parameters(self, trial_id):
+        '''
+        Gets parameters of the model associated with the trial.
+
+        :param str trial_id: ID of trial
+        :rtype: dict[str, any]
+        :returns: Parameters of the *trained* model associated with the trial
+        '''
+        data = self._get('/trials/{}/parameters'.format(trial_id))
+        parameters = pickle.loads(data)
+        return parameters
+
+    def load_trial_model(self, trial_id, ModelClass):
+        '''
+        Loads an instance of a trial's model with the trial's knobs & parameters.
+
+        Before this, you must have the trial's model class file already in your local filesystem,
+        the dependencies of the model must have been installed separately, and the model class must have been 
+        imported and passed into this method.
+
+        Wraps :meth:`get_trial_parameters` and :meth:`get_trial`.
+
+        :param str trial_id: ID of trial
+        :param class ModelClass: model class that conincides with the trial's model class
+        :returns: A *trained* model instance of ``ModelClass``, loaded with the trial's knobs and parameters
+        '''
+        data = self.get_trial(trial_id)
+        knobs = data.get('knobs')
+        parameters = self.get_trial_parameters(trial_id)
+        model_inst = ModelClass(**knobs)
+        model_inst.load_parameters(parameters)
+        return model_inst
 
     ####################################
     # Inference Jobs
@@ -478,16 +544,21 @@ class Client(object):
         elif target == 'advisor':
             url = 'http://{}:{}{}'.format(self._advisor_host, self._advisor_port, path)
         else:
-            raise Exception('Invalid URL target: {}'.format(target))
+            raise RafikiConnectionError('Invalid URL target: {}'.format(target))
 
         return url
 
     def _parse_response(self, res):
         if res.status_code != 200:
-            raise Exception(res.text)
+            raise RafikiConnectionError(res.text)
 
-        data = res.json()
-        return data
+        content_type = res.headers.get('content-type')
+        if content_type == 'application/json':
+            return res.json()
+        elif content_type == 'application/octet-stream':
+            return res.content
+        else:
+            raise RafikiConnectionError('Invalid response content type: {}'.format(content_type))
 
     def _get_headers(self):
         if self._token is not None:

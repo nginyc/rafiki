@@ -4,7 +4,7 @@ import requests
 
 from rafiki.client import Client
 from rafiki.constants import TaskType, BudgetType, UserType, ModelDependency
-from examples.scripts.client_quickstart import create_user, create_model, \
+from examples.scripts.quickstart import create_user, create_model, \
     create_train_job, get_predictor_host, wait_until_train_job_has_completed, \
     make_predictions, RAFIKI_HOST, ADMIN_PORT, ADMIN_WEB_PORT, SUPERADMIN_EMAIL, MODEL_DEVELOPER_EMAIL, \
     APP_DEVELOPER_EMAIL, USER_PASSWORD, ENABLE_GPU
