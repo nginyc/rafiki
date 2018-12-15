@@ -361,9 +361,9 @@ class Client(object):
         '''
         Loads an instance of a trial's model with the trial's knobs & parameters.
 
-        Separately, the dependencies of the model must have been installed, the
-        model class must have been imported and passed into this method, and
-        the given model class must the trial's model class.
+        Before this, you must have the trial's model class file already in your local filesystem,
+        the dependencies of the model must have been installed separately, and the model class must have been 
+        imported and passed into this method.
 
         Wraps :meth:`get_trial_parameters` and :meth:`get_trial`.
 
