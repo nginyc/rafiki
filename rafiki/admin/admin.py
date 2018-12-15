@@ -5,7 +5,7 @@ import bcrypt
 import pickle
 
 from rafiki.db import Database
-from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus
+from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus, ModelAccessRight
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.model import ModelLogger
 from rafiki.container import DockerSwarmContainerManager 
@@ -76,7 +76,7 @@ class Admin(object):
         app_version = max([x.app_version for x in train_jobs], default=0) + 1
 
         # Ensure that there are models associated with task
-        models = self._db.get_models_of_task(task)
+        models = self._db.get_models_of_task(user_id, task)
         if len(models) == 0:
             raise NoModelsForTaskException()
 
@@ -404,7 +404,7 @@ class Admin(object):
     ####################################
 
     def create_model(self, user_id, name, task, model_file_bytes, 
-                    model_class, dependencies={}, docker_image=None):
+                    model_class, docker_image=None, dependencies={}, access_right=ModelAccessRight.PUBLIC):
         model = self._db.create_model(
             user_id=user_id,
             name=name,
@@ -412,15 +412,16 @@ class Admin(object):
             model_file_bytes=model_file_bytes,
             model_class=model_class,
             docker_image=(docker_image or self._base_worker_image),
-            dependencies=dependencies
+            dependencies=dependencies,
+            access_right=access_right
         )
 
         return {
             'name': model.name 
         }
 
-    def get_models(self):
-        models = self._db.get_models()
+    def get_models(self, user_id):
+        models = self._db.get_models(user_id)
         return [
             {
                 'name': model.name,
@@ -429,13 +430,14 @@ class Admin(object):
                 'datetime_created': model.datetime_created,
                 'user_id': model.user_id,
                 'docker_image': model.docker_image,
-                'dependencies': model.dependencies
+                'dependencies': model.dependencies,
+                'access_right': model.access_right
             }
             for model in models
         ]
 
-    def get_models_of_task(self, task):
-        models = self._db.get_models_of_task(task)
+    def get_models_of_task(self, user_id, task):
+        models = self._db.get_models_of_task(user_id, task)
         return [
             {
                 'name': model.name,
@@ -444,7 +446,8 @@ class Admin(object):
                 'datetime_created': model.datetime_created,
                 'user_id': model.user_id,
                 'docker_image': model.docker_image,
-                'dependencies': model.dependencies
+                'dependencies': model.dependencies,
+                'access_right': model.access_right
             }
             for model in models
         ]

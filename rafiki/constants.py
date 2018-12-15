@@ -9,6 +9,10 @@ class ModelDependency():
     PYTORCH = 'torch'
     SINGA = 'singa'
 
+class ModelAccessRight():
+    PUBLIC = 'PUBLIC'
+    PRIVATE = 'PRIVATE'
+
 class InferenceJobStatus():
     STARTED = 'STARTED'
     RUNNING = 'RUNNING'

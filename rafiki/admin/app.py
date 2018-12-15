@@ -244,12 +244,12 @@ def get_models(auth):
     # Return models by task
     if params.get('task') is not None:
         with admin:
-            return jsonify(admin.get_models_of_task(**params))
+            return jsonify(admin.get_models_of_task(auth['user_id'], **params))
     
     # Return all models
     else:
         with admin:
-            return jsonify(admin.get_models(**params))
+            return jsonify(admin.get_models(auth['user_id'], **params))
 
 # Handle uncaught exceptions with a server error & the error's stack trace (for development)
 @app.errorhandler(Exception)

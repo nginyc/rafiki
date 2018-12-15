@@ -83,7 +83,7 @@ class ServicesManager(object):
         train_job = self._db.get_train_job(train_job_id)
         
         # Create a worker service for each model
-        models = self._db.get_models_of_task(train_job.task)
+        models = self._db.get_models_of_task(train_job.user_id, train_job.task)
         model_to_replicas = self._compute_train_worker_replicas_for_models(models)
         worker_services = []
         for (model, replicas) in model_to_replicas.items():

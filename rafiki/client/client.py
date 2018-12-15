@@ -2,7 +2,7 @@ import requests
 import json
 import pprint
 
-from rafiki.constants import BudgetType
+from rafiki.constants import BudgetType, ModelAccessRight
 
 class Client(object):
 
@@ -89,7 +89,8 @@ class Client(object):
     # Models
     ####################################
 
-    def create_model(self, name, task, model_file_path, model_class, dependencies={}, docker_image=None):
+    def create_model(self, name, task, model_file_path, model_class, docker_image=None, \
+                    dependencies={}, access_right=ModelAccessRight.PUBLIC):
         '''
         Creates a model on Rafiki.
 
@@ -102,7 +103,8 @@ class Client(object):
         :param dependencies: List of dependencies & their versions
         :type dependencies: dict[str, str]
         :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
-
+        :param str access_right: Model access right
+        
         ``model_file_path`` should point to a file that contains all necessary Python code for the model's implementation. 
         If the Python file imports any external Python modules, you should list it in ``dependencies`` or create a custom
         ``docker_image``.
@@ -145,7 +147,8 @@ class Client(object):
                 'task': task,
                 'dependencies': json.dumps(dependencies),
                 'docker_image': docker_image,
-                'model_class':  model_class
+                'model_class':  model_class,
+                'access_right': access_right
             }
         )
         return data
@@ -153,6 +156,8 @@ class Client(object):
     def get_models(self):
         '''
         Lists all models on Rafiki.
+
+        :param str access_right: Model access right.
         '''
         data = self._get('/models')
         return data

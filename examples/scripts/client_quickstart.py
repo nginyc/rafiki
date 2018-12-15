@@ -5,7 +5,8 @@ import traceback
 import os
 
 from rafiki.client import Client
-from rafiki.constants import TaskType, UserType, BudgetType, TrainJobStatus, InferenceJobStatus, ModelDependency
+from rafiki.constants import TaskType, UserType, BudgetType, TrainJobStatus, \
+                                InferenceJobStatus, ModelDependency, ModelAccessRight
 
 RAFIKI_HOST = 'localhost'
 ADMIN_PORT = 3000
@@ -23,9 +24,10 @@ def create_user(client, email, password, user_type):
         # print(traceback.format_exc())
         print('Failed to create user "{}" - maybe it already exists?'.format(email))
 
-def create_model(client, name, task, model_file_path, model_class, dependencies):
+def create_model(client, name, task, model_file_path, model_class, dependencies, access_right):
     try:
-        return client.create_model(name, task, model_file_path, model_class, dependencies=dependencies)
+        return client.create_model(name, task, model_file_path, model_class, \
+                                    dependencies=dependencies, access_right=access_right)
     except:
         # print(traceback.format_exc())
         print('Failed to create model "{}" - maybe it already exists?'.format(name))
@@ -143,41 +145,43 @@ if __name__ == '__main__':
 
     print('Adding models to Rafiki...') 
     create_model(client, 'TfFeedForward', task, 'examples/models/image_classification/TfFeedForward.py', \
-                'TfFeedForward', dependencies={ ModelDependency.TENSORFLOW: '1.12.0' })
+                'TfFeedForward', dependencies={ ModelDependency.TENSORFLOW: '1.12.0' }, \
+                access_right=ModelAccessRight.PUBLIC)
     create_model(client, 'SkDt', task, 'examples/models/image_classification/SkDt.py', \
-                'SkDt', dependencies={ ModelDependency.SCIKIT_LEARN: '0.20.0' })
+                'SkDt', dependencies={ ModelDependency.SCIKIT_LEARN: '0.20.0' }, \
+                access_right=ModelAccessRight.PRIVATE)
 
-    print('Logging in as app developer...')
-    client.login(email=APP_DEVELOPER_EMAIL, password=USER_PASSWORD)
+    # print('Logging in as app developer...')
+    # client.login(email=APP_DEVELOPER_EMAIL, password=USER_PASSWORD)
 
-    print('Creating train job for app "{}" on Rafiki...'.format(app)) 
-    (train_job, train_job_web_url) = create_train_job(client, app, task, train_dataset_uri, \
-                                                    test_dataset_uri, enable_gpu=ENABLE_GPU)
-    pprint.pprint(train_job)
+    # print('Creating train job for app "{}" on Rafiki...'.format(app)) 
+    # (train_job, train_job_web_url) = create_train_job(client, app, task, train_dataset_uri, \
+    #                                                 test_dataset_uri, enable_gpu=ENABLE_GPU)
+    # pprint.pprint(train_job)
 
-    print('Waiting for train job to complete...')
-    print('You can view the status of the train job at {}'.format(train_job_web_url))
-    print('Login as an app developer with email "{}" and password "{}"'.format(APP_DEVELOPER_EMAIL, USER_PASSWORD)) 
-    print('This might take a few minutes')
-    result = wait_until_train_job_has_completed(client, app)
-    if not result: raise Exception('Train job has errored or stopped')
-    print('Train job has been completed!')
+    # print('Waiting for train job to complete...')
+    # print('You can view the status of the train job at {}'.format(train_job_web_url))
+    # print('Login as an app developer with email "{}" and password "{}"'.format(APP_DEVELOPER_EMAIL, USER_PASSWORD)) 
+    # print('This might take a few minutes')
+    # result = wait_until_train_job_has_completed(client, app)
+    # if not result: raise Exception('Train job has errored or stopped')
+    # print('Train job has been completed!')
 
-    print('Listing best trials of latest train job for app "{}"...'.format(app))
-    pprint.pprint(client.get_best_trials_of_train_job(app))
+    # print('Listing best trials of latest train job for app "{}"...'.format(app))
+    # pprint.pprint(client.get_best_trials_of_train_job(app))
 
-    print('Creating inference job for app "{}" on Rafiki...'.format(app))
-    pprint.pprint(client.create_inference_job(app))
-    predictor_host = get_predictor_host(client, app)
-    if not predictor_host: raise Exception('Inference job has errored or stopped')
-    print('Inference job is running!')
+    # print('Creating inference job for app "{}" on Rafiki...'.format(app))
+    # pprint.pprint(client.create_inference_job(app))
+    # predictor_host = get_predictor_host(client, app)
+    # if not predictor_host: raise Exception('Inference job has errored or stopped')
+    # print('Inference job is running!')
 
-    print('Making predictions for queries:')
-    print(queries)
-    predictions = make_predictions(client, predictor_host, queries)
-    print('Predictions are:')
-    print(predictions)
+    # print('Making predictions for queries:')
+    # print(queries)
+    # predictions = make_predictions(client, predictor_host, queries)
+    # print('Predictions are:')
+    # print(predictions)
 
-    print('Stopping inference job...')
-    pprint.pprint(client.stop_inference_job(app))
+    # print('Stopping inference job...')
+    # pprint.pprint(client.stop_inference_job(app))
 

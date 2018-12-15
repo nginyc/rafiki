@@ -5,7 +5,7 @@ import uuid
 import datetime
 
 from rafiki.constants import InferenceJobStatus, ServiceStatus, TrainJobStatus, \
-    TrialStatus
+    TrialStatus, ModelAccessRight
 
 Base = declarative_base()
 
@@ -45,6 +45,7 @@ class Model(Base):
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
     docker_image = Column(String, nullable=False)
     dependencies = Column(JSON, nullable=False)
+    access_right = Column(JSON, nullable=False, default=ModelAccessRight.PUBLIC)
 
 class Service(Base):
     __tablename__ = 'service'

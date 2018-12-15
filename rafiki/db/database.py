@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from rafiki.constants import TrainJobStatus, \
-    TrialStatus, ServiceStatus, InferenceJobStatus
+    TrialStatus, ServiceStatus, InferenceJobStatus, ModelAccessRight
 
 from .schema import Base, TrainJob, TrainJobWorker, \
     InferenceJob, Trial, Model, User, Service, InferenceJobWorker, \
@@ -284,7 +284,7 @@ class Database(object):
     # Models
     ####################################
 
-    def create_model(self, user_id, name, task, model_file_bytes, model_class, docker_image, dependencies):
+    def create_model(self, user_id, name, task, model_file_bytes, model_class, docker_image, dependencies, access_right):
         model = Model(
             user_id=user_id,
             name=name,
@@ -292,23 +292,45 @@ class Database(object):
             model_file_bytes=model_file_bytes,
             model_class=model_class,
             docker_image=docker_image,
-            dependencies=dependencies
+            dependencies=dependencies,
+            access_right=access_right
         )
         self._session.add(model)
         return model
 
-    def get_models_of_task(self, task):
-        models = self._session.query(Model) \
-            .filter(Model.task == task).all()
+    def get_models_of_task(self, user_id, task):
 
+        public_models = self._session.query(Model) \
+            .filter(Model.task == task) \
+            .filter(Model.access_right == ModelAccessRight.PUBLIC) \
+            .all()
+
+        private_models = self._session.query(Model) \
+            .filter(Model.task == task) \
+            .filter(Model.access_right == ModelAccessRight.PRIVATE) \
+            .filter(Model.user_id == user_id) \
+            .all()
+
+        models = public_models + private_models
+        return models
+
+    def get_models(self, user_id):
+
+        public_models = self._session.query(Model) \
+            .filter(Model.access_right == ModelAccessRight.PUBLIC) \
+            .all()
+
+        private_models = self._session.query(Model) \
+            .filter(Model.access_right == ModelAccessRight.PRIVATE) \
+            .filter(Model.user_id == user_id) \
+            .all()
+
+        models = public_models + private_models
         return models
 
     def get_model(self, id):
         model = self._session.query(Model).get(id)
         return model
-
-    def get_models(self):
-        return self._session.query(Model).all()
 
     ####################################
     # Trials
