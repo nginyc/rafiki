@@ -159,6 +159,7 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         _print_header('Checking loading of model & model definition...')
         f = open(model_file_path, 'rb')
         model_file_bytes = f.read()
+        f.close()
         py_model_class = load_model_class(model_file_bytes, model_class, temp_mod_name='your-model-file-temp')
         _check_model_class(py_model_class)
 
