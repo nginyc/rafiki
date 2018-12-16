@@ -32,8 +32,8 @@ def create_model(client, name, task, model_file_path, model_class, dependencies,
         # print(traceback.format_exc())
         print('Failed to create model "{}" - maybe it already exists?'.format(name))
 
-def create_train_job(client, app, task, train_dataset_uri, test_dataset_uri, models=None):
-    train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, models)
+def create_train_job(client, app, task, train_dataset_uri, test_dataset_uri, global_budget, models=None):
+    train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, global_budget, models)
 
     app = train_job.get('app')
     app_version = train_job.get('app_version')
@@ -147,24 +147,25 @@ if __name__ == '__main__':
                 access_right=ModelAccessRight.PRIVATE)
 
     print('Creating train job for app "{}" on Rafiki...'.format(app)) 
+    global_budget = {
+        BudgetType.MODEL_TRIAL_COUNT: 3,
+        BudgetType.ENABLE_GPU: ENABLE_GPU
+    }
+    
     models = [
         {
             'name': 'TfFeedForward',
             'budget': {
-                BudgetType.MODEL_TRIAL_COUNT: 1,
+                BudgetType.MODEL_TRIAL_COUNT: 2,
                 BudgetType.ENABLE_GPU: ENABLE_GPU
             }
         },
         {
-            'name': 'SkDt',
-            'budget': {
-                BudgetType.MODEL_TRIAL_COUNT: 1,
-                BudgetType.ENABLE_GPU: ENABLE_GPU
-            }
+            'name': 'SkDt'
         }
     ]
     (train_job, train_job_web_url) = create_train_job(client, app, task, train_dataset_uri, \
-                                                    test_dataset_uri, models)
+                                                    test_dataset_uri, global_budget, models)
     pprint.pprint(train_job)
 
     print('Waiting for train job to complete...')

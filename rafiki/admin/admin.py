@@ -70,20 +70,19 @@ class Admin(object):
     ####################################
 
     def create_train_job(self, user_id, app,
-        task, train_dataset_uri, test_dataset_uri, models=None):
+        task, train_dataset_uri, test_dataset_uri, global_budget, models=None):
         
         # Compute auto-incremented app version
         train_jobs = self._db.get_train_jobs_of_app(app)
         app_version = max([x.app_version for x in train_jobs], default=0) + 1
 
         if models is None:
+            models = []
             user_models = self._db.get_models_of_task(user_id, task)
             for user_model in user_models:
+                model = {}
                 model['id'] = user_model.id
-                model['budget'] = {
-                    BudgetType.MODEL_TRIAL_COUNT: 1,
-                    BudgetType.ENABLE_GPU: 0
-                }
+                model['budget'] = global_budget
                 models.append(model)
         else:
             # Ensure that models are specified
@@ -94,6 +93,8 @@ class Admin(object):
             user_models = self._db.get_models_of_task(user_id, task)
             for model in models:
                 found = False
+                if 'budget' not in model:
+                    model['budget'] = global_budget
                 for user_model in user_models:
                     if model['name'] == user_model.name:
                         found = True

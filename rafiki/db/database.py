@@ -337,32 +337,20 @@ class Database(object):
         return model
 
     def get_models_of_task(self, user_id, task):
-
-        public_models = self._session.query(Model) \
+        task_models = self._session.query(Model) \
             .filter(Model.task == task) \
-            .filter(Model.access_right == ModelAccessRight.PUBLIC) \
             .all()
 
-        private_models = self._session.query(Model) \
-            .filter(Model.task == task) \
-            .filter(Model.access_right == ModelAccessRight.PRIVATE) \
-            .filter(Model.user_id == user_id) \
-            .all()
-
+        public_models = self._filter_public_models(task_models)
+        private_models = self._filter_private_models(task_models, user_id)
         models = public_models + private_models
         return models
 
     def get_models(self, user_id):
+        all_models = self._session.query(Model).all()
 
-        public_models = self._session.query(Model) \
-            .filter(Model.access_right == ModelAccessRight.PUBLIC) \
-            .all()
-
-        private_models = self._session.query(Model) \
-            .filter(Model.access_right == ModelAccessRight.PRIVATE) \
-            .filter(Model.user_id == user_id) \
-            .all()
-
+        public_models = self._filter_public_models(all_models)
+        private_models = self._filter_private_models(all_models, user_id)
         models = public_models + private_models
         return models
 
@@ -491,3 +479,9 @@ class Database(object):
     def _define_tables(self):
         Base.metadata.create_all(bind=self._engine)
 
+    def _filter_public_models(self, models):
+        return list(filter(lambda model: model.access_right == ModelAccessRight.PUBLIC, models))
+    
+    def _filter_private_models(self, models, user_id):
+        return list(filter(lambda model: model.access_right == ModelAccessRight.PRIVATE and \
+                            model.user_id == user_id, models))
