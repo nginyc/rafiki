@@ -4,7 +4,7 @@ import traceback
 import bcrypt
 
 from rafiki.db import Database
-from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus, ModelAccessRight
+from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus, ModelAccessRight, BudgetType
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.model import ModelLogger
 from rafiki.container import DockerSwarmContainerManager 
@@ -69,26 +69,36 @@ class Admin(object):
     ####################################
 
     def create_train_job(self, user_id, app,
-        task, train_dataset_uri, test_dataset_uri, models):
+        task, train_dataset_uri, test_dataset_uri, models=None):
         
         # Compute auto-incremented app version
         train_jobs = self._db.get_train_jobs_of_app(app)
         app_version = max([x.app_version for x in train_jobs], default=0) + 1
 
-        # Ensure that models are specified
-        if len(models) == 0:
-            raise NoModelsForTaskError()
-
-        # Ensure that models are registered
-        user_models = self._db.get_models_of_task(user_id, task)
-        for model in models:
-            found = False
+        if models is None:
+            user_models = self._db.get_models_of_task(user_id, task)
             for user_model in user_models:
-                if model['name'] == user_model.name:
-                    found = True
-                    model['id'] = user_model.id
-            if not found:
+                model['id'] = user_model.id
+                model['budget'] = {
+                    BudgetType.MODEL_TRIAL_COUNT: 1,
+                    BudgetType.ENABLE_GPU: 0
+                }
+                models.append(model)
+        else:
+            # Ensure that models are specified
+            if len(models) == 0:
                 raise NoModelsForTaskError()
+
+            # Ensure that models are registered
+            user_models = self._db.get_models_of_task(user_id, task)
+            for model in models:
+                found = False
+                for user_model in user_models:
+                    if model['name'] == user_model.name:
+                        found = True
+                        model['id'] = user_model.id
+                if not found:
+                    raise NoModelsForTaskError()
         
         train_job = self._db.create_train_job(
             user_id=user_id,
@@ -134,28 +144,15 @@ class Admin(object):
         if train_job is None:
             raise InvalidTrainJobError()
 
-        count = {
-            TrainJobStatus.STARTED: 0,
-            TrainJobStatus.RUNNING: 0,
-            TrainJobStatus.STOPPED: 0,
-            TrainJobStatus.COMPLETED: 0
-        }
+        status = self._get_train_job_status(train_job)
+
         workers = []
         sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(train_job.id)
         for sub_train_job in sub_train_jobs:
             workers += self._db.get_workers_of_sub_train_job(sub_train_job.id)
-            count[sub_train_job.status] += 1
         services = [self._db.get_service(x.service_id) for x in workers]
         worker_models = [self._db.get_model(self._db.get_sub_train_job(x.sub_train_job_id).model_id) \
                          for x in workers]
-
-        status = TrainJobStatus.STARTED
-        if count[TrainJobStatus.RUNNING] > 0:
-            status = TrainJobStatus.RUNNING
-        elif count[TrainJobStatus.COMPLETED] == len(sub_train_jobs):
-            status = TrainJobStatus.COMPLETED
-        elif count[TrainJobStatus.STOPPED] > 0:
-            status = TrainJobStatus.STOPPED
 
         return {
             'id': train_job.id,
@@ -319,23 +316,7 @@ class Admin(object):
         if train_job is None:
             raise InvalidTrainJobError('Have you started a train job for this app?')
 
-        count = {
-            TrainJobStatus.STARTED: 0,
-            TrainJobStatus.RUNNING: 0,
-            TrainJobStatus.STOPPED: 0,
-            TrainJobStatus.COMPLETED: 0
-        }
-        sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(train_job.id)
-        for sub_train_job in sub_train_jobs:
-            count[sub_train_job.status] += 1
-
-        status = TrainJobStatus.STARTED
-        if count[TrainJobStatus.RUNNING] > 0:
-            status = TrainJobStatus.RUNNING
-        elif count[TrainJobStatus.COMPLETED] == len(sub_train_jobs):
-            status = TrainJobStatus.COMPLETED
-        elif count[TrainJobStatus.STOPPED] > 0:
-            status = TrainJobStatus.STOPPED
+        status = self._get_train_job_status(train_job)
 
         if status != TrainJobStatus.COMPLETED:
             raise InvalidTrainJobError('Train job has not completed.')
@@ -596,4 +577,25 @@ class Admin(object):
 
     def disconnect(self):
         self._db.disconnect()
+        
+    def _get_train_job_status(self, train_job):
+        count = {
+            TrainJobStatus.STARTED: 0,
+            TrainJobStatus.RUNNING: 0,
+            TrainJobStatus.STOPPED: 0,
+            TrainJobStatus.COMPLETED: 0
+        }
+        sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(train_job.id)
+        for sub_train_job in sub_train_jobs:
+            count[sub_train_job.status] += 1
+
+        status = TrainJobStatus.STARTED
+        if count[TrainJobStatus.RUNNING] > 0:
+            status = TrainJobStatus.RUNNING
+        elif count[TrainJobStatus.COMPLETED] == len(sub_train_jobs):
+            status = TrainJobStatus.COMPLETED
+        elif count[TrainJobStatus.STOPPED] > 0:
+            status = TrainJobStatus.STOPPED
+
+        return status
         

@@ -32,7 +32,7 @@ def create_model(client, name, task, model_file_path, model_class, dependencies,
         # print(traceback.format_exc())
         print('Failed to create model "{}" - maybe it already exists?'.format(name))
 
-def create_train_job(client, app, task, train_dataset_uri, test_dataset_uri, models):
+def create_train_job(client, app, task, train_dataset_uri, test_dataset_uri, models=None):
     train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, models)
 
     app = train_job.get('app')

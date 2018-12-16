@@ -235,7 +235,7 @@ class Client(object):
     ####################################
     
     def create_train_job(self, app, task, train_dataset_uri,
-                        test_dataset_uri, models):
+                        test_dataset_uri, models=None):
         '''
         Creates and starts a train job on Rafiki. 
         A train job is uniquely identified by its associated app and the app version (returned in output).
