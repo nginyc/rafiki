@@ -6,8 +6,8 @@ from functools import wraps
 from rafiki.constants import UserType
 from rafiki.config import APP_SECRET
 
-class UnauthorizedException(Exception): pass
-class InvalidAuthorizationHeaderException(Exception): pass
+class UnauthorizedError(Exception): pass
+class InvalidAuthorizationHeaderError(Exception): pass
     
 def generate_token(payload):
     token = jwt.encode(payload, APP_SECRET, algorithm='HS256')
