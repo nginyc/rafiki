@@ -151,6 +151,7 @@ class Client(object):
         '''
         f = open(model_file_path, 'rb')
         model_file_bytes = f.read()
+        f.close()
         
         data = self._post(
             '/models', 
