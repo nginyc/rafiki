@@ -255,7 +255,7 @@ def get_model_file(auth, name):
     params = get_request_params()
 
     with admin:
-        model_file = admin.get_model_file(name, **params)
+        model_file = admin.get_model_file(auth['user_id'], name, **params)
 
     res = make_response(model_file)
     res.headers.set('Content-Type', 'application/octet-stream')
@@ -267,7 +267,7 @@ def get_model(auth, name):
     admin = get_admin()
     params = get_request_params()
     with admin:
-        return jsonify(admin.get_model(name, **params))
+        return jsonify(admin.get_model(auth['user_id'], name, **params))
 
 @app.route('/models', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])

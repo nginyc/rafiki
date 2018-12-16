@@ -369,6 +369,7 @@ class Database(object):
     def get_model_by_name(self, name):
         model = self._session.query(Model) \
             .filter(Model.name == name).first()
+        
         return model
 
     def get_model(self, id):

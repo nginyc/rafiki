@@ -18,6 +18,7 @@ class InvalidUserError(Exception): pass
 class InvalidPasswordError(Exception): pass
 class InvalidRunningInferenceJobError(Exception): pass
 class InvalidModelError(Exception): pass
+class InvalidModelAccessError(Exception): pass
 class InvalidTrainJobError(Exception): pass
 class InvalidTrialError(Exception): pass
 class RunningInferenceJobExistsError(Exception): pass
@@ -465,10 +466,13 @@ class Admin(object):
             'name': model.name 
         }
 
-    def get_model(self, name):
+    def get_model(self, user_id, name):
         model = self._db.get_model_by_name(name)
         if model is None:
             raise InvalidModelError()
+
+        if model.access_right == ModelAccessRight.PRIVATE and model.user_id != user_id:
+            raise InvalidModelAccessError()
 
         return {
             'name': model.name,
@@ -481,15 +485,19 @@ class Admin(object):
             'access_right': model.access_right
         }
 
-    def get_model_file(self, name):
+    def get_model_file(self, user_id, name):
         model = self._db.get_model_by_name(name)
+        
         if model is None:
             raise InvalidModelError()
 
+        if model.access_right == ModelAccessRight.PRIVATE and model.user_id != user_id:
+            raise InvalidModelAccessError()
+
         return model.model_file_bytes
 
-    def get_models(self):
-        models = self._db.get_models()
+    def get_models(self, user_id):
+        models = self._db.get_models(user_id)
         return [
             {
                 'name': model.name,
