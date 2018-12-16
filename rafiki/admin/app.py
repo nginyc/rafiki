@@ -5,7 +5,7 @@ import traceback
 import json
 
 from rafiki.constants import UserType
-from rafiki.utils.auth import generate_token, decode_token, UnauthorizedException, auth
+from rafiki.utils.auth import generate_token, decode_token, auth
 
 from .admin import Admin
 

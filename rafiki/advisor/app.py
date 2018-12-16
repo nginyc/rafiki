@@ -6,7 +6,7 @@ import json
 from rafiki.model import deserialize_knob_config
 from rafiki.constants import UserType
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
-from rafiki.utils.auth import generate_token, decode_token, UnauthorizedException, auth
+from rafiki.utils.auth import generate_token, decode_token, UnauthorizedError, auth
 
 from .service import AdvisorService
 
@@ -25,7 +25,7 @@ def generate_user_token():
     # Only superadmin can authenticate (other users must use Rafiki Admin)
     if not (params['email'] == SUPERADMIN_EMAIL and \
             params['password'] == SUPERADMIN_PASSWORD):
-        raise UnauthorizedException()
+        raise UnauthorizedError()
     
     auth = {
         'user_type': UserType.SUPERADMIN
