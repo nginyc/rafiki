@@ -17,10 +17,9 @@ def decode_token(token):
     payload = jwt.decode(token, APP_SECRET, algorithms=['HS256'])
     return payload
 
-def auth(user_types=None):
-
+def auth(user_types=[]):
     # Superadmin can do anything
-    user_types = user_types.append(UserType.SUPERADMIN)
+    user_types.append(UserType.SUPERADMIN)
 
     def decorator(f):
         @wraps(f)
@@ -29,8 +28,8 @@ def auth(user_types=None):
             token = extract_token_from_header(auth_header)
             auth = decode_token(token)
 
-            if user_types and auth.get('user_type') not in user_types:
-                raise UnauthorizedException()
+            if auth.get('user_type') not in user_types:
+                raise UnauthorizedError()
 
             return f(auth, *args, **kwargs)
 
@@ -39,15 +38,15 @@ def auth(user_types=None):
 
 def extract_token_from_header(header):
     if header is None:
-        raise InvalidAuthorizationHeaderException()
+        raise InvalidAuthorizationHeaderError()
     
     parts = header.split(' ')
     
     if len(parts) != 2:
-        raise InvalidAuthorizationHeaderException()
+        raise InvalidAuthorizationHeaderError()
 
     if parts[0] != 'Bearer':
-        raise InvalidAuthorizationHeaderException()
+        raise InvalidAuthorizationHeaderError()
 
     token = parts[1]
     return token
