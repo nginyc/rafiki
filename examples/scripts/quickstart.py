@@ -5,33 +5,17 @@ import traceback
 import os
 
 from rafiki.client import Client
+from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TaskType, UserType, BudgetType, TrainJobStatus, \
-                                InferenceJobStatus, ModelDependency, ModelAccessRight
+                                InferenceJobStatus, ModelDependency
 
-RAFIKI_HOST = 'localhost'
-ADMIN_PORT = 3000
-ADMIN_WEB_PORT = 3001
-SUPERADMIN_EMAIL = 'superadmin@rafiki'
-MODEL_DEVELOPER_EMAIL = 'model_developer@rafiki'
-APP_DEVELOPER_EMAIL = 'app_developer@rafiki'
-USER_PASSWORD = 'rafiki'
-ENABLE_GPU = int(os.environ.get('ENABLE_GPU', 0))
-
-def create_user(client, email, password, user_type):
+def create_model(client, name, task, model_file_path, model_class, dependencies):
     try:
-        return client.create_user(email, password, user_type)
+        return client.create_model(name, task, model_file_path, model_class, dependencies=dependencies)
     except:
-        # print(traceback.format_exc())
-        print('Failed to create user "{}" - maybe it already exists?'.format(email))
-
-def create_model(client, name, task, model_file_path, model_class, dependencies, access_right):
-    try:
-        return client.create_model(name, task, model_file_path, model_class, \
-                                    dependencies=dependencies, access_right=access_right)
-    except:
-        # print(traceback.format_exc())
         print('Failed to create model "{}" - maybe it already exists?'.format(name))
 
+<<<<<<< Updated upstream
 def create_train_job(client, app, task, train_dataset_uri, test_dataset_uri, global_budget, models=None):
     train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, global_budget, models)
 
@@ -41,21 +25,23 @@ def create_train_job(client, app, task, train_dataset_uri, test_dataset_uri, glo
     return (train_job, train_job_web_url)
 
 def wait_until_train_job_has_completed(client, app):
+=======
+def wait_until_train_job_has_stopped(client, app, timeout=60*5, tick=10):
+    length = 0
+>>>>>>> Stashed changes
     while True:
-        time.sleep(10)
-        try:
-            train_job = client.get_train_job(app)
-            status = train_job.get('status')
-            if status == TrainJobStatus.COMPLETED:
-                # Train job completed!
-                return True
-            elif status == TrainJobStatus.STOPPED:
-                # Train job has either errored or been stopped
-                return False
-            else:
-                continue
-        except:
-            pass
+        train_job = client.get_train_job(app)
+        status = train_job['status']
+        if status not in [TrainJobStatus.STARTED, TrainJobStatus.RUNNING]:
+            # Train job has stopped
+            return
+            
+        # Still running...
+        if length >= timeout:
+            raise TimeoutError('Train job is running for too long')
+
+        length += tick
+        time.sleep(tick)
 
 # Returns `predictor_host` of inference job
 def get_predictor_host(client, app):
@@ -89,12 +75,57 @@ def make_predictions(client, predictor_host, queries):
         predictions.append(res.json()['prediction'])
 
     return predictions
-    
-if __name__ == '__main__':
-    app = 'fashion_mnist_app'
+
+
+def quickstart(client, app, enable_gpu, train_dataset_uri, test_dataset_uri):
     task = TaskType.IMAGE_CLASSIFICATION
-    train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true'
-    test_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true'
+
+    print('Adding models to Rafiki...') 
+    create_model(client, 'TfFeedForward', task, 'examples/models/image_classification/TfFeedForward.py', \
+                'TfFeedForward', dependencies={ ModelDependency.TENSORFLOW: '1.12.0' })
+    create_model(client, 'SkDt', task, 'examples/models/image_classification/SkDt.py', \
+                'SkDt', dependencies={ ModelDependency.SCIKIT_LEARN: '0.20.0' })
+
+    print('Creating train job for app "{}" on Rafiki...'.format(app)) 
+    global_budget = {
+        BudgetType.MODEL_TRIAL_COUNT: 3,
+        BudgetType.ENABLE_GPU: ENABLE_GPU
+    }
+    
+    models = [
+        {
+            'name': 'TfFeedForward',
+            'budget': {
+                BudgetType.MODEL_TRIAL_COUNT: 2,
+                BudgetType.ENABLE_GPU: enable_gpu
+            }
+        },
+        {
+            'name': 'SkDt',
+            'budget': {
+                BudgetType.MODEL_TRIAL_COUNT: 2,
+                BudgetType.ENABLE_GPU: enable_gpu
+            }
+        }
+    ]
+    train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, models)
+    pprint.pprint(train_job)
+
+    print('Waiting for train job to complete...')
+    print('This might take a few minutes')
+    wait_until_train_job_has_stopped(client, app)
+    print('Train job has been stopped')
+
+    print('Listing best trials of latest train job for app "{}"...'.format(app))
+    pprint.pprint(client.get_best_trials_of_train_job(app))
+
+    print('Creating inference job for app "{}" on Rafiki...'.format(app))
+    pprint.pprint(client.create_inference_job(app))
+    predictor_host = get_predictor_host(client, app)
+    if not predictor_host: raise Exception('Inference job has errored or stopped')
+    print('Inference job is running!')
+
+    print('Making predictions for queries:')
     queries = [
         [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
@@ -125,67 +156,6 @@ if __name__ == '__main__':
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
     ]
-
-    client = Client(admin_host=RAFIKI_HOST, admin_port=ADMIN_PORT)
-    client.login(email=SUPERADMIN_EMAIL, password=USER_PASSWORD)
-
-    print('Creating model developer in Rafiki...')
-    create_user(client, MODEL_DEVELOPER_EMAIL, USER_PASSWORD, UserType.MODEL_DEVELOPER)
-
-    print('Creating app developer in Rafiki...')
-    create_user(client, APP_DEVELOPER_EMAIL, USER_PASSWORD, UserType.APP_DEVELOPER)
-
-    print('Logging in as model developer...')
-    client.login(email=MODEL_DEVELOPER_EMAIL, password=USER_PASSWORD)
-
-    print('Adding models to Rafiki...') 
-    create_model(client, 'TfFeedForward', task, 'examples/models/image_classification/TfFeedForward.py', \
-                'TfFeedForward', dependencies={ ModelDependency.TENSORFLOW: '1.12.0' }, \
-                access_right=ModelAccessRight.PUBLIC)
-    create_model(client, 'SkDt', task, 'examples/models/image_classification/SkDt.py', \
-                'SkDt', dependencies={ ModelDependency.SCIKIT_LEARN: '0.20.0' }, \
-                access_right=ModelAccessRight.PRIVATE)
-
-    print('Creating train job for app "{}" on Rafiki...'.format(app)) 
-    global_budget = {
-        BudgetType.MODEL_TRIAL_COUNT: 3,
-        BudgetType.ENABLE_GPU: ENABLE_GPU
-    }
-    
-    models = [
-        {
-            'name': 'TfFeedForward',
-            'budget': {
-                BudgetType.MODEL_TRIAL_COUNT: 2,
-                BudgetType.ENABLE_GPU: ENABLE_GPU
-            }
-        },
-        {
-            'name': 'SkDt'
-        }
-    ]
-    (train_job, train_job_web_url) = create_train_job(client, app, task, train_dataset_uri, \
-                                                    test_dataset_uri, global_budget, models)
-    pprint.pprint(train_job)
-
-    print('Waiting for train job to complete...')
-    print('You can view the status of the train job at {}'.format(train_job_web_url))
-    print('Login as an app developer with email "{}" and password "{}"'.format(APP_DEVELOPER_EMAIL, USER_PASSWORD)) 
-    print('This might take a few minutes')
-    result = wait_until_train_job_has_completed(client, app)
-    if not result: raise Exception('Train job has errored or stopped')
-    print('Train job has been completed!')
-
-    print('Listing best trials of latest train job for app "{}"...'.format(app))
-    pprint.pprint(client.get_best_trials_of_train_job(app))
-
-    print('Creating inference job for app "{}" on Rafiki...'.format(app))
-    pprint.pprint(client.create_inference_job(app))
-    predictor_host = get_predictor_host(client, app)
-    if not predictor_host: raise Exception('Inference job has errored or stopped')
-    print('Inference job is running!')
-
-    print('Making predictions for queries:')
     print(queries)
     predictions = make_predictions(client, predictor_host, queries)
     print('Predictions are:')
@@ -194,3 +164,24 @@ if __name__ == '__main__':
     print('Stopping inference job...')
     pprint.pprint(client.stop_inference_job(app))
 
+if __name__ == '__main__':
+    rafiki_host = os.environ.get('RAFIKI_IP_ADDRESS', 'localhost')
+    admin_port = int(os.environ.get('ADMIN_EXT_PORT', 3000))
+    admin_web_port = int(os.environ.get('ADMIN_WEB_EXT_PORT', 3001))
+    user_email = os.environ.get('USER_EMAIL', SUPERADMIN_EMAIL)
+    user_password = os.environ.get('USER_PASSWORD', SUPERADMIN_PASSWORD)
+
+    # Initialize client
+    client = Client(admin_host=rafiki_host, admin_port=admin_port)
+    client.login(email=user_email, password=user_password)
+    admin_web_url = 'http://{}:{}'.format(rafiki_host, admin_web_port)
+    print('During training, you can view the status of the train job at {}'.format(admin_web_url))
+    print('Login with email "{}" and password "{}"'.format(user_email, user_password)) 
+    
+    app = 'fashion_mnist_app'
+    enable_gpu = int(os.environ.get('ENABLE_GPU', 0))
+    train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true'
+    test_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true'
+
+    # Run quickstart
+    quickstart(client, app, enable_gpu, train_dataset_uri, test_dataset_uri)
