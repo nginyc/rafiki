@@ -102,3 +102,15 @@ you might be running out of space allocated for Docker. Try one of the following
 
 From Mac Mojave onwards, due to Mac's new `privacy protection feature <https://www.howtogeek.com/361707/how-macos-mojaves-privacy-protection-works/>`_, 
 you might need to explicitly give Docker *Full Disk Access*, restart Docker, or even do a factory reset of Docker.
+
+
+Using Rafiki Admin's HTTP interface
+--------------------------------------------------------------------
+
+To make calls to the HTTP endpoints of Rafiki Admin, you'll need first authenticate with email & password 
+against the `POST /tokens` endpoint to obtain an authentication token `token`, 
+and subsequently add the `Authorization` header for every other call:
+
+::
+
+    Authorization: Bearer {{token}}
