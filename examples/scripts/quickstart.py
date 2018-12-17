@@ -15,7 +15,7 @@ from rafiki.constants import TaskType, UserType, BudgetType, TrainJobStatus, \
 def gen_id(length=16):
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
 
-def wait_until_train_job_has_stopped(client, app, timeout=60*10, tick=10):
+def wait_until_train_job_has_stopped(client, app, timeout=60*20, tick=10):
     length = 0
     while True:
         train_job = client.get_train_job(app)
