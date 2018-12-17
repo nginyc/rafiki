@@ -14,3 +14,7 @@ rafiki.constants
 .. autoclass:: rafiki.constants.BudgetType
 
 .. autoclass:: rafiki.constants.UserType
+
+.. autoclass:: rafiki.constants.ModelDependency
+
+.. autoclass:: rafiki.constants.ModelAccessRight
