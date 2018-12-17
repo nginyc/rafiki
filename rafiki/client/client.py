@@ -4,7 +4,7 @@ import pprint
 import pickle
 import os
 
-from rafiki.constants import BudgetType
+from rafiki.constants import BudgetType, ModelAccessRight
 
 class RafikiConnectionError(ConnectionError):
     pass
@@ -101,7 +101,8 @@ class Client(object):
     # Models
     ####################################
 
-    def create_model(self, name, task, model_file_path, model_class, dependencies={}, docker_image=None):
+    def create_model(self, name, task, model_file_path, model_class, docker_image=None, \
+                    dependencies={}, access_right=ModelAccessRight.PRIVATE):
         '''
         Creates a model on Rafiki.
 
@@ -114,6 +115,8 @@ class Client(object):
         :param dependencies: List of dependencies & their versions
         :type dependencies: dict[str, str]
         :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
+        :param rafiki.constants.ModelAccessRight access_right: Model access right
+        
         :returns: Created model as dictionary
         :rtype: dict[str, any]
 
@@ -148,6 +151,7 @@ class Client(object):
         '''
         f = open(model_file_path, 'rb')
         model_file_bytes = f.read()
+        f.close()
         
         data = self._post(
             '/models', 
@@ -159,7 +163,8 @@ class Client(object):
                 'task': task,
                 'dependencies': json.dumps(dependencies),
                 'docker_image': docker_image,
-                'model_class':  model_class
+                'model_class':  model_class,
+                'access_right': access_right
             }
         )
         return data
@@ -179,6 +184,7 @@ class Client(object):
         '''
         Lists all models on Rafiki.
 
+        :param str access_right: Model access right.
         :returns: Details of models as list of dictionaries
         :rtype: dict[str, any][]
         '''
@@ -229,21 +235,20 @@ class Client(object):
     # Train Jobs
     ####################################
     
-    def create_train_job(self, app, task, train_dataset_uri,
-                        test_dataset_uri, budget=None):
+    def create_train_job(self, app, task, train_dataset_uri, test_dataset_uri, budget, models=None):
         '''
         Creates and starts a train job on Rafiki. 
         A train job is uniquely identified by its associated app and the app version (returned in output).
         
-        Only admins & app developers can manage train jobs.
+        Only admins, model developers and app developers can manage train jobs.
 
         :param str app: Name of the app associated with the train job
         :param str task: Task associated with the train job, 
             the train job will train models associated with the task
         :param str train_dataset_uri: URI of the train dataset in a format specified by the task
         :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task
-        :param budget: budget for the train job
-        :type budget: dict[:class:`rafiki.constants.BudgetType`, int]
+        :param str budget: Budget for each model
+        :param str[] models: list of model names to use for train job
         :returns: Created train job as dictionary
         :rtype: dict[str, any]
 
@@ -256,9 +261,11 @@ class Client(object):
         =====================       =====================
         **Budget Type**             **Description**
         ---------------------       ---------------------        
-        ``MODEL_TRIAL_COUNT``       Target number of trials, per model, to run
+        ``MODEL_TRIAL_COUNT``       Target number of trials to run
         ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported
         =====================       =====================
+
+        If ``models`` is unspecified, all models available to the user for the specified task will be used.
         '''
 
         data = self._post('/train_jobs', json={
@@ -266,7 +273,8 @@ class Client(object):
             'task': task,
             'train_dataset_uri': train_dataset_uri,
             'test_dataset_uri': test_dataset_uri,
-            'budget': budget
+            'budget': budget,
+            'models': models
         })
         return data
 
@@ -307,7 +315,7 @@ class Client(object):
         data = self._get('/train_jobs/{}/{}'.format(app, app_version))
         return data
 
-    def get_best_trials_of_train_job(self, app, app_version=-1, max_count=3):
+    def get_best_trials_of_train_job(self, app, app_version=-1, max_count=2):
         '''
         Lists the best scoring trials of the train job identified by an app and an app version,
         ordered by descending score.
@@ -421,7 +429,7 @@ class Client(object):
     def create_inference_job(self, app, app_version=-1):
         '''
         Creates and starts a inference job on Rafiki with the 2 best trials of an associated train job of the app. 
-        The train job must have the status of ``COMPLETED``.The inference job would be tagged with the train job's app and app version. 
+        The train job must have the status of ``STOPPED``.The inference job would be tagged with the train job's app and app version. 
         Throws an error if an inference job of the same train job is already running.
 
         In this method's response, `predictor_host` is this inference job's predictor's host. 

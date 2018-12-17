@@ -157,8 +157,8 @@ class RafikiClient {
       x.datetime_started = this._toDate(x.datetime_started);
     }
 
-    if (x.datetime_completed) {
-      x.datetime_completed = this._toDate(x.datetime_completed);
+    if (x.datetime_stopped) {
+      x.datetime_stopped = this._toDate(x.datetime_stopped);
     }
 
     return <TrainJob>x;
@@ -283,7 +283,7 @@ interface TrainJob {
     [budget_type: string]: number
   };
   datetime_started: Date;
-  datetime_completed?: Date;
+  datetime_stopped?: Date;
   status: string;
   task: string;
 }

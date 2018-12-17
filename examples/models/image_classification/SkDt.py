@@ -17,7 +17,7 @@ class SkDt(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'max_depth': IntegerKnob(2, 16 if APP_MODE != 'DEV' else 8),
+            'max_depth': IntegerKnob(2, 16 if APP_MODE != 'DEV' else 4),
             'criterion': CategoricalKnob(['gini', 'entropy'])
         }
 

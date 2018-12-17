@@ -35,17 +35,15 @@ class TrainWorker(object):
         advisor_id = None
         while True:
             self._db.connect()
-            (budget, model_id,
-                model_file_bytes, model_class, train_job_id, 
-                train_dataset_uri, test_dataset_uri) = self._read_worker_info()
+            (sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
+                train_job_id, train_dataset_uri, test_dataset_uri) = self._read_worker_info()
 
-            if self._if_budget_reached(budget, train_job_id, model_id):
+            if self._if_budget_reached(budget, sub_train_job_id):
                 # If budget reached
                 logger.info('Budget for train job has reached')
                 self._stop_worker()
                 if advisor_id is not None:
                     self._delete_advisor(advisor_id)
-
                 break
 
             # Load model class from bytes
@@ -75,7 +73,7 @@ class TrainWorker(object):
             logger.info('Received proposal of knobs from advisor:')
             logger.info(pprint.pformat(knobs))
             logger.info('Creating new trial in DB...')
-            self._trial_id = self._create_new_trial(model_id, train_job_id, knobs)
+            self._trial_id = self._create_new_trial(sub_train_job_id, model_id, knobs)
             logger.info('Created trial of ID "{}" in DB'.format(self._trial_id))
 
             # Don't keep DB connection while training model
@@ -168,10 +166,10 @@ class TrainWorker(object):
         return (score, parameters)
 
     # Creates a new trial in the DB
-    def _create_new_trial(self, model_id, train_job_id, knobs):
+    def _create_new_trial(self, sub_train_job_id, model_id, knobs):
         trial = self._db.create_trial(
-            model_id=model_id, 
-            train_job_id=train_job_id, 
+            sub_train_job_id=sub_train_job_id,
+            model_id=model_id,
             knobs=knobs
         )
         self._db.commit()
@@ -215,13 +213,12 @@ class TrainWorker(object):
             logger.warning(traceback.format_exc())
 
     # Returns whether the worker reached its budget (only consider COMPLETED or ERRORED trials)
-    def _if_budget_reached(self, budget, train_job_id, model_id):
-        # By default, budget is model trial count of 10
-        max_trials = budget.get(BudgetType.MODEL_TRIAL_COUNT, 10)
-        trials = self._db.get_trials_of_train_job(train_job_id)
+    def _if_budget_reached(self, budget, sub_train_job_id):
+        # By default, budget is model trial count of 2
+        max_trials = budget.get(BudgetType.MODEL_TRIAL_COUNT, 2)
+        trials = self._db.get_trials_of_sub_train_job(sub_train_job_id)
         trials = [x for x in trials if x.status in [TrialStatus.COMPLETED, TrialStatus.ERRORED]]
-        model_trials = [x for x in trials if x.model_id == model_id]
-        return len(model_trials) >= max_trials
+        return len(trials) >= max_trials
 
     def _read_worker_info(self):
         worker = self._db.get_train_job_worker(self._service_id)
@@ -229,18 +226,20 @@ class TrainWorker(object):
         if worker is None:
             raise InvalidWorkerException()
 
-        model = self._db.get_model(worker.model_id)
         train_job = self._db.get_train_job(worker.train_job_id)
+        sub_train_job = self._db.get_sub_train_job(worker.sub_train_job_id)
+        model = self._db.get_model(sub_train_job.model_id)
 
         if model is None:
             raise InvalidModelException()
 
-        if train_job is None:
+        if train_job is None or sub_train_job is None:
             raise InvalidTrainJobException()
 
         return (
-            train_job.budget, 
-            worker.model_id,
+            sub_train_job.id,
+            train_job.budget,
+            model.id,
             model.model_file_bytes,
             model.model_class,
             train_job.id,

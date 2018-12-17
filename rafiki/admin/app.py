@@ -5,7 +5,7 @@ import traceback
 import json
 
 from rafiki.constants import UserType
-from rafiki.utils.auth import generate_token, decode_token, UnauthorizedException, auth
+from rafiki.utils.auth import generate_token, decode_token, auth
 
 from .admin import Admin
 
@@ -255,7 +255,7 @@ def get_model_file(auth, name):
     params = get_request_params()
 
     with admin:
-        model_file = admin.get_model_file(name, **params)
+        model_file = admin.get_model_file(auth['user_id'], name, **params)
 
     res = make_response(model_file)
     res.headers.set('Content-Type', 'application/octet-stream')
@@ -267,7 +267,7 @@ def get_model(auth, name):
     admin = get_admin()
     params = get_request_params()
     with admin:
-        return jsonify(admin.get_model(name, **params))
+        return jsonify(admin.get_model(auth['user_id'], name, **params))
 
 @app.route('/models', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
@@ -278,12 +278,12 @@ def get_models(auth):
     # Return models by task
     if params.get('task') is not None:
         with admin:
-            return jsonify(admin.get_models_of_task(**params))
+            return jsonify(admin.get_models_of_task(auth['user_id'], **params))
     
     # Return all models
     else:
         with admin:
-            return jsonify(admin.get_models(**params))
+            return jsonify(admin.get_models(auth['user_id'], **params))
 
 # Handle uncaught exceptions with a server error & the error's stack trace (for development)
 @app.errorhandler(Exception)

@@ -85,9 +85,16 @@ Build & view Rafiki's Sphinx documentation on your machine with the following co
 Troubleshooting
 --------------------------------------------------------------------
 
-While building Rafiki's images locally, if you encounter an error like "No space left on device", you might be running out of space allocated for Docker. Try removing all containers & images:
+While building Rafiki's images locally, if you encounter errors like "No space left on device", 
+you might be running out of space allocated for Docker. Try one of the following:
 
-    .. code-block:: shell
+    Prune dangling images:
+    ::
+
+        docker system prune
+
+    Remove all containers & images:
+    ::
 
         # Delete all containers
         docker rm $(docker ps -a -q)
