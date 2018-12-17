@@ -32,6 +32,11 @@ class ServicesManager(object):
     def create_inference_services(self, inference_job_id):
         inference_job = self._db.get_inference_job(inference_job_id)
 
+        # Prepare all inputs for inference job deployment
+        # Throws error early to make service deployment more atomic
+        best_trials = self._get_best_trials_for_inference(inference_job)
+        trial_to_replicas = self._compute_inference_worker_replicas_for_trials(best_trials)
+
         try:
             # Create predictor
             predictor_service = self._create_predictor_service(inference_job)
@@ -39,12 +44,11 @@ class ServicesManager(object):
             self._db.commit()
 
             # Create a worker service for each best trial of associated train job
-            best_trials = self._get_best_trials_for_inference(inference_job)
-            trial_to_replicas = self._compute_inference_worker_replicas_for_trials(best_trials)
             worker_services = []
             for (trial, replicas) in trial_to_replicas.items():
                 service = self._create_inference_job_worker(inference_job, trial, replicas)
                 worker_services.append(service)
+                self._db.commit()
 
             # Ensure that all services are running
             self._wait_until_services_running([predictor_service, *worker_services])
@@ -342,12 +346,7 @@ class ServicesManager(object):
         return port
 
     def _get_best_trials_for_inference(self, inference_job):
-        sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(inference_job.train_job_id)
-        best_trials = []
-        for sub_train_job in sub_train_jobs:
-            best_trials += self._db.get_best_trials_of_sub_train_job(sub_train_job.id, \
-                                    max_count=INFERENCE_MAX_BEST_TRIALS)
-
+        best_trials = self._db.get_best_trials_of_train_job(inference_job.train_job_id)
         return best_trials
 
     def _compute_train_worker_replicas_for_sub_train_jobs(self, sub_train_jobs):
