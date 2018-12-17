@@ -88,12 +88,11 @@ Troubleshooting
 While building Rafiki's images locally, if you encounter errors like "No space left on device", 
 you might be running out of space allocated for Docker. Try one of the following:
 
-    Prune dangling images:
     ::
 
+        # Prunes dangling images
         docker system prune
 
-    Remove all containers & images:
     ::
 
         # Delete all containers
