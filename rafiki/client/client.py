@@ -236,7 +236,7 @@ class Client(object):
     ####################################
     
     def create_train_job(self, app, task, train_dataset_uri,
-                        test_dataset_uri, models=None):
+                        test_dataset_uri, global_budget, models=None):
         '''
         Creates and starts a train job on Rafiki. 
         A train job is uniquely identified by its associated app and the app version (returned in output).
@@ -248,12 +248,12 @@ class Client(object):
             the train job will train models associated with the task
         :param str train_dataset_uri: URI of the train dataset in a format specified by the task
         :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task
-        :param models: models to use for the train job. List of dictionaries containing model name and budget.
-
+        :param str global_budget: Budget for each model
+        :param dict[] models: models to use for the train job. List of dictionaries containing model name and budget.
         :returns: Created train job as dictionary
         :rtype: dict[str, any]
 
-        ``budget`` should be a dictionary of ``{ <budget_type>: <budget_amount> }``, where 
+        ``global_budget`` should be a dictionary of ``{ <budget_type>: <budget_amount> }``, where 
         ``<budget_type>`` is one of :class:`rafiki.constants.BudgetType` and 
         ``<budget_amount>`` specifies the amount for the associated budget type.
         
@@ -262,8 +262,18 @@ class Client(object):
         =====================       =====================
         **Budget Type**             **Description**
         ---------------------       ---------------------        
-        ``MODEL_TRIAL_COUNT``       Target number of trials, per model, to run
+        ``MODEL_TRIAL_COUNT``       Target number of trials to run
         ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported
+        =====================       =====================
+
+        If ``models`` is unspecified, all models available to the user for the specified task will be used.
+        ``models`` should be a list of dictionaries, where each dictionary contains the following keys:
+
+        =====================       =====================
+        **Key**                     **Description**
+        ---------------------       ---------------------        
+        ``name``                    Name of model to use
+        ``budget`` (optional)       A model-specific budget ``{ <budget_type>: <budget_amount> }``. This defaults to `global_budget`
         =====================       =====================
         '''
 
@@ -272,6 +282,7 @@ class Client(object):
             'task': task,
             'train_dataset_uri': train_dataset_uri,
             'test_dataset_uri': test_dataset_uri,
+            'global_budget': global_budget,
             'models': models
         })
         return data
