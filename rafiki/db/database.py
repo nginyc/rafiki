@@ -71,7 +71,7 @@ class Database(object):
 
         uncompleted_train_jobs = []
         for train_job in train_jobs:
-            uncompleted_sub_train_jobs = get_uncompleted_sub_train_jobs_of_train_job(train_job.id)
+            uncompleted_sub_train_jobs = self.get_uncompleted_sub_train_jobs_of_train_job(train_job.id)
             if not uncompleted_sub_train_jobs:
                 uncompleted_train_jobs.append(train_job)
 
