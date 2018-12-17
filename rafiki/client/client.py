@@ -115,14 +115,17 @@ class Client(object):
         :param dependencies: List of dependencies & their versions
         :type dependencies: dict[str, str]
         :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
-        :param rafiki.constants.ModelAccessRight access_right: Model access right
-        
+        :param access_right: Model access right
+        :type access_right: :class:`rafiki.constants.ModelAccessRight`
         :returns: Created model as dictionary
         :rtype: dict[str, any]
 
         ``model_file_path`` should point to a file that contains all necessary Python code for the model's implementation. 
         If the Python file imports any external Python modules, you should list it in ``dependencies`` or create a custom
-        ``docker_image``.
+        ``docker_image``. 
+
+        If a model's ``access_right`` is set to ``PUBLIC``, all other users have access to the model for training
+        and inference. By default, a model's access is ``PRIVATE``.
 
         ``dependencies`` should be a dictionary of ``{ <dependency_name>: <dependency_version> }``, where 
         ``<dependency_name>`` corresponds to the name of the Python Package Index (PyPI) package (e.g. ``tensorflow``)
@@ -252,6 +255,8 @@ class Client(object):
         :returns: Created train job as dictionary
         :rtype: dict[str, any]
 
+        If ``models`` is unspecified, all models accessible to the user for the specified task will be used.
+
         ``budget`` should be a dictionary of ``{ <budget_type>: <budget_amount> }``, where 
         ``<budget_type>`` is one of :class:`rafiki.constants.BudgetType` and 
         ``<budget_amount>`` specifies the amount for the associated budget type.
@@ -264,8 +269,6 @@ class Client(object):
         ``MODEL_TRIAL_COUNT``       Target number of trials to run
         ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported
         =====================       =====================
-
-        If ``models`` is unspecified, all models available to the user for the specified task will be used.
         '''
 
         data = self._post('/train_jobs', json={
