@@ -41,11 +41,13 @@ Horizontal scaling can be done by adding more nodes to the swarm.
 
 Perform the following for *each* worker node to be added:
 
-1. Connect the node to the same network as the master, so that the node can `join the master's Docker Swarm <https://docs.docker.com/engine/swarm/join-nodes/>`_.
+1. Connect the node to the same network as the master node
 
-2. Configure the node with the script:
+2. Have the node `join the master node's Docker Swarm <https://docs.docker.com/engine/swarm/join-nodes/>`_
 
-    .. code-block:: shell
+3. On the *master* node, configure the node with the script:
+
+    ::    
 
         bash scripts/setup_node.sh
 
@@ -56,11 +58,14 @@ Exposing Rafiki Publicly
 Rafiki runs in a `Docker routing-mesh overlay network <https://docs.docker.com/network/overlay/>`_, with
 Rafiki Admin and Rafiki Admin Web running only on the master node.
 
-Edit the following line in ``.env.sh`` with the IP address of the master node in the network you intend to expose Rafiki:
+Change ``RAFIKI_IP_ADDRESS`` in ``.env.sh`` to the IP address of the master node
+in the network you intend to expose Rafiki in.
 
-.. code-block:: shell
+Example: 
 
-    export RAFIKI_IP_ADDRESS=127.0.0.1
+::
+
+    export RAFIKI_IP_ADDRESS=172.28.176.35
 
 Re-deploy Rafiki. Rafiki Admin and Rafiki Admin Web will be available at that IP address over ports 3000 and 3001, 
 assuming incoming connections to these ports are allowed.
