@@ -5,6 +5,8 @@ export RAFIKI_IP_ADDRESS=127.0.0.1
 export ADMIN_EXT_PORT=3000
 export ADMIN_WEB_EXT_PORT=3001
 export ADVISOR_EXT_PORT=3002
+export DATA_WORKDIR_PATH=$PWD/data # Shares a data folder with containers
+export LOGS_WORKDIR_PATH=$PWD/logs # Shares a folder with containers that stores components' logs
 
 # Internal credentials for Rafiki's components
 export POSTGRES_USER=rafiki
@@ -22,8 +24,6 @@ export REDIS_HOST=rafiki_cache
 export REDIS_PORT=6379
 export PREDICTOR_PORT=3003
 export ADMIN_WEB_HOST=rafiki_admin_web
-export DATA_WORKDIR_PATH=$PWD/data
-export LOGS_WORKDIR_PATH=$PWD/logs
 export DATA_DOCKER_WORKDIR_PATH=/root/rafiki/data
 export LOGS_DOCKER_WORKDIR_PATH=/root/rafiki/logs
 export DOCKER_WORKDIR_PATH=/root/rafiki
