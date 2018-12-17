@@ -5,6 +5,8 @@ export RAFIKI_IP_ADDRESS=127.0.0.1
 export ADMIN_EXT_PORT=3000
 export ADMIN_WEB_EXT_PORT=3001
 export ADVISOR_EXT_PORT=3002
+export POSTGRES_EXT_PORT=5433
+export REDIS_EXT_PORT=6380
 
 # Internal credentials for Rafiki's components
 export POSTGRES_USER=rafiki

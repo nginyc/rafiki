@@ -27,8 +27,8 @@ By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g 
 
     ::
 
-        POSTGRES_HOST=localhost
-        POSTGRES_PORT=5433
+        RAFIKI_IP_ADDRESS=127.0.0.1
+        POSTGRES_EXT_PORT=5433
         POSTGRES_USER=rafiki
         POSTGRES_DB=rafiki
         POSTGRES_PASSWORD=rafiki
@@ -46,8 +46,8 @@ You can connect to Redis DB with `rebrow <https://github.com/marians/rebrow>`_:
 
     ::
 
-        REDIS_HOST=rafiki_cache
-        REDIS_PORT=6379
+        RAFIKI_IP_ADDRESS=127.0.0.1
+        REDIS_EXT_PORT=6380
 
 Building Images Locally
 --------------------------------------------------------------------
