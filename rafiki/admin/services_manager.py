@@ -22,9 +22,26 @@ class ServicesManager(object):
         if container_manager is None: 
             container_manager = DockerSwarmContainerManager()
         
+        self._postgres_host = os.environ['POSTGRES_HOST']
+        self._postgres_port = os.environ['POSTGRES_PORT']
+        self._postgres_user = os.environ['POSTGRES_USER']
+        self._postgres_password = os.environ['POSTGRES_PASSWORD']
+        self._postgres_db = os.environ['POSTGRES_DB']
+        self._redis_host = os.environ['REDIS_HOST']
+        self._redis_port = os.environ['REDIS_PORT']
+        self._admin_host = os.environ['ADMIN_HOST']
+        self._admin_host = os.environ['ADMIN_HOST']
+        self._admin_port = os.environ['ADMIN_PORT']
+        self._advisor_host = os.environ['ADVISOR_HOST']
+        self._advisor_port = os.environ['ADVISOR_PORT']
+        self._data_workdir = os.environ['DATA_WORKDIR_PATH']
+        self._logs_workdir = os.environ['LOGS_WORKDIR_PATH']
+        self._data_docker_workdir = os.environ['DATA_DOCKER_WORKDIR_PATH']
+        self._logs_docker_workdir = os.environ['LOGS_DOCKER_WORKDIR_PATH']
         self._predictor_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_PREDICTOR'],
                                                 os.environ['RAFIKI_VERSION'])
         self._predictor_port = os.environ['PREDICTOR_PORT']
+        self._rafiki_ip_address = os.environ['RAFIKI_IP_ADDRESS']
 
         self._db = db
         self._container_manager = container_manager
@@ -130,13 +147,13 @@ class ServicesManager(object):
         service_type = ServiceType.INFERENCE
         install_command = parse_model_install_command(model.dependencies, enable_gpu=False)
         environment_vars = {
-            'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
-            'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
-            'POSTGRES_USER': os.environ['POSTGRES_USER'],
-            'POSTGRES_DB': os.environ['POSTGRES_DB'],
-            'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
-            'REDIS_HOST': os.environ['REDIS_HOST'],
-            'REDIS_PORT': os.environ['REDIS_PORT'],
+            'POSTGRES_HOST': self._postgres_host,
+            'POSTGRES_PORT': self._postgres_port,
+            'POSTGRES_USER': self._postgres_user,
+            'POSTGRES_DB': self._postgres_db,
+            'POSTGRES_PASSWORD': self._postgres_password,
+            'REDIS_HOST': self._redis_host,
+            'REDIS_PORT': self._redis_port,
             'WORKER_INSTALL_COMMAND': install_command,
             'CUDA_VISIBLE_DEVICES': '-1' # Hide GPU
         }
@@ -160,13 +177,13 @@ class ServicesManager(object):
     def _create_predictor_service(self, inference_job):
         service_type = ServiceType.PREDICT
         environment_vars = {
-            'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
-            'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
-            'POSTGRES_USER': os.environ['POSTGRES_USER'],
-            'POSTGRES_DB': os.environ['POSTGRES_DB'],
-            'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
-            'REDIS_HOST': os.environ['REDIS_HOST'],
-            'REDIS_PORT': os.environ['REDIS_PORT']
+            'POSTGRES_HOST': self._postgres_host,
+            'POSTGRES_PORT': self._postgres_port,
+            'POSTGRES_USER': self._postgres_user,
+            'POSTGRES_DB': self._postgres_db,
+            'POSTGRES_PASSWORD': self._postgres_password,
+            'REDIS_HOST': self._redis_host,
+            'REDIS_PORT': self._redis_port
         }
 
         service = self._create_service(
@@ -185,15 +202,15 @@ class ServicesManager(object):
         enable_gpu = int(train_job.budget.get(BudgetType.ENABLE_GPU, 0)) > 0
         install_command = parse_model_install_command(model.dependencies, enable_gpu=enable_gpu)
         environment_vars = {
-            'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
-            'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
-            'POSTGRES_USER': os.environ['POSTGRES_USER'],
-            'POSTGRES_DB': os.environ['POSTGRES_DB'],
-            'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
-            'ADMIN_HOST': os.environ['ADMIN_HOST'],
-            'ADMIN_PORT': os.environ['ADMIN_PORT'],
-            'ADVISOR_HOST': os.environ['ADVISOR_HOST'],
-            'ADVISOR_PORT': os.environ['ADVISOR_PORT'],
+            'POSTGRES_HOST': self._postgres_host,
+            'POSTGRES_PORT': self._postgres_port,
+            'POSTGRES_USER': self._postgres_user,
+            'POSTGRES_DB': self._postgres_db,
+            'POSTGRES_PASSWORD': self._postgres_password,
+            'ADMIN_HOST': self._admin_host,
+            'ADMIN_PORT': self._admin_port,
+            'ADVISOR_HOST': self._advisor_host,
+            'ADVISOR_PORT': self._advisor_port,
             'WORKER_INSTALL_COMMAND': install_command,
             **({'CUDA_VISIBLE_DEVICES': -1} if not enable_gpu else {}) # Hide GPU if not enabled
         }
@@ -278,11 +295,10 @@ class ServicesManager(object):
             'RAFIKI_SERVICE_TYPE': service_type
         }
 
-        # Mount whole local to containers' work directories (for sharing of logs & data) 
-        local_workdir = os.environ['LOCAL_WORKDIR_PATH']
-        cont_workdir = os.environ['DOCKER_WORKDIR_PATH']
+        # Mount data and logs folders to containers' work directories
         mounts = {
-            local_workdir: cont_workdir
+            self._data_workdir: self._data_docker_workdir,
+            self._logs_workdir: self._logs_docker_workdir
         }
 
         # Expose container port if it exists
@@ -290,7 +306,7 @@ class ServicesManager(object):
         ext_hostname = None
         ext_port = None
         if container_port is not None:
-            ext_hostname = os.environ['RAFIKI_IP_ADDRESS']
+            ext_hostname = self._rafiki_ip_address
             ext_port = self._get_available_ext_port()
             publish_port = (ext_port, container_port)
 
