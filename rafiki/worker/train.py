@@ -35,7 +35,7 @@ class TrainWorker(object):
         advisor_id = None
         while True:
             self._db.connect()
-            ( sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
+            (sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
                 train_job_id, train_dataset_uri, test_dataset_uri) = self._read_worker_info()
 
             if self._if_budget_reached(budget, sub_train_job_id):
@@ -44,7 +44,6 @@ class TrainWorker(object):
                 self._stop_worker()
                 if advisor_id is not None:
                     self._delete_advisor(advisor_id)
-
                 break
 
             # Load model class from bytes
@@ -74,7 +73,7 @@ class TrainWorker(object):
             logger.info('Received proposal of knobs from advisor:')
             logger.info(pprint.pformat(knobs))
             logger.info('Creating new trial in DB...')
-            self._trial_id = self._create_new_trial(sub_train_job_id, knobs)
+            self._trial_id = self._create_new_trial(sub_train_job_id, model_id, knobs)
             logger.info('Created trial of ID "{}" in DB'.format(self._trial_id))
 
             # Don't keep DB connection while training model
@@ -167,9 +166,10 @@ class TrainWorker(object):
         return (score, parameters)
 
     # Creates a new trial in the DB
-    def _create_new_trial(self, sub_train_job_id, knobs):
+    def _create_new_trial(self, sub_train_job_id, model_id, knobs):
         trial = self._db.create_trial(
             sub_train_job_id=sub_train_job_id,
+            model_id=model_id,
             knobs=knobs
         )
         self._db.commit()
@@ -214,8 +214,8 @@ class TrainWorker(object):
 
     # Returns whether the worker reached its budget (only consider COMPLETED or ERRORED trials)
     def _if_budget_reached(self, budget, sub_train_job_id):
-        # By default, budget is model trial count of 10
-        max_trials = budget.get(BudgetType.MODEL_TRIAL_COUNT, 10)
+        # By default, budget is model trial count of 2
+        max_trials = budget.get(BudgetType.MODEL_TRIAL_COUNT, 2)
         trials = self._db.get_trials_of_sub_train_job(sub_train_job_id)
         trials = [x for x in trials if x.status in [TrialStatus.COMPLETED, TrialStatus.ERRORED]]
         return len(trials) >= max_trials
@@ -238,7 +238,7 @@ class TrainWorker(object):
 
         return (
             sub_train_job.id,
-            sub_train_job.budget, 
+            train_job.budget,
             model.id,
             model.model_file_bytes,
             model.model_class,

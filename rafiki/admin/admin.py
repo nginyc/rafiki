@@ -69,8 +69,8 @@ class Admin(object):
     # Train Job
     ####################################
 
-    def create_train_job(self, user_id, app,
-        task, train_dataset_uri, test_dataset_uri, global_budget, models=None):
+    def create_train_job(self, user_id, app, task, train_dataset_uri, 
+                        test_dataset_uri, budget, models=None):
         
         # Compute auto-incremented app version
         train_jobs = self._db.get_train_jobs_of_app(app)
@@ -80,26 +80,19 @@ class Admin(object):
         avail_models = self._db.get_models_of_task(user_id, task)
         
         # Auto populate models with all available models if not specified
-        # Also add "id" attribute to each model
         if models is None:
-            models = [
-                { 'id': x.id, 'name': x.name, 'budget': global_budget }
-                for x in avail_models
-            ]
+            model_ids = [x.id for x in avail_models]
         else:
             # Ensure all models are available
+            model_ids = []
             for model in models:
-                db_model = next([x for x in avail_models if x.name == model.get('name')], None)
+                db_model = next((x for x in avail_models if x.name == model), None)
                 if db_model is None:
-                    raise InvalidModelAccessError('You don\'t have access to model "{}"'.format(name))
-
-                # Auto populate budget if not specified
-                model['id'] = db_model
-                if 'budget' not in model:
-                    model['budget'] = global_budget
+                    raise InvalidModelAccessError('You don\'t have access to model "{}"'.format(model))
+                model_ids.append(db_model.id)
 
         # Ensure that models are specified
-        if len(models) == 0:
+        if len(model_ids) == 0:
             raise NoModelsForTrainJobError()
 
         train_job = self._db.create_train_job(
@@ -107,17 +100,17 @@ class Admin(object):
             app=app,
             app_version=app_version,
             task=task,
+            budget=budget,
             train_dataset_uri=train_dataset_uri,
             test_dataset_uri=test_dataset_uri
         )
         self._db.commit()
 
-        for model in models:
+        for model_id in model_ids:
             self._db.create_sub_train_job(
                 train_job_id=train_job.id,
-                model_id=model['id'],
-                user_id=train_job.user_id,
-                budget=model['budget']
+                model_id=model_id,
+                user_id=train_job.user_id
             )
 
         train_job = self._services_manager.create_train_services(train_job.id)
@@ -146,7 +139,7 @@ class Admin(object):
         if train_job is None:
             raise InvalidTrainJobError()
 
-        status = self._get_train_job_status(train_job)
+        (status, datetime_started, datetime_stopped) = self._get_train_job_status(train_job)
         workers = self._get_workers_of_train_job(train_job)
         services = [self._db.get_service(x.service_id) for x in workers]
         worker_models = [self._db.get_model(self._db.get_sub_train_job(x.sub_train_job_id).model_id) \
@@ -160,6 +153,8 @@ class Admin(object):
             'task': train_job.task,
             'train_dataset_uri': train_job.train_dataset_uri,
             'test_dataset_uri': train_job.test_dataset_uri,
+            'datetime_started': datetime_started,
+            'datetime_stopped': datetime_stopped,
             'workers': [
                 {
                     'service_id': service.id,
@@ -177,7 +172,6 @@ class Admin(object):
     def get_train_jobs_of_app(self, app):
         train_jobs = self._db.get_train_jobs_of_app(app)
         statuses = [self._get_train_job_status(x) for x in train_jobs]
-
         return [
             {
                 'id': x.id,
@@ -187,11 +181,11 @@ class Admin(object):
                 'task': x.task,
                 'train_dataset_uri': x.train_dataset_uri,
                 'test_dataset_uri': x.test_dataset_uri,
-                'datetime_started': x.datetime_started,
-                'datetime_completed': x.datetime_completed,
+                'datetime_started': datetime_started,
+                'datetime_stopped': datetime_stopped,
                 'budget': x.budget
             }
-            for (x, status) in zip(train_jobs, statuses)
+            for (x, (status, datetime_started, datetime_stopped)) in zip(train_jobs, statuses)
         ]
 
     def get_best_trials_of_train_job(self, app, app_version=-1, max_count=2):
@@ -199,12 +193,8 @@ class Admin(object):
         if train_job is None:
             raise InvalidTrainJobError()
 
-        sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(train_job.id)
-        best_trials = []
-        best_trials_models = []
-        for sub_train_job in sub_train_jobs:
-            best_trials += self._db.get_best_trials_of_sub_train_job(sub_train_job.id, max_count=max_count)
-            best_trials_models += [self._db.get_model(sub_train_job.model_id) for x in best_trials]
+        best_trials = self._db.get_best_trials_of_train_job(train_job.id, max_count=max_count)
+        trials_models = [self._db.get_model(x.model_id) for x in best_trials]
 
         return [
             {
@@ -215,7 +205,7 @@ class Admin(object):
                 'model_name': model.name,
                 'score': trial.score
             }
-            for (trial, model) in zip(best_trials, best_trials_models)
+            for (trial, model) in zip(best_trials, trials_models)
         ]
 
     def get_train_jobs_by_user(self, user_id):
@@ -231,11 +221,11 @@ class Admin(object):
                 'task': x.task,
                 'train_dataset_uri': x.train_dataset_uri,
                 'test_dataset_uri': x.test_dataset_uri,
-                'datetime_started': x.datetime_started,
-                'datetime_completed': x.datetime_completed,
+                'datetime_started': datetime_started,
+                'datetime_stopped': datetime_stopped,
                 'budget': x.budget
             }
-            for (x, status) in zip(train_jobs, statuses)
+            for (x, (status, datetime_started, datetime_stopped)) in zip(train_jobs, statuses)
         ]
 
     def get_trials_of_train_job(self, app, app_version=-1):
@@ -243,8 +233,14 @@ class Admin(object):
         if train_job is None:
             raise InvalidTrainJobError()
 
-        trials = self._db.get_trials_of_train_job(train_job.id)
+        sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(train_job.id)
+        trials = []
+        for sub_train_job in sub_train_jobs:
+            trials_for_sub = self._db.get_trials_of_sub_train_job(sub_train_job.id)
+            trials.extend(trials_for_sub)
+
         trials_models = [self._db.get_model(x.model_id) for x in trials]
+        
         return [
             {
                 'id': trial.id,
@@ -319,10 +315,10 @@ class Admin(object):
         if train_job is None:
             raise InvalidTrainJobError('Have you started a train job for this app?')
 
-        status = self._get_train_job_status(train_job)
+        (status, _, _) = self._get_train_job_status(train_job)
 
-        if status != TrainJobStatus.COMPLETED:
-            raise InvalidTrainJobError('Train job has not completed.')
+        if status != TrainJobStatus.STOPPED:
+            raise InvalidTrainJobError('Train job has not stopped.')
 
         # Ensure only 1 running inference job for 1 train job
         inference_job = self._db.get_running_inference_job_by_train_job(train_job.id)
@@ -569,26 +565,35 @@ class Admin(object):
     # Private / Train Job
     ####################################
 
+    # Returns (status, datetime_started, datetime_stopped)
     def _get_train_job_status(self, train_job):
+        sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(train_job.id)
+
         count = {
             TrainJobStatus.STARTED: 0,
             TrainJobStatus.RUNNING: 0,
-            TrainJobStatus.STOPPED: 0,
-            TrainJobStatus.COMPLETED: 0
+            TrainJobStatus.STOPPED: 0
         }
-        sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(train_job.id)
+
+        datetime_started = None
+        datetime_stopped = None
         for sub_train_job in sub_train_jobs:
             count[sub_train_job.status] += 1
+            if sub_train_job.datetime_started is not None and \
+                (datetime_started is None or datetime_started < sub_train_job.datetime_started):
+                datetime_started = sub_train_job.datetime_started
 
-        status = TrainJobStatus.STARTED
-        if count[TrainJobStatus.RUNNING] > 0:
-            status = TrainJobStatus.RUNNING
-        elif count[TrainJobStatus.COMPLETED] == len(sub_train_jobs):
-            status = TrainJobStatus.COMPLETED
-        elif count[TrainJobStatus.STOPPED] > 0:
-            status = TrainJobStatus.STOPPED
+            if sub_train_job.datetime_stopped is not None and \
+                (datetime_stopped is None or datetime_stopped > sub_train_job.datetime_stopped):
+                datetime_stopped = sub_train_job.datetime_stopped
 
-        return status
+        # Determine status of train job based on sub-jobs
+        if count[TrainJobStatus.STOPPED] == len(sub_train_jobs):
+            return (TrainJobStatus.STOPPED, datetime_started, datetime_stopped)
+        elif count[TrainJobStatus.STARTED] == len(sub_train_jobs):
+            return (TrainJobStatus.STARTED, datetime_started, None)
+        else:
+            return (TrainJobStatus.RUNNING, datetime_started, None)
 
     def _get_workers_of_train_job(self, train_job):
         workers = []

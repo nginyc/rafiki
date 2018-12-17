@@ -1,4 +1,4 @@
-To create an model deployment job, you need to submit the app name associated with a *completed* train job.
+To create an model deployment job, you need to submit the app name associated with a *stopped* train job.
 The inference job would be created from the best trials from the train job.
 
 Example:

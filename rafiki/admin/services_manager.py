@@ -96,6 +96,7 @@ class ServicesManager(object):
         # Mark sub train job as running
         for sub_train_job in sub_train_jobs:
             self._db.mark_sub_train_job_as_running(sub_train_job)
+            
         self._db.commit()
 
         return train_job
@@ -177,7 +178,7 @@ class ServicesManager(object):
     def _create_train_job_worker(self, train_job, sub_train_job, replicas):
         model = self._db.get_model(sub_train_job.model_id)
         service_type = ServiceType.TRAIN
-        enable_gpu = int(sub_train_job.budget.get(BudgetType.ENABLE_GPU, 0)) > 0
+        enable_gpu = int(train_job.budget.get(BudgetType.ENABLE_GPU, 0)) > 0
         install_command = parse_model_install_command(model.dependencies, enable_gpu=enable_gpu)
         environment_vars = {
             'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
@@ -229,7 +230,7 @@ class ServicesManager(object):
             x for x in services 
             if x.status in [ServiceStatus.RUNNING, ServiceStatus.STARTED, ServiceStatus.DEPLOYING]
         ), None) is None:
-            self._db.mark_sub_train_job_as_complete(sub_train_job)
+            self._db.mark_sub_train_job_as_stopped(sub_train_job)
             self._db.commit()
 
     def _stop_service(self, service):

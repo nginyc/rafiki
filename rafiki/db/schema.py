@@ -73,6 +73,7 @@ class TrainJob(Base):
     app = Column(String, nullable=False)
     app_version = Column(Integer, nullable=False)
     task = Column(String, nullable=False)
+    budget = Column(JSON, nullable=False)
     train_dataset_uri = Column(String, nullable=False)
     test_dataset_uri = Column(String, nullable=False)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
@@ -84,10 +85,9 @@ class SubTrainJob(Base):
     train_job_id = Column(String, ForeignKey('train_job.id'))
     model_id = Column(String, ForeignKey('model.id'))
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
-    budget = Column(JSON, nullable=False)
     status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
-    datetime_completed = Column(DateTime, default=None)
+    datetime_stopped = Column(DateTime, default=None)
 
 class TrainJobWorker(Base):
     __tablename__ = 'train_job_worker'
@@ -101,6 +101,7 @@ class Trial(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     knobs = Column(JSON, nullable=False)
+    model_id = Column(String, ForeignKey('model.id'), nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     sub_train_job_id = Column(String, ForeignKey('sub_train_job.id'), nullable=False)
     status = Column(String, nullable=False, default=TrialStatus.RUNNING)

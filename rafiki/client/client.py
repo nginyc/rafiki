@@ -115,7 +115,7 @@ class Client(object):
         :param dependencies: List of dependencies & their versions
         :type dependencies: dict[str, str]
         :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
-        :param str access_right: Model access right
+        :param rafiki.constants.ModelAccessRight access_right: Model access right
         
         :returns: Created model as dictionary
         :rtype: dict[str, any]
@@ -235,8 +235,7 @@ class Client(object):
     # Train Jobs
     ####################################
     
-    def create_train_job(self, app, task, train_dataset_uri,
-                        test_dataset_uri, global_budget, models=None):
+    def create_train_job(self, app, task, train_dataset_uri, test_dataset_uri, budget, models=None):
         '''
         Creates and starts a train job on Rafiki. 
         A train job is uniquely identified by its associated app and the app version (returned in output).
@@ -248,12 +247,12 @@ class Client(object):
             the train job will train models associated with the task
         :param str train_dataset_uri: URI of the train dataset in a format specified by the task
         :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task
-        :param str global_budget: Budget for each model
-        :param dict[] models: models to use for the train job. List of dictionaries containing model name and budget.
+        :param str budget: Budget for each model
+        :param str[] models: list of model names to use for train job
         :returns: Created train job as dictionary
         :rtype: dict[str, any]
 
-        ``global_budget`` should be a dictionary of ``{ <budget_type>: <budget_amount> }``, where 
+        ``budget`` should be a dictionary of ``{ <budget_type>: <budget_amount> }``, where 
         ``<budget_type>`` is one of :class:`rafiki.constants.BudgetType` and 
         ``<budget_amount>`` specifies the amount for the associated budget type.
         
@@ -267,14 +266,6 @@ class Client(object):
         =====================       =====================
 
         If ``models`` is unspecified, all models available to the user for the specified task will be used.
-        ``models`` should be a list of dictionaries, where each dictionary contains the following keys:
-
-        =====================       =====================
-        **Key**                     **Description**
-        ---------------------       ---------------------        
-        ``name``                    Name of model to use
-        ``budget`` (optional)       A model-specific budget ``{ <budget_type>: <budget_amount> }``. This defaults to `global_budget`
-        =====================       =====================
         '''
 
         data = self._post('/train_jobs', json={
@@ -282,7 +273,7 @@ class Client(object):
             'task': task,
             'train_dataset_uri': train_dataset_uri,
             'test_dataset_uri': test_dataset_uri,
-            'global_budget': global_budget,
+            'budget': budget,
             'models': models
         })
         return data
@@ -438,7 +429,7 @@ class Client(object):
     def create_inference_job(self, app, app_version=-1):
         '''
         Creates and starts a inference job on Rafiki with the 2 best trials of an associated train job of the app. 
-        The train job must have the status of ``COMPLETED``.The inference job would be tagged with the train job's app and app version. 
+        The train job must have the status of ``STOPPED``.The inference job would be tagged with the train job's app and app version. 
         Throws an error if an inference job of the same train job is already running.
 
         In this method's response, `predictor_host` is this inference job's predictor's host. 

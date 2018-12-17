@@ -4,44 +4,40 @@ import requests
 import os
 
 from rafiki.client import Client
-from rafiki.constants import TaskType, BudgetType, UserType, ModelDependency
-from examples.scripts.quickstart import create_user, create_model, \
-    create_train_job, get_predictor_host, wait_until_train_job_has_stopped, \
-    make_predictions, RAFIKI_HOST, ADMIN_PORT, ADMIN_WEB_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
+from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
+from rafiki.constants import TaskType, BudgetType, UserType, ModelDependency, ModelAccessRight
+from examples.scripts.quickstart import get_predictor_host, \
+    wait_until_train_job_has_stopped, make_predictions,  gen_id
 
-def run_pos_tagging(client, app, enable_gpu, train_dataset_uri, test_dataset_uri):
+def run_pos_tagging(client, enable_gpu):
     task = TaskType.POS_TAGGING
 
-    print('Adding models to Rafiki...') 
-    create_model(client, 'BigramHmm', task, 'examples/models/pos_tagging/BigramHmm.py', \
-                'BigramHmm', dependencies={})
-    create_model(client, 'PyBiLstm', task, 'examples/models/pos_tagging/PyBiLstm.py', \
-                'PyBiLstm', dependencies={ ModelDependency.PYTORCH: '0.4.1' })
+    # Randomly generate app & model names to avoid naming conflicts
+    app_id = gen_id()
+    app = 'pos_tagging_app_{}'.format(app_id)
+    bihmm_model_name = 'BigramHmm_{}'.format(app_id)
+    py_model_name = 'PyBiLstm_{}'.format(app_id)
 
-    print('Creating train job for app "{}" on Rafiki...'.format(app)) 
-    models = [
-        {
-            'name': 'BigramHmm',
-            'budget': {
-                BudgetType.MODEL_TRIAL_COUNT: 2,
-                BudgetType.ENABLE_GPU: enable_gpu
-            }
-        },
-        {
-            'name': 'PyBiLstm',
-            'budget': {
-                BudgetType.MODEL_TRIAL_COUNT: 2,
-                BudgetType.ENABLE_GPU: enable_gpu
-            }
-        }
-    ]
-    train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, models)
+    print('Adding models "{}" and "{}" to Rafiki...'.format(bihmm_model_name, py_model_name)) 
+    client.create_model(bihmm_model_name, task, 'examples/models/pos_tagging/BigramHmm.py', \
+                        'BigramHmm', dependencies={}) 
+    client.create_model(py_model_name, task, 'examples/models/pos_tagging/PyBiLstm.py', \
+                        'PyBiLstm', dependencies={ ModelDependency.PYTORCH: '0.4.1' })
+
+    print('Creating train job for app "{}" on Rafiki...'.format(app))
+    budget = {
+        BudgetType.MODEL_TRIAL_COUNT: 2,
+        BudgetType.ENABLE_GPU: enable_gpu
+    }
+    train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_train.zip?raw=true'
+    test_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_test.zip?raw=true'
+    train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, 
+                                        budget, models=[bihmm_model_name, py_model_name])
     pprint.pprint(train_job)
 
     print('Waiting for train job to complete...')
     print('This might take a few minutes')
     wait_until_train_job_has_stopped(client, app)
-    if not result: raise Exception('Train job has stopped')
     print('Train job has been stopped')
 
     print('Listing best trials of latest train job for app "{}"...'.format(app))
@@ -75,12 +71,8 @@ if __name__ == '__main__':
     # Initialize client
     client = Client(admin_host=rafiki_host, admin_port=admin_port)
     client.login(email=user_email, password=user_password)
-    
-    app = 'ptb_pos_app'
     enable_gpu = int(os.environ.get('ENABLE_GPU', 0))
-    train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_train.zip?raw=true'
-    test_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_test.zip?raw=true'
 
     # Run training & inference
-    run_pos_tagging(client, app, enable_gpu, train_dataset_uri, test_dataset_uri)
+    run_pos_tagging(client, enable_gpu)
             
