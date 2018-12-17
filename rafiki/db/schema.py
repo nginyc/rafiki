@@ -45,7 +45,7 @@ class Model(Base):
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
     docker_image = Column(String, nullable=False)
     dependencies = Column(JSON, nullable=False)
-    access_right = Column(String, nullable=False, default=ModelAccessRight.PUBLIC)
+    access_right = Column(String, nullable=False, default=ModelAccessRight.PRIVATE)
 
 class Service(Base):
     __tablename__ = 'service'

@@ -102,7 +102,7 @@ class Client(object):
     ####################################
 
     def create_model(self, name, task, model_file_path, model_class, docker_image=None, \
-                    dependencies={}, access_right=ModelAccessRight.PUBLIC):
+                    dependencies={}, access_right=ModelAccessRight.PRIVATE):
         '''
         Creates a model on Rafiki.
 
