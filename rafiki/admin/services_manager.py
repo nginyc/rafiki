@@ -274,11 +274,16 @@ class ServicesManager(object):
             'RAFIKI_SERVICE_TYPE': service_type
         }
 
-        # Mount whole local to containers' work directories (for sharing of logs & data) 
-        local_workdir = os.environ['LOCAL_WORKDIR_PATH']
-        cont_workdir = os.environ['DOCKER_WORKDIR_PATH']
+        # Mount data and logs folders to containers' work directories
+        data_workdir = os.environ['DATA_WORKDIR_PATH']
+        logs_workdir = os.environ['LOGS_WORKDIR_PATH']
+
+        data_docker_workdir = os.environ['DATA_DOCKER_WORKDIR_PATH']
+        logs_docker_workdir = os.environ['LOGS_DOCKER_WORKDIR_PATH']
+
         mounts = {
-            local_workdir: cont_workdir
+            data_workdir: data_docker_workdir,
+            logs_workdir: logs_docker_workdir
         }
 
         # Expose container port if it exists

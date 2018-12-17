@@ -22,7 +22,10 @@ export REDIS_HOST=rafiki_cache
 export REDIS_PORT=6379
 export PREDICTOR_PORT=3003
 export ADMIN_WEB_HOST=rafiki_admin_web
-export LOCAL_WORKDIR_PATH=$PWD
+export DATA_WORKDIR_PATH=$PWD/data
+export LOGS_WORKDIR_PATH=$PWD/logs
+export DATA_DOCKER_WORKDIR_PATH=/root/rafiki/data
+export LOGS_DOCKER_WORKDIR_PATH=/root/rafiki/logs
 export DOCKER_WORKDIR_PATH=/root/rafiki
 export CONDA_ENVIORNMENT=rafiki
 
