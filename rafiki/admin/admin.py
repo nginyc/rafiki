@@ -448,7 +448,6 @@ class Admin(object):
     def create_model(self, user_id, name, task, model_file_bytes, 
                     model_class, docker_image=None, dependencies={}, access_right=ModelAccessRight.PRIVATE):
         
-        # TODO: Handle duplicate model names
         model = self._db.create_model(
             user_id=user_id,
             name=name,
