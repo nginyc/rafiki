@@ -45,7 +45,7 @@ To scale Rafiki horizontally, add more nodes to the master node's Docker Swarm:
 
 1. If Rafiki is running, stop Rafiki, and have the master node leave its Docker Swarm
 
-2. Put every worker node and a master node into a common network,
+2. Put every worker node and the master node into a common network,
    and change ``DOCKER_SWARM_ADVERTISE_ADDR`` in ``.env.sh`` to the IP address of the master node
    in *the network that your worker nodes are in*
 
@@ -57,7 +57,7 @@ To scale Rafiki horizontally, add more nodes to the master node's Docker Swarm:
 
 5. For every worker node, have the node `join the master node's Docker Swarm <https://docs.docker.com/engine/swarm/join-nodes/>`_
 
-6. On the *master* node, for *every* node, configure it with the script:
+6. On the *master* node, for *every* node (*including the master node*), configure it with the script:
 
     ::    
 
