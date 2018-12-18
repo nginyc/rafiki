@@ -1,0 +1,961 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>rafiki.client.Client &mdash; Rafiki  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="rafiki.model" href="rafiki.model.html" />
+    <link rel="prev" title="Python Documentation" href="index.html" /> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Rafiki
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.9
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../user/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev/index.html">Developer Guide</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Python Documentation</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">rafiki.client.Client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rafiki.model.html">rafiki.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rafiki.constants.html">rafiki.constants</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Rafiki</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Python Documentation</a> &raquo;</li>
+        
+      <li>rafiki.client.Client</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../../_sources/docs/src/python/rafiki.client.Client.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="rafiki-client-client">
+<h1>rafiki.client.Client<a class="headerlink" href="#rafiki-client-client" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="rafiki.client.Client">
+<em class="property">class </em><code class="descclassname">rafiki.client.</code><code class="descname">Client</code><span class="sig-paren">(</span><em>admin_host='localhost'</em>, <em>admin_port=3000</em>, <em>advisor_host='localhost'</em>, <em>advisor_port=3002</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes the Client to connect to a running 
+Rafiki Admin instance that the Client connects to.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>admin_host</strong> (<em>str</em>) – Host of Rafiki Admin</li>
+<li><strong>admin_port</strong> (<em>int</em>) – Port of Rafiki Admin</li>
+<li><strong>advisor_host</strong> (<em>str</em>) – Host of Rafiki Advisor</li>
+<li><strong>advisor_port</strong> (<em>int</em>) – Port of Rafiki Advisor</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="rafiki.client.Client.create_advisor">
+<code class="descname">create_advisor</code><span class="sig-paren">(</span><em>knob_config_str</em>, <em>advisor_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.create_advisor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_advisor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a Rafiki advisor. If <cite>advisor_id</cite> is passed, it will create an advisor
+of that ID, or do nothing if an advisor of that ID has already been created.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>knob_config_str</strong> (<em>str</em>) – Serialized knob configuration for advisor session</li>
+<li><strong>advisor_id</strong> (<em>str</em>) – ID of advisor to create</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Created advisor as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.create_inference_job">
+<code class="descname">create_inference_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.create_inference_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_inference_job" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and starts a inference job on Rafiki with the 2 best trials of an associated train job of the app. 
+The train job must have the status of <code class="docutils literal notranslate"><span class="pre">STOPPED</span></code>.The inference job would be tagged with the train job’s app and app version. 
+Throws an error if an inference job of the same train job is already running.</p>
+<p>In this method’s response, <cite>predictor_host</cite> is this inference job’s predictor’s host.</p>
+<p>Only admins &amp; app developers can manage inference jobs.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>app</strong> (<em>str</em>) – Name of the app identifying the train job to use</li>
+<li><strong>app_version</strong> (<em>str</em>) – Version of the app identifying the train job to use</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Created inference job as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.create_model">
+<code class="descname">create_model</code><span class="sig-paren">(</span><em>name</em>, <em>task</em>, <em>model_file_path</em>, <em>model_class</em>, <em>docker_image=None</em>, <em>dependencies={}</em>, <em>access_right='PRIVATE'</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.create_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a model on Rafiki.</p>
+<p>Only admins &amp; model developers can manage models.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<em>str</em>) – Name of the model, must be unique on Rafiki</li>
+<li><strong>task</strong> (<em>str</em>) – Task associated with the model, where the model must adhere to the specification of the task</li>
+<li><strong>model_file_path</strong> (<em>str</em>) – Path to a single Python file that contains the definition for the model class</li>
+<li><strong>model_class</strong> (<em>obj</em>) – The name of the model class inside the Python file. This class should implement <a class="reference internal" href="rafiki.model.html#rafiki.model.BaseModel" title="rafiki.model.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.BaseModel</span></code></a></li>
+<li><strong>dependencies</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>str</em><em>]</em>) – List of dependencies &amp; their versions</li>
+<li><strong>docker_image</strong> (<em>str</em>) – A custom Docker image name that extends <code class="docutils literal notranslate"><span class="pre">rafikiai/rafiki_worker</span></code></li>
+<li><strong>access_right</strong> (<a class="reference internal" href="rafiki.constants.html#rafiki.constants.ModelAccessRight" title="rafiki.constants.ModelAccessRight"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.constants.ModelAccessRight</span></code></a>) – Model access right</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Created model as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">model_file_path</span></code> should point to a file that contains all necessary Python code for the model’s implementation. 
+If the Python file imports any external Python modules, you should list it in <code class="docutils literal notranslate"><span class="pre">dependencies</span></code> or create a custom
+<code class="docutils literal notranslate"><span class="pre">docker_image</span></code>.</p>
+<p>If a model’s <code class="docutils literal notranslate"><span class="pre">access_right</span></code> is set to <code class="docutils literal notranslate"><span class="pre">PUBLIC</span></code>, all other users have access to the model for training
+and inference. By default, a model’s access is <code class="docutils literal notranslate"><span class="pre">PRIVATE</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">dependencies</span></code> should be a dictionary of <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">&lt;dependency_name&gt;:</span> <span class="pre">&lt;dependency_version&gt;</span> <span class="pre">}</span></code>, where 
+<code class="docutils literal notranslate"><span class="pre">&lt;dependency_name&gt;</span></code> corresponds to the name of the Python Package Index (PyPI) package (e.g. <code class="docutils literal notranslate"><span class="pre">tensorflow</span></code>)
+and <code class="docutils literal notranslate"><span class="pre">&lt;dependency_version&gt;</span></code> corresponds to the version of the PyPI package (e.g. <code class="docutils literal notranslate"><span class="pre">1.12.0</span></code>). These dependencies 
+will be lazily installed on top of the worker’s Docker image before the submitted model’s code is executed.</p>
+<p>If the model is to be run on GPU, Rafiki could map dependencies to their GPU-enabled versions, if required. 
+For example, <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">'tensorflow':</span> <span class="pre">'1.12.0'</span> <span class="pre">}</span></code> will be installed as <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">'tensorflow-gpu':</span> <span class="pre">'1.12.0'</span> <span class="pre">}</span></code>.</p>
+<p>Rafiki could also parse specific dependency names to install certain non-PyPI packages. 
+For example, <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">'singa':</span> <span class="pre">'1.1.1'</span> <span class="pre">}</span></code> will be installed as <code class="docutils literal notranslate"><span class="pre">singa-cpu=1.1.1</span></code> or <code class="docutils literal notranslate"><span class="pre">singa-gpu=1.1.1</span></code> using <code class="docutils literal notranslate"><span class="pre">conda</span></code>.</p>
+<p>Refer to the list of officially supported dependencies below. For dependencies that are not listed,
+they will be installed as PyPI packages of the specified name and version.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="17%" />
+<col width="83%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Dependency</strong></td>
+<td><strong>Installation Command</strong></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">tensorflow</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">tensorflow==${ver}</span></code> or <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">tensorflow-gpu==${ver}</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">singa</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">-c</span> <span class="pre">nusdbsystem</span> <span class="pre">singa-cpu=${ver}</span></code> or <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">-c</span> <span class="pre">nusdbsystem</span> <span class="pre">singa-gpu=${ver}</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">Keras</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">Keras==${ver}</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">scikit-learn</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">scikit-learn==${ver}</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">torch</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">torch==${ver}</span></code></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.create_train_job">
+<code class="descname">create_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>task</em>, <em>train_dataset_uri</em>, <em>test_dataset_uri</em>, <em>budget</em>, <em>models=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.create_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_train_job" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and starts a train job on Rafiki. 
+A train job is uniquely identified by its associated app and the app version (returned in output).</p>
+<p>Only admins, model developers and app developers can manage train jobs.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>app</strong> (<em>str</em>) – Name of the app associated with the train job</li>
+<li><strong>task</strong> (<em>str</em>) – Task associated with the train job, 
+the train job will train models associated with the task</li>
+<li><strong>train_dataset_uri</strong> (<em>str</em>) – URI of the train dataset in a format specified by the task</li>
+<li><strong>test_dataset_uri</strong> (<em>str</em>) – URI of the test (development) dataset in a format specified by the task</li>
+<li><strong>budget</strong> (<em>str</em>) – Budget for each model</li>
+<li><strong>models</strong> (<em>str</em><em>[</em><em>]</em>) – list of model names to use for train job</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Created train job as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>If <code class="docutils literal notranslate"><span class="pre">models</span></code> is unspecified, all models accessible to the user for the specified task will be used.</p>
+<p><code class="docutils literal notranslate"><span class="pre">budget</span></code> should be a dictionary of <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">&lt;budget_type&gt;:</span> <span class="pre">&lt;budget_amount&gt;</span> <span class="pre">}</span></code>, where 
+<code class="docutils literal notranslate"><span class="pre">&lt;budget_type&gt;</span></code> is one of <a class="reference internal" href="rafiki.constants.html#rafiki.constants.BudgetType" title="rafiki.constants.BudgetType"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.constants.BudgetType</span></code></a> and 
+<code class="docutils literal notranslate"><span class="pre">&lt;budget_amount&gt;</span></code> specifies the amount for the associated budget type.</p>
+<p>The following describes the budget types available:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="25%" />
+<col width="75%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Budget Type</strong></td>
+<td><strong>Description</strong></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">MODEL_TRIAL_COUNT</span></code></td>
+<td>Target number of trials to run</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">ENABLE_GPU</span></code></td>
+<td>Whether model training should run on GPU (0 or 1), if supported</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.create_user">
+<code class="descname">create_user</code><span class="sig-paren">(</span><em>email</em>, <em>password</em>, <em>user_type</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.create_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a Rafiki user.</p>
+<p>Only admins can manage users.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>email</strong> (<em>str</em>) – The new user’s email</li>
+<li><strong>password</strong> (<em>str</em>) – The new user’s password</li>
+<li><strong>user_type</strong> (<a class="reference internal" href="rafiki.constants.html#rafiki.constants.UserType" title="rafiki.constants.UserType"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.constants.UserType</span></code></a>) – The new user’s type</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Created user as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.create_users">
+<code class="descname">create_users</code><span class="sig-paren">(</span><em>csv_file_path</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.create_users"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_users" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates multiple Rafiki users.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>csv_file_path</strong> (<em>str</em>) – Path to a single csv file containing users to seed</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Created users as list of dictionaries</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any][]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.delete_advisor">
+<code class="descname">delete_advisor</code><span class="sig-paren">(</span><em>advisor_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.delete_advisor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.delete_advisor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deletes a Rafiki advisor.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>advisor_id</strong> (<em>str</em>) – ID of target advisor</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Deleted advisor as dictionary</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.download_model_file">
+<code class="descname">download_model_file</code><span class="sig-paren">(</span><em>name</em>, <em>model_file_path</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.download_model_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.download_model_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Downloads the Python script containing the model’s class to the local filesystem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<em>str</em>) – Name of model</li>
+<li><strong>model_file_path</strong> (<em>str</em>) – Absolute/relative path to save the Python script to</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Details of model as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.feedback_to_advisor">
+<code class="descname">feedback_to_advisor</code><span class="sig-paren">(</span><em>advisor_id</em>, <em>knobs</em>, <em>score</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.feedback_to_advisor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.feedback_to_advisor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Feedbacks to the advisor on the score of a set of knobs.
+Additionally returns another proposal of knobs after ingesting feedback.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>advisor_id</strong> (<em>str</em>) – ID of target advisor</li>
+<li><strong>knobs</strong> (<em>str</em>) – Knobs to give feedback on</li>
+<li><strong>score</strong> (<em>float</em>) – Score of the knobs, the higher the number, the better the set of knobs</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Knobs as <cite>dict[&lt;knob_name&gt;, &lt;knob_value&gt;]</cite></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.generate_proposal">
+<code class="descname">generate_proposal</code><span class="sig-paren">(</span><em>advisor_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.generate_proposal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.generate_proposal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a proposal of knobs from an advisor.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>advisor_id</strong> (<em>str</em>) – ID of target advisor</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Knobs as <cite>dict[&lt;knob_name&gt;, &lt;knob_value&gt;]</cite></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_best_trials_of_train_job">
+<code class="descname">get_best_trials_of_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em>, <em>max_count=2</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_best_trials_of_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_best_trials_of_train_job" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists the best scoring trials of the train job identified by an app and an app version,
+ordered by descending score.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>app</strong> (<em>str</em>) – Name of the app</li>
+<li><strong>app_version</strong> (<em>int</em>) – Version of the app (-1 for latest version)</li>
+<li><strong>max_count</strong> (<em>int</em>) – Maximum number of trials to return</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Details of trials as list of dictionaries</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any][]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_current_user">
+<code class="descname">get_current_user</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_current_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_current_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets currently logged in user’s data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Current user as dictionary, or <cite>None</cite> if client is not logged in</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_inference_jobs_by_user">
+<code class="descname">get_inference_jobs_by_user</code><span class="sig-paren">(</span><em>user_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_inference_jobs_by_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_inference_jobs_by_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists all inference jobs associated to an user on Rafiki.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>user_id</strong> (<em>str</em>) – ID of the user</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of inference jobs as list of dictionaries</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any][]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_inference_jobs_of_app">
+<code class="descname">get_inference_jobs_of_app</code><span class="sig-paren">(</span><em>app</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_inference_jobs_of_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_inference_jobs_of_app" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists all inference jobs associated to an app on Rafiki.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>app</strong> (<em>str</em>) – Name of the app</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of inference jobs as list of dictionaries</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any][]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_model">
+<code class="descname">get_model</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves details of a single model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> (<em>str</em>) – Name of model</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of model as dictionary</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_models">
+<code class="descname">get_models</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_models"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_models" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists all models on Rafiki.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>access_right</strong> (<em>str</em>) – Model access right.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of models as list of dictionaries</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any][]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_models_of_task">
+<code class="descname">get_models_of_task</code><span class="sig-paren">(</span><em>task</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_models_of_task"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_models_of_task" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists all models associated to a task on Rafiki.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>task</strong> (<em>str</em>) – Task name</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of models as list of dictionaries</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any][]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_running_inference_job">
+<code class="descname">get_running_inference_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_running_inference_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_running_inference_job" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves details of the <em>running</em> inference job identified by an app and an app version,
+including workers’ details.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>app</strong> (<em>str</em>) – Name of the app</li>
+<li><strong>app_version</strong> (<em>int</em>) – Version of the app (-1 for latest version)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Details of inference job as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_train_job">
+<code class="descname">get_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_train_job" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves details of the train job identified by an app and an app version, 
+including workers’ details.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>app</strong> (<em>str</em>) – Name of the app</li>
+<li><strong>app_version</strong> (<em>int</em>) – Version of the app (-1 for latest version)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Details of train job as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_train_jobs_by_user">
+<code class="descname">get_train_jobs_by_user</code><span class="sig-paren">(</span><em>user_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_train_jobs_by_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_train_jobs_by_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists all train jobs associated to an user on Rafiki.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>user_id</strong> (<em>str</em>) – ID of the user</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of train jobs as list of dictionaries</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any][]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_train_jobs_of_app">
+<code class="descname">get_train_jobs_of_app</code><span class="sig-paren">(</span><em>app</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_train_jobs_of_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_train_jobs_of_app" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists all train jobs associated to an app on Rafiki.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>app</strong> (<em>str</em>) – Name of the app</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of train jobs as list of dictionaries</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any][]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_trial">
+<code class="descname">get_trial</code><span class="sig-paren">(</span><em>trial_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_trial"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_trial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets a specific trial.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>trial_id</strong> (<em>str</em>) – ID of trial</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of trial as dictionary</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_trial_logs">
+<code class="descname">get_trial_logs</code><span class="sig-paren">(</span><em>trial_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_trial_logs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_trial_logs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the logs for a specific trial.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>trial_id</strong> (<em>str</em>) – ID of trial</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Logs of trial as dictionary</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_trial_parameters">
+<code class="descname">get_trial_parameters</code><span class="sig-paren">(</span><em>trial_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_trial_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_trial_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets parameters of the model associated with the trial.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>trial_id</strong> (<em>str</em>) – ID of trial</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Parameters of the <em>trained</em> model associated with the trial</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_trials_of_train_job">
+<code class="descname">get_trials_of_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_trials_of_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_trials_of_train_job" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists all trials of the train job identified by an app and an app version,
+ordered by when the trial started.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>app</strong> (<em>str</em>) – Name of the app</li>
+<li><strong>app_version</strong> (<em>int</em>) – Version of the app (-1 for latest version)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Details of trials as list of dictionaries</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any][]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.load_trial_model">
+<code class="descname">load_trial_model</code><span class="sig-paren">(</span><em>trial_id</em>, <em>ModelClass</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.load_trial_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.load_trial_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads an instance of a trial’s model with the trial’s knobs &amp; parameters.</p>
+<p>Before this, you must have the trial’s model class file already in your local filesystem,
+the dependencies of the model must have been installed separately, and the model class must have been 
+imported and passed into this method.</p>
+<p>Wraps <a class="reference internal" href="#rafiki.client.Client.get_trial_parameters" title="rafiki.client.Client.get_trial_parameters"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_trial_parameters()</span></code></a> and <a class="reference internal" href="#rafiki.client.Client.get_trial" title="rafiki.client.Client.get_trial"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_trial()</span></code></a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>trial_id</strong> (<em>str</em>) – ID of trial</li>
+<li><strong>ModelClass</strong> (<em>class</em>) – model class that conincides with the trial’s model class</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A <em>trained</em> model instance of <code class="docutils literal notranslate"><span class="pre">ModelClass</span></code>, loaded with the trial’s knobs and parameters</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.login">
+<code class="descname">login</code><span class="sig-paren">(</span><em>email</em>, <em>password</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.login"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.login" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a login session as a Rafiki user. You will have to be logged in to perform any actions.</p>
+<p>App developers can create, list and stop train and inference jobs, as well as list models.
+Model developers can create and list models.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>email</strong> (<em>str</em>) – User’s email</li>
+<li><strong>password</strong> (<em>str</em>) – User’s password</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Logged-in user as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.logout">
+<code class="descname">logout</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.logout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.logout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clears the current login session.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.stop_inference_job">
+<code class="descname">stop_inference_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.stop_inference_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.stop_inference_job" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stops the inference job identified by an app and an app version.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>app</strong> (<em>str</em>) – Name of the app</li>
+<li><strong>app_version</strong> (<em>int</em>) – Version of the app (-1 for latest version)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Stopped inference job as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.stop_train_job">
+<code class="descname">stop_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.stop_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.stop_train_job" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prematurely stops the train job identified by an app and an app version.
+Otherwise, the train job should stop by itself when its budget is reached.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>app</strong> (<em>str</em>) – Name of the app</li>
+<li><strong>app_version</strong> (<em>int</em>) – Version of the app (-1 for latest version)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Stopped train job as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="rafiki.model.html" class="btn btn-neutral float-right" title="rafiki.model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="Python Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, nginyc, cadmusthefounder, nudles.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
