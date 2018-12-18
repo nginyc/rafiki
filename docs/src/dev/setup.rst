@@ -43,13 +43,21 @@ using it for networking amongst nodes.
 
 To scale Rafiki horizontally, add more nodes to the master node's Docker Swarm:
 
-1. For all nodes, including the master node, ensure the `firewall rules 
-   allow TCP & UDP traffic on ports 2377, 7946 and 4789 <https://docs.docker.com/network/overlay/#operations-for-all-overlay-networks>`_ 
+1. If Rafiki is running, stop Rafiki, and have the master node leave its Docker Swarm
 
-2. For every worker node, connect it to the same network as the master node
-   and have the node `join the master node's Docker Swarm <https://docs.docker.com/engine/swarm/join-nodes/>`_
+2. Put every worker node and a master node into a common network,
+   and change ``DOCKER_SWARM_ADVERTISE_ADDR`` in ``.env.sh`` to the IP address of the master node
+   in *the network that your worker nodes are in*
 
-3. On the *master* node, for *each* node, configure it with the script:
+3. For every node, including the master node, ensure the `firewall rules 
+   allow TCP & UDP traffic on ports 2377, 7946 and 4789 
+   <https://docs.docker.com/network/overlay/#operations-for-all-overlay-networks>`_ 
+
+4. Start Rafiki with `bash scripts/start.sh`
+
+5. For every worker node, have the node `join the master node's Docker Swarm <https://docs.docker.com/engine/swarm/join-nodes/>`_
+
+6. On the *master* node, for *every* node, configure it with the script:
 
     ::    
 
@@ -79,14 +87,14 @@ Exposing Rafiki Publicly
 --------------------------------------------------------------------
 
 Rafiki Admin and Rafiki Admin Web runs on the master node. 
-Change ``RAFIKI_IP_ADDRESS`` in ``.env.sh`` to the IP address of the master node
+Change ``RAFIKI_ADDR`` in ``.env.sh`` to the IP address of the master node
 in the network you intend to expose Rafiki in.
 
 Example: 
 
 ::
 
-    export RAFIKI_IP_ADDRESS=172.28.176.35
+    export RAFIKI_ADDR=172.28.176.35
 
 Re-deploy Rafiki. Rafiki Admin and Rafiki Admin Web will be available at that IP address,
 over ports 3000 and 3001 (by default), assuming incoming connections to these ports are allowed.
@@ -98,3 +106,11 @@ Reading Rafiki's logs
 By default, you can read logs of Rafiki Admin, Rafiki Advisor & any of Rafiki's services
 in `./logs` directory at the root of the project's directory of the master node. 
 
+
+Troubleshooting
+--------------------------------------------------------------------
+
+Q: There seems to be connectivity issues amongst containers across nodes!
+
+A: Ensure that containers are able to communicate with one another through the Docker Swarm overlay network:
+   https://docs.docker.com/network/network-tutorial-overlay/#use-an-overlay-network-for-standalone-containers

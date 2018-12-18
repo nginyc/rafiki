@@ -41,7 +41,7 @@ class ServicesManager(object):
         self._predictor_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_PREDICTOR'],
                                                 os.environ['RAFIKI_VERSION'])
         self._predictor_port = os.environ['PREDICTOR_PORT']
-        self._rafiki_ip_address = os.environ['RAFIKI_IP_ADDRESS']
+        self._rafiki_addr = os.environ['RAFIKI_ADDR']
 
         self._db = db
         self._container_manager = container_manager
@@ -307,7 +307,7 @@ class ServicesManager(object):
         ext_hostname = None
         ext_port = None
         if container_port is not None:
-            ext_hostname = self._rafiki_ip_address
+            ext_hostname = self._rafiki_addr
             ext_port = self._get_available_ext_port()
             publish_port = (ext_port, container_port)
 
