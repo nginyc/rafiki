@@ -33,11 +33,6 @@ ensure_stable()
 title "Creating Docker swarm for Rafiki..."
 bash $FILE_DIR/create_docker_swarm.sh
 
-# Setup node for Rafiki
-
-title "Setting up node for Rafiki..."
-bash $FILE_DIR/setup_node.sh manager
-
 # Pull images from Docker Hub
 
 title "Pulling images for Rafiki from Docker Hub..."
@@ -66,4 +61,5 @@ title "Starting Rafiki's Admin Web..."
 ensure_stable "Rafiki's Admin Web"
 
 echo "To use Rafiki, use Rafiki Client in the Python CLI"
-echo "Refer to Rafiki's docs at https://nginyc.github.io/rafiki/docs/latest"
+echo "A quickstart is available at https://nginyc.github.io/rafiki/docs/latest/docs/src/user/quickstart.html"
+echo "To configure Rafiki, refer to Rafiki's developer docs at https://nginyc.github.io/rafiki/docs/latest/docs/src/dev/setup.html"

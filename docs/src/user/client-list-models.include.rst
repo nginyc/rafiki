@@ -8,20 +8,22 @@ Example:
 
     .. code-block:: python
 
-        [{'datetime_created': 'Sun, 18 Nov 2018 09:56:03 GMT',
+       [{'access_right': 'PRIVATE',
+        'datetime_created': 'Mon, 17 Dec 2018 07:06:03 GMT',
         'dependencies': {'tensorflow': '1.12.0'},
-        'docker_image': 'rafikiai/rafiki_worker:0.0.7',
+        'docker_image': 'rafikiai/rafiki_worker:0.0.9',
         'model_class': 'TfFeedForward',
         'name': 'TfFeedForward',
         'task': 'IMAGE_CLASSIFICATION',
-        'user_id': '9fdefa23-c838-4c56-8eb5-f625ff4245ab'},
-        {'datetime_created': 'Sun, 18 Nov 2018 09:56:04 GMT',
+        'user_id': 'fb5671f1-c673-40e7-b53a-9208eb1ccc50'},
+        {'access_right': 'PRIVATE',
+        'datetime_created': 'Mon, 17 Dec 2018 07:06:03 GMT',
         'dependencies': {'scikit-learn': '0.20.0'},
-        'docker_image': 'rafikiai/rafiki_worker:0.0.7',
+        'docker_image': 'rafikiai/rafiki_worker:0.0.9',
         'model_class': 'SkDt',
         'name': 'SkDt',
         'task': 'IMAGE_CLASSIFICATION',
-        'user_id': '9fdefa23-c838-4c56-8eb5-f625ff4245ab'}]
+        'user_id': 'fb5671f1-c673-40e7-b53a-9208eb1ccc50'}]
 
 .. seealso:: :meth:`rafiki.client.Client.get_models_of_task`
     

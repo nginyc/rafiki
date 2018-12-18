@@ -27,8 +27,8 @@ By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g 
 
     ::
 
-        POSTGRES_HOST=localhost
-        POSTGRES_PORT=5433
+        RAFIKI_ADDR=127.0.0.1
+        POSTGRES_EXT_PORT=5433
         POSTGRES_USER=rafiki
         POSTGRES_DB=rafiki
         POSTGRES_PASSWORD=rafiki
@@ -46,8 +46,8 @@ You can connect to Redis DB with `rebrow <https://github.com/marians/rebrow>`_:
 
     ::
 
-        REDIS_HOST=rafiki_cache
-        REDIS_PORT=6379
+        RAFIKI_ADDR=127.0.0.1
+        REDIS_EXT_PORT=6380
 
 Building Images Locally
 --------------------------------------------------------------------
@@ -85,9 +85,15 @@ Build & view Rafiki's Sphinx documentation on your machine with the following co
 Troubleshooting
 --------------------------------------------------------------------
 
-While building Rafiki's images locally, if you encounter an error like "No space left on device", you might be running out of space allocated for Docker. Try removing all containers & images:
+While building Rafiki's images locally, if you encounter errors like "No space left on device", 
+you might be running out of space allocated for Docker. Try one of the following:
 
-    .. code-block:: shell
+    ::
+
+        # Prunes dangling images
+        docker system prune
+
+    ::
 
         # Delete all containers
         docker rm $(docker ps -a -q)
@@ -96,3 +102,15 @@ While building Rafiki's images locally, if you encounter an error like "No space
 
 From Mac Mojave onwards, due to Mac's new `privacy protection feature <https://www.howtogeek.com/361707/how-macos-mojaves-privacy-protection-works/>`_, 
 you might need to explicitly give Docker *Full Disk Access*, restart Docker, or even do a factory reset of Docker.
+
+
+Using Rafiki Admin's HTTP interface
+--------------------------------------------------------------------
+
+To make calls to the HTTP endpoints of Rafiki Admin, you'll need first authenticate with email & password 
+against the `POST /tokens` endpoint to obtain an authentication token `token`, 
+and subsequently add the `Authorization` header for every other call:
+
+::
+
+    Authorization: Bearer {{token}}

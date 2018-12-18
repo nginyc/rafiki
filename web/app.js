@@ -11,7 +11,7 @@ app.use('/dist', express.static(path.join(__dirname, 'dist')));
 
 app.get('/*', (req, res) => {
   res.render('index', {
-    'ADMIN_HOST': process.env.RAFIKI_IP_ADDRESS,
+    'ADMIN_HOST': process.env.RAFIKI_ADDR,
     'ADMIN_PORT': process.env.ADMIN_EXT_PORT
   });
 });
