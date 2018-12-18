@@ -61,5 +61,5 @@ title "Starting Rafiki's Admin Web..."
 ensure_stable "Rafiki's Admin Web"
 
 echo "To use Rafiki, use Rafiki Client in the Python CLI"
-echo "Add more nodes to the Docker Swarm and configure each node by running `bash scripts/setup_node.sh` here."
+echo "Add more nodes to the Docker Swarm and configure each node by running 'bash scripts/setup_node.sh' here."
 echo "Refer to Rafiki's docs at https://nginyc.github.io/rafiki/docs/latest"

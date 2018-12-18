@@ -291,6 +291,7 @@ class ServicesManager(object):
         # Pass service details as environment variables 
         environment_vars = {
             **environment_vars,
+            'LOGS_DOCKER_WORKDIR_PATH': self._logs_docker_workdir,
             'RAFIKI_SERVICE_ID': service.id,
             'RAFIKI_SERVICE_TYPE': service_type
         }
