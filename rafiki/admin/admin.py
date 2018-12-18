@@ -2,6 +2,8 @@ import os
 import logging
 import traceback
 import bcrypt
+import uuid
+import csv
 
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus, ModelAccessRight, BudgetType
@@ -64,6 +66,33 @@ class Admin(object):
         return {
             'id': user.id
         }
+
+    def create_users(self, csv_file_bytes):
+        temp_csv_file = '{}.csv'.format(str(uuid.uuid4()))
+
+        # Temporarily save the csv file to disk
+        with open(temp_csv_file, 'wb') as f:
+            f.write(csv_file_bytes)
+
+        users = []
+        with open(temp_csv_file, 'rt', encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            reader.fieldnames = [name.lower() for name in reader.fieldnames]
+            line_number = 0
+            for row in reader:
+                if line_number > 0:
+                    user = self._create_user(row['email'], row['password'], row['user_type'])
+                    users.append(user)
+                line_number += 1
+        os.remove(temp_csv_file)
+        return [
+            {
+                'id': user.id,
+                'email': user.email,
+                'user_type': user.user_type
+            }
+            for user in users
+        ]
 
     ####################################
     # Train Job
