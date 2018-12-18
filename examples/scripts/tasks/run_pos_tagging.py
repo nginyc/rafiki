@@ -63,7 +63,7 @@ def run_pos_tagging(client, enable_gpu):
     pprint.pprint(client.stop_inference_job(app))
 
 if __name__ == '__main__':
-    rafiki_host = os.environ.get('RAFIKI_IP_ADDRESS', 'localhost')
+    rafiki_host = os.environ.get('RAFIKI_HOST', 'localhost')
     admin_port = int(os.environ.get('ADMIN_EXT_PORT', 3000))
     user_email = os.environ.get('USER_EMAIL', SUPERADMIN_EMAIL)
     user_password = os.environ.get('USER_PASSWORD', SUPERADMIN_PASSWORD)

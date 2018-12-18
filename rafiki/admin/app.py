@@ -20,7 +20,7 @@ def index():
 # Users
 ####################################
 
-@app.route('/users', methods=['POST'])
+@app.route('/user', methods=['POST'])
 @auth([UserType.ADMIN])
 def create_user(auth):
     admin = get_admin()
@@ -28,6 +28,19 @@ def create_user(auth):
 
     with admin:
         return jsonify(admin.create_user(**params))
+
+@app.route('/users', methods=['POST'])
+@auth([UserType.ADMIN])
+def create_users(auth):
+    admin = get_admin()
+    params = get_request_params()
+
+    # Expect csv file as bytes
+    csv_file_bytes = request.files['csv_file_bytes'].read()
+    params['csv_file_bytes'] = csv_file_bytes
+
+    with admin:
+        return jsonify(admin.create_users(**params))
 
 @app.route('/tokens', methods=['POST'])
 def generate_user_token():

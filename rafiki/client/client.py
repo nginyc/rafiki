@@ -90,11 +90,33 @@ class Client(object):
         :returns: Created user as dictionary
         :rtype: dict[str, any]
         '''
-        data = self._post('/users', json={
+        data = self._post('/user', json={
             'email': email,
             'password': password,
             'user_type': user_type
         })
+        return data
+
+    def create_users(self, csv_file_path):
+        '''
+        Creates multiple Rafiki users.
+
+        :param str csv_file_path: Path to a single csv file containing users to seed
+
+        :returns: Created users as list of dictionaries
+        :rtype: dict[str, any][]
+        '''
+
+        f = open(csv_file_path, 'rb')
+        csv_file_bytes = f.read()
+        f.close()
+
+        data = self._post(
+            '/users', 
+            files={
+                'csv_file_bytes': csv_file_bytes
+            }
+        )
         return data
 
     ####################################
