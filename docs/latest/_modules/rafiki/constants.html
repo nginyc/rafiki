@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.0.8
+                0.0.9
               </div>
             
           
@@ -151,12 +151,16 @@
     <span class="n">MODEL_TRIAL_COUNT</span> <span class="o">=</span> <span class="s1">&#39;MODEL_TRIAL_COUNT&#39;</span>
     <span class="n">ENABLE_GPU</span> <span class="o">=</span> <span class="s1">&#39;ENABLE_GPU&#39;</span></div>
 
-<span class="k">class</span> <span class="nc">ModelDependency</span><span class="p">():</span>
+<div class="viewcode-block" id="ModelDependency"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.ModelDependency">[docs]</a><span class="k">class</span> <span class="nc">ModelDependency</span><span class="p">():</span>
     <span class="n">TENSORFLOW</span> <span class="o">=</span> <span class="s1">&#39;tensorflow&#39;</span>
     <span class="n">KERAS</span> <span class="o">=</span> <span class="s1">&#39;Keras&#39;</span>
     <span class="n">SCIKIT_LEARN</span> <span class="o">=</span> <span class="s1">&#39;scikit-learn&#39;</span>
     <span class="n">PYTORCH</span> <span class="o">=</span> <span class="s1">&#39;torch&#39;</span>
-    <span class="n">SINGA</span> <span class="o">=</span> <span class="s1">&#39;singa&#39;</span>
+    <span class="n">SINGA</span> <span class="o">=</span> <span class="s1">&#39;singa&#39;</span></div>
+
+<div class="viewcode-block" id="ModelAccessRight"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.ModelAccessRight">[docs]</a><span class="k">class</span> <span class="nc">ModelAccessRight</span><span class="p">():</span>
+    <span class="n">PUBLIC</span> <span class="o">=</span> <span class="s1">&#39;PUBLIC&#39;</span>
+    <span class="n">PRIVATE</span> <span class="o">=</span> <span class="s1">&#39;PRIVATE&#39;</span></div>
 
 <div class="viewcode-block" id="InferenceJobStatus"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.InferenceJobStatus">[docs]</a><span class="k">class</span> <span class="nc">InferenceJobStatus</span><span class="p">():</span>
     <span class="n">STARTED</span> <span class="o">=</span> <span class="s1">&#39;STARTED&#39;</span>
@@ -167,10 +171,10 @@
 <div class="viewcode-block" id="TrainJobStatus"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.TrainJobStatus">[docs]</a><span class="k">class</span> <span class="nc">TrainJobStatus</span><span class="p">():</span>
     <span class="n">STARTED</span> <span class="o">=</span> <span class="s1">&#39;STARTED&#39;</span>
     <span class="n">RUNNING</span> <span class="o">=</span> <span class="s1">&#39;RUNNING&#39;</span>
-    <span class="n">STOPPED</span> <span class="o">=</span> <span class="s1">&#39;STOPPED&#39;</span>
-    <span class="n">COMPLETED</span> <span class="o">=</span> <span class="s1">&#39;COMPLETED&#39;</span></div>
+    <span class="n">STOPPED</span> <span class="o">=</span> <span class="s1">&#39;STOPPED&#39;</span></div>
 
 <div class="viewcode-block" id="TrialStatus"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.TrialStatus">[docs]</a><span class="k">class</span> <span class="nc">TrialStatus</span><span class="p">():</span>
+    <span class="n">STARTED</span> <span class="o">=</span> <span class="s1">&#39;STARTED&#39;</span>
     <span class="n">RUNNING</span> <span class="o">=</span> <span class="s1">&#39;RUNNING&#39;</span>
     <span class="n">ERRORED</span> <span class="o">=</span> <span class="s1">&#39;ERRORED&#39;</span>
     <span class="n">TERMINATED</span> <span class="o">=</span> <span class="s1">&#39;TERMINATED&#39;</span>

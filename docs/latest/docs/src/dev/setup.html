@@ -58,7 +58,7 @@
             
             
               <div class="version">
-                0.0.8
+                0.0.9
               </div>
             
           
@@ -87,11 +87,10 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Developer Guide</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Setup &amp; Configuration</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#quick-setup">Quick Setup</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#adding-nodes-to-rafiki">Adding Nodes to Rafiki</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#scaling-rafiki">Scaling Rafiki</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#exposing-rafiki-publicly">Exposing Rafiki Publicly</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#enabling-gpu-for-rafiki-s-workers">Enabling GPU for Rafiki’s Workers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#reading-rafiki-s-logs">Reading Rafiki’s logs</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#using-rafiki-admin-s-http-interface">Using Rafiki Admin’s HTTP interface</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="development.html">Development</a></li>
@@ -173,11 +172,10 @@
 <ul class="simple">
 <li><a class="reference internal" href="#setup-configuration" id="id3">Setup &amp; Configuration</a><ul>
 <li><a class="reference internal" href="#quick-setup" id="id4">Quick Setup</a></li>
-<li><a class="reference internal" href="#adding-nodes-to-rafiki" id="id5">Adding Nodes to Rafiki</a></li>
+<li><a class="reference internal" href="#scaling-rafiki" id="id5">Scaling Rafiki</a></li>
 <li><a class="reference internal" href="#exposing-rafiki-publicly" id="id6">Exposing Rafiki Publicly</a></li>
-<li><a class="reference internal" href="#enabling-gpu-for-rafiki-s-workers" id="id7">Enabling GPU for Rafiki’s Workers</a></li>
-<li><a class="reference internal" href="#reading-rafiki-s-logs" id="id8">Reading Rafiki’s logs</a></li>
-<li><a class="reference internal" href="#using-rafiki-admin-s-http-interface" id="id9">Using Rafiki Admin’s HTTP interface</a></li>
+<li><a class="reference internal" href="#reading-rafiki-s-logs" id="id7">Reading Rafiki’s logs</a></li>
+<li><a class="reference internal" href="#troubleshooting" id="id8">Troubleshooting</a></li>
 </ul>
 </li>
 </ul>
@@ -206,18 +204,41 @@
 </div>
 </div></blockquote>
 </div>
-<div class="section" id="adding-nodes-to-rafiki">
-<h2><a class="toc-backref" href="#id5">Adding Nodes to Rafiki</a><a class="headerlink" href="#adding-nodes-to-rafiki" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="scaling-rafiki">
+<h2><a class="toc-backref" href="#id5">Scaling Rafiki</a><a class="headerlink" href="#scaling-rafiki" title="Permalink to this headline">¶</a></h2>
+<p>Rafiki’s default setup runs on a single node, and only runs on CPUs.</p>
 <p>Rafiki has with its dynamic stack (e.g. train workers, inference workes, predictors)
-running as <a class="reference external" href="https://docs.docker.com/engine/swarm/services/">Docker Swarm Services</a>.</p>
-<p>Horizontal scaling can be done by adding more nodes to the swarm.</p>
-<p>Perform the following for <em>each</em> worker node to be added:</p>
+running as <a class="reference external" href="https://docs.docker.com/engine/swarm/services/">Docker Swarm Services</a>.
+It runs in a <a class="reference external" href="https://docs.docker.com/network/overlay/">Docker routing-mesh overlay network</a>,
+using it for networking amongst nodes.</p>
+<p>Rafiki’s workers run in Docker containers that extend the Docker image <code class="docutils literal notranslate"><span class="pre">nvidia/cuda:9.0-runtime-ubuntu16.04</span></code>,
+and are capable of leveraging on <a class="reference external" href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#pre-installation-actions">CUDA-Capable GPUs</a>
+across Rafiki’s nodes.</p>
+<p>To scale Rafiki horizontally and enable running on GPUs, do the following:</p>
 <ol class="arabic">
-<li><p class="first">Connect the node to the same network as the master, so that the node can <a class="reference external" href="https://docs.docker.com/engine/swarm/join-nodes/">join the master’s Docker Swarm</a>.</p>
+<li><p class="first">If Rafiki is running, stop Rafiki, and have the master node leave its Docker Swarm</p>
 </li>
-<li><p class="first">Configure the node with the script:</p>
+<li><p class="first">Put every worker node and the master node into a common network,
+and change <code class="docutils literal notranslate"><span class="pre">DOCKER_SWARM_ADVERTISE_ADDR</span></code> in <code class="docutils literal notranslate"><span class="pre">.env.sh</span></code> to the IP address of the master node
+in <em>the network that your worker nodes are in</em></p>
+</li>
+<li><p class="first">For every node, including the master node, ensure the <a class="reference external" href="https://docs.docker.com/network/overlay/#operations-for-all-overlay-networks">firewall rules
+allow TCP &amp; UDP traffic on ports 2377, 7946 and 4789</a></p>
+</li>
+<li><p class="first">For every node that has GPUs:</p>
 <blockquote>
-<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/setup_node.sh
+<div><p>4.1. <a class="reference external" href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html">Install NVIDIA drivers</a> for CUDA <em>9.0</em> or above</p>
+<p>4.2. <a class="reference external" href="https://github.com/NVIDIA/nvidia-docker">Install nvidia-docker2</a></p>
+<p>4.3. Set the <code class="docutils literal notranslate"><span class="pre">default-runtime</span></code> of Docker to <cite>nvidia</cite> (e.g. <a class="reference external" href="https://lukeyeager.github.io/2018/01/22/setting-the-default-docker-runtime-to-nvidia.html">instructions here</a>)</p>
+</div></blockquote>
+</li>
+<li><p class="first">Start Rafiki with <code class="docutils literal notranslate"><span class="pre">bash</span> <span class="pre">scripts/start.sh</span></code></p>
+</li>
+<li><p class="first">For every worker node, have the node <a class="reference external" href="https://docs.docker.com/engine/swarm/join-nodes/">join the master node’s Docker Swarm</a></p>
+</li>
+<li><p class="first">On the <em>master</em> node, for <em>every</em> node (including the master node), configure it with the script:</p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bash</span> <span class="n">scripts</span><span class="o">/</span><span class="n">setup_node</span><span class="o">.</span><span class="n">sh</span>
 </pre></div>
 </div>
 </div></blockquote>
@@ -226,40 +247,25 @@ running as <a class="reference external" href="https://docs.docker.com/engine/sw
 </div>
 <div class="section" id="exposing-rafiki-publicly">
 <h2><a class="toc-backref" href="#id6">Exposing Rafiki Publicly</a><a class="headerlink" href="#exposing-rafiki-publicly" title="Permalink to this headline">¶</a></h2>
-<p>Rafiki runs in a <a class="reference external" href="https://docs.docker.com/network/overlay/">Docker routing-mesh overlay network</a>, with
-Rafiki Admin and Rafiki Admin Web running only on the master node.</p>
-<p>Edit the following line in <code class="docutils literal notranslate"><span class="pre">.env.sh</span></code> with the IP address of the master node in the network you intend to expose Rafiki:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span> <span class="nv">RAFIKI_IP_ADDRESS</span><span class="o">=</span><span class="m">127</span>.0.0.1
+<p>Rafiki Admin and Rafiki Admin Web runs on the master node.
+Change <code class="docutils literal notranslate"><span class="pre">RAFIKI_ADDR</span></code> in <code class="docutils literal notranslate"><span class="pre">.env.sh</span></code> to the IP address of the master node
+in the network you intend to expose Rafiki in.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">export</span> <span class="n">RAFIKI_ADDR</span><span class="o">=</span><span class="mf">172.28</span><span class="o">.</span><span class="mf">176.35</span>
 </pre></div>
 </div>
-<p>Re-deploy Rafiki. Rafiki Admin and Rafiki Admin Web will be available at that IP address over ports 3000 and 3001,
-assuming incoming connections to these ports are allowed.</p>
-</div>
-<div class="section" id="enabling-gpu-for-rafiki-s-workers">
-<h2><a class="toc-backref" href="#id7">Enabling GPU for Rafiki’s Workers</a><a class="headerlink" href="#enabling-gpu-for-rafiki-s-workers" title="Permalink to this headline">¶</a></h2>
-<p>Rafiki’s workers run in Docker containers that extend the Docker image <code class="docutils literal notranslate"><span class="pre">nvidia/cuda:9.0-runtime-ubuntu16.04</span></code>,
-and are capable of leveraging on <a class="reference external" href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#pre-installation-actions">CUBA-Capable GPUs</a>
-across Rafiki’s nodes.</p>
-<p>Rafiki’s default setup would only configure its workers to run on CPUs across Rafiki’s nodes. To allow model
-training in workers to run on GPUs, perform the following configuration on <em>each</em> node in Rafiki:</p>
-<ol class="arabic simple">
-<li><a class="reference external" href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html">Install NVIDIA drivers</a> for CUDA <em>9.0</em> or above</li>
-<li><a class="reference external" href="https://github.com/NVIDIA/nvidia-docker">Install nvidia-docker2</a></li>
-<li>Set the <code class="docutils literal notranslate"><span class="pre">default-runtime</span></code> of Docker to <cite>nvidia</cite> (e.g. <a class="reference external" href="https://lukeyeager.github.io/2018/01/22/setting-the-default-docker-runtime-to-nvidia.html">instructions here</a>)</li>
-</ol>
+<p>Re-deploy Rafiki. Rafiki Admin and Rafiki Admin Web will be available at that IP address,
+over ports 3000 and 3001 (by default), assuming incoming connections to these ports are allowed.</p>
 </div>
 <div class="section" id="reading-rafiki-s-logs">
-<h2><a class="toc-backref" href="#id8">Reading Rafiki’s logs</a><a class="headerlink" href="#reading-rafiki-s-logs" title="Permalink to this headline">¶</a></h2>
-<p>You can read logs of Rafiki Admin, Rafiki Advisor &amp; any of Rafiki’s services at in the project’s <cite>./logs</cite> directory.</p>
+<h2><a class="toc-backref" href="#id7">Reading Rafiki’s logs</a><a class="headerlink" href="#reading-rafiki-s-logs" title="Permalink to this headline">¶</a></h2>
+<p>By default, you can read logs of Rafiki Admin, Rafiki Advisor &amp; any of Rafiki’s services
+in <cite>./logs</cite> directory at the root of the project’s directory of the master node.</p>
 </div>
-<div class="section" id="using-rafiki-admin-s-http-interface">
-<h2><a class="toc-backref" href="#id9">Using Rafiki Admin’s HTTP interface</a><a class="headerlink" href="#using-rafiki-admin-s-http-interface" title="Permalink to this headline">¶</a></h2>
-<p>To make calls to the HTTP endpoints of Rafiki Admin, you’ll need first authenticate with email &amp; password
-against the <cite>POST /tokens</cite> endpoint to obtain an authentication token <cite>token</cite>,
-and subsequently add the <cite>Authorization</cite> header for every other call:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Authorization</span><span class="p">:</span> <span class="n">Bearer</span> <span class="p">{{</span><span class="n">token</span><span class="p">}}</span>
-</pre></div>
-</div>
+<div class="section" id="troubleshooting">
+<h2><a class="toc-backref" href="#id8">Troubleshooting</a><a class="headerlink" href="#troubleshooting" title="Permalink to this headline">¶</a></h2>
+<p>Q: There seems to be connectivity issues amongst containers across nodes!
+A: Ensure that containers are able to communicate with one another through the Docker Swarm overlay network: <a class="reference external" href="https://docs.docker.com/network/network-tutorial-overlay/#use-an-overlay-network-for-standalone-containers">https://docs.docker.com/network/network-tutorial-overlay/#use-an-overlay-network-for-standalone-containers</a></p>
 </div>
 </div>
 

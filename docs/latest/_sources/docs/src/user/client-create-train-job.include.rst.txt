@@ -21,9 +21,9 @@ Example:
 
     .. code-block:: python
 
-        {'app': 'fashion_mnist_app', 
-        'app_version': 1, 
-        'id': '3f3b3bdd-43ac-4354-99a5-d4d86006b68a'}
+        {'app': 'fashion_mnist_app',
+        'app_version': 1,
+        'id': 'ec4db479-b9b2-4289-8086-52794ffc71c8'}
 
 .. note::
 

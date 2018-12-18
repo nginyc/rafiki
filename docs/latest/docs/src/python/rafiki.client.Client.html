@@ -58,7 +58,7 @@
             
             
               <div class="version">
-                0.0.8
+                0.0.9
               </div>
             
           
@@ -187,10 +187,16 @@ of that ID, or do nothing if an advisor of that ID has already been created.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>knob_config_str</strong> (<em>str</em>) – Serialized knob configuration for advisor session</li>
 <li><strong>advisor_id</strong> (<em>str</em>) – ID of advisor to create</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Created advisor as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
 </td>
 </tr>
 </tbody>
@@ -201,7 +207,7 @@ of that ID, or do nothing if an advisor of that ID has already been created.</p>
 <dt id="rafiki.client.Client.create_inference_job">
 <code class="descname">create_inference_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.create_inference_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_inference_job" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates and starts a inference job on Rafiki with the 2 best trials of an associated train job of the app. 
-The train job must have the status of <code class="docutils literal notranslate"><span class="pre">COMPLETED</span></code>.The inference job would be tagged with the train job’s app and app version. 
+The train job must have the status of <code class="docutils literal notranslate"><span class="pre">STOPPED</span></code>.The inference job would be tagged with the train job’s app and app version. 
 Throws an error if an inference job of the same train job is already running.</p>
 <p>In this method’s response, <cite>predictor_host</cite> is this inference job’s predictor’s host.</p>
 <p>Only admins &amp; app developers can manage inference jobs.</p>
@@ -209,10 +215,16 @@ Throws an error if an inference job of the same train job is already running.</p
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>app</strong> (<em>str</em>) – Name of the app identifying the train job to use</li>
 <li><strong>app_version</strong> (<em>str</em>) – Version of the app identifying the train job to use</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Created inference job as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
 </td>
 </tr>
 </tbody>
@@ -221,21 +233,28 @@ Throws an error if an inference job of the same train job is already running.</p
 
 <dl class="method">
 <dt id="rafiki.client.Client.create_model">
-<code class="descname">create_model</code><span class="sig-paren">(</span><em>name</em>, <em>task</em>, <em>model_file_path</em>, <em>model_class</em>, <em>dependencies={}</em>, <em>docker_image=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.create_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_model" title="Permalink to this definition">¶</a></dt>
+<code class="descname">create_model</code><span class="sig-paren">(</span><em>name</em>, <em>task</em>, <em>model_file_path</em>, <em>model_class</em>, <em>docker_image=None</em>, <em>dependencies={}</em>, <em>access_right='PRIVATE'</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.create_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_model" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates a model on Rafiki.</p>
 <p>Only admins &amp; model developers can manage models.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>name</strong> (<em>str</em>) – Name of the model, must be unique on Rafiki</li>
 <li><strong>task</strong> (<em>str</em>) – Task associated with the model, where the model must adhere to the specification of the task</li>
 <li><strong>model_file_path</strong> (<em>str</em>) – Path to a single Python file that contains the definition for the model class</li>
 <li><strong>model_class</strong> (<em>obj</em>) – The name of the model class inside the Python file. This class should implement <a class="reference internal" href="rafiki.model.html#rafiki.model.BaseModel" title="rafiki.model.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.BaseModel</span></code></a></li>
 <li><strong>dependencies</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>str</em><em>]</em>) – List of dependencies &amp; their versions</li>
 <li><strong>docker_image</strong> (<em>str</em>) – A custom Docker image name that extends <code class="docutils literal notranslate"><span class="pre">rafikiai/rafiki_worker</span></code></li>
+<li><strong>access_right</strong> (<a class="reference internal" href="rafiki.constants.html#rafiki.constants.ModelAccessRight" title="rafiki.constants.ModelAccessRight"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.constants.ModelAccessRight</span></code></a>) – Model access right</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Created model as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
 </td>
 </tr>
 </tbody>
@@ -243,6 +262,8 @@ Throws an error if an inference job of the same train job is already running.</p
 <p><code class="docutils literal notranslate"><span class="pre">model_file_path</span></code> should point to a file that contains all necessary Python code for the model’s implementation. 
 If the Python file imports any external Python modules, you should list it in <code class="docutils literal notranslate"><span class="pre">dependencies</span></code> or create a custom
 <code class="docutils literal notranslate"><span class="pre">docker_image</span></code>.</p>
+<p>If a model’s <code class="docutils literal notranslate"><span class="pre">access_right</span></code> is set to <code class="docutils literal notranslate"><span class="pre">PUBLIC</span></code>, all other users have access to the model for training
+and inference. By default, a model’s access is <code class="docutils literal notranslate"><span class="pre">PRIVATE</span></code>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">dependencies</span></code> should be a dictionary of <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">&lt;dependency_name&gt;:</span> <span class="pre">&lt;dependency_version&gt;</span> <span class="pre">}</span></code>, where 
 <code class="docutils literal notranslate"><span class="pre">&lt;dependency_name&gt;</span></code> corresponds to the name of the Python Package Index (PyPI) package (e.g. <code class="docutils literal notranslate"><span class="pre">tensorflow</span></code>)
 and <code class="docutils literal notranslate"><span class="pre">&lt;dependency_version&gt;</span></code> corresponds to the version of the PyPI package (e.g. <code class="docutils literal notranslate"><span class="pre">1.12.0</span></code>). These dependencies 
@@ -283,26 +304,34 @@ they will be installed as PyPI packages of the specified name and version.</p>
 
 <dl class="method">
 <dt id="rafiki.client.Client.create_train_job">
-<code class="descname">create_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>task</em>, <em>train_dataset_uri</em>, <em>test_dataset_uri</em>, <em>budget=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.create_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_train_job" title="Permalink to this definition">¶</a></dt>
+<code class="descname">create_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>task</em>, <em>train_dataset_uri</em>, <em>test_dataset_uri</em>, <em>budget</em>, <em>models=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.create_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_train_job" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates and starts a train job on Rafiki. 
 A train job is uniquely identified by its associated app and the app version (returned in output).</p>
-<p>Only admins &amp; app developers can manage train jobs.</p>
+<p>Only admins, model developers and app developers can manage train jobs.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>app</strong> (<em>str</em>) – Name of the app associated with the train job</li>
 <li><strong>task</strong> (<em>str</em>) – Task associated with the train job, 
 the train job will train models associated with the task</li>
 <li><strong>train_dataset_uri</strong> (<em>str</em>) – URI of the train dataset in a format specified by the task</li>
 <li><strong>test_dataset_uri</strong> (<em>str</em>) – URI of the test (development) dataset in a format specified by the task</li>
-<li><strong>budget</strong> (dict[<a class="reference internal" href="rafiki.constants.html#rafiki.constants.BudgetType" title="rafiki.constants.BudgetType"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.constants.BudgetType</span></code></a>, int]) – budget for the train job</li>
+<li><strong>budget</strong> (<em>str</em>) – Budget for each model</li>
+<li><strong>models</strong> (<em>str</em><em>[</em><em>]</em>) – list of model names to use for train job</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Created train job as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
 </td>
 </tr>
 </tbody>
 </table>
+<p>If <code class="docutils literal notranslate"><span class="pre">models</span></code> is unspecified, all models accessible to the user for the specified task will be used.</p>
 <p><code class="docutils literal notranslate"><span class="pre">budget</span></code> should be a dictionary of <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">&lt;budget_type&gt;:</span> <span class="pre">&lt;budget_amount&gt;</span> <span class="pre">}</span></code>, where 
 <code class="docutils literal notranslate"><span class="pre">&lt;budget_type&gt;</span></code> is one of <a class="reference internal" href="rafiki.constants.html#rafiki.constants.BudgetType" title="rafiki.constants.BudgetType"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.constants.BudgetType</span></code></a> and 
 <code class="docutils literal notranslate"><span class="pre">&lt;budget_amount&gt;</span></code> specifies the amount for the associated budget type.</p>
@@ -317,7 +346,7 @@ the train job will train models associated with the task</li>
 <td><strong>Description</strong></td>
 </tr>
 <tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">MODEL_TRIAL_COUNT</span></code></td>
-<td>Target number of trials, per model, to run</td>
+<td>Target number of trials to run</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">ENABLE_GPU</span></code></td>
 <td>Whether model training should run on GPU (0 or 1), if supported</td>
@@ -335,12 +364,36 @@ the train job will train models associated with the task</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>email</strong> (<em>str</em>) – The new user’s email</li>
 <li><strong>password</strong> (<em>str</em>) – The new user’s password</li>
 <li><strong>user_type</strong> (<a class="reference internal" href="rafiki.constants.html#rafiki.constants.UserType" title="rafiki.constants.UserType"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.constants.UserType</span></code></a>) – The new user’s type</li>
 </ul>
 </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Created user as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.create_users">
+<code class="descname">create_users</code><span class="sig-paren">(</span><em>csv_file_path</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.create_users"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_users" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates multiple Rafiki users.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>csv_file_path</strong> (<em>str</em>) – Path to a single csv file containing users to seed</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Created users as list of dictionaries</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any][]</td>
 </tr>
 </tbody>
 </table>
@@ -355,6 +408,34 @@ the train job will train models associated with the task</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>advisor_id</strong> (<em>str</em>) – ID of target advisor</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Deleted advisor as dictionary</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.download_model_file">
+<code class="descname">download_model_file</code><span class="sig-paren">(</span><em>name</em>, <em>model_file_path</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.download_model_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.download_model_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Downloads the Python script containing the model’s class to the local filesystem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<em>str</em>) – Name of model</li>
+<li><strong>model_file_path</strong> (<em>str</em>) – Absolute/relative path to save the Python script to</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Details of model as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -376,10 +457,10 @@ Additionally returns another proposal of knobs after ingesting feedback.</p>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first">dict[&lt;knob_name&gt;, &lt;knob_value&gt;]</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Knobs as <cite>dict[&lt;knob_name&gt;, &lt;knob_value&gt;]</cite></p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Knobs as <cite>dict[&lt;knob_name&gt;, &lt;knob_value&gt;]</cite></p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
 </td>
 </tr>
 </tbody>
@@ -398,24 +479,32 @@ Additionally returns another proposal of knobs after ingesting feedback.</p>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Knobs as <cite>dict[&lt;knob_name&gt;, &lt;knob_value&gt;]</cite></td>
 </tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any]</td>
+</tr>
 </tbody>
 </table>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.client.Client.get_best_trials_of_train_job">
-<code class="descname">get_best_trials_of_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em>, <em>max_count=3</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_best_trials_of_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_best_trials_of_train_job" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_best_trials_of_train_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em>, <em>max_count=2</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_best_trials_of_train_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_best_trials_of_train_job" title="Permalink to this definition">¶</a></dt>
 <dd><p>Lists the best scoring trials of the train job identified by an app and an app version,
 ordered by descending score.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>app</strong> (<em>str</em>) – Name of the app</li>
 <li><strong>app_version</strong> (<em>int</em>) – Version of the app (-1 for latest version)</li>
 <li><strong>max_count</strong> (<em>int</em>) – Maximum number of trials to return</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Details of trials as list of dictionaries</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any][]</p>
 </td>
 </tr>
 </tbody>
@@ -430,7 +519,9 @@ ordered by descending score.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Dictionary of shape <cite>{ id, user_type }</cite>, or <cite>None</cite> if client is not logged in</td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Current user as dictionary, or <cite>None</cite> if client is not logged in</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any]</td>
 </tr>
 </tbody>
 </table>
@@ -446,6 +537,10 @@ ordered by descending score.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>user_id</strong> (<em>str</em>) – ID of the user</td>
 </tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of inference jobs as list of dictionaries</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any][]</td>
+</tr>
 </tbody>
 </table>
 </dd></dl>
@@ -460,6 +555,28 @@ ordered by descending score.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>app</strong> (<em>str</em>) – Name of the app</td>
 </tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of inference jobs as list of dictionaries</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any][]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_model">
+<code class="descname">get_model</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves details of a single model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> (<em>str</em>) – Name of model</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of model as dictionary</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any]</td>
+</tr>
 </tbody>
 </table>
 </dd></dl>
@@ -468,6 +585,18 @@ ordered by descending score.</p>
 <dt id="rafiki.client.Client.get_models">
 <code class="descname">get_models</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_models"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_models" title="Permalink to this definition">¶</a></dt>
 <dd><p>Lists all models on Rafiki.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>access_right</strong> (<em>str</em>) – Model access right.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of models as list of dictionaries</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any][]</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -479,6 +608,10 @@ ordered by descending score.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>task</strong> (<em>str</em>) – Task name</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of models as list of dictionaries</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any][]</td>
 </tr>
 </tbody>
 </table>
@@ -493,10 +626,16 @@ including workers’ details.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>app</strong> (<em>str</em>) – Name of the app</li>
 <li><strong>app_version</strong> (<em>int</em>) – Version of the app (-1 for latest version)</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Details of inference job as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
 </td>
 </tr>
 </tbody>
@@ -512,10 +651,16 @@ including workers’ details.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>app</strong> (<em>str</em>) – Name of the app</li>
 <li><strong>app_version</strong> (<em>int</em>) – Version of the app (-1 for latest version)</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Details of train job as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
 </td>
 </tr>
 </tbody>
@@ -532,6 +677,10 @@ including workers’ details.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>user_id</strong> (<em>str</em>) – ID of the user</td>
 </tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of train jobs as list of dictionaries</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any][]</td>
+</tr>
 </tbody>
 </table>
 </dd></dl>
@@ -545,6 +694,10 @@ including workers’ details.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>app</strong> (<em>str</em>) – Name of the app</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of train jobs as list of dictionaries</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any][]</td>
 </tr>
 </tbody>
 </table>
@@ -560,6 +713,10 @@ including workers’ details.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>trial_id</strong> (<em>str</em>) – ID of trial</td>
 </tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Details of trial as dictionary</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any]</td>
+</tr>
 </tbody>
 </table>
 </dd></dl>
@@ -574,6 +731,28 @@ including workers’ details.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>trial_id</strong> (<em>str</em>) – ID of trial</td>
 </tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Logs of trial as dictionary</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.get_trial_parameters">
+<code class="descname">get_trial_parameters</code><span class="sig-paren">(</span><em>trial_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.get_trial_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.get_trial_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets parameters of the model associated with the trial.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>trial_id</strong> (<em>str</em>) – ID of trial</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Parameters of the <em>trained</em> model associated with the trial</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict[str, any]</td>
+</tr>
 </tbody>
 </table>
 </dd></dl>
@@ -587,10 +766,41 @@ ordered by when the trial started.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>app</strong> (<em>str</em>) – Name of the app</li>
 <li><strong>app_version</strong> (<em>int</em>) – Version of the app (-1 for latest version)</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Details of trials as list of dictionaries</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any][]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.client.Client.load_trial_model">
+<code class="descname">load_trial_model</code><span class="sig-paren">(</span><em>trial_id</em>, <em>ModelClass</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.load_trial_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.load_trial_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads an instance of a trial’s model with the trial’s knobs &amp; parameters.</p>
+<p>Before this, you must have the trial’s model class file already in your local filesystem,
+the dependencies of the model must have been installed separately, and the model class must have been 
+imported and passed into this method.</p>
+<p>Wraps <a class="reference internal" href="#rafiki.client.Client.get_trial_parameters" title="rafiki.client.Client.get_trial_parameters"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_trial_parameters()</span></code></a> and <a class="reference internal" href="#rafiki.client.Client.get_trial" title="rafiki.client.Client.get_trial"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_trial()</span></code></a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>trial_id</strong> (<em>str</em>) – ID of trial</li>
+<li><strong>ModelClass</strong> (<em>class</em>) – model class that conincides with the trial’s model class</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A <em>trained</em> model instance of <code class="docutils literal notranslate"><span class="pre">ModelClass</span></code>, loaded with the trial’s knobs and parameters</p>
 </td>
 </tr>
 </tbody>
@@ -607,10 +817,16 @@ Model developers can create and list models.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>email</strong> (<em>str</em>) – User’s email</li>
 <li><strong>password</strong> (<em>str</em>) – User’s password</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Logged-in user as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
 </td>
 </tr>
 </tbody>
@@ -631,10 +847,16 @@ Model developers can create and list models.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>app</strong> (<em>str</em>) – Name of the app</li>
 <li><strong>app_version</strong> (<em>int</em>) – Version of the app (-1 for latest version)</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Stopped inference job as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
 </td>
 </tr>
 </tbody>
@@ -650,20 +872,20 @@ Otherwise, the train job should stop by itself when its budget is reached.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>app</strong> (<em>str</em>) – Name of the app</li>
 <li><strong>app_version</strong> (<em>int</em>) – Version of the app (-1 for latest version)</li>
 </ul>
 </td>
 </tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Stopped train job as dictionary</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict[str, any]</p>
+</td>
+</tr>
 </tbody>
 </table>
-</dd></dl>
-
-<dl class="method">
-<dt id="rafiki.client.Client.stop_train_job_worker">
-<code class="descname">stop_train_job_worker</code><span class="sig-paren">(</span><em>service_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.stop_train_job_worker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.stop_train_job_worker" title="Permalink to this definition">¶</a></dt>
-<dd><p>Rafiki-internal method</p>
 </dd></dl>
 
 </dd></dl>

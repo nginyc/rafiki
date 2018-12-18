@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Quick Start (Rafiki Admins) &mdash; Rafiki  documentation</title>
+  <title>Quick Start (Admins) &mdash; Rafiki  documentation</title>
   
 
   
@@ -58,7 +58,7 @@
             
             
               <div class="version">
-                0.0.8
+                0.0.9
               </div>
             
           
@@ -88,9 +88,9 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html">Quick Start (Model Developers)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html">Quick Start (Application Developers)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html">Quick Start (Application Users)</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Quick Start (Rafiki Admins)</a><ul>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Quick Start (Admins)</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#installation">Installation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#initializing-the-client">Initializing the Client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#initializing-the-client">Initializing the client</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#creating-users">Creating users</a></li>
 </ul>
 </li>
@@ -149,7 +149,7 @@
         
           <li><a href="index.html">User Guide</a> &raquo;</li>
         
-      <li>Quick Start (Rafiki Admins)</li>
+      <li>Quick Start (Admins)</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -168,19 +168,24 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="quick-start-rafiki-admins">
-<h1><a class="toc-backref" href="#id1">Quick Start (Rafiki Admins)</a><a class="headerlink" href="#quick-start-rafiki-admins" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="quick-start-admins">
+<h1><a class="toc-backref" href="#id1">Quick Start (Admins)</a><a class="headerlink" href="#quick-start-admins" title="Permalink to this headline">¶</a></h1>
 <div class="contents topic" id="table-of-contents">
 <p class="topic-title first">Table of Contents</p>
 <ul class="simple">
-<li><a class="reference internal" href="#quick-start-rafiki-admins" id="id1">Quick Start (Rafiki Admins)</a><ul>
+<li><a class="reference internal" href="#quick-start-admins" id="id1">Quick Start (Admins)</a><ul>
 <li><a class="reference internal" href="#installation" id="id2">Installation</a></li>
-<li><a class="reference internal" href="#initializing-the-client" id="id3">Initializing the Client</a></li>
+<li><a class="reference internal" href="#initializing-the-client" id="id3">Initializing the client</a></li>
 <li><a class="reference internal" href="#creating-users" id="id4">Creating users</a></li>
 </ul>
 </li>
 </ul>
 </div>
+<p>As an Admin, you can manage users, manage models, and manage train &amp; inference jobs on Rafiki.</p>
+<p>This quickstart only highlights the key methods available to manage users.
+To learn about how to manage models, go to <a class="reference internal" href="quickstart-model-developers.html#quickstart-model-developers"><span class="std std-ref">Quick Start (Model Developers)</span></a>,
+To learn about how to manage train &amp; inference jobs, go to <a class="reference internal" href="quickstart-app-developers.html#quickstart-app-developers"><span class="std std-ref">Quick Start (Application Developers)</span></a>,
+To learn more about what you can do on Rafiki, explore the methods of <a class="reference internal" href="../python/rafiki.client.Client.html#rafiki.client.Client" title="rafiki.client.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.client.Client</span></code></a>.</p>
 <p>We assume that you have access to a running instance of <em>Rafiki Admin</em> at <code class="docutils literal notranslate"><span class="pre">&lt;rafiki_host&gt;:&lt;admin_port&gt;</span></code>
 and <em>Rafiki Admin Web</em> at <code class="docutils literal notranslate"><span class="pre">&lt;rafiki_host&gt;:&lt;admin_web_port&gt;</span></code>.</p>
 <div class="section" id="installation">
@@ -207,7 +212,7 @@ and <em>Rafiki Admin Web</em> at <code class="docutils literal notranslate"><spa
 </ol>
 </div>
 <div class="section" id="initializing-the-client">
-<h2><a class="toc-backref" href="#id3">Initializing the Client</a><a class="headerlink" href="#initializing-the-client" title="Permalink to this headline">¶</a></h2>
+<h2><a class="toc-backref" href="#id3">Initializing the client</a><a class="headerlink" href="#initializing-the-client" title="Permalink to this headline">¶</a></h2>
 <p>Example:</p>
 <blockquote>
 <div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">rafiki.client</span> <span class="kn">import</span> <span class="n">Client</span>

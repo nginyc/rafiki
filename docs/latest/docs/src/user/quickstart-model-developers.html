@@ -58,7 +58,7 @@
             
             
               <div class="version">
-                0.0.8
+                0.0.9
               </div>
             
           
@@ -86,15 +86,15 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">User Guide</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Quick Start (Model Developers)</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#installing-the-client">Installing the Client</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#initializing-the-client">Initializing the Client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#installing-the-client">Installing the client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#initializing-the-client">Initializing the client</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#creating-models">Creating models</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#listing-models-by-task">Listing models by task</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html">Quick Start (Application Developers)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html">Quick Start (Application Users)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html">Quick Start (Rafiki Admins)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html">Quick Start (Admins)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="using-admin-web.html">Using Rafiki’s Admin Web</a></li>
 <li class="toctree-l2"><a class="reference internal" href="creating-models.html">Creating Models</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tasks.html">Supported Tasks</a></li>
@@ -175,18 +175,22 @@
 <p class="topic-title first">Table of Contents</p>
 <ul class="simple">
 <li><a class="reference internal" href="#quick-start-model-developers" id="id1">Quick Start (Model Developers)</a><ul>
-<li><a class="reference internal" href="#installing-the-client" id="id2">Installing the Client</a></li>
-<li><a class="reference internal" href="#initializing-the-client" id="id3">Initializing the Client</a></li>
+<li><a class="reference internal" href="#installing-the-client" id="id2">Installing the client</a></li>
+<li><a class="reference internal" href="#initializing-the-client" id="id3">Initializing the client</a></li>
 <li><a class="reference internal" href="#creating-models" id="id4">Creating models</a></li>
 <li><a class="reference internal" href="#listing-models-by-task" id="id5">Listing models by task</a></li>
 </ul>
 </li>
 </ul>
 </div>
+<p>As a Model Developer, you can manage models and manage train &amp; inference jobs on Rafiki.</p>
+<p>This quickstart only highlights the key methods available to manage models.
+To learn about how to manage train &amp; inference jobs, go to <a class="reference internal" href="quickstart-app-developers.html#quickstart-app-developers"><span class="std std-ref">Quick Start (Application Developers)</span></a>.
+To learn more about what you can do on Rafiki, explore the methods of <a class="reference internal" href="../python/rafiki.client.Client.html#rafiki.client.Client" title="rafiki.client.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.client.Client</span></code></a>.</p>
 <p>We assume that you have access to a running instance of <em>Rafiki Admin</em> at <code class="docutils literal notranslate"><span class="pre">&lt;rafiki_host&gt;:&lt;admin_port&gt;</span></code>
 and <em>Rafiki Admin Web</em> at <code class="docutils literal notranslate"><span class="pre">&lt;rafiki_host&gt;:&lt;admin_web_port&gt;</span></code>.</p>
 <div class="section" id="installing-the-client">
-<h2><a class="toc-backref" href="#id2">Installing the Client</a><a class="headerlink" href="#installing-the-client" title="Permalink to this headline">¶</a></h2>
+<h2><a class="toc-backref" href="#id2">Installing the client</a><a class="headerlink" href="#installing-the-client" title="Permalink to this headline">¶</a></h2>
 <ol class="arabic">
 <li><p class="first">Install Python 3.6</p>
 </li>
@@ -209,7 +213,7 @@ and <em>Rafiki Admin Web</em> at <code class="docutils literal notranslate"><spa
 </ol>
 </div>
 <div class="section" id="initializing-the-client">
-<h2><a class="toc-backref" href="#id3">Initializing the Client</a><a class="headerlink" href="#initializing-the-client" title="Permalink to this headline">¶</a></h2>
+<h2><a class="toc-backref" href="#id3">Initializing the client</a><a class="headerlink" href="#initializing-the-client" title="Permalink to this headline">¶</a></h2>
 <p>Example:</p>
 <blockquote>
 <div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">rafiki.client</span> <span class="kn">import</span> <span class="n">Client</span>
@@ -263,20 +267,22 @@ and refer to <a class="reference internal" href="creating-models.html#creating-m
 </pre></div>
 </div>
 <p>Output:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;datetime_created&#39;</span><span class="p">:</span> <span class="s1">&#39;Sun, 18 Nov 2018 09:56:03 GMT&#39;</span><span class="p">,</span>
-<span class="s1">&#39;dependencies&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;tensorflow&#39;</span><span class="p">:</span> <span class="s1">&#39;1.12.0&#39;</span><span class="p">},</span>
-<span class="s1">&#39;docker_image&#39;</span><span class="p">:</span> <span class="s1">&#39;rafikiai/rafiki_worker:0.0.7&#39;</span><span class="p">,</span>
-<span class="s1">&#39;model_class&#39;</span><span class="p">:</span> <span class="s1">&#39;TfFeedForward&#39;</span><span class="p">,</span>
-<span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TfFeedForward&#39;</span><span class="p">,</span>
-<span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="s1">&#39;IMAGE_CLASSIFICATION&#39;</span><span class="p">,</span>
-<span class="s1">&#39;user_id&#39;</span><span class="p">:</span> <span class="s1">&#39;9fdefa23-c838-4c56-8eb5-f625ff4245ab&#39;</span><span class="p">},</span>
-<span class="p">{</span><span class="s1">&#39;datetime_created&#39;</span><span class="p">:</span> <span class="s1">&#39;Sun, 18 Nov 2018 09:56:04 GMT&#39;</span><span class="p">,</span>
-<span class="s1">&#39;dependencies&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;scikit-learn&#39;</span><span class="p">:</span> <span class="s1">&#39;0.20.0&#39;</span><span class="p">},</span>
-<span class="s1">&#39;docker_image&#39;</span><span class="p">:</span> <span class="s1">&#39;rafikiai/rafiki_worker:0.0.7&#39;</span><span class="p">,</span>
-<span class="s1">&#39;model_class&#39;</span><span class="p">:</span> <span class="s1">&#39;SkDt&#39;</span><span class="p">,</span>
-<span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;SkDt&#39;</span><span class="p">,</span>
-<span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="s1">&#39;IMAGE_CLASSIFICATION&#39;</span><span class="p">,</span>
-<span class="s1">&#39;user_id&#39;</span><span class="p">:</span> <span class="s1">&#39;9fdefa23-c838-4c56-8eb5-f625ff4245ab&#39;</span><span class="p">}]</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;access_right&#39;</span><span class="p">:</span> <span class="s1">&#39;PRIVATE&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;datetime_created&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Dec 2018 07:06:03 GMT&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;dependencies&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;tensorflow&#39;</span><span class="p">:</span> <span class="s1">&#39;1.12.0&#39;</span><span class="p">},</span>
+ <span class="s1">&#39;docker_image&#39;</span><span class="p">:</span> <span class="s1">&#39;rafikiai/rafiki_worker:0.0.9&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;model_class&#39;</span><span class="p">:</span> <span class="s1">&#39;TfFeedForward&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TfFeedForward&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="s1">&#39;IMAGE_CLASSIFICATION&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;user_id&#39;</span><span class="p">:</span> <span class="s1">&#39;fb5671f1-c673-40e7-b53a-9208eb1ccc50&#39;</span><span class="p">},</span>
+ <span class="p">{</span><span class="s1">&#39;access_right&#39;</span><span class="p">:</span> <span class="s1">&#39;PRIVATE&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;datetime_created&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Dec 2018 07:06:03 GMT&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;dependencies&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;scikit-learn&#39;</span><span class="p">:</span> <span class="s1">&#39;0.20.0&#39;</span><span class="p">},</span>
+ <span class="s1">&#39;docker_image&#39;</span><span class="p">:</span> <span class="s1">&#39;rafikiai/rafiki_worker:0.0.9&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;model_class&#39;</span><span class="p">:</span> <span class="s1">&#39;SkDt&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;SkDt&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="s1">&#39;IMAGE_CLASSIFICATION&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;user_id&#39;</span><span class="p">:</span> <span class="s1">&#39;fb5671f1-c673-40e7-b53a-9208eb1ccc50&#39;</span><span class="p">}]</span>
 </pre></div>
 </div>
 </div></blockquote>

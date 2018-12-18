@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.0.8
+                0.0.9
               </div>
             
           
@@ -265,7 +265,11 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">log_line</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{}</span>
+            <span class="c1"># An unserializable log line is a message</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">LogType</span><span class="o">.</span><span class="n">MESSAGE</span><span class="p">,</span>
+                <span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="n">log_line</span>
+            <span class="p">}</span>
 
     <span class="nd">@staticmethod</span>
     <span class="c1"># Parses logs into (messages, metrics, plots) for visualization.</span>
@@ -277,23 +281,21 @@
         <span class="k">for</span> <span class="n">log_line</span> <span class="ow">in</span> <span class="n">log_lines</span><span class="p">:</span>
             <span class="n">log_dict</span> <span class="o">=</span> <span class="n">ModelLogger</span><span class="o">.</span><span class="n">parse_log_line</span><span class="p">(</span><span class="n">log_line</span><span class="p">)</span>            
 
-            <span class="k">if</span> <span class="s1">&#39;time&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">log_dict</span> <span class="ow">or</span> <span class="s1">&#39;type&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">log_dict</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;type&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">log_dict</span><span class="p">:</span>
                 <span class="k">continue</span>
 
-            <span class="n">log_datetime</span> <span class="o">=</span> <span class="n">log_dict</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span>
             <span class="n">log_type</span> <span class="o">=</span> <span class="n">log_dict</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span>
-            <span class="k">del</span> <span class="n">log_dict</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span>
             <span class="k">del</span> <span class="n">log_dict</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span>
 
             <span class="k">if</span> <span class="n">log_type</span> <span class="o">==</span> <span class="n">LogType</span><span class="o">.</span><span class="n">MESSAGE</span><span class="p">:</span>
                 <span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
-                    <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">log_datetime</span><span class="p">,</span>
+                    <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">log_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">),</span>
                     <span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="n">log_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">)</span>
                 <span class="p">})</span>
 
             <span class="k">elif</span> <span class="n">log_type</span> <span class="o">==</span> <span class="n">LogType</span><span class="o">.</span><span class="n">METRICS</span><span class="p">:</span>
                 <span class="n">metrics</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
-                    <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">log_datetime</span><span class="p">,</span>
+                    <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">log_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">),</span>
                     <span class="o">**</span><span class="n">log_dict</span>
                 <span class="p">})</span>
 
@@ -301,7 +303,7 @@
                 <span class="n">plots</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
                     <span class="o">**</span><span class="n">log_dict</span>
                 <span class="p">})</span>
-
+            
         <span class="k">return</span> <span class="p">(</span><span class="n">messages</span><span class="p">,</span> <span class="n">metrics</span><span class="p">,</span> <span class="n">plots</span><span class="p">)</span></div>
 
 <span class="k">class</span> <span class="nc">ModelLoggerDebugHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Handler</span><span class="p">):</span>
