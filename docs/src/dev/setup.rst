@@ -112,5 +112,5 @@ Troubleshooting
 
 Q: There seems to be connectivity issues amongst containers across nodes!
 
-A: Ensure that containers are able to communicate with one another through the Docker Swarm overlay network:
-   https://docs.docker.com/network/network-tutorial-overlay/#use-an-overlay-network-for-standalone-containers
+Ensure that containers are able to communicate with one another through the Docker Swarm overlay network:
+https://docs.docker.com/network/network-tutorial-overlay/#use-an-overlay-network-for-standalone-containers
