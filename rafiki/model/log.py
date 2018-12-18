@@ -116,7 +116,11 @@ class ModelLogger():
         try:
             return json.loads(log_line)
         except ValueError:
-            return {}
+            # An unserializable log line is a message
+            return {
+                'type': LogType.MESSAGE,
+                'message': log_line
+            }
 
     @staticmethod
     # Parses logs into (messages, metrics, plots) for visualization.
@@ -128,23 +132,21 @@ class ModelLogger():
         for log_line in log_lines:
             log_dict = ModelLogger.parse_log_line(log_line)            
 
-            if 'time' not in log_dict or 'type' not in log_dict:
+            if 'type' not in log_dict:
                 continue
 
-            log_datetime = log_dict['time']
             log_type = log_dict['type']
-            del log_dict['time']
             del log_dict['type']
 
             if log_type == LogType.MESSAGE:
                 messages.append({
-                    'time': log_datetime,
+                    'time': log_dict.get('time'),
                     'message': log_dict.get('message')
                 })
 
             elif log_type == LogType.METRICS:
                 metrics.append({
-                    'time': log_datetime,
+                    'time': log_dict.get('time'),
                     **log_dict
                 })
 
@@ -152,7 +154,7 @@ class ModelLogger():
                 plots.append({
                     **log_dict
                 })
-
+            
         return (messages, metrics, plots)
 
 class ModelLoggerDebugHandler(logging.Handler):

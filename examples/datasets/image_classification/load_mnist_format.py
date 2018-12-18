@@ -10,12 +10,10 @@ from tqdm import tqdm
 from itertools import chain
 from PIL import Image
 
-from rafiki.model import ModelUtils
-
-utils = ModelUtils()
+from rafiki.model import dataset_utils
 
 def load(train_images_url, train_labels_url, test_images_url, test_labels_url, label_to_name, \
-        out_train_dataset_path, out_test_dataset_path, out_meta_csv_path):
+        out_train_dataset_path, out_test_dataset_path, out_meta_csv_path, limit=None):
     '''
         Loads and converts an image dataset of the MNIST format to the DatasetType `IMAGE_FILES`.
         Refer to http://yann.lecun.com/exdb/mnist/ for the MNIST dataset format for.
@@ -28,17 +26,18 @@ def load(train_images_url, train_labels_url, test_images_url, test_labels_url, l
         :param str out_train_dataset_path: Path to save the output train dataset file
         :param str out_test_dataset_path: Path to save the output test dataset file
         :param str out_meta_csv_path: Path to save the output dataset metadata .CSV file
+        :param int limit: Maximum number of train & test samples (for purposes of testing)
     '''
 
     print('Downloading files...')
-    train_images_file_path = utils.download_dataset_from_uri(train_images_url)
-    train_labels_file_path = utils.download_dataset_from_uri(train_labels_url)
-    test_images_file_path = utils.download_dataset_from_uri(test_images_url)
-    test_labels_file_path = utils.download_dataset_from_uri(test_labels_url)
+    train_images_file_path = dataset_utils.download_dataset_from_uri(train_images_url)
+    train_labels_file_path = dataset_utils.download_dataset_from_uri(train_labels_url)
+    test_images_file_path = dataset_utils.download_dataset_from_uri(test_images_url)
+    test_labels_file_path = dataset_utils.download_dataset_from_uri(test_labels_url)
 
     print('Loading datasets into memory...')
-    (train_images, train_labels) = _load_dataset_from_files(train_images_file_path, train_labels_file_path)
-    (test_images, test_labels) = _load_dataset_from_files(test_images_file_path, test_labels_file_path)
+    (train_images, train_labels) = _load_dataset_from_files(train_images_file_path, train_labels_file_path, limit=limit)
+    (test_images, test_labels) = _load_dataset_from_files(test_images_file_path, test_labels_file_path, limit=limit)
 
     print('Converting and writing datasets...')
 
@@ -84,13 +83,17 @@ def _write_dataset(images, labels, label_to_index, out_dataset_path):
         out_path = shutil.make_archive(out_dataset_path, 'zip', d)
         os.rename(out_path, out_dataset_path) # Remove additional trailing `.zip`
 
-def _load_dataset_from_files(images_file_path, labels_file_path):
+def _load_dataset_from_files(images_file_path, labels_file_path, limit=None):
     with gzip.open(labels_file_path, 'rb') as lbpath:
         labels = np.frombuffer(lbpath.read(), dtype=np.uint8, offset=8)
 
     with gzip.open(images_file_path, 'rb') as imgpath:
         images = np.frombuffer(imgpath.read(), dtype=np.uint8, offset=16).reshape(len(labels), 28, 28)
         np.reshape(images, (len(labels), 28, 28))
+
+    if limit is not None:
+        images = images[:limit]
+        labels = labels[:limit]
 
     return (images, labels)
 

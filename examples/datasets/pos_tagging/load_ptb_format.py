@@ -10,9 +10,7 @@ import shutil
 from tqdm import tqdm
 import zipfile
 
-from rafiki.model import ModelUtils
-
-utils = ModelUtils()
+from rafiki.model import dataset_utils
 
 def load(dataset_url, out_train_dataset_path, out_test_dataset_path, out_meta_tsv_path):
     '''
@@ -26,7 +24,7 @@ def load(dataset_url, out_train_dataset_path, out_test_dataset_path, out_meta_ts
     '''
 
     print('Downloading files...')
-    dataset_path = utils.download_dataset_from_uri(dataset_url)
+    dataset_path = dataset_utils.download_dataset_from_uri(dataset_url)
 
     print('Loading dataset and writing to output dataset files...')
     _convert_dataset(dataset_path, out_meta_tsv_path, \

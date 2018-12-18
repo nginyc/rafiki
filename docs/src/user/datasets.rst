@@ -7,7 +7,9 @@ Dataset URIs must have the protocols of either ``http`` or ``https``.
 
 .. note::
     
-    You can alternatively use relative or absolute filepaths as dataset URIs, only if you have deployed the full Rafiki stack on your own machine.
+    You can alternatively use relative (e.g. ``data/dataset.zip``) filepaths as dataset URIs, 
+    only if you have deployed the full Rafiki stack on your own machine. This filepath is relative to
+    the root of the project directory.
 
 .. note::
 
