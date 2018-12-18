@@ -100,6 +100,15 @@ class TrainWorker(object):
                     self._db.mark_trial_as_complete(trial, score, parameters)
 
                 self._trial_id = None
+
+                # Report results of trial to advisor
+                try:
+                    logger.info('Sending result of trials\' knobs to advisor...')
+                    self._feedback_to_advisor(advisor_id, knobs, score)
+                except Exception:
+                    logger.error('Error while sending result of proposal to advisor:')
+                    logger.error(traceback.format_exc())
+
             except Exception:
                 logger.error('Error while running trial:')
                 logger.error(traceback.format_exc())
@@ -110,14 +119,7 @@ class TrainWorker(object):
                     self._db.mark_trial_as_errored(trial)
 
                 self._trial_id = None
-
-            # Report results of trial to advisor
-            try:
-                logger.info('Sending result of trials\' knobs to advisor...')
-                self._feedback_to_advisor(advisor_id, knobs, score)
-            except Exception:
-                logger.error('Error while sending result of proposal to advisor:')
-                logger.error(traceback.format_exc())
+                break # Exit worker upon trial error
             
     def stop(self):
         # If worker is currently running a trial, mark it has terminated
