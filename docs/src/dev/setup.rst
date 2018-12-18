@@ -53,7 +53,7 @@ To scale Rafiki horizontally, add more nodes to the master node's Docker Swarm:
    allow TCP & UDP traffic on ports 2377, 7946 and 4789 
    <https://docs.docker.com/network/overlay/#operations-for-all-overlay-networks>`_ 
 
-4. Start Rafiki with `bash scripts/start.sh`
+4. Start Rafiki with ``bash scripts/start.sh``
 
 5. For every worker node, have the node `join the master node's Docker Swarm <https://docs.docker.com/engine/swarm/join-nodes/>`_
 
