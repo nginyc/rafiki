@@ -107,10 +107,14 @@ class ServicesManager(object):
         # Create a worker service for each sub train job, wait for them to be running, then mark them as running
         sub_train_job_to_replicas = self._compute_train_worker_replicas_for_sub_train_jobs(sub_train_jobs)
         for (sub_train_job, replicas) in sub_train_job_to_replicas.items():
-            service = self._create_train_job_worker(train_job, sub_train_job, replicas)
-            self._wait_until_services_running([service])
-            self._db.mark_sub_train_job_as_running(sub_train_job)
-            self._db.commit()
+            try:
+                service = self._create_train_job_worker(train_job, sub_train_job, replicas)
+                self._wait_until_services_running([service])
+                self._db.mark_sub_train_job_as_running(sub_train_job)
+                self._db.commit()
+            except InvalidServiceRequest:
+                self._db.mark_sub_train_job_as_stopped(sub_train_job)
+                self._db.commit()
 
         return train_job
 

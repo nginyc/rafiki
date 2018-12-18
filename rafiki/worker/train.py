@@ -32,6 +32,7 @@ class TrainWorker(object):
         logger.info('Starting train worker for service of ID "{}"...' \
             .format(self._service_id))
             
+        # TODO: Break up crazily long & unreadable method
         advisor_id = None
         while True:
             with self._db:
