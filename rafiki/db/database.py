@@ -349,11 +349,10 @@ class Database(object):
     # Trials
     ####################################
 
-    def create_trial(self, sub_train_job_id, model_id, knobs):
+    def create_trial(self, sub_train_job_id, model_id):
         trial = Trial(
             sub_train_job_id=sub_train_job_id,
-            model_id=model_id,
-            knobs=knobs
+            model_id=model_id
         )
         self._session.add(trial)
         return trial
@@ -398,6 +397,12 @@ class Database(object):
             .order_by(Trial.datetime_started.desc())
 
         return trials
+
+    def mark_trial_as_running(self, trial, knobs):
+        trial.status = TrialStatus.RUNNING
+        trial.knobs = knobs
+        self._session.add(trial)
+        return trial
 
     def mark_trial_as_errored(self, trial):
         trial.status = TrialStatus.ERRORED

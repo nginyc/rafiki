@@ -100,11 +100,11 @@ class Trial(Base):
     __tablename__ = 'trial'
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    knobs = Column(JSON, nullable=False)
+    sub_train_job_id = Column(String, ForeignKey('sub_train_job.id'), nullable=False)
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
-    sub_train_job_id = Column(String, ForeignKey('sub_train_job.id'), nullable=False)
-    status = Column(String, nullable=False, default=TrialStatus.RUNNING)
+    status = Column(String, nullable=False, default=TrialStatus.STARTED)
+    knobs = Column(JSON, default=None)
     score = Column(Float, default=0)
     parameters = Column(Binary, default=None)
     datetime_stopped = Column(DateTime, default=None)

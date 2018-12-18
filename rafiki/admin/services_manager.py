@@ -104,21 +104,13 @@ class ServicesManager(object):
         train_job = self._db.get_train_job(train_job_id)
         sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(train_job_id)
         
-        # Create a worker service for each model
+        # Create a worker service for each sub train job, wait for them to be running, then mark them as running
         sub_train_job_to_replicas = self._compute_train_worker_replicas_for_sub_train_jobs(sub_train_jobs)
-        worker_services = []
         for (sub_train_job, replicas) in sub_train_job_to_replicas.items():
             service = self._create_train_job_worker(train_job, sub_train_job, replicas)
-            worker_services.append(service)
-
-        # Ensure that all services are running
-        self._wait_until_services_running(worker_services)
-
-        # Mark sub train job as running
-        for sub_train_job in sub_train_jobs:
+            self._wait_until_services_running([service])
             self._db.mark_sub_train_job_as_running(sub_train_job)
-            
-        self._db.commit()
+            self._db.commit()
 
         return train_job
 
