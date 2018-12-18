@@ -78,12 +78,9 @@ class Admin(object):
         with open(temp_csv_file, 'rt', encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             reader.fieldnames = [name.lower() for name in reader.fieldnames]
-            line_number = 0
             for row in reader:
-                if line_number > 0:
-                    user = self._create_user(row['email'], row['password'], row['user_type'])
-                    users.append(user)
-                line_number += 1
+                user = self._create_user(row['email'], row['password'], row['user_type'])
+                users.append(user)
         os.remove(temp_csv_file)
         return [
             {
