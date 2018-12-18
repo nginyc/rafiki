@@ -155,8 +155,9 @@ class TrainWorker(object):
         # Evaluate model
         score = model_inst.evaluate(test_dataset_uri)
 
-        # Remove log handler for trial
+        # Remove log handlers from loggers for this trial
         root_logger.removeHandler(log_handler)
+        py_model_logger.removeHandler(log_handler)
 
         # Dump and pickle model parameters
         parameters = model_inst.dump_parameters()
