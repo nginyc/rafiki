@@ -316,7 +316,7 @@ interface TrialMetric {
 }
 
 interface TrialMessage {
-  time: Date;
+  time?: Date;
   message: string;
 }
 

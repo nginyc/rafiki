@@ -151,8 +151,8 @@ class TrialDetailPage extends React.Component<Props> {
           <List>
             {Object.values(logs.messages).map((x, i) => {
               return (
-                <ListItem key={x.time + x.message}>
-                  <ListItemText primary={x.message} secondary={x.time.toTimeString()} />
+                <ListItem key={(x.time || '') + x.message}>
+                  <ListItemText primary={x.message} secondary={x.time ? x.time.toTimeString() : null} />
                 </ListItem>
               );
             })}
