@@ -26,6 +26,12 @@ Prerequisites: MacOS or Linux environment
 
 More instructions are available in [Rafiki's Developer Guide](https://nginyc.github.io/rafiki/docs/latest/docs/src/dev).
 
+
+## Issues
+
+Report the issues at [JIRA](https://issues.apache.org/jira/browse/SINGA) or [Github](https://github.com/nginyc/rafiki/issues)
+
+
 ## Acknowledgements
 
 The research is supported by the National Research Foundation, Prime Minister’s Office, Singapore under its National Cybersecurity R\&D Programme (Grant No. NRF2016NCR-NCR002-020), National Natural Science Foundation of China (No. 61832001), National Key Research and Development Program of China  (No. 2017YFB1201001), China Thousand Talents Program for Young Professionals (3070011 181811).
