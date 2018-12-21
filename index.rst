@@ -35,6 +35,13 @@ For *Model Developers*, they can:
 Check out :ref:`quick-setup` to deploy/develop Rafiki on your machine, and/or :ref:`quick-start` to use a deployed instance of Rafiki.
 
 
+
+Issues
+------------------------------------------------------------------
+Report the issues at [JIRA](https://issues.apache.org/jira/browse/SINGA) or [Github](https://github.com/nginyc/rafiki/issues)
+
+
+
 Acknowledgements
 ------------------------------------------------------------------
 
