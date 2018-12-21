@@ -6,7 +6,7 @@ import time
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType, BudgetType
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, \
-    TRAIN_WORKER_REPLICAS_PER_MODEL, INFERENCE_WORKER_REPLICAS_PER_TRIAL, \
+    TRAIN_WORKER_REPLICAS_PER_SUB_TRAIN_JOB, INFERENCE_WORKER_REPLICAS_PER_TRIAL, \
     INFERENCE_MAX_BEST_TRIALS, SERVICE_STATUS_WAIT
 from rafiki.container import DockerSwarmContainerManager, ServiceRequirement, InvalidServiceRequest
 from rafiki.model import parse_model_install_command
@@ -22,15 +22,37 @@ class ServicesManager(object):
         if container_manager is None: 
             container_manager = DockerSwarmContainerManager()
         
+        self._postgres_host = os.environ['POSTGRES_HOST']
+        self._postgres_port = os.environ['POSTGRES_PORT']
+        self._postgres_user = os.environ['POSTGRES_USER']
+        self._postgres_password = os.environ['POSTGRES_PASSWORD']
+        self._postgres_db = os.environ['POSTGRES_DB']
+        self._redis_host = os.environ['REDIS_HOST']
+        self._redis_port = os.environ['REDIS_PORT']
+        self._admin_host = os.environ['ADMIN_HOST']
+        self._admin_host = os.environ['ADMIN_HOST']
+        self._admin_port = os.environ['ADMIN_PORT']
+        self._advisor_host = os.environ['ADVISOR_HOST']
+        self._advisor_port = os.environ['ADVISOR_PORT']
+        self._data_workdir = os.environ['DATA_WORKDIR_PATH']
+        self._logs_workdir = os.environ['LOGS_WORKDIR_PATH']
+        self._data_docker_workdir = os.environ['DATA_DOCKER_WORKDIR_PATH']
+        self._logs_docker_workdir = os.environ['LOGS_DOCKER_WORKDIR_PATH']
         self._predictor_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_PREDICTOR'],
                                                 os.environ['RAFIKI_VERSION'])
         self._predictor_port = os.environ['PREDICTOR_PORT']
+        self._rafiki_addr = os.environ['RAFIKI_ADDR']
 
         self._db = db
         self._container_manager = container_manager
 
     def create_inference_services(self, inference_job_id):
         inference_job = self._db.get_inference_job(inference_job_id)
+
+        # Prepare all inputs for inference job deployment
+        # Throws error early to make service deployment more atomic
+        best_trials = self._get_best_trials_for_inference(inference_job)
+        trial_to_replicas = self._compute_inference_worker_replicas_for_trials(best_trials)
 
         try:
             # Create predictor
@@ -39,12 +61,11 @@ class ServicesManager(object):
             self._db.commit()
 
             # Create a worker service for each best trial of associated train job
-            best_trials = self._get_best_trials_for_inference(inference_job)
-            trial_to_replicas = self._compute_inference_worker_replicas_for_trials(best_trials)
             worker_services = []
             for (trial, replicas) in trial_to_replicas.items():
                 service = self._create_inference_job_worker(inference_job, trial, replicas)
                 worker_services.append(service)
+                self._db.commit()
 
             # Ensure that all services are running
             self._wait_until_services_running([predictor_service, *worker_services])
@@ -81,21 +102,19 @@ class ServicesManager(object):
 
     def create_train_services(self, train_job_id):
         train_job = self._db.get_train_job(train_job_id)
+        sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(train_job_id)
         
-        # Create a worker service for each model
-        models = self._db.get_models_of_task(train_job.task)
-        model_to_replicas = self._compute_train_worker_replicas_for_models(models)
-        worker_services = []
-        for (model, replicas) in model_to_replicas.items():
-            service = self._create_train_job_worker(train_job, model, replicas)
-            worker_services.append(service)
-
-        # Ensure that all services are running
-        self._wait_until_services_running(worker_services)
-
-        # Mark train job as running
-        self._db.mark_train_job_as_running(train_job)
-        self._db.commit()
+        # Create a worker service for each sub train job, wait for them to be running, then mark them as running
+        sub_train_job_to_replicas = self._compute_train_worker_replicas_for_sub_train_jobs(sub_train_jobs)
+        for (sub_train_job, replicas) in sub_train_job_to_replicas.items():
+            try:
+                service = self._create_train_job_worker(train_job, sub_train_job, replicas)
+                self._wait_until_services_running([service])
+                self._db.mark_sub_train_job_as_running(sub_train_job)
+                self._db.commit()
+            except InvalidServiceRequest:
+                self._db.mark_sub_train_job_as_stopped(sub_train_job)
+                self._db.commit()
 
         return train_job
 
@@ -119,17 +138,18 @@ class ServicesManager(object):
     ####################################
 
     def _create_inference_job_worker(self, inference_job, trial, replicas):
-        model = self._db.get_model(trial.model_id)
+        sub_train_job = self._db.get_sub_train_job(trial.sub_train_job_id)
+        model = self._db.get_model(sub_train_job.model_id)
         service_type = ServiceType.INFERENCE
         install_command = parse_model_install_command(model.dependencies, enable_gpu=False)
         environment_vars = {
-            'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
-            'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
-            'POSTGRES_USER': os.environ['POSTGRES_USER'],
-            'POSTGRES_DB': os.environ['POSTGRES_DB'],
-            'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
-            'REDIS_HOST': os.environ['REDIS_HOST'],
-            'REDIS_PORT': os.environ['REDIS_PORT'],
+            'POSTGRES_HOST': self._postgres_host,
+            'POSTGRES_PORT': self._postgres_port,
+            'POSTGRES_USER': self._postgres_user,
+            'POSTGRES_DB': self._postgres_db,
+            'POSTGRES_PASSWORD': self._postgres_password,
+            'REDIS_HOST': self._redis_host,
+            'REDIS_PORT': self._redis_port,
             'WORKER_INSTALL_COMMAND': install_command,
             'CUDA_VISIBLE_DEVICES': '-1' # Hide GPU
         }
@@ -153,13 +173,13 @@ class ServicesManager(object):
     def _create_predictor_service(self, inference_job):
         service_type = ServiceType.PREDICT
         environment_vars = {
-            'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
-            'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
-            'POSTGRES_USER': os.environ['POSTGRES_USER'],
-            'POSTGRES_DB': os.environ['POSTGRES_DB'],
-            'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
-            'REDIS_HOST': os.environ['REDIS_HOST'],
-            'REDIS_PORT': os.environ['REDIS_PORT']
+            'POSTGRES_HOST': self._postgres_host,
+            'POSTGRES_PORT': self._postgres_port,
+            'POSTGRES_USER': self._postgres_user,
+            'POSTGRES_DB': self._postgres_db,
+            'POSTGRES_PASSWORD': self._postgres_password,
+            'REDIS_HOST': self._redis_host,
+            'REDIS_PORT': self._redis_port
         }
 
         service = self._create_service(
@@ -172,20 +192,21 @@ class ServicesManager(object):
 
         return service
 
-    def _create_train_job_worker(self, train_job, model, replicas):
+    def _create_train_job_worker(self, train_job, sub_train_job, replicas):
+        model = self._db.get_model(sub_train_job.model_id)
         service_type = ServiceType.TRAIN
         enable_gpu = int(train_job.budget.get(BudgetType.ENABLE_GPU, 0)) > 0
         install_command = parse_model_install_command(model.dependencies, enable_gpu=enable_gpu)
         environment_vars = {
-            'POSTGRES_HOST': os.environ['POSTGRES_HOST'],
-            'POSTGRES_PORT': os.environ['POSTGRES_PORT'],
-            'POSTGRES_USER': os.environ['POSTGRES_USER'],
-            'POSTGRES_DB': os.environ['POSTGRES_DB'],
-            'POSTGRES_PASSWORD': os.environ['POSTGRES_PASSWORD'],
-            'ADMIN_HOST': os.environ['ADMIN_HOST'],
-            'ADMIN_PORT': os.environ['ADMIN_PORT'],
-            'ADVISOR_HOST': os.environ['ADVISOR_HOST'],
-            'ADVISOR_PORT': os.environ['ADVISOR_PORT'],
+            'POSTGRES_HOST': self._postgres_host,
+            'POSTGRES_PORT': self._postgres_port,
+            'POSTGRES_USER': self._postgres_user,
+            'POSTGRES_DB': self._postgres_db,
+            'POSTGRES_PASSWORD': self._postgres_password,
+            'ADMIN_HOST': self._admin_host,
+            'ADMIN_PORT': self._admin_port,
+            'ADVISOR_HOST': self._advisor_host,
+            'ADVISOR_PORT': self._advisor_port,
             'WORKER_INSTALL_COMMAND': install_command,
             **({'CUDA_VISIBLE_DEVICES': -1} if not enable_gpu else {}) # Hide GPU if not enabled
         }
@@ -205,7 +226,7 @@ class ServicesManager(object):
         self._db.create_train_job_worker(
             service_id=service.id,
             train_job_id=train_job.id,
-            model_id=model.id
+            sub_train_job_id=sub_train_job.id
         )
         self._db.commit()
 
@@ -214,19 +235,19 @@ class ServicesManager(object):
     def _stop_train_job_worker(self, worker):
         service = self._db.get_service(worker.service_id)
         self._stop_service(service)
-        train_job = self._db.get_train_job(worker.train_job_id)
-        self._update_train_job_status(train_job)
+        sub_train_job = self._db.get_sub_train_job(worker.sub_train_job_id)
+        self._update_sub_train_job_status(sub_train_job)
 
-    def _update_train_job_status(self, train_job):
-        workers = self._db.get_workers_of_train_job(train_job.id)
+    def _update_sub_train_job_status(self, sub_train_job):
+        workers = self._db.get_workers_of_sub_train_job(sub_train_job.id)
         services = [self._db.get_service(x.service_id) for x in workers]
         
-        # If all workers for the train job have stopped, stop train job as well
+        # If all workers for the sub train job have stopped, stop sub train job as well
         if next((
             x for x in services 
             if x.status in [ServiceStatus.RUNNING, ServiceStatus.STARTED, ServiceStatus.DEPLOYING]
         ), None) is None:
-            self._db.mark_train_job_as_complete(train_job)
+            self._db.mark_sub_train_job_as_stopped(sub_train_job)
             self._db.commit()
 
     def _stop_service(self, service):
@@ -266,15 +287,15 @@ class ServicesManager(object):
         # Pass service details as environment variables 
         environment_vars = {
             **environment_vars,
+            'LOGS_DOCKER_WORKDIR_PATH': self._logs_docker_workdir,
             'RAFIKI_SERVICE_ID': service.id,
             'RAFIKI_SERVICE_TYPE': service_type
         }
 
-        # Mount whole local to containers' work directories (for sharing of logs & data) 
-        local_workdir = os.environ['LOCAL_WORKDIR_PATH']
-        cont_workdir = os.environ['DOCKER_WORKDIR_PATH']
+        # Mount data and logs folders to containers' work directories
         mounts = {
-            local_workdir: cont_workdir
+            self._data_workdir: self._data_docker_workdir,
+            self._logs_workdir: self._logs_docker_workdir
         }
 
         # Expose container port if it exists
@@ -282,7 +303,7 @@ class ServicesManager(object):
         ext_hostname = None
         ext_port = None
         if container_port is not None:
-            ext_hostname = os.environ['RAFIKI_IP_ADDRESS']
+            ext_hostname = self._rafiki_addr
             ext_port = self._get_available_ext_port()
             publish_port = (ext_port, container_port)
 
@@ -338,17 +359,14 @@ class ServicesManager(object):
         return port
 
     def _get_best_trials_for_inference(self, inference_job):
-        best_trials = self._db.get_best_trials_of_train_job(
-            inference_job.train_job_id, 
-            max_count=INFERENCE_MAX_BEST_TRIALS
-        )
+        best_trials = self._db.get_best_trials_of_train_job(inference_job.train_job_id)
         return best_trials
 
-    def _compute_train_worker_replicas_for_models(self, models):
+    def _compute_train_worker_replicas_for_sub_train_jobs(self, sub_train_jobs):
         # TODO: Improve provisioning algorithm
         return {
-            model : TRAIN_WORKER_REPLICAS_PER_MODEL
-            for model in models
+            sub_train_job : TRAIN_WORKER_REPLICAS_PER_SUB_TRAIN_JOB
+            for sub_train_job in sub_train_jobs
         }
 
     def _compute_inference_worker_replicas_for_trials(self, trials):

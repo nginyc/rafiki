@@ -1,8 +1,13 @@
 import requests
 import json
 import pprint
+import pickle
+import os
 
-from rafiki.constants import BudgetType
+from rafiki.constants import BudgetType, ModelAccessRight
+
+class RafikiConnectionError(ConnectionError):
+    pass
 
 class Client(object):
 
@@ -33,6 +38,9 @@ class Client(object):
 
         :param str email: User's email
         :param str password: User's password
+
+        :returns: Logged-in user as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._post('/tokens', json={
             'email': email,
@@ -52,7 +60,8 @@ class Client(object):
         '''
         Gets currently logged in user's data.
 
-        :returns: Dictionary of shape `{ id, user_type }`, or `None` if client is not logged in
+        :returns: Current user as dictionary, or `None` if client is not logged in
+        :rtype: dict[str, any]
         '''
         return self._user
 
@@ -77,19 +86,45 @@ class Client(object):
         :param str password: The new user's password
         :param user_type: The new user's type
         :type user_type: :class:`rafiki.constants.UserType` 
+
+        :returns: Created user as dictionary
+        :rtype: dict[str, any]
         '''
-        data = self._post('/users', json={
+        data = self._post('/user', json={
             'email': email,
             'password': password,
             'user_type': user_type
         })
         return data
 
+    def create_users(self, csv_file_path):
+        '''
+        Creates multiple Rafiki users.
+
+        :param str csv_file_path: Path to a single csv file containing users to seed
+
+        :returns: Created users as list of dictionaries
+        :rtype: dict[str, any][]
+        '''
+
+        f = open(csv_file_path, 'rb')
+        csv_file_bytes = f.read()
+        f.close()
+
+        data = self._post(
+            '/users', 
+            files={
+                'csv_file_bytes': csv_file_bytes
+            }
+        )
+        return data
+
     ####################################
     # Models
     ####################################
 
-    def create_model(self, name, task, model_file_path, model_class, dependencies={}, docker_image=None):
+    def create_model(self, name, task, model_file_path, model_class, docker_image=None, \
+                    dependencies={}, access_right=ModelAccessRight.PRIVATE):
         '''
         Creates a model on Rafiki.
 
@@ -102,10 +137,17 @@ class Client(object):
         :param dependencies: List of dependencies & their versions
         :type dependencies: dict[str, str]
         :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
+        :param access_right: Model access right
+        :type access_right: :class:`rafiki.constants.ModelAccessRight`
+        :returns: Created model as dictionary
+        :rtype: dict[str, any]
 
         ``model_file_path`` should point to a file that contains all necessary Python code for the model's implementation. 
         If the Python file imports any external Python modules, you should list it in ``dependencies`` or create a custom
-        ``docker_image``.
+        ``docker_image``. 
+
+        If a model's ``access_right`` is set to ``PUBLIC``, all other users have access to the model for training
+        and inference. By default, a model's access is ``PRIVATE``.
 
         ``dependencies`` should be a dictionary of ``{ <dependency_name>: <dependency_version> }``, where 
         ``<dependency_name>`` corresponds to the name of the Python Package Index (PyPI) package (e.g. ``tensorflow``)
@@ -134,6 +176,7 @@ class Client(object):
         '''
         f = open(model_file_path, 'rb')
         model_file_bytes = f.read()
+        f.close()
         
         data = self._post(
             '/models', 
@@ -145,14 +188,30 @@ class Client(object):
                 'task': task,
                 'dependencies': json.dumps(dependencies),
                 'docker_image': docker_image,
-                'model_class':  model_class
+                'model_class':  model_class,
+                'access_right': access_right
             }
         )
+        return data
+
+    def get_model(self, name):
+        '''
+        Retrieves details of a single model.
+
+        :param str name: Name of model
+        :returns: Details of model as dictionary
+        :rtype: dict[str, any]
+        '''
+        data = self._get('/models/{}'.format(name))
         return data
 
     def get_models(self):
         '''
         Lists all models on Rafiki.
+
+        :param str access_right: Model access right.
+        :returns: Details of models as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/models')
         return data
@@ -162,35 +221,63 @@ class Client(object):
         Lists all models associated to a task on Rafiki.
 
         :param str task: Task name
+        :returns: Details of models as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/models', params={
             'task': task
         })
         return data
 
+    def download_model_file(self, name, model_file_path):
+        '''
+        Downloads the Python script containing the model's class to the local filesystem.
+
+        :param str name: Name of model
+        :param str model_file_path: Absolute/relative path to save the Python script to
+        :returns: Details of model as dictionary
+        :rtype: dict[str, any]
+        '''
+        model_file_bytes = self._get('/models/{}/model_file'.format(name))
+
+        with open(model_file_path, 'wb') as f:
+            f.write(model_file_bytes)
+
+        data = self.get_model(name)
+        dependencies = data.get('dependencies')
+        model_class = data.get('model_class')
+
+        print('Model file downloaded to "{}"!'.format(os.path.join(os.getcwd(), model_file_path)))
+        
+        if dependencies:
+            print('You\'ll need to install the following model dependencies locally: {}'.format(dependencies))
+
+        print('From the file, import the model class `{}`.'.format(model_class))
+
+        return data
+
     ####################################
     # Train Jobs
     ####################################
     
-    def create_train_job(self, 
-                        app, 
-                        task, 
-                        train_dataset_uri,
-                        test_dataset_uri, 
-                        budget=None):
+    def create_train_job(self, app, task, train_dataset_uri, test_dataset_uri, budget, models=None):
         '''
         Creates and starts a train job on Rafiki. 
         A train job is uniquely identified by its associated app and the app version (returned in output).
         
-        Only admins & app developers can manage train jobs.
+        Only admins, model developers and app developers can manage train jobs.
 
         :param str app: Name of the app associated with the train job
         :param str task: Task associated with the train job, 
             the train job will train models associated with the task
         :param str train_dataset_uri: URI of the train dataset in a format specified by the task
         :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task
-        :param budget: budget for the train job
-        :type budget: dict[:class:`rafiki.constants.BudgetType`, int]
+        :param str budget: Budget for each model
+        :param str[] models: list of model names to use for train job
+        :returns: Created train job as dictionary
+        :rtype: dict[str, any]
+
+        If ``models`` is unspecified, all models accessible to the user for the specified task will be used.
 
         ``budget`` should be a dictionary of ``{ <budget_type>: <budget_amount> }``, where 
         ``<budget_type>`` is one of :class:`rafiki.constants.BudgetType` and 
@@ -201,7 +288,7 @@ class Client(object):
         =====================       =====================
         **Budget Type**             **Description**
         ---------------------       ---------------------        
-        ``MODEL_TRIAL_COUNT``       Target number of trials, per model, to run
+        ``MODEL_TRIAL_COUNT``       Target number of trials to run
         ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported
         =====================       =====================
         '''
@@ -211,7 +298,8 @@ class Client(object):
             'task': task,
             'train_dataset_uri': train_dataset_uri,
             'test_dataset_uri': test_dataset_uri,
-            'budget': budget
+            'budget': budget,
+            'models': models
         })
         return data
 
@@ -220,6 +308,8 @@ class Client(object):
         Lists all train jobs associated to an user on Rafiki.
 
         :param str user_id: ID of the user
+        :returns: Details of train jobs as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/train_jobs', params={ 
             'user_id': user_id
@@ -231,6 +321,8 @@ class Client(object):
         Lists all train jobs associated to an app on Rafiki.
 
         :param str app: Name of the app
+        :returns: Details of train jobs as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/train_jobs/{}'.format(app))
         return data
@@ -242,11 +334,13 @@ class Client(object):
 
         :param str app: Name of the app
         :param int app_version: Version of the app (-1 for latest version)
+        :returns: Details of train job as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._get('/train_jobs/{}/{}'.format(app, app_version))
         return data
 
-    def get_best_trials_of_train_job(self, app, app_version=-1, max_count=3):
+    def get_best_trials_of_train_job(self, app, app_version=-1, max_count=2):
         '''
         Lists the best scoring trials of the train job identified by an app and an app version,
         ordered by descending score.
@@ -254,6 +348,8 @@ class Client(object):
         :param str app: Name of the app
         :param int app_version: Version of the app (-1 for latest version)
         :param int max_count: Maximum number of trials to return
+        :returns: Details of trials as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/train_jobs/{}/{}/trials'.format(app, app_version), params={
             'type': 'best',
@@ -268,6 +364,8 @@ class Client(object):
 
         :param str app: Name of the app
         :param int app_version: Version of the app (-1 for latest version)
+        :returns: Details of trials as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/train_jobs/{}/{}/trials'.format(app, app_version))
         return data
@@ -279,14 +377,14 @@ class Client(object):
 
         :param str app: Name of the app
         :param int app_version: Version of the app (-1 for latest version)
+        :returns: Stopped train job as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._post('/train_jobs/{}/{}/stop'.format(app, app_version))
         return data
 
+    # Rafiki-internal method
     def stop_train_job_worker(self, service_id):
-        '''
-        Rafiki-internal method
-        '''
         data = self._post('/train_job_workers/{}/stop'.format(service_id))
         return data
 
@@ -299,6 +397,8 @@ class Client(object):
         Gets a specific trial.
 
         :param str trial_id: ID of trial
+        :returns: Details of trial as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._get('/trials/{}'.format(trial_id))
         return data
@@ -308,9 +408,44 @@ class Client(object):
         Gets the logs for a specific trial.
 
         :param str trial_id: ID of trial
+        :returns: Logs of trial as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._get('/trials/{}/logs'.format(trial_id))
         return data
+
+    def get_trial_parameters(self, trial_id):
+        '''
+        Gets parameters of the model associated with the trial.
+
+        :param str trial_id: ID of trial
+        :returns: Parameters of the *trained* model associated with the trial
+        :rtype: dict[str, any]
+        '''
+        data = self._get('/trials/{}/parameters'.format(trial_id))
+        parameters = pickle.loads(data)
+        return parameters
+
+    def load_trial_model(self, trial_id, ModelClass):
+        '''
+        Loads an instance of a trial's model with the trial's knobs & parameters.
+
+        Before this, you must have the trial's model class file already in your local filesystem,
+        the dependencies of the model must have been installed separately, and the model class must have been 
+        imported and passed into this method.
+
+        Wraps :meth:`get_trial_parameters` and :meth:`get_trial`.
+
+        :param str trial_id: ID of trial
+        :param class ModelClass: model class that conincides with the trial's model class
+        :returns: A *trained* model instance of ``ModelClass``, loaded with the trial's knobs and parameters
+        '''
+        data = self.get_trial(trial_id)
+        knobs = data.get('knobs')
+        parameters = self.get_trial_parameters(trial_id)
+        model_inst = ModelClass(**knobs)
+        model_inst.load_parameters(parameters)
+        return model_inst
 
     ####################################
     # Inference Jobs
@@ -319,7 +454,7 @@ class Client(object):
     def create_inference_job(self, app, app_version=-1):
         '''
         Creates and starts a inference job on Rafiki with the 2 best trials of an associated train job of the app. 
-        The train job must have the status of ``COMPLETED``.The inference job would be tagged with the train job's app and app version. 
+        The train job must have the status of ``STOPPED``.The inference job would be tagged with the train job's app and app version. 
         Throws an error if an inference job of the same train job is already running.
 
         In this method's response, `predictor_host` is this inference job's predictor's host. 
@@ -328,6 +463,8 @@ class Client(object):
 
         :param str app: Name of the app identifying the train job to use
         :param str app_version: Version of the app identifying the train job to use
+        :returns: Created inference job as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._post('/inference_jobs', json={
             'app': app,
@@ -340,6 +477,8 @@ class Client(object):
         Lists all inference jobs associated to an user on Rafiki.
 
         :param str user_id: ID of the user
+        :returns: Details of inference jobs as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/inference_jobs', params={ 
             'user_id': user_id
@@ -351,6 +490,8 @@ class Client(object):
         Lists all inference jobs associated to an app on Rafiki.
 
         :param str app: Name of the app
+        :returns: Details of inference jobs as list of dictionaries
+        :rtype: dict[str, any][]
         '''
         data = self._get('/inference_jobs/{}'.format(app))
         return data
@@ -362,6 +503,8 @@ class Client(object):
 
         :param str app: Name of the app 
         :param int app_version: Version of the app (-1 for latest version)
+        :returns: Details of inference job as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._get('/inference_jobs/{}/{}'.format(app, app_version))
         return data
@@ -372,6 +515,8 @@ class Client(object):
 
         :param str app: Name of the app
         :param int app_version: Version of the app (-1 for latest version)
+        :returns: Stopped inference job as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._post('/inference_jobs/{}/{}/stop'.format(app, app_version))
         return data
@@ -387,6 +532,8 @@ class Client(object):
 
         :param str knob_config_str: Serialized knob configuration for advisor session
         :param str advisor_id: ID of advisor to create
+        :returns: Created advisor as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._post('/advisors', target='advisor',
                             json={
@@ -401,6 +548,7 @@ class Client(object):
 
         :param str advisor_id: ID of target advisor
         :returns: Knobs as `dict[<knob_name>, <knob_value>]`
+        :rtype: dict[str, any]
         '''
         data = self._post('/advisors/{}/propose'.format(advisor_id), target='advisor')
         return data
@@ -412,9 +560,9 @@ class Client(object):
 
         :param str advisor_id: ID of target advisor
         :param str knobs: Knobs to give feedback on
-        :rtype: dict[<knob_name>, <knob_value>]
         :param float score: Score of the knobs, the higher the number, the better the set of knobs
         :returns: Knobs as `dict[<knob_name>, <knob_value>]`
+        :rtype: dict[str, any]
         '''
         data = self._post('/advisors/{}/feedback'.format(advisor_id), 
                         target='advisor', json={
@@ -428,6 +576,8 @@ class Client(object):
         Deletes a Rafiki advisor.
 
         :param str advisor_id: ID of target advisor
+        :returns: Deleted advisor as dictionary
+        :rtype: dict[str, any]
         '''
         data = self._delete('/advisors/{}'.format(advisor_id), target='advisor')
         return data
@@ -478,16 +628,21 @@ class Client(object):
         elif target == 'advisor':
             url = 'http://{}:{}{}'.format(self._advisor_host, self._advisor_port, path)
         else:
-            raise Exception('Invalid URL target: {}'.format(target))
+            raise RafikiConnectionError('Invalid URL target: {}'.format(target))
 
         return url
 
     def _parse_response(self, res):
         if res.status_code != 200:
-            raise Exception(res.text)
+            raise RafikiConnectionError(res.text)
 
-        data = res.json()
-        return data
+        content_type = res.headers.get('content-type')
+        if content_type == 'application/json':
+            return res.json()
+        elif content_type == 'application/octet-stream':
+            return res.content
+        else:
+            raise RafikiConnectionError('Invalid response content type: {}'.format(content_type))
 
     def _get_headers(self):
         if self._token is not None:

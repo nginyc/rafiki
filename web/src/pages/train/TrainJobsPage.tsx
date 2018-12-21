@@ -49,7 +49,7 @@ class TrainJobsPage extends React.Component<Props> {
               <TableCell>Budget</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Started At</TableCell>
-              <TableCell>Completed At</TableCell>
+              <TableCell>Stopped At</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -73,7 +73,7 @@ class TrainJobsPage extends React.Component<Props> {
                   <TableCell>{JSON.stringify(x.budget)}</TableCell>
                   <TableCell>{x.status}</TableCell>
                   <TableCell>{moment(x.datetime_started).fromNow()}</TableCell>
-                  <TableCell>{x.datetime_completed ? moment(x.datetime_completed).fromNow() : '-'}</TableCell>
+                  <TableCell>{x.datetime_stopped ? moment(x.datetime_stopped).fromNow() : '-'}</TableCell>
                 </TableRow>
               );
             })}
