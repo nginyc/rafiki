@@ -64,7 +64,7 @@ class ModelDatasetUtils():
             :returns: An instance of ``ImageFilesDataset``
         '''
         dataset_path = self.download_dataset_from_uri(dataset_uri)
-        return ImageFilesDataset(dataset_path, image_size, l)
+        return ImageFilesDataset(dataset_path, image_size, mode)
 
     def resize_as_images(self, images, image_size):
         '''
