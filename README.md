@@ -1,3 +1,5 @@
+[comment]: # (This actually is the most platform independent comment)
+
 # Rafiki
 
 *Rafiki* is a distributed system that trains machine learning (ML) models and deploys trained models, built with ease-of-use in mind. To do so, it leverages on automated machine learning (AutoML).
