@@ -54,16 +54,17 @@ class ModelDatasetUtils():
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         return CorpusDataset(dataset_path, tags, split_by)
 
-    def load_dataset_of_image_files(self, dataset_uri, image_size=None):
+    def load_dataset_of_image_files(self, dataset_uri, image_size=None, mode='L'):
         '''
             Loads dataset with type `IMAGE_FILES`.
 
             :param str dataset_uri: URI of the dataset file
-            :param str image_size: dimensions to resize all images to (None for no resizing)
-            :returns: An instance of ``ImageFilesDataset``.
+            :param image_size: dimensions to resize all images to, as a tuple of int (None for no resizing)
+            :param str mode: Pillow image mode. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes
+            :returns: An instance of ``ImageFilesDataset``
         '''
         dataset_path = self.download_dataset_from_uri(dataset_uri)
-        return ImageFilesDataset(dataset_path, image_size)
+        return ImageFilesDataset(dataset_path, image_size, l)
 
     def resize_as_images(self, images, image_size):
         '''
@@ -213,26 +214,33 @@ class ImageFilesDataset(ModelDataset):
     Class that helps loading of dataset with type `IMAGE_FILES`
     
     ``classes`` is the number of image classes.
-    Each dataset example is (image, class) where each image is a 2D list
-    of integers (0, 255) as grayscale, each class is an integer from 0 to (k - 1).
+
+    Each dataset example is (image, class) where:
+        
+        - Each image is a 2D/3D/4D list, depending on ``mode``
+        - Each class is an integer from 0 to (k - 1)
     '''   
 
-    def __init__(self, dataset_path, image_size):
+    def __init__(self, dataset_path, image_size=None, mode='L'):
         super().__init__(dataset_path)
         self.image_size = image_size
+        self.mode = mode
         (self.size, self.classes, self._image_paths, 
             self._image_classes, self._dataset_dir) = self._load(self.path)
+
+        self.x = 0
 
     def __getitem__(self, index):
         image_path = self._image_paths[index]
         image_class = self._image_classes[index]
         dataset_dir = self._dataset_dir
         image_size = self.image_size
-
+        mode = self.mode
+        
         full_image_path = os.path.join(dataset_dir.name, image_path)
         with open(full_image_path, 'rb') as f:
             encoded = io.BytesIO(f.read())
-            image = Image.open(encoded)
+            image = Image.open(encoded).convert(mode)
             
             if image_size is not None:
                 image = image.resize(image_size)
