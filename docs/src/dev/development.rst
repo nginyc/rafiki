@@ -85,9 +85,9 @@ Build & view Rafiki's Sphinx documentation on your machine with the following co
 Testing
 --------------------------------------------------------------------
 
-Rafiki uses `pytest <https://docs.pytest.org>`_. 
+Rafiki uses `pytest <https://docs.pytest.org>`_.  
 
-Run all tests with the following command:
+Running all tests:
 
     ::
 

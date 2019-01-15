@@ -30,3 +30,6 @@ logs/*
 # IPython notebooks
 .ipynb_checkpoints/*
 *.ipynb
+
+# Pytest files
+.coverage*
