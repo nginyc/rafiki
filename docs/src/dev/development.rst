@@ -82,6 +82,18 @@ Build & view Rafiki's Sphinx documentation on your machine with the following co
         bash scripts/build_docs.sh latest
         open docs/index.html
 
+Testing
+--------------------------------------------------------------------
+
+Rafiki uses `pytest <https://docs.pytest.org>`_. 
+
+Run all tests with the following command:
+
+    ::
+
+        bash scripts/test.sh
+
+
 Troubleshooting
 --------------------------------------------------------------------
 
