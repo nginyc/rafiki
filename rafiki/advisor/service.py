@@ -9,8 +9,7 @@ from .advisor import Advisor
 
 logger = logging.getLogger(__name__)
 
-class InvalidAdvisorException(Exception): pass
-class InvalidProposalException(Exception): pass
+class InvalidAdvisorError(Exception): pass
 
 class AdvisorService(object):
     def __init__(self):
@@ -36,7 +35,6 @@ class AdvisorService(object):
 
     def delete_advisor(self, advisor_id):
         is_deleted = False
-
         advisor = self._get_advisor(advisor_id)
 
         if advisor is not None:
@@ -51,6 +49,9 @@ class AdvisorService(object):
 
     def generate_proposal(self, advisor_id):
         advisor = self._get_advisor(advisor_id)
+        if advisor is None:
+            raise InvalidAdvisorError()
+
         knobs = advisor.propose()
 
         return {
@@ -61,9 +62,8 @@ class AdvisorService(object):
     # Additionally, returns another proposal of knobs after ingesting feedback
     def feedback(self, advisor_id, knobs, score):
         advisor = self._get_advisor(advisor_id)
-
         if advisor is None:
-            raise InvalidAdvisorException()
+            raise InvalidAdvisorError()
 
         advisor.feedback(knobs, score)
         knobs = advisor.propose()

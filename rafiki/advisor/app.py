@@ -6,9 +6,9 @@ import json
 from rafiki.model import deserialize_knob_config
 from rafiki.constants import UserType
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
-from rafiki.utils.auth import generate_token, decode_token, UnauthorizedError, auth
+from rafiki.utils.auth import generate_token, UnauthorizedError, auth
 
-from .service import AdvisorService
+from .service import AdvisorService, InvalidAdvisorError
 
 service = AdvisorService()
 
@@ -67,6 +67,13 @@ def feedback(auth, advisor_id):
 def delete_advisor(auth, advisor_id):
     params = get_request_params()
     return jsonify(service.delete_advisor(advisor_id, **params))
+
+@app.errorhandler(InvalidAdvisorError)
+def handle_invalid_advisor_error(error):
+    return jsonify({
+        'error': True,
+        'message': 'Invalid advisor.'
+    }), 400
 
 # Handle uncaught exceptions with a server error & the error's stack trace (for development)
 @app.errorhandler(Exception)
