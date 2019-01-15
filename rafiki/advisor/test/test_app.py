@@ -72,12 +72,23 @@ class TestApp():
             '/advisors/{}/propose'.format(advisor_id),
             headers=auth_headers
         )
-
         assert res.status_code == 200
         data = json.loads(res.data)
         knobs = data['knobs']
         assert isinstance(knobs, dict)
         assert knobs['knob'] in knob_values 
+
+        # Can feedback to advisor
+        res = client.post(
+            '/advisors/{}/feedback'.format(advisor_id),
+            headers=auth_headers,
+            content_type='application/json',
+            data=json.dumps({
+                'knobs': knobs,
+                'score': 1
+            })
+        )
+        assert res.status_code == 200
 
     def test_delete_advisor(self, client):
         '''
@@ -105,7 +116,6 @@ class TestApp():
             '/advisors/{}'.format(advisor_id),
             headers=auth_headers
         )
-
         assert res.status_code == 200
 
         # Deleted advisor should not exist
