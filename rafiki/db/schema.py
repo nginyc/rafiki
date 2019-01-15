@@ -45,7 +45,7 @@ class Model(Base):
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
     docker_image = Column(String, nullable=False)
     dependencies = Column(JSON, nullable=False)
-    access_right = Column(String, nullable=False, default=ModelAccessRight.PUBLIC)
+    access_right = Column(String, nullable=False, default=ModelAccessRight.PRIVATE)
 
 class Service(Base):
     __tablename__ = 'service'
@@ -73,6 +73,7 @@ class TrainJob(Base):
     app = Column(String, nullable=False)
     app_version = Column(Integer, nullable=False)
     task = Column(String, nullable=False)
+    budget = Column(JSON, nullable=False)
     train_dataset_uri = Column(String, nullable=False)
     test_dataset_uri = Column(String, nullable=False)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
@@ -84,10 +85,9 @@ class SubTrainJob(Base):
     train_job_id = Column(String, ForeignKey('train_job.id'))
     model_id = Column(String, ForeignKey('model.id'))
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
-    budget = Column(JSON, nullable=False)
     status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
-    datetime_completed = Column(DateTime, default=None)
+    datetime_stopped = Column(DateTime, default=None)
 
 class TrainJobWorker(Base):
     __tablename__ = 'train_job_worker'
@@ -100,10 +100,11 @@ class Trial(Base):
     __tablename__ = 'trial'
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    knobs = Column(JSON, nullable=False)
-    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     sub_train_job_id = Column(String, ForeignKey('sub_train_job.id'), nullable=False)
-    status = Column(String, nullable=False, default=TrialStatus.RUNNING)
+    model_id = Column(String, ForeignKey('model.id'), nullable=False)
+    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
+    status = Column(String, nullable=False, default=TrialStatus.STARTED)
+    knobs = Column(JSON, default=None)
     score = Column(Float, default=0)
     parameters = Column(Binary, default=None)
     datetime_stopped = Column(DateTime, default=None)

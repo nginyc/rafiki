@@ -35,6 +35,6 @@
   },
   "devDependencies": {
     "tslint": "^5.11.0",
-    "webpack-dev-server": "^3.1.10"
+    "webpack-dev-server": "^3.1.11"
   }
 }

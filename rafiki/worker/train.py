@@ -32,59 +32,59 @@ class TrainWorker(object):
         logger.info('Starting train worker for service of ID "{}"...' \
             .format(self._service_id))
             
+        # TODO: Break up crazily long & unreadable method
         advisor_id = None
         while True:
-            self._db.connect()
-            ( sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
-                train_job_id, train_dataset_uri, test_dataset_uri) = self._read_worker_info()
+            with self._db:
+                (sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
+                    train_job_id, train_dataset_uri, test_dataset_uri) = self._read_worker_info()
 
-            if self._if_budget_reached(budget, sub_train_job_id):
-                # If budget reached
-                logger.info('Budget for train job has reached')
-                self._stop_worker()
-                if advisor_id is not None:
-                    self._delete_advisor(advisor_id)
+                if self._if_budget_reached(budget, sub_train_job_id):
+                    # If budget reached
+                    logger.info('Budget for train job has reached')
+                    self._stop_worker()
+                    if advisor_id is not None:
+                        self._delete_advisor(advisor_id)
+                    break
 
-                break
-
-            # Load model class from bytes
-            try:
-                clazz = load_model_class(model_file_bytes, model_class)
-            except Exception as e:
-                logger.error('Error while loading model class for worker:')
-                logger.error(traceback.format_exc())
-                self._stop_worker()
-                raise e
-
-            # If not created, create a Rafiki advisor for train worker to propose knobs in trials
-            if advisor_id is None:
-                logger.info('Creating Rafiki advisor...')
-                try: 
-                    advisor_id = self._create_advisor(clazz)
-                    logger.info('Created advisor of ID "{}"'.format(advisor_id))
-                except Exception as e:
-                    logger.error('Error while creating advisor for worker:')
-                    logger.error(traceback.format_exc())
-                    raise e
-
-            # Create a new trial
-            logger.info('Starting trial...')
-            logger.info('Requesting for knobs proposal from advisor...')
-            knobs = self._get_proposal_from_advisor(advisor_id)
-            logger.info('Received proposal of knobs from advisor:')
-            logger.info(pprint.pformat(knobs))
-            logger.info('Creating new trial in DB...')
-            self._trial_id = self._create_new_trial(sub_train_job_id, knobs)
-            logger.info('Created trial of ID "{}" in DB'.format(self._trial_id))
-
+                # Create a new trial
+                logger.info('Creating new trial in DB...')
+                trial = self._db.create_trial(
+                    sub_train_job_id=sub_train_job_id,
+                    model_id=model_id
+                )
+                self._db.commit()
+                self._trial_id = trial.id
+                logger.info('Created trial of ID "{}" in DB'.format(self._trial_id))
+                
             # Don't keep DB connection while training model
-            self._db.disconnect()
 
             # Perform trial & record results
             score = 0
             try:
                 logger.info('Starting trial...')
+
+                # Load model class from bytes
+                logger.info('Loading model class...')
+                clazz = load_model_class(model_file_bytes, model_class)
+
+                # If not created, create a Rafiki advisor for train worker to propose knobs in trials
+                if advisor_id is None:
+                    logger.info('Creating Rafiki advisor...')
+                    advisor_id = self._create_advisor(clazz)
+                    logger.info('Created advisor of ID "{}"'.format(advisor_id))
+
+                # Generate knobs for trial
+                logger.info('Requesting for knobs proposal from advisor...')
+                knobs = self._get_proposal_from_advisor(advisor_id)
+                logger.info('Received proposal of knobs from advisor:')
+                logger.info(pprint.pformat(knobs))
+
+                # Mark trial as running in DB
                 logger.info('Training & evaluating model...')
+                with self._db:
+                    trial = self._db.get_trial(self._trial_id)
+                    self._db.mark_trial_as_running(trial, knobs)
 
                 def handle_log(log_line, log_lvl):
                     with self._db:
@@ -101,6 +101,15 @@ class TrainWorker(object):
                     self._db.mark_trial_as_complete(trial, score, parameters)
 
                 self._trial_id = None
+
+                # Report results of trial to advisor
+                try:
+                    logger.info('Sending result of trials\' knobs to advisor...')
+                    self._feedback_to_advisor(advisor_id, knobs, score)
+                except Exception:
+                    logger.error('Error while sending result of proposal to advisor:')
+                    logger.error(traceback.format_exc())
+
             except Exception:
                 logger.error('Error while running trial:')
                 logger.error(traceback.format_exc())
@@ -111,14 +120,7 @@ class TrainWorker(object):
                     self._db.mark_trial_as_errored(trial)
 
                 self._trial_id = None
-
-            # Report results of trial to advisor
-            try:
-                logger.info('Sending result of trials\' knobs to advisor...')
-                self._feedback_to_advisor(advisor_id, knobs, score)
-            except Exception:
-                logger.error('Error while sending result of proposal to advisor:')
-                logger.error(traceback.format_exc())
+                break # Exit worker upon trial error
             
     def stop(self):
         # If worker is currently running a trial, mark it has terminated
@@ -156,8 +158,9 @@ class TrainWorker(object):
         # Evaluate model
         score = model_inst.evaluate(test_dataset_uri)
 
-        # Remove log handler for trial
+        # Remove log handlers from loggers for this trial
         root_logger.removeHandler(log_handler)
+        py_model_logger.removeHandler(log_handler)
 
         # Dump and pickle model parameters
         parameters = model_inst.dump_parameters()
@@ -165,15 +168,6 @@ class TrainWorker(object):
         model_inst.destroy()
 
         return (score, parameters)
-
-    # Creates a new trial in the DB
-    def _create_new_trial(self, sub_train_job_id, knobs):
-        trial = self._db.create_trial(
-            sub_train_job_id=sub_train_job_id,
-            knobs=knobs
-        )
-        self._db.commit()
-        return trial.id
 
     # Gets proposal of a set of knob values from advisor
     def _get_proposal_from_advisor(self, advisor_id):
@@ -186,6 +180,7 @@ class TrainWorker(object):
         self._client.feedback_to_advisor(advisor_id, knobs, score)
 
     def _stop_worker(self):
+        logger.warn('Stopping train job worker...')
         try:
             self._client.stop_train_job_worker(self._service_id)
         except Exception:
@@ -214,8 +209,8 @@ class TrainWorker(object):
 
     # Returns whether the worker reached its budget (only consider COMPLETED or ERRORED trials)
     def _if_budget_reached(self, budget, sub_train_job_id):
-        # By default, budget is model trial count of 10
-        max_trials = budget.get(BudgetType.MODEL_TRIAL_COUNT, 10)
+        # By default, budget is model trial count of 2
+        max_trials = budget.get(BudgetType.MODEL_TRIAL_COUNT, 2)
         trials = self._db.get_trials_of_sub_train_job(sub_train_job_id)
         trials = [x for x in trials if x.status in [TrialStatus.COMPLETED, TrialStatus.ERRORED]]
         return len(trials) >= max_trials
@@ -238,7 +233,7 @@ class TrainWorker(object):
 
         return (
             sub_train_job.id,
-            sub_train_job.budget, 
+            train_job.budget,
             model.id,
             model.model_file_bytes,
             model.model_class,

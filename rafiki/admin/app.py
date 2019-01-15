@@ -20,7 +20,7 @@ def index():
 # Users
 ####################################
 
-@app.route('/users', methods=['POST'])
+@app.route('/user', methods=['POST'])
 @auth([UserType.ADMIN])
 def create_user(auth):
     admin = get_admin()
@@ -28,6 +28,19 @@ def create_user(auth):
 
     with admin:
         return jsonify(admin.create_user(**params))
+
+@app.route('/users', methods=['POST'])
+@auth([UserType.ADMIN])
+def create_users(auth):
+    admin = get_admin()
+    params = get_request_params()
+
+    # Expect csv file as bytes
+    csv_file_bytes = request.files['csv_file_bytes'].read()
+    params['csv_file_bytes'] = csv_file_bytes
+
+    with admin:
+        return jsonify(admin.create_users(**params))
 
 @app.route('/tokens', methods=['POST'])
 def generate_user_token():
@@ -255,7 +268,7 @@ def get_model_file(auth, name):
     params = get_request_params()
 
     with admin:
-        model_file = admin.get_model_file(name, **params)
+        model_file = admin.get_model_file(auth['user_id'], name, **params)
 
     res = make_response(model_file)
     res.headers.set('Content-Type', 'application/octet-stream')
@@ -267,7 +280,7 @@ def get_model(auth, name):
     admin = get_admin()
     params = get_request_params()
     with admin:
-        return jsonify(admin.get_model(name, **params))
+        return jsonify(admin.get_model(auth['user_id'], name, **params))
 
 @app.route('/models', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])

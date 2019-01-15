@@ -90,11 +90,33 @@ class Client(object):
         :returns: Created user as dictionary
         :rtype: dict[str, any]
         '''
-        data = self._post('/users', json={
+        data = self._post('/user', json={
             'email': email,
             'password': password,
             'user_type': user_type
         })
+        return data
+
+    def create_users(self, csv_file_path):
+        '''
+        Creates multiple Rafiki users.
+
+        :param str csv_file_path: Path to a single csv file containing users to seed
+
+        :returns: Created users as list of dictionaries
+        :rtype: dict[str, any][]
+        '''
+
+        f = open(csv_file_path, 'rb')
+        csv_file_bytes = f.read()
+        f.close()
+
+        data = self._post(
+            '/users', 
+            files={
+                'csv_file_bytes': csv_file_bytes
+            }
+        )
         return data
 
     ####################################
@@ -102,7 +124,7 @@ class Client(object):
     ####################################
 
     def create_model(self, name, task, model_file_path, model_class, docker_image=None, \
-                    dependencies={}, access_right=ModelAccessRight.PUBLIC):
+                    dependencies={}, access_right=ModelAccessRight.PRIVATE):
         '''
         Creates a model on Rafiki.
 
@@ -115,14 +137,17 @@ class Client(object):
         :param dependencies: List of dependencies & their versions
         :type dependencies: dict[str, str]
         :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
-        :param str access_right: Model access right
-        
+        :param access_right: Model access right
+        :type access_right: :class:`rafiki.constants.ModelAccessRight`
         :returns: Created model as dictionary
         :rtype: dict[str, any]
 
         ``model_file_path`` should point to a file that contains all necessary Python code for the model's implementation. 
         If the Python file imports any external Python modules, you should list it in ``dependencies`` or create a custom
-        ``docker_image``.
+        ``docker_image``. 
+
+        If a model's ``access_right`` is set to ``PUBLIC``, all other users have access to the model for training
+        and inference. By default, a model's access is ``PRIVATE``.
 
         ``dependencies`` should be a dictionary of ``{ <dependency_name>: <dependency_version> }``, where 
         ``<dependency_name>`` corresponds to the name of the Python Package Index (PyPI) package (e.g. ``tensorflow``)
@@ -235,8 +260,7 @@ class Client(object):
     # Train Jobs
     ####################################
     
-    def create_train_job(self, app, task, train_dataset_uri,
-                        test_dataset_uri, models):
+    def create_train_job(self, app, task, train_dataset_uri, test_dataset_uri, budget, models=None):
         '''
         Creates and starts a train job on Rafiki. 
         A train job is uniquely identified by its associated app and the app version (returned in output).
@@ -248,10 +272,12 @@ class Client(object):
             the train job will train models associated with the task
         :param str train_dataset_uri: URI of the train dataset in a format specified by the task
         :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task
-        :param models: models to use for the train job. List of dictionaries containing model name and budget.
-
+        :param str budget: Budget for each model
+        :param str[] models: list of model names to use for train job
         :returns: Created train job as dictionary
         :rtype: dict[str, any]
+
+        If ``models`` is unspecified, all models accessible to the user for the specified task will be used.
 
         ``budget`` should be a dictionary of ``{ <budget_type>: <budget_amount> }``, where 
         ``<budget_type>`` is one of :class:`rafiki.constants.BudgetType` and 
@@ -262,7 +288,7 @@ class Client(object):
         =====================       =====================
         **Budget Type**             **Description**
         ---------------------       ---------------------        
-        ``MODEL_TRIAL_COUNT``       Target number of trials, per model, to run
+        ``MODEL_TRIAL_COUNT``       Target number of trials to run
         ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported
         =====================       =====================
         '''
@@ -272,6 +298,7 @@ class Client(object):
             'task': task,
             'train_dataset_uri': train_dataset_uri,
             'test_dataset_uri': test_dataset_uri,
+            'budget': budget,
             'models': models
         })
         return data
@@ -427,7 +454,7 @@ class Client(object):
     def create_inference_job(self, app, app_version=-1):
         '''
         Creates and starts a inference job on Rafiki with the 2 best trials of an associated train job of the app. 
-        The train job must have the status of ``COMPLETED``.The inference job would be tagged with the train job's app and app version. 
+        The train job must have the status of ``STOPPED``.The inference job would be tagged with the train job's app and app version. 
         Throws an error if an inference job of the same train job is already running.
 
         In this method's response, `predictor_host` is this inference job's predictor's host. 

@@ -24,7 +24,13 @@ Prerequisites: MacOS or Linux environment
     bash scripts/stop.sh
     ```
 
-More instructions are available in [Rafiki's Developer Guide](https://nginyc.github.io/rafiki/docs/latest/docs/dev).
+More instructions are available in [Rafiki's Developer Guide](https://nginyc.github.io/rafiki/docs/latest/docs/src/dev).
+
+
+## Issues
+
+Report the issues at [JIRA](https://issues.apache.org/jira/browse/SINGA) or [Github](https://github.com/nginyc/rafiki/issues)
+
 
 ## Acknowledgements
 
