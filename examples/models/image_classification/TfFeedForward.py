@@ -43,9 +43,8 @@ class TfFeedForward(BaseModel):
 
         logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
-        # Define 2 plots: Loss against time, loss against epochs
-        logger.define_loss_plot()
-        logger.define_plot('Loss Over Time', ['loss', 'val_loss'])
+        # Define plot for loss against epochs
+        logger.define_plot('Loss Over Epochs', ['loss', 'val_loss'], x_axis='epoch')
 
         dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[im_sz, im_sz])
         num_classes = dataset.classes
@@ -61,7 +60,7 @@ class TfFeedForward(BaseModel):
                     classes, 
                     verbose=0,
                     epochs=max_epochs,
-                    validation_split=0.95,
+                    validation_split=0.05,
                     batch_size=bs,
                     callbacks=[
                         tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2),
@@ -140,8 +139,7 @@ class TfFeedForward(BaseModel):
     def _on_train_epoch_end(self, epoch, logs):
         loss = logs['loss']
         val_loss = logs['val_loss']
-        logger.log_loss(loss, epoch)
-        logger.log(val_loss=val_loss)
+        logger.log(loss=loss, val_loss=val_loss, epoch=epoch)
 
     def _build_model(self, num_classes):
         units = self._knobs.get('hidden_layer_units')

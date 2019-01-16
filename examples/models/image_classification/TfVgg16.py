@@ -42,14 +42,14 @@ class TfVgg16(BaseModel):
 
         logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
-        # Define 2 plots: Loss against time, loss against epochs
-        logger.define_loss_plot()
-        logger.define_plot('Loss Over Time', ['loss', 'val_loss'])
+        # Define plot for loss against epochs
+        logger.define_plot('Loss Over Epochs', ['loss', 'val_loss'], x_axis='epochs')
 
         dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[im_sz, im_sz])
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
+        classes = keras.utils.to_categorical(classes)
         classes = np.asarray(classes)
 
         with self._graph.as_default():
@@ -59,7 +59,7 @@ class TfVgg16(BaseModel):
                     images, 
                     classes, 
                     epochs=max_epochs, 
-                    validation_split=0.95,
+                    validation_split=0.05,
                     batch_size=bs,
                     callbacks=[
                         tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2),
@@ -138,8 +138,7 @@ class TfVgg16(BaseModel):
     def _on_train_epoch_end(self, epoch, logs):
         loss = logs['loss']
         val_loss = logs['val_loss']
-        logger.log_loss(loss, epoch)
-        logger.log(val_loss=val_loss)
+        logger.log(loss=loss, val_loss=val_loss, epoch=epoch)
 
     def _build_model(self, num_classes):
         im_sz = self._knobs.get('image_size')
