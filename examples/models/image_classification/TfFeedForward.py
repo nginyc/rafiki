@@ -20,12 +20,12 @@ class TfFeedForward(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': IntegerKnob(3, 10 if APP_MODE != 'DEV' else 3),
+            'max_epochs': FixedKnob(100),
             'hidden_layer_count': IntegerKnob(1, 8 if APP_MODE != 'DEV' else 2),
             'hidden_layer_units': IntegerKnob(2, 128),
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
-            'image_size': FixedKnob(32)
+            'image_size': CategoricalKnob([32, 48, 64]),
         }
 
     def __init__(self, **knobs):
@@ -39,13 +39,13 @@ class TfFeedForward(BaseModel):
     def train(self, dataset_uri):
         im_sz = self._knobs.get('image_size')
         bs = self._knobs.get('batch_size')
-        ep = self._knobs.get('epochs')
+        max_epochs = self._knobs.get('max_epochs')
 
         logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
         # Define 2 plots: Loss against time, loss against epochs
         logger.define_loss_plot()
-        logger.define_plot('Loss Over Time', ['loss'])
+        logger.define_plot('Loss Over Time', ['loss', 'val_loss'])
 
         dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[im_sz, im_sz])
         num_classes = dataset.classes
@@ -60,9 +60,11 @@ class TfFeedForward(BaseModel):
                     images, 
                     classes, 
                     verbose=0,
-                    epochs=ep,
+                    epochs=max_epochs,
+                    validation_split=0.95,
                     batch_size=bs,
                     callbacks=[
+                        tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2),
                         tf.keras.callbacks.LambdaCallback(on_epoch_end=self._on_train_epoch_end)
                     ]
                 )
@@ -137,7 +139,9 @@ class TfFeedForward(BaseModel):
 
     def _on_train_epoch_end(self, epoch, logs):
         loss = logs['loss']
+        val_loss = logs['val_loss']
         logger.log_loss(loss, epoch)
+        logger.log(val_loss=val_loss)
 
     def _build_model(self, num_classes):
         units = self._knobs.get('hidden_layer_units')
@@ -146,7 +150,7 @@ class TfFeedForward(BaseModel):
         im_sz = self._knobs.get('image_size')
 
         model = keras.Sequential()
-        model.add(keras.layers.Flatten(input_shape=(im_sz, im_sz,)))
+        model.add(keras.layers.Flatten(input_shape=(im_sz, im_sz, 3)))
         model.add(keras.layers.BatchNormalization())
 
         for _ in range(layers):

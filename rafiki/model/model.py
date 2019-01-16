@@ -175,12 +175,14 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         py_model_class = load_model_class(model_file_bytes, model_class, temp_mod_name='your-model-file-temp')
         _check_model_class(py_model_class)
 
-        _print_header('Checking model knob configuration...')
+        _print_header('Checking model configuration...')
         knob_config = py_model_class.get_knob_config()
         _check_knob_config(knob_config)
+        train_config = py_model_class.get_train_config()
+        advisor_type = train_config.get('advisor_type') or AdvisorType.SKOPT
+        advisor = Advisor(knob_config, advisor_type)
 
         _print_header('Checking model initialization...')
-        advisor = Advisor(knob_config)
         if knobs is None: 
             knobs = advisor.propose()
         print('Using knobs: {}'.format(knobs))

@@ -54,7 +54,7 @@ class ModelDatasetUtils():
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         return CorpusDataset(dataset_path, tags, split_by)
 
-    def load_dataset_of_image_files(self, dataset_uri, image_size=None, mode='L'):
+    def load_dataset_of_image_files(self, dataset_uri, image_size=None, mode='RGB'):
         '''
             Loads dataset with type `IMAGE_FILES`.
 
@@ -66,15 +66,16 @@ class ModelDatasetUtils():
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         return ImageFilesDataset(dataset_path, image_size, mode)
 
-    def resize_as_images(self, images, image_size):
+    def resize_as_images(self, images, image_size, mode='RGB'):
         '''
-            Resize a list of N grayscale images to another size.
+            Resize a list of N images to another size and/or mode
 
-            :param int[][][] images: images to resize as a N x 2D lists (grayscale)
+            :param images: list of images to resize as a (N x width x height x channels) list
             :param int image_size: dimensions to resize all images to (None for no resizing)
-            :returns: images as N x 2D numpy arrays
+            :param str mode: Pillow image mode. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes
+            :returns: list of output images as a (N x width x height x channels) numpy
         '''
-        images = [Image.fromarray(np.asarray(x, dtype=np.uint8)) for x in images]
+        images = [Image.fromarray(np.asarray(x, dtype=np.uint8), mode=mode) for x in images]
         images = [np.asarray(x.resize(image_size)) for x in images]
         return np.asarray(images)
                 
@@ -217,11 +218,11 @@ class ImageFilesDataset(ModelDataset):
 
     Each dataset example is (image, class) where:
         
-        - Each image is a 2D/3D/4D list, depending on ``mode``
+        - Each image is a 2D/3D/4D list, depending on ``mode`` (default of ``RGB``)
         - Each class is an integer from 0 to (k - 1)
     '''   
 
-    def __init__(self, dataset_path, image_size=None, mode='L'):
+    def __init__(self, dataset_path, image_size=None, mode='RGB'):
         super().__init__(dataset_path)
         self.image_size = image_size
         self.mode = mode
