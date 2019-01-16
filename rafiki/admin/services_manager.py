@@ -122,9 +122,11 @@ class ServicesManager(object):
         train_job = self._db.get_train_job(train_job_id)
 
         # Stop all workers for train job
-        workers = self._db.get_workers_of_train_job(train_job_id)
-        for worker in workers:
-            self._stop_train_job_worker(worker)
+        sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(train_job_id)
+        for sub_train_job in sub_train_jobs:
+            workers = self._db.get_workers_of_sub_train_job(sub_train_job.id)
+            for worker in workers:
+                self._stop_train_job_worker(worker)
 
         return train_job
         
