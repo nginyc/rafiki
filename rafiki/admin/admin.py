@@ -98,8 +98,13 @@ class Admin(object):
     def create_train_job(self, user_id, app, task, train_dataset_uri, 
                         test_dataset_uri, budget, models=None):
         
-        # Compute auto-incremented app version
         train_jobs = self._db.get_train_jobs_of_app(app)
+
+        # Ensure there is no existing train job for app
+        if any([x.status != TrainJobStatus.STOPPED for x in train_jobs]):
+            raise InvalidTrainJobError('Another train job for app "{}" is still running!'.format(app))
+        
+        # Compute auto-incremented app version
         app_version = max([x.app_version for x in train_jobs], default=0) + 1
 
         # Get models available to user
