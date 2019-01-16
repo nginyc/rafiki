@@ -18,7 +18,8 @@ class SkDt(BaseModel):
     def get_knob_config():
         return {
             'max_depth': IntegerKnob(2, 16 if APP_MODE != 'DEV' else 4),
-            'criterion': CategoricalKnob(['gini', 'entropy'])
+            'criterion': CategoricalKnob(['gini', 'entropy']),
+            'image_size': CategoricalKnob([32, 48, 64]),
         }
 
     def __init__(self, **knobs):
@@ -27,7 +28,7 @@ class SkDt(BaseModel):
         self._clf = self._build_classifier(self.max_depth, self.criterion)
        
     def train(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[self.image_size, self.image_size], mode='L')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -39,7 +40,7 @@ class SkDt(BaseModel):
         logger.log('Train accuracy: {}'.format(accuracy))
 
     def evaluate(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[self.image_size, self.image_size], mode='L')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -48,6 +49,7 @@ class SkDt(BaseModel):
         return accuracy
 
     def predict(self, queries):
+        queries = dataset_utils.resize_as_images(queries, image_size=[self.image_size, self.image_size], mode='L')
         X = self._prepare_X(queries)
         probs = self._clf.predict_proba(X)
         return probs.tolist()

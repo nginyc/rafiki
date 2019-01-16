@@ -7,7 +7,7 @@ import numpy as np
 
 from rafiki.config import APP_MODE
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, CategoricalKnob, FloatKnob, dataset_utils
+                        IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, dataset_utils
 from rafiki.constants import TaskType, ModelDependency
 
 class SkSvm(BaseModel):
@@ -17,10 +17,11 @@ class SkSvm(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'max_iter': IntegerKnob(10, 40 if APP_MODE != 'DEV' else 10),
+            'max_iter': FixedKnob(40 if APP_MODE != 'DEV' else 10),
             'kernel': CategoricalKnob(['rbf', 'linear']),
             'gamma': CategoricalKnob(['scale', 'auto']),
-            'C': FloatKnob(1e-2, 1e2, is_exp=True)
+            'C': FloatKnob(1e-2, 1e2, is_exp=True),
+            'image_size': CategoricalKnob([32, 48, 64])
         }
 
     def __init__(self, **knobs):
@@ -29,14 +30,14 @@ class SkSvm(BaseModel):
         self._clf = self._build_classifier(self.max_iter, self.kernel, self.gamma, self.C)
         
     def train(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[self.image_size, self.image_size], mode='L')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
         self._clf.fit(X, y)
 
     def evaluate(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[self.image_size, self.image_size], mode='L')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -45,6 +46,7 @@ class SkSvm(BaseModel):
         return accuracy
 
     def predict(self, queries):
+        queries = dataset_utils.resize_as_images(queries, image_size=[self.image_size, self.image_size], mode='L')
         X = self._prepare_X(queries)
         probs = self._clf.predict_proba(X)
         return probs.tolist()
