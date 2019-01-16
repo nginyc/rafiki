@@ -3,6 +3,8 @@ export DOCKER_NETWORK=rafiki
 export DOCKER_SWARM_ADVERTISE_ADDR=127.0.0.1
 export RAFIKI_VERSION=0.0.10
 export RAFIKI_ADDR=127.0.0.1
+export POSTGRES_PASSWORD=rafiki
+export SUPERADMIN_PASSWORDr=rafiki
 export ADMIN_EXT_PORT=3000
 export ADMIN_WEB_EXT_PORT=3001
 export ADVISOR_EXT_PORT=3002
@@ -14,7 +16,6 @@ export LOGS_WORKDIR_PATH=$PWD/logs # Shares a folder with containers that stores
 # Internal credentials for Rafiki's components
 export POSTGRES_USER=rafiki
 export POSTGRES_DB=rafiki
-export POSTGRES_PASSWORD=rafiki
 
 # Internal hosts & ports and configuration for Rafiki's components 
 export POSTGRES_HOST=rafiki_db

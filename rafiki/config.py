@@ -4,7 +4,7 @@ import os
 APP_SECRET = 'rafiki'
 APP_MODE = 'DEV' # DEV or PROD
 SUPERADMIN_EMAIL = 'superadmin@rafiki'
-SUPERADMIN_PASSWORD = 'rafiki'
+SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD', 'rafiki')
 
 # Admin
 MIN_SERVICE_PORT = 30000
