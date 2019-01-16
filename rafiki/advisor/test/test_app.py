@@ -5,6 +5,7 @@ from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.advisor.app import app
 from rafiki.model.knob import IntegerKnob, CategoricalKnob, FixedKnob, FloatKnob, serialize_knob_config
 from rafiki.test.utils import global_setup
+from rafiki.constants import AdvisorType
 
 class TestApp():
     @pytest.fixture(scope='class', autouse=True)
@@ -124,6 +125,26 @@ class TestApp():
             headers=auth_headers
         )
         assert res.status_code == 400
+
+    def test_create_advisor_of_type(self, client):
+        '''
+        Can create advisor of a specific type
+        '''
+        auth_headers = self._login(client, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD)
+
+        # Create advisor of specific type
+        knob_config = {}
+        knob_config_str = serialize_knob_config(knob_config)
+        res = client.post(
+            '/advisors', 
+            headers=auth_headers,
+            content_type='application/json',
+            data=json.dumps({
+                'knob_config_str': knob_config_str,
+                'advisor_type': AdvisorType.BTB_GP
+            })
+        )
+        assert res.status_code == 200
 
     def _login(self, client, email, password):
         '''

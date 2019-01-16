@@ -6,6 +6,7 @@ import traceback
 import pprint
 
 from .advisor import Advisor
+from rafiki.constants import AdvisorType
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ class AdvisorService(object):
     def __init__(self):
         self._advisors = {}
 
-    def create_advisor(self, knob_config, advisor_id=None):
+    def create_advisor(self, knob_config, advisor_type=AdvisorType.SKOPT, advisor_id=None):
         is_created = False
         advisor = None
 
@@ -23,7 +24,7 @@ class AdvisorService(object):
             advisor = self._get_advisor(advisor_id)
             
         if advisor is None:
-            advisor = Advisor(knob_config)
+            advisor = Advisor(knob_config, advisor_type)
             advisor_id = str(uuid.uuid4()) if advisor_id is None else advisor_id
             self._advisors[advisor_id] = advisor
             is_created = True

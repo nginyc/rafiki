@@ -3,13 +3,12 @@ import numpy as np
 
 from rafiki.constants import AdvisorType
 
-class InvalidAdvisorTypeException(Exception): pass
+class InvalidAdvisorTypeError(Exception): pass
 
 class BaseAdvisor(abc.ABC):
     '''
     Rafiki's base advisor class
     '''   
-
     @abc.abstractmethod
     def __init__(self, knob_config):
         raise NotImplementedError()
@@ -24,7 +23,7 @@ class BaseAdvisor(abc.ABC):
 
 # Generalized Advisor class that wraps & hides implementation-specific advisor class
 class Advisor():
-    def __init__(self, knob_config, advisor_type=AdvisorType.BTB_GP):
+    def __init__(self, knob_config, advisor_type):
         self._advisor = self._make_advisor(knob_config, advisor_type)
         self._knob_config = knob_config
 
@@ -48,11 +47,14 @@ class Advisor():
         self._advisor.feedback(knobs, score)
 
     def _make_advisor(self, knob_config, advisor_type):
-        if advisor_type == AdvisorType.BTB_GP:
-            from .btb_gp_advisor import BtbGpAdvisor
+        if advisor_type == AdvisorType.SKOPT:
+            from .types.skopt_advisor import SkoptAdvisor
+            return SkoptAdvisor(knob_config)
+        elif advisor_type == AdvisorType.BTB_GP:
+            from .types.btb_gp_advisor import BtbGpAdvisor
             return BtbGpAdvisor(knob_config)
         else:
-            raise InvalidAdvisorTypeException()
+            raise InvalidAdvisorTypeError()
 
     def _simplify_value(self, value):
         # TODO: Support int64 & other non-serializable data formats

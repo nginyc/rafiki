@@ -21,7 +21,7 @@ class BaseModel(abc.ABC):
     '''
     Rafiki's base model class that Rafiki models should extend. 
     Rafiki models should implement all abstract methods according to their associated tasks' specifications,
-    together with the static method ``get_knob_config()``.
+    together with the static methods ``get_knob_config()`` and ``get_train_config()`` (optional).
 
     In the model's ``__init__`` method, call ``super().__init__(**knobs)`` as the first line, 
     followed by the model's initialization logic. The model should be initialize itself with ``knobs``, 
@@ -55,6 +55,18 @@ class BaseModel(abc.ABC):
         :rtype: dict[str, rafiki.model.BaseKnob]
         '''
         raise NotImplementedError()
+
+    @staticmethod
+    def get_train_config():
+        '''
+        Return a dictionary defining how this model class should be trained & tuned.
+
+        :returns: Dictionary defining this model's training configuration 
+        :rtype: dict[str, str]
+        '''
+        return {
+            'advisor_type': None
+        }
 
     @abc.abstractmethod
     def train(self, dataset_uri):
@@ -168,8 +180,9 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         _check_knob_config(knob_config)
 
         _print_header('Checking model initialization...')
-        advisor = Advisor(knob_config, advisor_type=AdvisorType.BTB_GP)
-        if knobs is None: knobs = advisor.propose()
+        advisor = Advisor(knob_config)
+        if knobs is None: 
+            knobs = advisor.propose()
         print('Using knobs: {}'.format(knobs))
         model_inst = py_model_class(**knobs)
         _check_model_inst(model_inst)

@@ -2,14 +2,13 @@ from btb.tuning import GP
 from btb import HyperParameter, ParamTypes
 
 from rafiki.model import BaseKnob, FloatKnob, IntegerKnob, CategoricalKnob, FixedKnob
-from .advisor import BaseAdvisor
+from ..advisor import BaseAdvisor
 
 class BtbGpAdvisor(BaseAdvisor):
     '''
     Uses BTB's GP tuner
     '''   
     def __init__(self, knob_config):
-        # TODO: Support conditional knobs
         tunables = self._get_tunables(knob_config)
 
         # TODO: Allow configuration of tuner

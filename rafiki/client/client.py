@@ -525,21 +525,26 @@ class Client(object):
     # Advisors
     ####################################
 
-    def create_advisor(self, knob_config_str, advisor_id=None):
+    def create_advisor(self, knob_config_str, advisor_type=None, advisor_id=None):
         '''
         Creates a Rafiki advisor. If `advisor_id` is passed, it will create an advisor
         of that ID, or do nothing if an advisor of that ID has already been created.
 
         :param str knob_config_str: Serialized knob configuration for advisor session
+        :param rafiki.constants.AdvisorType advisor_type: Type of advisor (`None` for default)
         :param str advisor_id: ID of advisor to create
         :returns: Created advisor as dictionary
         :rtype: dict[str, any]
         '''
-        data = self._post('/advisors', target='advisor',
-                            json={
-                                'advisor_id': advisor_id,
-                                'knob_config_str': knob_config_str
-                            })
+        json = {
+            'advisor_id': advisor_id,
+            'knob_config_str': knob_config_str
+        }
+
+        if advisor_type is not None:
+            json['advisor_type'] = advisor_type
+
+        data = self._post('/advisors', target='advisor', json=json)
         return data
 
     def generate_proposal(self, advisor_id):

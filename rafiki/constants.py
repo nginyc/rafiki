@@ -51,6 +51,7 @@ class UserType():
     USER = 'USER'
 
 class AdvisorType():
+    SKOPT = 'SKOPT'
     BTB_GP = 'BTB_GP'
 
 class DatasetType():
