@@ -43,7 +43,7 @@ class TfVgg16(BaseModel):
         logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
         # Define plot for loss against epochs
-        logger.define_plot('Loss Over Epochs', ['loss', 'val_loss'], x_axis='epochs')
+        logger.define_plot('Loss Over Epochs', ['loss', 'val_loss'], x_axis='epoch')
 
         dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, min_image_size=32, max_image_size=max_image_size)
         self._image_size = dataset.image_size
@@ -79,6 +79,7 @@ class TfVgg16(BaseModel):
         dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, min_image_size=32, max_image_size=max_image_size)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
+        classes = keras.utils.to_categorical(classes)
         classes = np.asarray(classes)
 
         with self._graph.as_default():
