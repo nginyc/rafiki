@@ -19,7 +19,7 @@ class SkDt(BaseModel):
         return {
             'max_depth': IntegerKnob(2, 16 if APP_MODE != 'DEV' else 4),
             'criterion': CategoricalKnob(['gini', 'entropy']),
-            'image_size': CategoricalKnob([32, 48, 64]),
+            'image_size': CategoricalKnob([16, 32]),
         }
 
     def __init__(self, **knobs):

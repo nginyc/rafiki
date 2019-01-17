@@ -21,7 +21,7 @@ class SkSvm(BaseModel):
             'kernel': CategoricalKnob(['rbf', 'linear']),
             'gamma': CategoricalKnob(['scale', 'auto']),
             'C': FloatKnob(1e-2, 1e2, is_exp=True),
-            'image_size': CategoricalKnob([32, 48, 64])
+            'image_size': CategoricalKnob([16, 32]),
         }
 
     def __init__(self, **knobs):

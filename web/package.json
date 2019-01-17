@@ -7,7 +7,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "webpack --config webpack.config.js",
-    "dev": "webpack-dev-server --open --config webpack.config.js"
+    "dev": "webpack-dev-server --port $ADMIN_WEB_EXT_PORT --open --config webpack.config.js"
   },
   "dependencies": {
     "@material-ui/core": "^3.3.2",

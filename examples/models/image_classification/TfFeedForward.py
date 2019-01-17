@@ -25,7 +25,7 @@ class TfFeedForward(BaseModel):
             'hidden_layer_units': IntegerKnob(2, 128),
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
-            'image_size': CategoricalKnob([32, 48, 64]),
+            'image_size': CategoricalKnob([16, 32]),
         }
 
     def __init__(self, **knobs):

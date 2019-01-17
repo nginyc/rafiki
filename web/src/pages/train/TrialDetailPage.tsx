@@ -206,7 +206,12 @@ function getPlotChartOptions(logs: TrialLogs): echarts.EChartOption[] {
   const chartOptions: echarts.EChartOption[] = [];
 
   for (const plot of logs.plots) {
-    const points = [];
+    const xAxisData: number[] = [];
+
+    const yAxisDatas: { [metric: string]: number[] }  = {};
+    for (const plotMetric of plot.metrics) {
+      yAxisDatas[plotMetric] = [];
+    }
 
     for (const metric of logs.metrics) {
       // Check if x axis value exists
@@ -216,22 +221,24 @@ function getPlotChartOptions(logs: TrialLogs): echarts.EChartOption[] {
       }
 
       // Initialize point
-      const point = [metric[xAxis]];
+      xAxisData.push(metric[xAxis])
 
       // For each of plot's y axis metrics, add it to point data
       for (const plotMetric of plot.metrics) {
-        point.push(plotMetric in metric ? metric[plotMetric] : null);
+        yAxisDatas[plotMetric].push(plotMetric in metric ? metric[plotMetric] : null);
       }
-
-      points.push(point);
     }
 
     const series = [];
-    series.push({
-      name,
-      type: 'line',
-      data: points
-    });
+    for (const plotMetric of plot.metrics) {
+      series.push({
+        name: plotMetric,
+        type: 'line',
+        data: yAxisDatas[plotMetric]
+      });
+    }
+
+    console.log(xAxisData, yAxisDatas)
 
     const chartOption: echarts.EChartOption = {
       title: {
@@ -241,7 +248,8 @@ function getPlotChartOptions(logs: TrialLogs): echarts.EChartOption[] {
         trigger: 'axis'
       },
       xAxis: {
-        type:  plot.x_axis ? 'value' : 'time',
+        type:  plot.x_axis ? 'category' : 'time',
+        data: xAxisData,
         splitLine: {
           show: false
         }

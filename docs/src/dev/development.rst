@@ -103,7 +103,7 @@ you might be running out of space allocated for Docker. Try one of the following
     ::
 
         # Prunes dangling images
-        docker system prune
+        docker system prune --all
 
     ::
 
