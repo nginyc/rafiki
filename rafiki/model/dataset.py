@@ -54,17 +54,18 @@ class ModelDatasetUtils():
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         return CorpusDataset(dataset_path, tags, split_by)
 
-    def load_dataset_of_image_files(self, dataset_uri, max_image_size=None, mode='RGB'):
+    def load_dataset_of_image_files(self, dataset_uri, min_image_size=None, max_image_size=None, mode='RGB'):
         '''
             Loads dataset with type `IMAGE_FILES`.
 
             :param str dataset_uri: URI of the dataset file
-            :param int max_image_size: maximum width *and* height to resize all images to (None for no resizing)
+            :param int min_image_size: minimum width *and* height to resize all images to 
+            :param int max_image_size: maximum width *and* height to resize all images to 
             :param str mode: Pillow image mode. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes
             :returns: An instance of ``ImageFilesDataset``
         '''
         dataset_path = self.download_dataset_from_uri(dataset_uri)
-        return ImageFilesDataset(dataset_path, max_image_size, mode)
+        return ImageFilesDataset(dataset_path, min_image_size, max_image_size, mode)
 
     def resize_as_images(self, images, image_size, mode='RGB'):
         '''
@@ -222,7 +223,7 @@ class ImageFilesDataset(ModelDataset):
         - Each class is an integer from 0 to (k - 1)
     '''   
 
-    def __init__(self, dataset_path, max_image_size=None, mode='RGB'):
+    def __init__(self, dataset_path, min_image_size=None, max_image_size=None, mode='RGB'):
         super().__init__(dataset_path)
         self.mode = mode
         (self.size, self.classes, self._image_paths, self._image_classes, 
@@ -231,10 +232,10 @@ class ImageFilesDataset(ModelDataset):
         if len(self._image_paths) == 0:
             raise InvalidDatasetFormatException('Dataset should contain at least 1 image!')
 
-        # Compute image size, so as to make it square and not stretch it
+        # Compute image size, adhering to min/max, making it square and trying not to stretch it
         pil_image = self._load_pil_image(self._image_paths[0])
         (width, height) = pil_image.size
-        self.image_size = min(width, height, max_image_size)
+        self.image_size = max(min([width, height, max_image_size or width]), min_image_size or 0)
 
         self.x = 0
 

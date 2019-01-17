@@ -45,7 +45,7 @@ class TfVgg16(BaseModel):
         # Define plot for loss against epochs
         logger.define_plot('Loss Over Epochs', ['loss', 'val_loss'], x_axis='epochs')
 
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, min_image_size=32, max_image_size=max_image_size)
         self._image_size = dataset.image_size
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
@@ -76,7 +76,7 @@ class TfVgg16(BaseModel):
     def evaluate(self, dataset_uri):
         max_image_size = self._knobs.get('max_image_size')
 
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, min_image_size=32, max_image_size=max_image_size)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
         classes = np.asarray(classes)
