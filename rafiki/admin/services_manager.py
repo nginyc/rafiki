@@ -26,6 +26,7 @@ class ServicesManager(object):
         self._postgres_port = os.environ['POSTGRES_PORT']
         self._postgres_user = os.environ['POSTGRES_USER']
         self._postgres_password = os.environ['POSTGRES_PASSWORD']
+        self._superadmin_password = os.environ['SUPERADMIN_PASSWORD']
         self._postgres_db = os.environ['POSTGRES_DB']
         self._redis_host = os.environ['REDIS_HOST']
         self._redis_port = os.environ['REDIS_PORT']
@@ -205,6 +206,7 @@ class ServicesManager(object):
             'POSTGRES_USER': self._postgres_user,
             'POSTGRES_DB': self._postgres_db,
             'POSTGRES_PASSWORD': self._postgres_password,
+            'SUPERADMIN_PASSWORD': self._superadmin_password,
             'ADMIN_HOST': self._admin_host,
             'ADMIN_PORT': self._admin_port,
             'ADVISOR_HOST': self._advisor_host,
