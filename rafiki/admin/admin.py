@@ -101,7 +101,9 @@ class Admin(object):
         train_jobs = self._db.get_train_jobs_of_app(app)
 
         # Ensure there is no existing train job for app
-        if any([x.status != TrainJobStatus.STOPPED for x in train_jobs]):
+        train_job_statuses = [self._get_train_job_status(x) for x in train_jobs]
+        train_job_statuses = [status for (status, _, _) in train_job_statuses]
+        if any([x != TrainJobStatus.STOPPED for x in train_job_statuses]):
             raise InvalidTrainJobError('Another train job for app "{}" is still running!'.format(app))
         
         # Compute auto-incremented app version
