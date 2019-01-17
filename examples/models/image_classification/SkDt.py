@@ -17,18 +17,20 @@ class SkDt(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'max_depth': IntegerKnob(2, 16 if APP_MODE != 'DEV' else 4),
+            'max_depth': IntegerKnob(2, 32 if APP_MODE != 'DEV' else 8),
+            'splitter': CategoricalKnob(['best', 'random']),
             'criterion': CategoricalKnob(['gini', 'entropy']),
-            'image_size': CategoricalKnob([16, 32]),
+            'max_image_size': CategoricalKnob([16, 32])
         }
 
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self.__dict__.update(knobs)
-        self._clf = self._build_classifier(self.max_depth, self.criterion)
+        self._clf = self._build_classifier(self.max_depth, self.criterion, self.splitter)
        
     def train(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[self.image_size, self.image_size], mode='L')
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, max_image_size=self.max_image_size, mode='L')
+        self._image_size = dataset.image_size
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -40,7 +42,7 @@ class SkDt(BaseModel):
         logger.log('Train accuracy: {}'.format(accuracy))
 
     def evaluate(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[self.image_size, self.image_size], mode='L')
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, max_image_size=self.max_image_size, mode='L')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -49,7 +51,7 @@ class SkDt(BaseModel):
         return accuracy
 
     def predict(self, queries):
-        queries = dataset_utils.resize_as_images(queries, image_size=[self.image_size, self.image_size], mode='L')
+        queries = dataset_utils.resize_as_images(queries, image_size=self._image_size, mode='L')
         X = self._prepare_X(queries)
         probs = self._clf.predict_proba(X)
         return probs.tolist()
@@ -64,6 +66,9 @@ class SkDt(BaseModel):
         clf_bytes = pickle.dumps(self._clf)
         clf_base64 = base64.b64encode(clf_bytes).decode('utf-8')
         params['clf_base64'] = clf_base64
+
+        # Save image size
+        params['image_size'] = self._image_size
         
         return params
 
@@ -74,15 +79,20 @@ class SkDt(BaseModel):
             raise InvalidModelParamsException()
         
         clf_bytes = base64.b64decode(params['clf_base64'].encode('utf-8'))
+
+        # Load image size
+        self._image_size = params['image_size']
+
         self._clf = pickle.loads(clf_bytes)
 
     def _prepare_X(self, images):
         return [np.asarray(image).flatten() for image in images]
 
-    def _build_classifier(self, max_depth, criterion):
+    def _build_classifier(self, max_depth, criterion, splitter):
         clf = tree.DecisionTreeClassifier(
             max_depth=max_depth,
-            criterion=criterion
+            criterion=criterion,
+            splitter=splitter
         ) 
         return clf
 

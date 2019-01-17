@@ -25,7 +25,7 @@ class TfFeedForward(BaseModel):
             'hidden_layer_units': IntegerKnob(2, 128),
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
-            'image_size': CategoricalKnob([16, 32]),
+            'max_image_size': CategoricalKnob([16, 32, 48]),
         }
 
     def __init__(self, **knobs):
@@ -37,7 +37,7 @@ class TfFeedForward(BaseModel):
         self._sess = tf.Session(graph=self._graph, config=config)
         
     def train(self, dataset_uri):
-        im_sz = self._knobs.get('image_size')
+        max_image_size = self._knobs.get('max_image_size')
         bs = self._knobs.get('batch_size')
         max_epochs = self._knobs.get('max_epochs')
 
@@ -46,14 +46,15 @@ class TfFeedForward(BaseModel):
         # Define plot for loss against epochs
         logger.define_plot('Loss Over Epochs', ['loss', 'val_loss'], x_axis='epoch')
 
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[im_sz, im_sz])
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size)
+        self._image_size = dataset.image_size
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
         classes = np.asarray(classes)
 
         with self._graph.as_default():
-            self._model = self._build_model(num_classes)
+            self._model = self._build_model(num_classes, dataset.image_size)
             with self._sess.as_default():
                 self._model.fit(
                     images, 
@@ -74,9 +75,9 @@ class TfFeedForward(BaseModel):
                 logger.log('Train accuracy: {}'.format(accuracy))
 
     def evaluate(self, dataset_uri):
-        im_sz = self._knobs.get('image_size')
+        max_image_size = self._knobs.get('max_image_size')
 
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[im_sz, im_sz])
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
         classes = np.asarray(classes)
@@ -89,9 +90,8 @@ class TfFeedForward(BaseModel):
         return accuracy
 
     def predict(self, queries):
-        im_sz = self._knobs.get('image_size')
-
-        X = dataset_utils.resize_as_images(queries, image_size=[im_sz, im_sz])
+        image_size = self._image_size
+        X = dataset_utils.resize_as_images(queries, image_size=image_size)
         with self._graph.as_default():
             with self._sess.as_default():
                 probs = self._model.predict(X)
@@ -117,6 +117,9 @@ class TfFeedForward(BaseModel):
 
             params['h5_model_base64'] = base64.b64encode(h5_model_bytes).decode('utf-8')
 
+        # Save image size
+        params['image_size'] = self._image_size
+
         return params
 
     def load_parameters(self, params):
@@ -136,19 +139,21 @@ class TfFeedForward(BaseModel):
                 with self._sess.as_default():
                     self._model = keras.models.load_model(tmp.name)
 
+        # Load image size
+        self._image_size = params['image_size']
+
     def _on_train_epoch_end(self, epoch, logs):
         loss = logs['loss']
         val_loss = logs['val_loss']
         logger.log(loss=loss, val_loss=val_loss, epoch=epoch)
 
-    def _build_model(self, num_classes):
+    def _build_model(self, num_classes, image_size):
         units = self._knobs.get('hidden_layer_units')
         layers = self._knobs.get('hidden_layer_count')
         lr = self._knobs.get('learning_rate')
-        im_sz = self._knobs.get('image_size')
-
+         
         model = keras.Sequential()
-        model.add(keras.layers.Flatten(input_shape=(im_sz, im_sz, 3)))
+        model.add(keras.layers.Flatten(input_shape=(image_size, image_size, 3)))
         model.add(keras.layers.BatchNormalization())
 
         for _ in range(layers):

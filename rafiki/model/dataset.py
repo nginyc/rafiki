@@ -54,29 +54,29 @@ class ModelDatasetUtils():
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         return CorpusDataset(dataset_path, tags, split_by)
 
-    def load_dataset_of_image_files(self, dataset_uri, image_size=None, mode='RGB'):
+    def load_dataset_of_image_files(self, dataset_uri, max_image_size=None, mode='RGB'):
         '''
             Loads dataset with type `IMAGE_FILES`.
 
             :param str dataset_uri: URI of the dataset file
-            :param image_size: dimensions to resize all images to, as a tuple of int (None for no resizing)
+            :param int max_image_size: maximum width *and* height to resize all images to (None for no resizing)
             :param str mode: Pillow image mode. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes
             :returns: An instance of ``ImageFilesDataset``
         '''
         dataset_path = self.download_dataset_from_uri(dataset_uri)
-        return ImageFilesDataset(dataset_path, image_size, mode)
+        return ImageFilesDataset(dataset_path, max_image_size, mode)
 
     def resize_as_images(self, images, image_size, mode='RGB'):
         '''
             Resize a list of N images to another size and/or mode
 
             :param images: list of images to resize as a (N x width x height x channels) list
-            :param int image_size: dimensions to resize all images to (None for no resizing)
+            :param int image_size: width *and* height to resize all images to
             :param str mode: Pillow image mode. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes
             :returns: list of output images as a (N x width x height x channels) numpy
         '''
         images = [Image.fromarray(np.asarray(x, dtype=np.uint8), mode=mode) for x in images]
-        images = [np.asarray(x.resize(image_size)) for x in images]
+        images = [np.asarray(x.resize([image_size, image_size])) for x in images]
         return np.asarray(images)
                 
     def download_dataset_from_uri(self, dataset_uri):
@@ -222,33 +222,42 @@ class ImageFilesDataset(ModelDataset):
         - Each class is an integer from 0 to (k - 1)
     '''   
 
-    def __init__(self, dataset_path, image_size=None, mode='RGB'):
+    def __init__(self, dataset_path, max_image_size=None, mode='RGB'):
         super().__init__(dataset_path)
-        self.image_size = image_size
         self.mode = mode
-        (self.size, self.classes, self._image_paths, 
-            self._image_classes, self._dataset_dir) = self._load(self.path)
+        (self.size, self.classes, self._image_paths, self._image_classes, 
+            self._dataset_dir) = self._load(self.path)
+        
+        if len(self._image_paths) == 0:
+            raise InvalidDatasetFormatException('Dataset should contain at least 1 image!')
+
+        # Compute image size, so as to make it square and not stretch it
+        pil_image = self._load_pil_image(self._image_paths[0])
+        (width, height) = pil_image.size
+        self.image_size = min(width, height, max_image_size)
 
         self.x = 0
 
     def __getitem__(self, index):
         image_path = self._image_paths[index]
         image_class = self._image_classes[index]
-        dataset_dir = self._dataset_dir
         image_size = self.image_size
-        mode = self.mode
         
+        pil_image = self._load_pil_image(image_path)
+        pil_image = pil_image.resize([image_size, image_size])
+        image = np.asarray(pil_image)
+
+        return (image, image_class)
+
+    def _load_pil_image(self, image_path):
+        dataset_dir = self._dataset_dir
+        mode = self.mode
+
         full_image_path = os.path.join(dataset_dir.name, image_path)
         with open(full_image_path, 'rb') as f:
             encoded = io.BytesIO(f.read())
             image = Image.open(encoded).convert(mode)
-            
-            if image_size is not None:
-                image = image.resize(image_size)
-
-            image = np.asarray(image)
-
-        return (image, image_class)
+            return image
 
     def _load(self, dataset_path):
         image_paths = []

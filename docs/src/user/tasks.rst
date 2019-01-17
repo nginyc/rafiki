@@ -30,12 +30,10 @@ Dataset Type
 
 :ref:`dataset-type:IMAGE_FILES`
 
-The train & test dataset's images should be have the same dimensions ``W x H``.
-
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A ``W x H`` 2D list representing the grayscale version of the query image. 
+A ``W x H`` 2D list representing a grayscale version of the query image. 
 
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

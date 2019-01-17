@@ -18,10 +18,10 @@ class SkSvm(BaseModel):
     def get_knob_config():
         return {
             'max_iter': FixedKnob(40 if APP_MODE != 'DEV' else 10),
-            'kernel': CategoricalKnob(['rbf', 'linear']),
+            'kernel': CategoricalKnob(['rbf', 'linear', 'poly']),
             'gamma': CategoricalKnob(['scale', 'auto']),
-            'C': FloatKnob(1e-2, 1e2, is_exp=True),
-            'image_size': CategoricalKnob([16, 32]),
+            'C': FloatKnob(1e-4, 1e4, is_exp=True),
+            'max_image_size': CategoricalKnob([16, 32])
         }
 
     def __init__(self, **knobs):
@@ -30,14 +30,15 @@ class SkSvm(BaseModel):
         self._clf = self._build_classifier(self.max_iter, self.kernel, self.gamma, self.C)
         
     def train(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[self.image_size, self.image_size], mode='L')
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, max_image_size=self.max_image_size, mode='L')
+        self._image_size = dataset.image_size
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
         self._clf.fit(X, y)
 
     def evaluate(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[self.image_size, self.image_size], mode='L')
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, max_image_size=self.max_image_size, mode='L')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -46,7 +47,7 @@ class SkSvm(BaseModel):
         return accuracy
 
     def predict(self, queries):
-        queries = dataset_utils.resize_as_images(queries, image_size=[self.image_size, self.image_size], mode='L')
+        queries = dataset_utils.resize_as_images(queries, image_size=self._image_size, mode='L')
         X = self._prepare_X(queries)
         probs = self._clf.predict_proba(X)
         return probs.tolist()
@@ -61,6 +62,9 @@ class SkSvm(BaseModel):
         clf_bytes = pickle.dumps(self._clf)
         clf_base64 = base64.b64encode(clf_bytes).decode('utf-8')
         params['clf_base64'] = clf_base64
+
+        # Save image size
+        params['image_size'] = self._image_size
         
         return params
 
@@ -69,6 +73,9 @@ class SkSvm(BaseModel):
         clf_base64 = params.get('clf_base64', None)
         if clf_base64 is None:
             raise InvalidModelParamsException()
+
+        # Load image size
+        self._image_size = params['image_size']
         
         clf_bytes = base64.b64decode(params['clf_base64'].encode('utf-8'))
         self._clf = pickle.loads(clf_bytes)
