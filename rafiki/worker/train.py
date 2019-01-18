@@ -137,20 +137,19 @@ class TrainWorker(object):
 
     def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, \
                                 test_dataset_uri, handle_log):
-
-        # Initialize model
-        model_inst = clazz(**knobs)
-
-        # Add logs handlers for trial, including adding handler to root logger 
-        # to handle logs emitted during model training with level above INFO
+        # Add log handlers for trial, including adding handler to root logger 
+        # to capture any logs emitted with level above INFO during model training & evaluation
         log_handler = ModelLoggerHandler(handle_log)
-        root_logger = logging.getLogger()
-        root_logger.addHandler(log_handler)
         py_model_logger = logging.getLogger('{}.trial'.format(__name__))
         py_model_logger.setLevel(logging.INFO)
         py_model_logger.propagate = False # Avoid duplicate logs in root logger
         py_model_logger.addHandler(log_handler)
         model_logger.set_logger(py_model_logger)
+        root_logger = logging.getLogger()
+        root_logger.addHandler(log_handler)
+
+        # Initialize model
+        model_inst = clazz(**knobs)
 
         # Train model
         model_inst.train(train_dataset_uri)
@@ -158,14 +157,14 @@ class TrainWorker(object):
         # Evaluate model
         score = model_inst.evaluate(test_dataset_uri)
 
-        # Remove log handlers from loggers for this trial
-        root_logger.removeHandler(log_handler)
-        py_model_logger.removeHandler(log_handler)
-
         # Dump and pickle model parameters
         parameters = model_inst.dump_parameters()
         parameters = pickle.dumps(parameters)
         model_inst.destroy()
+
+        # Remove log handlers from loggers for this trial
+        root_logger.removeHandler(log_handler)
+        py_model_logger.removeHandler(log_handler)
 
         return (score, parameters)
 
