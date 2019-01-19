@@ -1,3 +1,6 @@
+# Read from shell configuration file
+source ./.env.sh
+
 # Echo title with border
 title() 
 {
