@@ -1,7 +1,7 @@
 import os
 
 from rafiki.utils.service import run_service
-from rafiki.db import Database
+from rafiki.meta_store import MetaStore
 from rafiki.predictor.app import app
 
 def start_service(service_id, service_type):
@@ -12,5 +12,5 @@ def start_service(service_id, service_type):
 def end_service(service_id, service_type):
     pass
 
-db = Database()
-run_service(db, start_service, end_service)
+meta_store = MetaStore()
+run_service(meta_store, start_service, end_service)

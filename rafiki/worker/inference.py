@@ -8,7 +8,8 @@ import traceback
 import json
 
 from rafiki.model import load_model_class
-from rafiki.db import Database
+from rafiki.meta_store import MetaStore
+from rafiki.param_store import ParamStore
 from rafiki.cache import Cache
 from rafiki.config import INFERENCE_WORKER_SLEEP, INFERENCE_WORKER_PREDICT_BATCH_SIZE
 
@@ -17,14 +18,19 @@ logger = logging.getLogger(__name__)
 class InvalidWorkerException(Exception): pass
 
 class InferenceWorker(object):
-    def __init__(self, service_id, cache=None, db=None):
+    def __init__(self, service_id, cache=None, meta_store=None, param_store=None):
         if cache is None: 
             cache = Cache()
-        if db is None: 
-            db = Database()
+
+        if meta_store is None: 
+            meta_store = MetaStore()
+
+        if param_store is None: 
+            param_store = ParamStore()
 
         self._cache = cache
-        self._db = db
+        self._meta_store = meta_store
+        self._param_store = param_store
         self._service_id = service_id
         self._model = None
         
@@ -32,7 +38,7 @@ class InferenceWorker(object):
         logger.info('Starting inference worker for service of id {}...' \
             .format(self._service_id))
         
-        with self._db:
+        with self._meta_store:
             (inference_job_id, trial_id) = self._read_worker_info()
 
             # Add to inference job's set of running workers
@@ -65,7 +71,7 @@ class InferenceWorker(object):
             time.sleep(INFERENCE_WORKER_SLEEP)
 
     def stop(self):
-        with self._db:
+        with self._meta_store:
             (inference_job_id, _) = self._read_worker_info()
 
         # Remove from inference job's set of running workers
@@ -76,23 +82,24 @@ class InferenceWorker(object):
             self._model = None
 
     def _load_model(self, trial_id):
-        trial = self._db.get_trial(trial_id)
-        sub_train_job = self._db.get_sub_train_job(trial.sub_train_job_id)
-        model = self._db.get_model(sub_train_job.model_id)
+        trial = self._meta_store.get_trial(trial_id)
+        sub_train_job = self._meta_store.get_sub_train_job(trial.sub_train_job_id)
+        model = self._meta_store.get_model(sub_train_job.model_id)
 
         # Load model based on trial
         clazz = load_model_class(model.model_file_bytes, model.model_class)
         model_inst = clazz(**trial.knobs)
 
-        # Unpickle model parameters and load it
-        parameters = pickle.loads(trial.parameters)
+        # Load parameters from store, unpickle and load it in model
+        parameters = self._param_store.get_params(trial.param_id)
+        parameters = pickle.loads(parameters)
         model_inst.load_parameters(parameters)
 
         return model_inst
 
     def _read_worker_info(self):
-        worker = self._db.get_inference_job_worker(self._service_id)
-        inference_job = self._db.get_inference_job(worker.inference_job_id)
+        worker = self._meta_store.get_inference_job_worker(self._service_id)
+        inference_job = self._meta_store.get_inference_job(worker.inference_job_id)
 
         if worker is None:
             raise InvalidWorkerException()

@@ -12,8 +12,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data.dataset import Dataset
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, FloatKnob, CategoricalKnob, logger, dataset_utils
+from rafiki.model import BaseModel, InvalidModelParamsException, \
+                        test_model_class, FixedKnob, IntegerKnob, FloatKnob, \
+                        CategoricalKnob, logger, dataset_utils
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.config import APP_MODE
 
@@ -24,7 +25,7 @@ class PyBiLstm(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': IntegerKnob(10, 50 if APP_MODE != 'DEV' else 10),
+            'epochs': FixedKnob(100 if APP_MODE != 'DEV' else 20),
             'word_embed_dims': IntegerKnob(16, 128),
             'word_rnn_hidden_size': IntegerKnob(16, 128),
             'word_dropout': FloatKnob(1e-3, 2e-1, is_exp=True),
@@ -171,9 +172,8 @@ class PyBiLstm(BaseModel):
         null_tag = self._tag_count # Tag to ignore (from padding of sentences during batching)
         B = math.ceil(len(dataset) / N) # No. of batches
 
-        # Define 2 plots: Loss against time, loss against epochs
+        # Define loss plot
         logger.define_loss_plot()
-        logger.define_plot('Loss Over Time', ['loss'])
 
         (net, optimizer) = self._create_model()
 

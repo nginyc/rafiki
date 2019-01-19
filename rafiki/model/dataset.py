@@ -67,19 +67,25 @@ class ModelDatasetUtils():
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         return ImageFilesDataset(dataset_path, min_image_size, max_image_size, mode)
 
-    def resize_as_images(self, images, image_size, mode='RGB'):
+    def transform_images(self, images, image_size=None, mode=None):
         '''
-            Resize a list of N images to another size and/or mode
+            Resize or convert a list of N images to another size and/or mode
 
             :param images: list of images to resize as a (N x width x height x channels) list
             :param int image_size: width *and* height to resize all images to
-            :param str mode: Pillow image mode. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes
+            :param str mode: Pillow image mode to convert all images to. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes
             :returns: list of output images as a (N x width x height x channels) numpy
         '''
-        images = [Image.fromarray(np.asarray(x, dtype=np.uint8), mode=mode) for x in images]
-        images = [np.asarray(x.resize([image_size, image_size])) for x in images]
-        return np.asarray(images)
-                
+        images = [Image.fromarray(np.asarray(x, dtype=np.uint8)) for x in images]
+
+        if image_size is not None:
+            images = [x.resize([image_size, image_size]) for x in images]
+
+        if mode is not None:
+            images = [x.convert(mode) for x in images]
+
+        return np.asarray([np.asarray(x) for x in images])
+    
     def download_dataset_from_uri(self, dataset_uri):
         '''
             Maybe download the dataset at URI, ensuring that the dataset ends up in the local filesystem.

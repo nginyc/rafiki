@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Float, ForeignKey, Integer, Binary, DateTime
+from sqlalchemy import Column, String, Float, ForeignKey, Integer, LargeBinary, DateTime
 from sqlalchemy.dialects.postgresql import JSON, ARRAY
 import uuid
 import datetime
@@ -40,7 +40,7 @@ class Model(Base):
     datetime_created = Column(DateTime, nullable=False, default=generate_datetime)
     name = Column(String, unique=True, nullable=False)
     task = Column(String, nullable=False)
-    model_file_bytes = Column(Binary, nullable=False)
+    model_file_bytes = Column(LargeBinary, nullable=False)
     model_class = Column(String, nullable=False)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
     docker_image = Column(String, nullable=False)
@@ -107,7 +107,7 @@ class Trial(Base):
     status = Column(String, nullable=False, default=TrialStatus.STARTED)
     knobs = Column(JSON, default=None)
     score = Column(Float, default=0)
-    parameters = Column(Binary, default=None)
+    param_id = Column(String, default=None)
     datetime_stopped = Column(DateTime, default=None)
 
 class TrialLog(Base):
@@ -124,6 +124,6 @@ class User(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     email = Column(String, unique=True, nullable=False)
-    password_hash = Column(Binary, nullable=False)
+    password_hash = Column(LargeBinary, nullable=False)
     user_type = Column(String, nullable=False)
     

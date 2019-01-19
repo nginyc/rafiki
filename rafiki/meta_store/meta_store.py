@@ -10,13 +10,13 @@ from .schema import Base, TrainJob, SubTrainJob, TrainJobWorker, \
     InferenceJob, Trial, Model, User, Service, InferenceJobWorker, \
     TrialLog
 
-class Database(object):
-    def __init__(self, 
-        host=os.environ.get('POSTGRES_HOST', 'localhost'), 
-        port=os.environ.get('POSTGRES_PORT', 5432),
-        user=os.environ.get('POSTGRES_USER', 'rafiki'),
-        db=os.environ.get('POSTGRES_DB', 'rafiki'),
-        password=os.environ.get('POSTGRES_PASSWORD', 'rafiki')):
+class MetaStore(object):
+    def __init__(self, **kwargs):
+        host = kwargs.get('postgres_host', os.environ.get('POSTGRES_HOST', 'localhost'))
+        port = kwargs.get('postgres_port', os.environ.get('POSTGRES_PORT', 5432))
+        user = kwargs.get('postgres_user', os.environ.get('POSTGRES_USER', 'rafiki'))
+        db = kwargs.get('postgres_db', os.environ.get('POSTGRES_DB', 'rafiki'))
+        password = kwargs.get('postgres_password', os.environ.get('POSTGRES_PASSWORD', 'rafiki'))
 
         db_connection_url = self._make_connection_url(
             host=host, 
@@ -412,11 +412,11 @@ class Database(object):
         self._session.add(trial)
         return trial
 
-    def mark_trial_as_complete(self, trial, score, parameters):
+    def mark_trial_as_complete(self, trial, score, param_id):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
         trial.datetime_stopped = datetime.datetime.utcnow()
-        trial.parameters = parameters
+        trial.param_id = param_id
         self._session.add(trial)
         return trial
 

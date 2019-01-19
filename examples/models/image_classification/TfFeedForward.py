@@ -15,7 +15,7 @@ from rafiki.constants import TaskType, ModelDependency
 class TfFeedForward(BaseModel):
     '''
     Implements a fully-connected feed-forward neural network with variable hidden layers on Tensorflow 
-    for simple image classification
+    for image classification
     '''
     @staticmethod
     def get_knob_config():
@@ -46,7 +46,7 @@ class TfFeedForward(BaseModel):
         # Define plot for loss against epochs
         logger.define_plot('Loss Over Epochs', ['loss', 'val_loss'], x_axis='epoch')
 
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, mode='RGB')
         self._image_size = dataset.image_size
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
@@ -77,7 +77,7 @@ class TfFeedForward(BaseModel):
     def evaluate(self, dataset_uri):
         max_image_size = self._knobs.get('max_image_size')
 
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size)
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, mode='RGB')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
         classes = np.asarray(classes)
@@ -91,7 +91,7 @@ class TfFeedForward(BaseModel):
 
     def predict(self, queries):
         image_size = self._image_size
-        X = dataset_utils.resize_as_images(queries, image_size=image_size)
+        X = dataset_utils.transform_images(queries, image_size=image_size, mode='RGB')
         with self._graph.as_default():
             with self._sess.as_default():
                 probs = self._model.predict(X)

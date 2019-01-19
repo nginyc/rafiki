@@ -12,7 +12,7 @@ from rafiki.constants import TaskType, ModelDependency
 
 class SkSvm(BaseModel):
     '''
-    Implements a SVM on Scikit-Learn for simple image classification
+    Implements a SVM on Scikit-Learn for image classification
     '''
     @staticmethod
     def get_knob_config():
@@ -47,7 +47,7 @@ class SkSvm(BaseModel):
         return accuracy
 
     def predict(self, queries):
-        queries = dataset_utils.resize_as_images(queries, image_size=self._image_size, mode='L')
+        queries = dataset_utils.transform_images(queries, image_size=self._image_size, mode='L')
         X = self._prepare_X(queries)
         probs = self._clf.predict_proba(X)
         return probs.tolist()

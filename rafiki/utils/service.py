@@ -7,7 +7,7 @@ from rafiki.utils.log import configure_logging
 
 logger = logging.getLogger(__name__)
 
-def run_service(db, start_service, end_service):
+def run_service(meta_store, start_service, end_service):
     service_id = os.environ['RAFIKI_SERVICE_ID']
     service_type = os.environ['RAFIKI_SERVICE_TYPE']
     container_id = os.environ.get('HOSTNAME', 'localhost')
@@ -17,9 +17,9 @@ def run_service(db, start_service, end_service):
         logger.warn("Terminal signal received: %s, %s" % (_signo, _stack_frame))
 
         # Mark service as stopped in DB
-        with db:
-            service = db.get_service(service_id)
-            db.mark_service_as_stopped(service)
+        with meta_store:
+            service = meta_store.get_service(service_id)
+            meta_store.mark_service_as_stopped(service)
 
         end_service(service_id, service_type)
         exit(0)
@@ -28,9 +28,9 @@ def run_service(db, start_service, end_service):
     signal.signal(signal.SIGTERM, _sigterm_handler)
 
     # Mark service as running in DB
-    with db:
-        service = db.get_service(service_id)
-        db.mark_service_as_running(service)
+    with meta_store:
+        service = meta_store.get_service(service_id)
+        meta_store.mark_service_as_running(service)
 
     try:
         logger.info('Starting service {}...'.format(service_id))
@@ -40,9 +40,9 @@ def run_service(db, start_service, end_service):
         logger.info('Ending service {}...'.format(service_id))
 
         # Mark service as stopped in DB
-        with db:
-            service = db.get_service(service_id)
-            db.mark_service_as_stopped(service)
+        with meta_store:
+            service = meta_store.get_service(service_id)
+            meta_store.mark_service_as_stopped(service)
 
         end_service(service_id, service_type)
 
@@ -51,9 +51,9 @@ def run_service(db, start_service, end_service):
         logger.error(traceback.format_exc())
 
         # Mark service as errored in DB
-        with db:
-            service = db.get_service(service_id)
-            db.mark_service_as_errored(service)
+        with meta_store:
+            service = meta_store.get_service(service_id)
+            meta_store.mark_service_as_errored(service)
 
         end_service(service_id, service_type)
 

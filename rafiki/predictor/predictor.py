@@ -4,7 +4,7 @@ import logging
 import pickle
 
 from rafiki.cache import Cache
-from rafiki.db import Database
+from rafiki.meta_store import MetaStore
 from rafiki.config import PREDICTOR_PREDICT_SLEEP
 
 from .ensemble import ensemble_predictions
@@ -13,18 +13,18 @@ logger = logging.getLogger(__name__)
  
 class Predictor(object):
 
-    def __init__(self, service_id, db=None, cache=None):
-        if db is None: 
-            db = Database()
+    def __init__(self, service_id, meta_store=None, cache=None):
+        if meta_store is None: 
+            meta_store = MetaStore()
         if cache is None: 
             cache = Cache()
 
         self._service_id = service_id
-        self._db = db
+        self._meta_store = meta_store
         self._cache = cache
 
     def start(self):
-        with self._db:
+        with self._meta_store:
             (self._inference_job_id, self._task) \
                 = self._read_predictor_info()
 
@@ -74,8 +74,8 @@ class Predictor(object):
         }
 
     def _read_predictor_info(self):
-        inference_job = self._db.get_inference_job_by_predictor(self._service_id)
-        train_job = self._db.get_train_job(inference_job.train_job_id)
+        inference_job = self._meta_store.get_inference_job_by_predictor(self._service_id)
+        train_job = self._meta_store.get_train_job(inference_job.train_job_id)
 
         return (
             inference_job.id,

@@ -29,9 +29,13 @@ Folder Structure
 
         Code for Rafiki's `Predictor` component
 
-    - `db/`
+    - `meta_store/`
 
-        Code for Rafiki's *Database* as an abstract data access layer
+        Code for Rafiki's *MetaStore* as an abstract data access layer
+    
+    - `param_store/`
+
+        Code for Rafiki's *ParamStore* as an abstract data access layer
 
     - `cache/`
 

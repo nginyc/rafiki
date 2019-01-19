@@ -8,7 +8,8 @@ import pprint
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
 from rafiki.model import load_model_class, serialize_knob_config, logger as model_logger
-from rafiki.db import Database
+from rafiki.meta_store import MetaStore
+from rafiki.param_store import ParamStore
 from rafiki.client import Client
 
 logger = logging.getLogger(__name__)
@@ -19,48 +20,47 @@ class InvalidBudgetTypeException(Exception): pass
 class InvalidWorkerException(Exception): pass
 
 class TrainWorker(object):
-    def __init__(self, service_id, db=None):
-        if db is None: 
-            db = Database()
+    def __init__(self, service_id, meta_store=None, param_store=None, **kwargs):
+        if meta_store is None: 
+            meta_store = MetaStore()
+        
+        if param_store is None: 
+            param_store = ParamStore()
+
+        admin_host = kwargs.get('admin_host', os.environ['ADMIN_HOST'])
+        admin_port = kwargs.get('admin_port', os.environ['ADMIN_PORT'])
+        advisor_host = kwargs.get('advisor_host', os.environ['ADVISOR_HOST'])
+        advisor_port = kwargs.get('advisor_port', os.environ['ADVISOR_PORT'])
             
         self._service_id = service_id
-        self._db = db
+        self._meta_store = meta_store
+        self._param_store = param_store
         self._trial_id = None
-        self._client = self._make_client()
+        self._advisor_id = None
+        self._client = self._make_client(admin_host, admin_port, advisor_host, advisor_port)
 
     def start(self):
         logger.info('Starting train worker for service of ID "{}"...' \
             .format(self._service_id))
             
-        # TODO: Break up crazily long & unreadable method
-        advisor_id = None
         while True:
-            with self._db:
-                (sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
-                    train_job_id, train_dataset_uri, val_dataset_uri) = self._read_worker_info()
+            (sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
+                train_job_id, train_dataset_uri, val_dataset_uri) = self._read_worker_info()
 
-                if self._if_budget_reached(budget, sub_train_job_id):
-                    # If budget reached
-                    logger.info('Budget for train job has reached')
-                    self._stop_worker()
-                    if advisor_id is not None:
-                        self._delete_advisor(advisor_id)
-                    break
+            # If budget reached, stop worker
+            if self._if_budget_reached(budget, sub_train_job_id):
+                logger.info('Budget for train job has reached')
+                self._stop_worker()
+    
+                if self._advisor_id is not None:
+                    self._delete_advisor(self._advisor_id)
+                    self._advisor_id = None
+                break
 
-                # Create a new trial
-                logger.info('Creating new trial in DB...')
-                trial = self._db.create_trial(
-                    sub_train_job_id=sub_train_job_id,
-                    model_id=model_id
-                )
-                self._db.commit()
-                self._trial_id = trial.id
-                logger.info('Created trial of ID "{}" in DB'.format(self._trial_id))
-                
-            # Don't keep DB connection while training model
+            # Otherwise, create a new trial
+            self._trial_id = self._create_trial(model_id, sub_train_job_id)
 
             # Perform trial & record results
-            score = 0
             try:
                 logger.info('Starting trial...')
 
@@ -69,76 +69,51 @@ class TrainWorker(object):
                 clazz = load_model_class(model_file_bytes, model_class)
 
                 # If not created, create a Rafiki advisor for train worker to propose knobs in trials
-                if advisor_id is None:
-                    logger.info('Creating Rafiki advisor...')
-                    advisor_id = self._create_advisor(clazz)
-                    logger.info('Created advisor of ID "{}"'.format(advisor_id))
+                if self._advisor_id is None:
+                    self._advisor_id = self._create_advisor(clazz)
 
                 # Generate knobs for trial
-                logger.info('Requesting for knobs proposal from advisor...')
-                knobs = self._get_proposal_from_advisor(advisor_id)
-                logger.info('Received proposal of knobs from advisor:')
-                logger.info(pprint.pformat(knobs))
+                knobs = self._get_proposal_from_advisor()
 
-                # Mark trial as running in DB
-                logger.info('Training & evaluating model...')
-                with self._db:
-                    trial = self._db.get_trial(self._trial_id)
-                    self._db.mark_trial_as_running(trial, knobs)
-
-                def handle_log(log_line, log_lvl):
-                    with self._db:
-                        trial = self._db.get_trial(self._trial_id)
-                        self._db.add_trial_log(trial, log_line, log_lvl)
-
+                # Train & evaluate model for trial
+                self._mark_trial_as_running(knobs)
                 (score, parameters) = self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
-                                                                    val_dataset_uri, handle_log)
-                logger.info('Trial score: {}'.format(score))
-                
-                with self._db:
-                    logger.info('Marking trial as complete in DB...')
-                    trial = self._db.get_trial(self._trial_id)
-                    self._db.mark_trial_as_complete(trial, score, parameters)
-
-                self._trial_id = None
+                                                                    val_dataset_uri)
+                self._mark_trial_as_completed(score, parameters)
 
                 # Report results of trial to advisor
-                try:
-                    logger.info('Sending result of trials\' knobs to advisor...')
-                    self._feedback_to_advisor(advisor_id, knobs, score)
-                except Exception:
-                    logger.error('Error while sending result of proposal to advisor:')
-                    logger.error(traceback.format_exc())
-
+                self._feedback_to_advisor(knobs, score)
             except Exception:
-                logger.error('Error while running trial:')
-                logger.error(traceback.format_exc())
-                logger.info('Marking trial as errored in DB...')
-
-                with self._db:
-                    trial = self._db.get_trial(self._trial_id)
-                    self._db.mark_trial_as_errored(trial)
-
-                self._trial_id = None
+                self._mark_trial_as_errored()
                 break # Exit worker upon trial error
+            finally:
+                # Untie from done trial 
+                self._trial_id = None
             
     def stop(self):
         # If worker is currently running a trial, mark it has terminated
         logger.info('Marking trial as terminated in DB...')
         try:
             if self._trial_id is not None: 
-                with self._db:
-                    trial = self._db.get_trial(self._trial_id)
-                    self._db.mark_trial_as_terminated(trial)
+                with self._meta_store:
+                    trial = self._meta_store.get_trial(self._trial_id)
+                    self._meta_store.mark_trial_as_terminated(trial)
 
         except Exception:
             logger.error('Error marking trial as terminated:')
             logger.error(traceback.format_exc())
 
     def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, \
-                                val_dataset_uri, handle_log):
+                                val_dataset_uri):
+        logger.info('Training & evaluating model...')
+        
         # Add log handlers for trial, including adding handler to root logger 
         # to capture any logs emitted with level above INFO during model training & evaluation
+        def handle_log(log_line, log_lvl):
+            with self._meta_store:
+                trial = self._meta_store.get_trial(self._trial_id)
+                self._meta_store.add_trial_log(trial, log_line, log_lvl)
+
         log_handler = ModelLoggerHandler(handle_log)
         py_model_logger = logging.getLogger('{}.trial'.format(__name__))
         py_model_logger.setLevel(logging.INFO)
@@ -159,27 +134,36 @@ class TrainWorker(object):
 
         # Dump and pickle model parameters
         parameters = model_inst.dump_parameters()
-        parameters = pickle.dumps(parameters)
         model_inst.destroy()
 
         # Remove log handlers from loggers for this trial
         root_logger.removeHandler(log_handler)
         py_model_logger.removeHandler(log_handler)
 
+        logger.info('Trial score: {}'.format(score))
+
         return (score, parameters)
 
     # Gets proposal of a set of knob values from advisor
-    def _get_proposal_from_advisor(self, advisor_id):
-        res = self._client.generate_proposal(advisor_id)
+    def _get_proposal_from_advisor(self):
+        logger.info('Requesting for knobs proposal from advisor...')
+        res = self._client.generate_proposal(self._advisor_id)
         knobs = res['knobs']
+        logger.info('Received proposal of knobs from advisor:')
+        logger.info(pprint.pformat(knobs))
         return knobs
 
     # Feedback result of knobs to advisor
-    def _feedback_to_advisor(self, advisor_id, knobs, score):
-        self._client.feedback_to_advisor(advisor_id, knobs, score)
+    def _feedback_to_advisor(self, knobs, score):
+        try:
+            logger.info('Sending result of trials\' knobs to advisor...')
+            self._client.feedback_to_advisor(self._advisor_id, knobs, score)
+        except Exception:
+            logger.error('Error while sending result of proposal to advisor:')
+            logger.error(traceback.format_exc())
 
     def _stop_worker(self):
-        logger.warn('Stopping train job worker...')
+        logger.info('Stopping train job worker...')
         try:
             self._client.stop_train_job_worker(self._service_id)
         except Exception:
@@ -188,6 +172,8 @@ class TrainWorker(object):
             logger.warn(traceback.format_exc())
         
     def _create_advisor(self, clazz):
+        logger.info('Creating Rafiki advisor...')
+
         # Retrieve knob & train config for model of worker 
         knob_config = clazz.get_knob_config()
         knob_config_str = serialize_knob_config(knob_config)
@@ -197,11 +183,26 @@ class TrainWorker(object):
         advisor_type = train_config.get('advisor_type')
         res = self._client.create_advisor(knob_config_str, advisor_type, advisor_id=self._service_id)
         advisor_id = res['id']
+
+        logger.info('Created advisor of ID "{}"'.format(advisor_id))
         return advisor_id
+
+    def _create_trial(self, model_id, sub_train_job_id):
+        with self._meta_store:
+            logger.info('Creating new trial in DB...')
+            trial = self._meta_store.create_trial(
+                sub_train_job_id=sub_train_job_id,
+                model_id=model_id
+            )
+            self._meta_store.commit()
+            logger.info('Created trial of ID "{}" in DB'.format(trial.id))
+
+            return trial.id
 
     # Delete advisor
     def _delete_advisor(self, advisor_id):
         try:
+            logger.info('Deleting advisor...')
             self._client.delete_advisor(advisor_id)
         except Exception:
             # Throw just a warning - not critical for advisor to be deleted
@@ -211,43 +212,67 @@ class TrainWorker(object):
     # Returns whether the worker reached its budget (only consider COMPLETED or ERRORED trials)
     def _if_budget_reached(self, budget, sub_train_job_id):
         # By default, budget is model trial count of 2
-        max_trials = budget.get(BudgetType.MODEL_TRIAL_COUNT, 2)
-        trials = self._db.get_trials_of_sub_train_job(sub_train_job_id)
-        trials = [x for x in trials if x.status in [TrialStatus.COMPLETED, TrialStatus.ERRORED]]
-        return len(trials) >= max_trials
+        with self._meta_store:
+            max_trials = budget.get(BudgetType.MODEL_TRIAL_COUNT, 2)
+            trials = self._meta_store.get_trials_of_sub_train_job(sub_train_job_id)
+            trials = [x for x in trials if x.status in [TrialStatus.COMPLETED, TrialStatus.ERRORED]]
+            return len(trials) >= max_trials
 
     def _read_worker_info(self):
-        worker = self._db.get_train_job_worker(self._service_id)
+        with self._meta_store:
+            worker = self._meta_store.get_train_job_worker(self._service_id)
 
-        if worker is None:
-            raise InvalidWorkerException()
+            if worker is None:
+                raise InvalidWorkerException()
 
-        train_job = self._db.get_train_job(worker.train_job_id)
-        sub_train_job = self._db.get_sub_train_job(worker.sub_train_job_id)
-        model = self._db.get_model(sub_train_job.model_id)
+            train_job = self._meta_store.get_train_job(worker.train_job_id)
+            sub_train_job = self._meta_store.get_sub_train_job(worker.sub_train_job_id)
+            model = self._meta_store.get_model(sub_train_job.model_id)
 
-        if model is None:
-            raise InvalidModelException()
+            if model is None:
+                raise InvalidModelException()
 
-        if train_job is None or sub_train_job is None:
-            raise InvalidTrainJobException()
+            if train_job is None or sub_train_job is None:
+                raise InvalidTrainJobException()
 
-        return (
-            sub_train_job.id,
-            train_job.budget,
-            model.id,
-            model.model_file_bytes,
-            model.model_class,
-            train_job.id,
-            train_job.train_dataset_uri,
-            train_job.val_dataset_uri
-        )
+            return (
+                sub_train_job.id,
+                train_job.budget,
+                model.id,
+                model.model_file_bytes,
+                model.model_class,
+                train_job.id,
+                train_job.train_dataset_uri,
+                train_job.val_dataset_uri
+            )
 
-    def _make_client(self):
-        admin_host = os.environ['ADMIN_HOST']
-        admin_port = os.environ['ADMIN_PORT']
-        advisor_host = os.environ['ADVISOR_HOST']
-        advisor_port = os.environ['ADVISOR_PORT']
+    def _mark_trial_as_errored(self):
+        logger.error('Error while running trial:')
+        logger.error(traceback.format_exc())
+        logger.info('Marking trial as errored in DB...')
+
+        with self._meta_store:
+            trial = self._meta_store.get_trial(self._trial_id)
+            self._meta_store.mark_trial_as_errored(trial)
+
+    def _mark_trial_as_completed(self, score, parameters):
+        logger.info('Storing model parameters...')
+        parameters = pickle.dumps(parameters) # Convert to bytes
+        param_id = self._trial_id
+        self._param_store.put_params(param_id, parameters)
+
+        logger.info('Marking trial as completed in DB...')
+        with self._meta_store:
+            trial = self._meta_store.get_trial(self._trial_id)
+            self._meta_store.mark_trial_as_complete(trial, score, param_id)
+
+    def _mark_trial_as_running(self, knobs):
+        logger.info('Marking trial as running in DB...')
+        with self._meta_store:
+            trial = self._meta_store.get_trial(self._trial_id)
+            self._meta_store.mark_trial_as_running(trial, knobs)
+
+    def _make_client(self, admin_host, admin_port, advisor_host, advisor_port):
         superadmin_email = SUPERADMIN_EMAIL
         superadmin_password = SUPERADMIN_PASSWORD
         client = Client(admin_host=admin_host, 
