@@ -13,7 +13,7 @@ interface Props {
 class AppRouter extends React.Component<Props> {
 
   componentDidMount() {
-    const { appUtils: { rafikiClient, appNavigator} } = this.props;
+    const { appUtils: { rafikiClient, appNavigator } } = this.props;
 
     const user = rafikiClient.getCurrentUser();
     if (!user) {

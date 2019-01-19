@@ -1,6 +1,6 @@
 import 'whatwg-fetch';
 
-class RafikiClient {
+export default class RafikiClient {
   _storage: Storage;
   _adminHost: string;
   _adminPort: number;
@@ -270,12 +270,12 @@ class RafikiClient {
   }
 }
 
-interface User {
+export interface User {
   id: string;
   user_type: string;
 }
 
-interface TrainJob {
+export interface TrainJob {
   id: string;
   app: string;
   app_version: string;
@@ -288,9 +288,9 @@ interface TrainJob {
   task: string;
 }
 
-interface Trial {
+export interface Trial {
   id: string;
-  status: string;
+  status: TrialStatus;
   datetime_started: Date;
   datetime_stopped?: Date;
   score: number;
@@ -298,31 +298,30 @@ interface Trial {
   knobs: { [name: string]: any }
 }
 
-interface TrialLogs {
+export interface TrialLogs {
   plots: TrialPlot[];
   metrics: TrialMetric[];
   messages: TrialMessage[];
 }
 
-interface TrialPlot {
+export interface TrialPlot {
   title: string;
   metrics: string[];
   x_axis: string;
 }
 
-interface TrialMetric {
+export interface TrialMetric {
   time: Date;
   [metric: string]: any;
 }
 
-interface TrialMessage {
+export interface TrialMessage {
   time?: Date;
   message: string;
 }
 
-interface InferenceJob {
+export interface InferenceJob {
   id: string;
 }
 
-export default RafikiClient;
-export { User, TrainJob, InferenceJob, Trial, TrialLogs, TrialPlot };
+export type TrialStatus = 'STARTED' | 'RUNNING' | 'ERRORED' | 'TERMINATED' | 'COMPLETED';

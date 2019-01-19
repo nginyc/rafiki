@@ -70,13 +70,16 @@ class Database(object):
     def get_train_jobs_of_app(self, app):
         train_jobs = self._session.query(TrainJob) \
             .filter(TrainJob.app == app) \
-            .order_by(TrainJob.app_version.desc()).all()
+            .order_by(TrainJob.datetime_started.desc()) \
+            .all()
 
         return train_jobs
 
     def get_train_jobs_by_user(self, user_id):
         train_jobs = self._session.query(TrainJob) \
-            .filter(TrainJob.user_id == user_id).all()
+            .filter(TrainJob.user_id == user_id) \
+            .order_by(TrainJob.datetime_started.desc()) \
+            .all()
 
         return train_jobs
 
@@ -382,19 +385,18 @@ class Database(object):
 
         return trials
 
-    def get_trials_of_sub_train_job(self, sub_train_job_id):
+    def get_trials_of_train_job(self, train_job_id):
         trials = self._session.query(Trial) \
-            .filter(Trial.sub_train_job_id == sub_train_job_id) \
+            .join(SubTrainJob, Trial.sub_train_job_id == SubTrainJob.id) \
+            .filter(SubTrainJob.train_job_id == train_job_id) \
             .order_by(Trial.datetime_started.desc()).all()
 
         return trials
 
-    def get_trials_of_app(self, app):
+    def get_trials_of_sub_train_job(self, sub_train_job_id):
         trials = self._session.query(Trial) \
-            .join(SubTrainJob, Trial.sub_train_job_id == SubTrainJob.id) \
-            .join(TrainJob, TrainJob.id == SubTrainJob.train_job_id) \
-            .filter(TrainJob.app == app) \
-            .order_by(Trial.datetime_started.desc())
+            .filter(Trial.sub_train_job_id == sub_train_job_id) \
+            .order_by(Trial.datetime_started.desc()).all()
 
         return trials
 

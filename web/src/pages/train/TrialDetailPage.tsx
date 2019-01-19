@@ -5,11 +5,10 @@ import * as moment from 'moment';
 
 import { Paper, List, ListItem, Typography, Divider, Table, TableHead, TableBody, TableRow, 
   CircularProgress, ListItemText, TableCell } from '@material-ui/core';
-import * as echarts from 'echarts';
 
 import { AppUtils } from '../../App';
-import { AppRoute } from '../../app/AppNavigator';
-import { TrialLogs, TrialPlot, Trial } from '../../../client/RafikiClient';
+import { TrialLogs, TrialMetric, TrialPlot, Trial } from '../../../client/RafikiClient';
+import { PlotOption, PlotSeries } from '../../app/PlotManager';
 
 interface Props {
   classes: { [s: string]: any };
@@ -18,7 +17,6 @@ interface Props {
 }
 
 class TrialDetailPage extends React.Component<Props> {
-  charts: echarts.ECharts[] = [];
   state: {
     logs: TrialLogs | null,
     trial: Trial | null
@@ -42,26 +40,18 @@ class TrialDetailPage extends React.Component<Props> {
   }
 
   componentDidUpdate() {
-    this.updateCharts();
+    this.updatePlots();
   }
 
-  updateCharts() {
+  updatePlots() {
     const { logs } = this.state;
+    const { appUtils: { plotManager } } = this.props;
 
     if (!logs) return;
-    
-    this.charts = [];
-    const chartOptions = getPlotChartOptions(logs);
 
-    for (const i in chartOptions) {
-      const chartOption = chartOptions[i];
-      const dom = document.getElementById(`plot-${i}`);
-
-      if (!dom) continue;
-
-      // @ts-ignore
-      const chart = echarts.init(dom);  
-      chart.setOption(chartOption);
+    for (const i in logs.plots) {
+      const { series, plotOption } = getPlotDetails(logs.plots[i], logs.metrics)
+      plotManager.updatePlot(`plot-${i}`, series, plotOption);
     }
   }
 
@@ -202,71 +192,43 @@ class TrialDetailPage extends React.Component<Props> {
   }
 }
 
-function getPlotChartOptions(logs: TrialLogs): echarts.EChartOption[] {
-  const chartOptions: echarts.EChartOption[] = [];
+function getPlotDetails(plot: TrialPlot, metrics: TrialMetric[]): 
+  { series: PlotSeries[], plotOption: PlotOption } {
+  const seriesByName: { [name: string]: PlotSeries } = {}
+  for (const plotMetric of plot.metrics) {
+    seriesByName[plotMetric] = {
+      data: [],
+      name: plotMetric
+    }
+  }
+  const xAxis = plot.x_axis || 'time';
 
-  for (const plot of logs.plots) {
-    const xAxisData: number[] = [];
-
-    const yAxisDatas: { [metric: string]: number[] }  = {};
-    for (const plotMetric of plot.metrics) {
-      yAxisDatas[plotMetric] = [];
+  for (const metric of metrics) {
+    // Check if x axis value exists
+    if (!(xAxis in metric)) {
+      continue;
     }
 
-    for (const metric of logs.metrics) {
-      // Check if x axis value exists
-      const xAxis = plot.x_axis || 'time';
-      if (!(xAxis in metric)) {
+    // For each of plot's y axis metrics, push the [x, y] to data array
+    for (const plotMetric of plot.metrics) {
+      if (!(plotMetric in metric)) {
         continue;
       }
 
-      // Initialize point
-      xAxisData.push(metric[xAxis])
-
-      // For each of plot's y axis metrics, add it to point data
-      for (const plotMetric of plot.metrics) {
-        yAxisDatas[plotMetric].push(plotMetric in metric ? metric[plotMetric] : null);
-      }
+      // Push x axis value to data array
+      seriesByName[plotMetric].data.push([metric[xAxis], metric[plotMetric]]);
     }
-
-    const series = [];
-    for (const plotMetric of plot.metrics) {
-      series.push({
-        name: plotMetric,
-        type: 'line',
-        data: yAxisDatas[plotMetric]
-      });
-    }
-
-    console.log(xAxisData, yAxisDatas)
-
-    const chartOption: echarts.EChartOption = {
-      title: {
-        text: plot.title
-      },
-      tooltip: {
-        trigger: 'axis'
-      },
-      xAxis: {
-        type:  plot.x_axis ? 'category' : 'time',
-        data: xAxisData,
-        splitLine: {
-          show: false
-        }
-      },
-      yAxis: {
-        type: 'value',
-        splitLine: {
-          show: false
-        }
-      },
-      series
-    };
-
-    chartOptions.push(chartOption);
   }
 
-  return chartOptions;
+  const plotOption: PlotOption = {
+    title: plot.title,
+    xAxis: {
+      type: (xAxis == 'time') ? 'time' : 'number',
+      name: xAxis
+    }
+  }
+
+  return { series: Object.values(seriesByName), plotOption };
 }
 
 const styles: StyleRulesCallback = (theme) => ({

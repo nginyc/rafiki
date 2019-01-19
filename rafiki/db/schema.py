@@ -75,8 +75,9 @@ class TrainJob(Base):
     task = Column(String, nullable=False)
     budget = Column(JSON, nullable=False)
     train_dataset_uri = Column(String, nullable=False)
-    test_dataset_uri = Column(String, nullable=False)
+    val_dataset_uri = Column(String, nullable=False)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
+    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
 
 class SubTrainJob(Base):
     __tablename__ = 'sub_train_job'
