@@ -1,17 +1,21 @@
+# Core secrets for Rafiki - change these in production!
+export POSTGRES_PASSWORD=rafiki
+export SUPERADMIN_PASSWORD=rafiki
+export APP_SECRET=rafiki
+
 # Core external configuration for Rafiki
+export APP_MODE=DEV # DEV or PROD
 export DOCKER_NETWORK=rafiki
 export DOCKER_SWARM_ADVERTISE_ADDR=127.0.0.1
 export RAFIKI_VERSION=0.0.10
 export RAFIKI_ADDR=127.0.0.1
-export POSTGRES_PASSWORD=rafiki
-export SUPERADMIN_PASSWORD=rafiki
 export ADMIN_EXT_PORT=3000
 export ADMIN_WEB_EXT_PORT=3001
 export ADVISOR_EXT_PORT=3002
 export POSTGRES_EXT_PORT=5433
 export REDIS_EXT_PORT=6380
-export DATA_WORKDIR_PATH=$PWD/data # Shares a data folder with containers
-export LOGS_WORKDIR_PATH=$PWD/logs # Shares a folder with containers that stores components' logs
+export DATA_DIR_PATH=$PWD/data # Shares a data folder with containers
+export LOGS_DIR_PATH=$PWD/logs # Shares a folder with containers that stores components' logs
 
 # Internal credentials for Rafiki's components
 export POSTGRES_USER=rafiki
@@ -28,9 +32,9 @@ export REDIS_HOST=rafiki_cache
 export REDIS_PORT=6379
 export PREDICTOR_PORT=3003
 export ADMIN_WEB_HOST=rafiki_admin_web
-export DATA_DOCKER_WORKDIR_PATH=/root/rafiki/data
-export LOGS_DOCKER_WORKDIR_PATH=/root/rafiki/logs
-export DOCKER_WORKDIR_PATH=/root/rafiki
+export DATA_DOCKER_DIR_PATH=/root/data
+export LOGS_DOCKER_DIR_PATH=/root/logs
+export DOCKER_WORKDIR_PATH=/root
 export CONDA_ENVIORNMENT=rafiki
 
 # Docker images for Rafiki's custom components

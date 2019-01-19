@@ -35,10 +35,10 @@ class ServicesManager(object):
         self._admin_port = os.environ['ADMIN_PORT']
         self._advisor_host = os.environ['ADVISOR_HOST']
         self._advisor_port = os.environ['ADVISOR_PORT']
-        self._data_workdir = os.environ['DATA_WORKDIR_PATH']
-        self._logs_workdir = os.environ['LOGS_WORKDIR_PATH']
-        self._data_docker_workdir = os.environ['DATA_DOCKER_WORKDIR_PATH']
-        self._logs_docker_workdir = os.environ['LOGS_DOCKER_WORKDIR_PATH']
+        self._data_dir_path = os.environ['DATA_DIR_PATH']
+        self._logs_dir_path = os.environ['LOGS_DIR_PATH']
+        self._data_docker_dir_path = os.environ['DATA_DOCKER_DIR_PATH']
+        self._logs_docker_dir_path = os.environ['LOGS_DOCKER_DIR_PATH']
         self._predictor_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_PREDICTOR'],
                                                 os.environ['RAFIKI_VERSION'])
         self._predictor_port = os.environ['PREDICTOR_PORT']
@@ -291,15 +291,15 @@ class ServicesManager(object):
         # Pass service details as environment variables 
         environment_vars = {
             **environment_vars,
-            'LOGS_DOCKER_WORKDIR_PATH': self._logs_docker_workdir,
+            'LOGS_DOCKER_DIR_PATH': self._logs_docker_dir_path,
             'RAFIKI_SERVICE_ID': service.id,
             'RAFIKI_SERVICE_TYPE': service_type
         }
 
         # Mount data and logs folders to containers' work directories
         mounts = {
-            self._data_workdir: self._data_docker_workdir,
-            self._logs_workdir: self._logs_docker_workdir
+            self._data_dir_path: self._data_docker_dir_path,
+            self._logs_dir_path: self._logs_docker_dir_path
         }
 
         # Expose container port if it exists

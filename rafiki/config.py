@@ -1,8 +1,8 @@
 import os
 
 # Global
-APP_SECRET = 'rafiki'
-APP_MODE = 'DEV' # DEV or PROD
+APP_SECRET = os.environ.get('APP_SECRET', 'rafiki')
+APP_MODE = os.environ.get('APP_MODE', 'DEV') # DEV or PROD
 SUPERADMIN_EMAIL = 'superadmin@rafiki'
 SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD', 'rafiki')
 
