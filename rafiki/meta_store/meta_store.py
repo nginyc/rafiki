@@ -389,7 +389,7 @@ class MetaStore(object):
         trials = self._session.query(Trial) \
             .join(SubTrainJob, Trial.sub_train_job_id == SubTrainJob.id) \
             .filter(SubTrainJob.train_job_id == train_job_id) \
-            .order_by(Trial.datetime_started.desc()).all()
+            .order_by(Trial.datetime_stopped.desc(), Trial.datetime_started.desc()).all()
 
         return trials
 

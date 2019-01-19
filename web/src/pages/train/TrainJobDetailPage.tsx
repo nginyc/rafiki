@@ -222,7 +222,7 @@ class TrainJobDetailPage extends React.Component<Props> {
 
 function getPlotDetails(trials: Trial[]): 
   { series: PlotSeries[], plotOption: PlotOption } {
-  const trialsOverTime = _.sortBy(trials, x => x.datetime_started);
+  const trialsOverTime = _.sortBy(trials, x => x.datetime_stopped);
   const bestScoreSeries: PlotSeries = {
     name: 'Score',
     data: []
@@ -231,7 +231,7 @@ function getPlotDetails(trials: Trial[]):
   let bestScore = 0;
   for (const trial of trialsOverTime) {
     bestScore = Math.max(trial.score, bestScore);
-    bestScoreSeries.data.push([trial.datetime_started, bestScore]);
+    bestScoreSeries.data.push([trial.datetime_stopped, bestScore]);
   }
 
   const plotOption: PlotOption = {
