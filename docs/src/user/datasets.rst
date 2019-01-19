@@ -30,7 +30,7 @@ format with 2 columns of ``path`` and ``class``.
 For each row,
 
     ``path`` should be a file path to a ``.png``, ``.jpg`` or ``.jpeg`` image file within the archive, relative to the root of the directory.
-    All images in the train & test datasets should have the **same** dimensions ``W x H``.
+    All images in the train & validation datasets should have the **same** dimensions ``W x H``.
 
     ``class`` should be an integer from ``0`` to ``k - 1``, where ``k`` is the number of classes in the classification of images.
 

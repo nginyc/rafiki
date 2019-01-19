@@ -37,7 +37,7 @@ class TrainWorker(object):
         while True:
             with self._db:
                 (sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
-                    train_job_id, train_dataset_uri, test_dataset_uri) = self._read_worker_info()
+                    train_job_id, train_dataset_uri, val_dataset_uri) = self._read_worker_info()
 
                 if self._if_budget_reached(budget, sub_train_job_id):
                     # If budget reached
@@ -92,7 +92,7 @@ class TrainWorker(object):
                         self._db.add_trial_log(trial, log_line, log_lvl)
 
                 (score, parameters) = self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
-                                                                    test_dataset_uri, handle_log)
+                                                                    val_dataset_uri, handle_log)
                 logger.info('Trial score: {}'.format(score))
                 
                 with self._db:
@@ -136,7 +136,7 @@ class TrainWorker(object):
             logger.error(traceback.format_exc())
 
     def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, \
-                                test_dataset_uri, handle_log):
+                                val_dataset_uri, handle_log):
         # Add log handlers for trial, including adding handler to root logger 
         # to capture any logs emitted with level above INFO during model training & evaluation
         log_handler = ModelLoggerHandler(handle_log)
@@ -155,7 +155,7 @@ class TrainWorker(object):
         model_inst.train(train_dataset_uri)
 
         # Evaluate model
-        score = model_inst.evaluate(test_dataset_uri)
+        score = model_inst.evaluate(val_dataset_uri)
 
         # Dump and pickle model parameters
         parameters = model_inst.dump_parameters()
@@ -240,7 +240,7 @@ class TrainWorker(object):
             model.model_class,
             train_job.id,
             train_job.train_dataset_uri,
-            train_job.test_dataset_uri
+            train_job.val_dataset_uri
         )
 
     def _make_client(self):

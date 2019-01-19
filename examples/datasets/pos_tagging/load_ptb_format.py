@@ -12,44 +12,46 @@ import zipfile
 
 from rafiki.model import dataset_utils
 
-def load(dataset_url, out_train_dataset_path, out_test_dataset_path, out_meta_tsv_path):
+def load(dataset_url, out_train_dataset_path, out_val_dataset_path, out_meta_tsv_path, validation_split=0.05):
     '''
         Loads and converts a dataset of the format of the Penn Treebank sample 
         at http://www.nltk.org/nltk_data/ to the DatasetType `CORPUS` for the Task `POS_TAGGING`.
 
         :param str dataset_url: URL to download the dataset stored in the format similar to the Penn Treebank sample
         :param str out_train_dataset_path: Path to save the output train dataset file
-        :param str out_test_dataset_path: Path to save the output test dataset file
+        :param str out_val_dataset_path: Path to save the output validation dataset file
         :param str out_meta_tsv_path: Path to save the output dataset metadata .TSV file
+        :param float validation_split: Proportion (0-1) to carve out validation dataset from the original dataset
     '''
 
     print('Downloading files...')
     dataset_path = dataset_utils.download_dataset_from_uri(dataset_url)
 
     print('Loading dataset and writing to output dataset files...')
-    _convert_dataset(dataset_path, out_meta_tsv_path, \
-                    out_train_dataset_path, out_test_dataset_path)
+    _convert_dataset(dataset_path, out_meta_tsv_path, out_train_dataset_path, 
+                    out_val_dataset_path, validation_split)
 
     print('Dataset metadata file is saved at {}'.format(out_meta_tsv_path))
-    print('Train dataset file is saved at {}'.format(out_train_dataset_path))
-    print('Test dataset file is saved at {}'.format(out_test_dataset_path))
+    print('Train dataset file is saved at {}. This should be submitted as `train_dataset` of a train job.'
+            .format(out_train_dataset_path))
+    print('Validation dataset file is saved at {}. This should be submitted as `val_dataset` of a train job.'
+            .format(out_val_dataset_path))
 
-def _convert_dataset(dataset_path, out_meta_tsv_path, \
-                    out_train_dataset_path, out_test_dataset_path):
+def _convert_dataset(dataset_path, out_meta_tsv_path, out_train_dataset_path, 
+                    out_val_dataset_path, validation_split):
     TAGGED_DIRNAME = 'treebank/tagged'
     SENTS_FILENAME_GLOB = '*.pos'
     TSV_FILENAME = 'corpus.tsv'
-    TEST_FILES_RATIO = 0.05
 
     # Create train dataset dir & start TSV
     train_d = tempfile.TemporaryDirectory()
     train_tsv = open(os.path.join(train_d.name, TSV_FILENAME), 'w')
     train_tsv.write('token\ttag\n') 
 
-    # Same for test dataset
-    test_d = tempfile.TemporaryDirectory()
-    test_tsv = open(os.path.join(test_d.name, TSV_FILENAME), 'w')
-    test_tsv.write('token\ttag\n')
+    # Same for val dataset
+    val_d = tempfile.TemporaryDirectory()
+    val_tsv = open(os.path.join(val_d.name, TSV_FILENAME), 'w')
+    val_tsv.write('token\ttag\n')
 
     tag_to_index = {}
 
@@ -63,7 +65,7 @@ def _convert_dataset(dataset_path, out_meta_tsv_path, \
         sents_filepaths.sort()
 
         # Compute no. of sents files for train
-        train_files_count = round(len(sents_filepaths) * (1 - TEST_FILES_RATIO))
+        train_files_count = round(len(sents_filepaths) * (1 - validation_split))
         
         # Convert sentences for train dataset
         for sents_filepath in tqdm(sents_filepaths[0:train_files_count], unit='files'):
@@ -73,21 +75,21 @@ def _convert_dataset(dataset_path, out_meta_tsv_path, \
                     if len(sent) == 0: break
                     _write_next_sentence(train_tsv, sent)
 
-        # Convert sentences for test dataset
+        # Convert sentences for val dataset
         for sents_filepath in tqdm(sents_filepaths[train_files_count:], unit='files'):
             with open(sents_filepath) as f:
                 while True:
                     sent = _read_next_sentence(f, tag_to_index)
                     if len(sent) == 0: break
-                    _write_next_sentence(test_tsv, sent)
+                    _write_next_sentence(val_tsv, sent)
 
-    # Zip train & test datasets
-    test_tsv.close()
+    # Zip train & val datasets
+    val_tsv.close()
     train_tsv.close()
     out_path = shutil.make_archive(out_train_dataset_path, 'zip', train_d.name)
     os.rename(out_path, out_train_dataset_path) # Remove additional trailing `.zip`
-    out_path = shutil.make_archive(out_test_dataset_path, 'zip', test_d.name)
-    os.rename(out_path, out_test_dataset_path) # Remove additional trailing `.zip`
+    out_path = shutil.make_archive(out_val_dataset_path, 'zip', val_d.name)
+    os.rename(out_path, out_val_dataset_path) # Remove additional trailing `.zip`
 
     # Write to out meta file
     index_to_tag = { v: k for (k, v) in tag_to_index.items() }
@@ -145,7 +147,7 @@ if __name__ == '__main__':
     load(
         dataset_url='https://raw.githubusercontent.com/nltk/nltk_data/gh-pages/packages/corpora/treebank.zip',
         out_train_dataset_path='data/ptb_for_pos_tagging_train.zip',
-        out_test_dataset_path='data/ptb_for_pos_tagging_test.zip',
+        out_val_dataset_path='data/ptb_for_pos_tagging_val.zip',
         out_meta_tsv_path='data/ptb_for_pos_tagging_meta.tsv'
     )
 

@@ -96,7 +96,7 @@ class Admin(object):
     ####################################
 
     def create_train_job(self, user_id, app, task, train_dataset_uri, 
-                        test_dataset_uri, budget, models=None):
+                        val_dataset_uri, budget, models=None):
         
         train_jobs = self._db.get_train_jobs_of_app(app)
 
@@ -135,7 +135,7 @@ class Admin(object):
             task=task,
             budget=budget,
             train_dataset_uri=train_dataset_uri,
-            test_dataset_uri=test_dataset_uri
+            val_dataset_uri=val_dataset_uri
         )
         self._db.commit()
 
@@ -185,7 +185,7 @@ class Admin(object):
             'app_version': train_job.app_version,
             'task': train_job.task,
             'train_dataset_uri': train_job.train_dataset_uri,
-            'test_dataset_uri': train_job.test_dataset_uri,
+            'val_dataset_uri': train_job.val_dataset_uri,
             'datetime_started': datetime_started,
             'datetime_stopped': datetime_stopped,
             'workers': [
@@ -213,7 +213,7 @@ class Admin(object):
                 'app_version': x.app_version,
                 'task': x.task,
                 'train_dataset_uri': x.train_dataset_uri,
-                'test_dataset_uri': x.test_dataset_uri,
+                'val_dataset_uri': x.val_dataset_uri,
                 'datetime_started': datetime_started,
                 'datetime_stopped': datetime_stopped,
                 'budget': x.budget
@@ -253,7 +253,7 @@ class Admin(object):
                 'app_version': x.app_version,
                 'task': x.task,
                 'train_dataset_uri': x.train_dataset_uri,
-                'test_dataset_uri': x.test_dataset_uri,
+                'val_dataset_uri': x.val_dataset_uri,
                 'datetime_started': datetime_started,
                 'datetime_stopped': datetime_stopped,
                 'budget': x.budget
@@ -266,12 +266,7 @@ class Admin(object):
         if train_job is None:
             raise InvalidTrainJobError()
 
-        sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(train_job.id)
-        trials = []
-        for sub_train_job in sub_train_jobs:
-            trials_for_sub = self._db.get_trials_of_sub_train_job(sub_train_job.id)
-            trials.extend(trials_for_sub)
-
+        trials = self._db.get_trials_of_train_job(train_job.id)
         trials_models = [self._db.get_model(x.model_id) for x in trials]
         
         return [

@@ -105,7 +105,7 @@ if __name__ == '__main__':
             ModelDependency.SCIKIT_LEARN: '0.20.0'
         },
         train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
+        val_dataset_uri='data/fashion_mnist_for_image_classification_val.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

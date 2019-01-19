@@ -14,7 +14,8 @@ from PIL import Image
 
 from rafiki.model import dataset_utils
 
-def load(dataset_url, label_to_name, out_train_dataset_path, out_test_dataset_path, out_meta_csv_path):
+def load(dataset_url, label_to_name, out_train_dataset_path, out_val_dataset_path, 
+        out_test_dataset_path, out_meta_csv_path, validation_split=0.05):
     '''
         Loads and converts an image dataset of the CIFAR-10 format to the DatasetType `IMAGE_FILES`.
         Refer to https://www.cs.toronto.edu/~kriz/cifar.html for the CIFAR-10 dataset format for.
@@ -22,8 +23,10 @@ def load(dataset_url, label_to_name, out_train_dataset_path, out_test_dataset_pa
         :param str dataset_url: URL to download the Python version of the dataset
         :param dict[int, str] label_to_name: Dictionary mapping label index to label name
         :param str out_train_dataset_path: Path to save the output train dataset file
+        :param str out_val_dataset_path: Path to save the output validation dataset file
         :param str out_test_dataset_path: Path to save the output test dataset file
         :param str out_meta_csv_path: Path to save the output dataset metadata .CSV file
+        :param float validation_split: Proportion (0-1) to carve out validation dataset from the originl train dataset
     '''
 
     print('Downloading dataset archive...')
@@ -31,16 +34,31 @@ def load(dataset_url, label_to_name, out_train_dataset_path, out_test_dataset_pa
 
     print('Loading datasets into memory...')
     (train_images, train_labels, test_images, test_labels) = _load_dataset_from_zip_file(dataset_zip_file_path)
+    (train_images, train_labels, val_images, val_labels) = _split_train_dataset(train_images, train_labels, validation_split)
 
     print('Converting and writing datasets...')
+
     (label_to_index) = _write_meta_csv(chain(train_labels, test_labels), label_to_name, out_meta_csv_path)
     print('Dataset metadata file is saved at {}'.format(out_meta_csv_path))
 
     _write_dataset(train_images, train_labels, label_to_index, out_train_dataset_path)
-    print('Train dataset file is saved at {}'.format(out_train_dataset_path))
+    print('Train dataset file is saved at {}. This should be submitted as `train_dataset` of a train job.'
+            .format(out_train_dataset_path))
+
+    _write_dataset(val_images, val_labels, label_to_index, out_val_dataset_path)
+    print('Validation dataset file is saved at {}. This should be submitted as `val_dataset` of a train job.'
+            .format(out_val_dataset_path))
 
     _write_dataset(test_images, test_labels, label_to_index, out_test_dataset_path)
     print('Test dataset file is saved at {}'.format(out_test_dataset_path))
+
+def _split_train_dataset(train_images, train_labels, validation_split):
+    val_start_idx = int(len(train_images) * (1 - validation_split))
+    val_images = train_images[val_start_idx:]
+    val_labels = train_labels[val_start_idx:]
+    train_images = train_images[:val_start_idx]
+    train_labels = train_labels[:val_start_idx]
+    return (train_images, train_labels, val_images, val_labels)
 
 def _write_meta_csv(labels, label_to_name, out_meta_csv_path):
     label_to_index = {}
@@ -137,7 +155,8 @@ if __name__ == '__main__':
             9: 'truck'
         },
         out_train_dataset_path='data/cifar_10_for_image_classification_train.zip',
-        out_test_dataset_path='data/cifar_10_for_image_classification_test.zip',
+        out_val_dataset_path='data/cifar_10_for_image_classification_val.zip',
+        out_test_dataset_path='data/cifar_10_for_image_classification_val.zip',
         out_meta_csv_path='data/cifar_10_for_image_classification_meta.csv'
     )
 

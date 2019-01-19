@@ -30,8 +30,8 @@ def run_pos_tagging(client, enable_gpu):
         BudgetType.ENABLE_GPU: enable_gpu
     }
     train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_train.zip?raw=true'
-    test_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_test.zip?raw=true'
-    train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, 
+    val_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_val.zip?raw=true'
+    train_job = client.create_train_job(app, task, train_dataset_uri, val_dataset_uri, 
                                         budget, models=[bihmm_model_name, py_model_name])
     pprint.pprint(train_job)
 

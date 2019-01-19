@@ -260,7 +260,7 @@ class Client(object):
     # Train Jobs
     ####################################
     
-    def create_train_job(self, app, task, train_dataset_uri, test_dataset_uri, budget, models=None):
+    def create_train_job(self, app, task, train_dataset_uri, val_dataset_uri, budget, models=None):
         '''
         Creates and starts a train job on Rafiki. 
         A train job is uniquely identified by its associated app and the app version (returned in output).
@@ -271,7 +271,7 @@ class Client(object):
         :param str task: Task associated with the train job, 
             the train job will train models associated with the task
         :param str train_dataset_uri: URI of the train dataset in a format specified by the task
-        :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task
+        :param str val_dataset_uri: URI of the validation dataset in a format specified by the task
         :param str budget: Budget for each model
         :param str[] models: list of model names to use for train job
         :returns: Created train job as dictionary
@@ -297,7 +297,7 @@ class Client(object):
             'app': app,
             'task': task,
             'train_dataset_uri': train_dataset_uri,
-            'test_dataset_uri': test_dataset_uri,
+            'val_dataset_uri': val_dataset_uri,
             'budget': budget,
             'models': models
         })
