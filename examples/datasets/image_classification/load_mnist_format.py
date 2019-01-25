@@ -10,7 +10,7 @@ from tqdm import tqdm
 from itertools import chain
 from PIL import Image
 
-from rafiki.model import dataset_utils
+from rafiki.model import utils
 
 def load(train_images_url, train_labels_url, test_images_url, test_labels_url, label_to_name, 
         out_train_dataset_path, out_val_dataset_path, out_test_dataset_path, 
@@ -33,10 +33,10 @@ def load(train_images_url, train_labels_url, test_images_url, test_labels_url, l
     '''
 
     print('Downloading files...')
-    train_images_file_path = dataset_utils.download_dataset_from_uri(train_images_url)
-    train_labels_file_path = dataset_utils.download_dataset_from_uri(train_labels_url)
-    test_images_file_path = dataset_utils.download_dataset_from_uri(test_images_url)
-    test_labels_file_path = dataset_utils.download_dataset_from_uri(test_labels_url)
+    train_images_file_path = utils.dataset.download_dataset_from_uri(train_images_url)
+    train_labels_file_path = utils.dataset.download_dataset_from_uri(train_labels_url)
+    test_images_file_path = utils.dataset.download_dataset_from_uri(test_images_url)
+    test_labels_file_path = utils.dataset.download_dataset_from_uri(test_labels_url)
 
     print('Loading datasets into memory...')
     (train_images, train_labels) = _load_dataset_from_files(train_images_file_path, train_labels_file_path)

@@ -383,7 +383,7 @@ class Client(object):
         data = self._post('/train_jobs/{}/{}/stop'.format(app, app_version))
         return data
 
-    # Rafiki-internal method
+    # - INTERNAL METHOD -
     def stop_train_job_worker(self, service_id):
         data = self._post('/train_job_workers/{}/stop'.format(service_id))
         return data

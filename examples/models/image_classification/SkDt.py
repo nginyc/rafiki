@@ -7,7 +7,7 @@ import numpy as np
 
 from rafiki.config import APP_MODE
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, CategoricalKnob, dataset_utils, logger
+                        IntegerKnob, CategoricalKnob, utils
 from rafiki.constants import TaskType, ModelDependency
 
 class SkDt(BaseModel):
@@ -29,7 +29,7 @@ class SkDt(BaseModel):
         self._clf = self._build_classifier(self.max_depth, self.criterion, self.splitter)
        
     def train(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, max_image_size=self.max_image_size, mode='L')
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=self.max_image_size, mode='L')
         self._image_size = dataset.image_size
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
@@ -39,10 +39,10 @@ class SkDt(BaseModel):
         # Compute train accuracy
         preds = self._clf.predict(X)
         accuracy = sum(y == preds) / len(y)
-        logger.log('Train accuracy: {}'.format(accuracy))
+        utils.logger.log('Train accuracy: {}'.format(accuracy))
 
     def evaluate(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, max_image_size=self.max_image_size, mode='L')
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=self.max_image_size, mode='L')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -51,7 +51,7 @@ class SkDt(BaseModel):
         return accuracy
 
     def predict(self, queries):
-        queries = dataset_utils.transform_images(queries, image_size=self._image_size, mode='L')
+        queries = utils.dataset.transform_images(queries, image_size=self._image_size, mode='L')
         X = self._prepare_X(queries)
         probs = self._clf.predict_proba(X)
         return probs.tolist()

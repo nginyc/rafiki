@@ -10,7 +10,7 @@ import abc
 from urllib.parse import urlparse, parse_qs 
 
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, FloatKnob, CategoricalKnob, FixedKnob, dataset_utils, logger
+                        IntegerKnob, FloatKnob, CategoricalKnob, FixedKnob, utils
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.config import APP_MODE
 
@@ -30,9 +30,9 @@ class TfVgg16(BaseModel):
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
-        self._graph = tf.Graph()
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
+        self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph, config=config)
 
     def train(self, dataset_uri):
@@ -40,22 +40,22 @@ class TfVgg16(BaseModel):
         bs = self._knobs.get('batch_size')
         max_epochs = self._knobs.get('max_epochs')
 
-        logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
+        utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
         # Define plot for loss against epochs
-        logger.define_plot('Loss Over Epochs', ['loss', 'val_loss'], x_axis='epoch')
+        utils.logger.define_plot('Loss Over Epochs', ['loss', 'early_stop_val_loss'], x_axis='epoch')
 
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, min_image_size=32, 
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, min_image_size=32, 
                                                             max_image_size=max_image_size, mode='RGB')
         self._image_size = dataset.image_size
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+        (images, self._normalize_mean, self._normalize_std) = utils.dataset.normalize_images(images)
         images = np.asarray(images)
-        classes = keras.utils.to_categorical(classes)
-        classes = np.asarray(classes)
+        classes = np.asarray(keras.utils.to_categorical(classes))
 
+        self._model = self._build_model(num_classes, dataset.image_size)
         with self._graph.as_default():
-            self._model = self._build_model(num_classes, dataset.image_size)
             with self._sess.as_default():
                 self._model.fit(
                     images, 
@@ -71,15 +71,16 @@ class TfVgg16(BaseModel):
 
                 # Compute train accuracy
                 (loss, accuracy) = self._model.evaluate(images, classes)
-                logger.log('Train loss: {}'.format(loss))
-                logger.log('Train accuracy: {}'.format(accuracy))
+
+        utils.logger.log('Train loss: {}'.format(loss))
+        utils.logger.log('Train accuracy: {}'.format(accuracy))
 
     def evaluate(self, dataset_uri):
         max_image_size = self._knobs.get('max_image_size')
-
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, min_image_size=32, 
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, min_image_size=32, 
                                                             max_image_size=max_image_size, mode='RGB')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+        (images, _, _) = utils.dataset.normalize_images(images, self._normalize_mean, self._normalize_std)
         images = np.asarray(images)
         classes = keras.utils.to_categorical(classes)
         classes = np.asarray(classes)
@@ -87,16 +88,19 @@ class TfVgg16(BaseModel):
         with self._graph.as_default():
             with self._sess.as_default():
                 (loss, accuracy) = self._model.evaluate(images, classes)
-                logger.log('Test loss: {}'.format(loss))
+
+        utils.logger.log('Validation loss: {}'.format(loss))
 
         return accuracy
 
     def predict(self, queries):
         image_size = self._image_size
-        X = dataset_utils.transform_images(queries, image_size=image_size, mode='RGB')
+        images = utils.dataset.transform_images(queries, image_size=image_size, mode='RGB')
+        (images, _, _) = utils.dataset.normalize_images(images, self._normalize_mean, self._normalize_std)
+
         with self._graph.as_default():
             with self._sess.as_default():
-                probs = self._model.predict(X)
+                probs = self._model.predict(images)
                 
         return probs.tolist()
     
@@ -109,9 +113,8 @@ class TfVgg16(BaseModel):
         # Save model parameters
         with tempfile.NamedTemporaryFile() as tmp:
             # Save whole model to temp h5 file
-            with self._graph.as_default():
-                with self._sess.as_default():
-                    self._model.save(tmp.name)
+            with self._sess.as_default():
+                self._model.save(tmp.name)
         
             # Read from temp h5 file & encode it to base64 string
             with open(tmp.name, 'rb') as f:
@@ -119,8 +122,10 @@ class TfVgg16(BaseModel):
 
             params['h5_model_base64'] = base64.b64encode(h5_model_bytes).decode('utf-8')
 
-        # Save image size
+        # Save pre-processing params
         params['image_size'] = self._image_size
+        params['normalize_mean'] = self._normalize_mean
+        params['normalize_std'] = self._normalize_std
 
         return params
 
@@ -137,17 +142,18 @@ class TfVgg16(BaseModel):
                 f.write(h5_model_bytes)
 
             # Load model from temp file
-            with self._graph.as_default():
-                with self._sess.as_default():
-                    self._model = keras.models.load_model(tmp.name)
+            with self._sess.as_default():
+                self._model = keras.models.load_model(tmp.name)
         
-        # Load image size
+        # Load pre-processing params
         self._image_size = params['image_size']
+        self._normalize_mean = params['normalize_mean']
+        self._normalize_std = params['normalize_std']
 
     def _on_train_epoch_end(self, epoch, logs):
         loss = logs['loss']
-        val_loss = logs['val_loss']
-        logger.log(loss=loss, val_loss=val_loss, epoch=epoch)
+        early_stop_val_loss = logs['val_loss']
+        utils.logger.log(loss=loss, early_stop_val_loss=early_stop_val_loss, epoch=epoch)
 
     def _build_model(self, num_classes, image_size):
         lr = self._knobs.get('learning_rate')

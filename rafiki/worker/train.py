@@ -7,7 +7,7 @@ import pprint
 
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
-from rafiki.model import load_model_class, serialize_knob_config, logger as model_logger
+from rafiki.model import load_model_class, serialize_knob_config, logger as model_logger, utils as model_utils
 from rafiki.meta_store import MetaStore
 from rafiki.param_store import ParamStore
 from rafiki.client import Client
@@ -106,6 +106,9 @@ class TrainWorker(object):
     def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, \
                                 val_dataset_uri):
         logger.info('Training & evaluating model...')
+
+        # Provide trial ID to model
+        model_utils.set_trial_id(self._trial_id)
         
         # Add log handlers for trial, including adding handler to root logger 
         # to capture any logs emitted with level above INFO during model training & evaluation
@@ -114,12 +117,13 @@ class TrainWorker(object):
                 trial = self._meta_store.get_trial(self._trial_id)
                 self._meta_store.add_trial_log(trial, log_line, log_lvl)
 
-        log_handler = ModelLoggerHandler(handle_log)
+        log_handler = LoggerUtilsHandler(handle_log)
         py_model_logger = logging.getLogger('{}.trial'.format(__name__))
         py_model_logger.setLevel(logging.INFO)
         py_model_logger.propagate = False # Avoid duplicate logs in root logger
         py_model_logger.addHandler(log_handler)
         model_logger.set_logger(py_model_logger)
+
         root_logger = logging.getLogger()
         root_logger.addHandler(log_handler)
 
@@ -139,6 +143,9 @@ class TrainWorker(object):
         # Remove log handlers from loggers for this trial
         root_logger.removeHandler(log_handler)
         py_model_logger.removeHandler(log_handler)
+
+        # Unset trial ID
+        model_utils.set_trial_id(None)
 
         logger.info('Trial score: {}'.format(score))
 
@@ -282,7 +289,7 @@ class TrainWorker(object):
         client.login(email=superadmin_email, password=superadmin_password)
         return client
 
-class ModelLoggerHandler(logging.Handler):
+class LoggerUtilsHandler(logging.Handler):
     def __init__(self, handle_log):
         logging.Handler.__init__(self)
         self._handle_log = handle_log

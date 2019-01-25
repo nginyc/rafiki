@@ -9,7 +9,7 @@ from rafiki.meta_store import MetaStore
 from rafiki.param_store import ParamStore, InvalidParamsError, ParamsExistsError
 from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus, ModelAccessRight, BudgetType
 from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
-from rafiki.model import ModelLogger
+from rafiki.model import LoggerUtils
 from rafiki.container import DockerSwarmContainerManager 
 
 from .services_manager import ServicesManager
@@ -325,7 +325,7 @@ class Admin(object):
 
         trial_logs = self._meta_store.get_trial_logs(trial_id)
         log_lines = [x.line for x in trial_logs]
-        (messages, metrics, plots) = ModelLogger.parse_logs(log_lines)
+        (messages, metrics, plots) = LoggerUtils.parse_logs(log_lines)
         
         return {
             'plots': plots,

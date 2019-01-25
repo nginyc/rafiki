@@ -22,21 +22,23 @@ class InvalidDatasetProtocolException(Exception): pass
 class InvalidDatasetTypeException(Exception): pass 
 class InvalidDatasetFormatException(Exception): pass 
 
-class ModelDatasetUtils():
+class DatasetUtils():
     '''
     Collection of utility methods to help with the loading of datasets.
 
-    To use these utility methods, import the global ``dataset_utils`` instance from the module ``rafiki.model``.
+    This should NOT be initiailized outside of the module. Instead,
+    import the global ``utils`` instance from the module ``rafiki.model``
+    and use ``utils.dataset``.
 
     For example:
 
     ::
 
-        from rafiki.model import dataset_utils
+        from rafiki.model import utils
         ...
         def train(self, dataset_uri):
             ...
-            dataset_utils.load_dataset_of_image_files(dataset_uri)
+            utils.dataset.load_dataset_of_image_files(dataset_uri)
             ...
     '''   
     
@@ -54,7 +56,8 @@ class ModelDatasetUtils():
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         return CorpusDataset(dataset_path, tags, split_by)
 
-    def load_dataset_of_image_files(self, dataset_uri, min_image_size=None, max_image_size=None, mode='RGB'):
+    def load_dataset_of_image_files(self, dataset_uri, min_image_size=None, 
+                                    max_image_size=None, mode='RGB'):
         '''
             Loads dataset with type `IMAGE_FILES`.
 
@@ -65,16 +68,41 @@ class ModelDatasetUtils():
             :returns: An instance of ``ImageFilesDataset``
         '''
         dataset_path = self.download_dataset_from_uri(dataset_uri)
-        return ImageFilesDataset(dataset_path, min_image_size, max_image_size, mode)
+        return ImageFilesDataset(dataset_path, min_image_size=min_image_size, max_image_size=max_image_size, 
+                                mode=mode)
+
+    def normalize_images(self, images, mean=None, std=None):
+        '''
+            Normalize all images.
+
+            If mean `mean` and standard deviation `std` are `None`, they will be computed on the images.
+
+            :param images: (N x width x height x channels) array-like of images to resize
+            :param float[3] mean: Mean for normalization, by channel
+            :param float[3] std: Mean for normalization, by channel
+            :returns: (images, mean, std)
+        '''
+        if len(images) == 0:
+            return images
+
+        if mean is None:
+            mean = np.mean(images, axis=(0, 1, 2)) # shape = (channels,)
+        if std is None:
+            std = np.std(images, axis=(0, 1, 2)) # shape = (channels,)
+
+        # Normalize all images
+        images = np.transpose((np.transpose(images, (1, 0, 2, 3)) - mean) / std, (1, 0, 2, 3))
+
+        return (images, mean, std)
 
     def transform_images(self, images, image_size=None, mode=None):
         '''
             Resize or convert a list of N images to another size and/or mode
 
-            :param images: list of images to resize as a (N x width x height x channels) list
+            :param images: (N x width x height x channels) array-like of images to resize
             :param int image_size: width *and* height to resize all images to
             :param str mode: Pillow image mode to convert all images to. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes
-            :returns: list of output images as a (N x width x height x channels) numpy
+            :returns: numpy array of output images as a (N x width x height x channels) numpy
         '''
         images = [Image.fromarray(np.asarray(x, dtype=np.uint8)) for x in images]
 
@@ -225,71 +253,66 @@ class ImageFilesDataset(ModelDataset):
 
     Each dataset example is (image, class) where:
         
-        - Each image is a 2D/3D/4D list, depending on ``mode`` (default of ``RGB``)
+        - Each image is a 3D numpy array (width x height x channels)
         - Each class is an integer from 0 to (k - 1)
     '''   
 
     def __init__(self, dataset_path, min_image_size=None, max_image_size=None, mode='RGB'):
         super().__init__(dataset_path)
-        self.mode = mode
-        (self.size, self.classes, self._image_paths, self._image_classes, 
-            self._dataset_dir) = self._load(self.path)
-        
-        if len(self._image_paths) == 0:
-            raise InvalidDatasetFormatException('Dataset should contain at least 1 image!')
-
-        # Compute image size, adhering to min/max, making it square and trying not to stretch it
-        pil_image = self._load_pil_image(self._image_paths[0])
-        (width, height) = pil_image.size
-        self.image_size = max(min([width, height, max_image_size or width]), min_image_size or 0)
-
-        self.x = 0
+        (pil_images, self._image_classes, self.size, self.classes) = self._load(self.path, mode)
+        (self._images, self.image_size) = \
+            self._preprocess(pil_images, min_image_size, max_image_size)
 
     def __getitem__(self, index):
-        image_path = self._image_paths[index]
+        image = self._images[index]
         image_class = self._image_classes[index]
-        image_size = self.image_size
-        
-        pil_image = self._load_pil_image(image_path)
-        pil_image = pil_image.resize([image_size, image_size])
-        image = np.asarray(pil_image)
-
         return (image, image_class)
 
-    def _load_pil_image(self, image_path):
-        dataset_dir = self._dataset_dir
-        mode = self.mode
+    def _preprocess(self, pil_images, min_image_size, max_image_size):
+        if len(pil_images) == 0:
+            raise InvalidDatasetFormatException('Dataset should contain at least 1 image!')
 
-        full_image_path = os.path.join(dataset_dir.name, image_path)
-        with open(full_image_path, 'rb') as f:
-            encoded = io.BytesIO(f.read())
-            image = Image.open(encoded).convert(mode)
-            return image
+        # Decide on image size, adhering to min/max, making it square and trying not to stretch it
+        (width, height) = pil_images[0].size
+        image_size = max(min([width, height, max_image_size or width]), min_image_size or 0)
 
-    def _load(self, dataset_path):
-        image_paths = []
-        image_classes = [] 
+        # Resize all images
+        pil_images = [x.resize([image_size, image_size]) for x in pil_images]
 
+        # Convert to numpy arrays
+        images = [np.asarray(x) for x in pil_images]
+
+        return (images, image_size)
+
+    def _load(self, dataset_path, mode):
         # Create temp directory to unzip to
-        dataset_dir = tempfile.TemporaryDirectory()
+        with tempfile.TemporaryDirectory() as d:
+            dataset_zipfile = zipfile.ZipFile(dataset_path, 'r')
+            dataset_zipfile.extractall(path=d)
+            dataset_zipfile.close()
 
-        dataset_zipfile = zipfile.ZipFile(dataset_path, 'r')
-        dataset_zipfile.extractall(path=dataset_dir.name)
-        dataset_zipfile.close()
+            # Read images.csv, and read image paths & classes
+            image_paths = []
+            image_classes = [] 
+            images_csv_path = os.path.join(d, 'images.csv') 
+            try:
+                with open(images_csv_path, mode='r') as f:
+                    reader = csv.DictReader(f)
+                    (image_paths, image_classes) = zip(*[(row['path'], int(row['class'])) for row in reader])
+            except Exception:
+                traceback.print_stack()
+                raise InvalidDatasetFormatException()
 
-        # Read images.csv, and read image paths & classes
-        images_csv_path = os.path.join(dataset_dir.name, 'images.csv') 
-        try:
-            with open(images_csv_path, mode='r') as f:
-                reader = csv.DictReader(f)
-                (image_paths, image_classes) = zip(*[(row['path'], int(row['class'])) for row in reader])
-        except Exception:
-            traceback.print_stack()
-            raise InvalidDatasetFormatException()
+            # Load images from files
+            pil_images = []
+            for image_path in image_paths:
+                full_image_path = os.path.join(d, image_path)
+                with open(full_image_path, 'rb') as f:
+                    encoded = io.BytesIO(f.read())
+                    pil_image = Image.open(encoded).convert(mode)
+                    pil_images.append(pil_image)
 
         num_classes = len(set(image_classes))
         num_samples = len(image_paths)
 
-        return (num_samples, num_classes, image_paths, image_classes, dataset_dir)
-
-dataset_utils = ModelDatasetUtils()
+        return (pil_images, image_classes, num_samples, num_classes)

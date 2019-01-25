@@ -11,7 +11,7 @@ class LogType():
     METRICS = 'METRICS'
     MESSAGE = 'MESSAGE'
 
-class ModelLogger():
+class LoggerUtils():
     '''
     Allows models to log messages and metrics during model training, and 
     define plots for visualization of model training.
@@ -42,20 +42,20 @@ class ModelLogger():
         # By default, set a logging handler to print to stdout (for debugging)
         logger = logging.getLogger(__name__)
         logger.setLevel(level=logging.INFO)
-        logger.addHandler(ModelLoggerDebugHandler())
+        logger.addHandler(LoggerUtilsDebugHandler())
         self._logger = logger
 
     def define_loss_plot(self):
         '''
         Convenience method of defining a plot of ``loss`` against ``epoch``.
-        To be used with :meth:`rafiki.model.ModelLogger.log_loss`.
+        To be used with :meth:`rafiki.model.LoggerUtils.log_loss`.
         '''
         self.define_plot('Loss Over Epochs', ['loss'], x_axis='epoch')
   
     def log_loss(self, loss, epoch):
         '''
         Convenience method for logging `loss` against `epoch`.
-        To be used with :meth:`rafiki.model.ModelLogger.define_loss_plot`.
+        To be used with :meth:`rafiki.model.LoggerUtils.define_loss_plot`.
         '''
         self.log(loss=loss, epoch=epoch)
 
@@ -84,7 +84,7 @@ class ModelLogger():
 
         Logged messages will be viewable on Rafiki's administrative UI. 
         
-        To visualize logged metrics on plots, a plot must be defined via :meth:`rafiki.model.ModelLogger.define_plot`.
+        To visualize logged metrics on plots, a plot must be defined via :meth:`rafiki.model.LoggerUtils.define_plot`.
 
         Only call this method in :meth:`rafiki.model.BaseModel.train` and :meth:`rafiki.model.BaseModel.evaluate`.
 
@@ -98,6 +98,7 @@ class ModelLogger():
         if metrics:
             self._log(LogType.METRICS, metrics)
     
+    # - INTERNAL METHOD -
     # Set the Python logger internally used.
     # During model training, this method will be called by Rafiki to inject a Python logger 
     # to generate logs for an instance of model training.
@@ -130,7 +131,7 @@ class ModelLogger():
         messages = []
 
         for log_line in log_lines:
-            log_dict = ModelLogger.parse_log_line(log_line)            
+            log_dict = LoggerUtils.parse_log_line(log_line)            
 
             if 'type' not in log_dict:
                 continue
@@ -157,13 +158,13 @@ class ModelLogger():
             
         return (messages, metrics, plots)
 
-class ModelLoggerDebugHandler(logging.Handler):
+class LoggerUtilsDebugHandler(logging.Handler):
     def __init__(self):
         logging.Handler.__init__(self)
 
     def emit(self, record):
         log_line = record.msg
-        log_dict = ModelLogger.parse_log_line(log_line)
+        log_dict = LoggerUtils.parse_log_line(log_line)
         log_type = log_dict.get('type')
 
         if log_type == LogType.PLOT:
@@ -188,5 +189,3 @@ class ModelLoggerDebugHandler(logging.Handler):
         
     def _print(self, message):
         print('[{}]'.format(__name__), message)
-
-logger = ModelLogger()

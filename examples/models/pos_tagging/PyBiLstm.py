@@ -14,7 +14,7 @@ from torch.utils.data.dataset import Dataset
 
 from rafiki.model import BaseModel, InvalidModelParamsException, \
                         test_model_class, FixedKnob, IntegerKnob, FloatKnob, \
-                        CategoricalKnob, logger, dataset_utils
+                        CategoricalKnob, utils
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.config import APP_MODE
 
@@ -38,21 +38,21 @@ class PyBiLstm(BaseModel):
         self._knobs = knobs
 
     def train(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_corpus(dataset_uri)
+        dataset = utils.dataset.load_dataset_of_corpus(dataset_uri)
         self._word_dict = self._extract_word_dict(dataset)
         self._tag_count = dataset.tag_num_classes[0] 
 
-        logger.log('No. of unique words: {}'.format(len(self._word_dict)))
-        logger.log('No. of tags: {}'.format(self._tag_count))
+        utils.logger.log('No. of unique words: {}'.format(len(self._word_dict)))
+        utils.logger.log('No. of tags: {}'.format(self._tag_count))
         
         (self._net, self._optimizer) = self._train(dataset)
         sents_tags = self._predict(dataset)
         acc = self._compute_accuracy(dataset, sents_tags)
 
-        logger.log('Train accuracy: {}'.format(acc))
+        utils.logger.log('Train accuracy: {}'.format(acc))
 
     def evaluate(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_corpus(dataset_uri)
+        dataset = utils.dataset.load_dataset_of_corpus(dataset_uri)
         sents_tags = self._predict(dataset)
         acc = self._compute_accuracy(dataset, sents_tags)
         return acc
@@ -139,7 +139,7 @@ class PyBiLstm(BaseModel):
 
         Tensor = torch.LongTensor
         if torch.cuda.is_available():
-            logger.log('Using CUDA...')
+            utils.logger.log('Using CUDA...')
             net = net.cuda()
             Tensor = torch.cuda.LongTensor
 
@@ -173,13 +173,13 @@ class PyBiLstm(BaseModel):
         B = math.ceil(len(dataset) / N) # No. of batches
 
         # Define loss plot
-        logger.define_loss_plot()
+        utils.logger.define_loss_plot()
 
         (net, optimizer) = self._create_model()
 
         Tensor = torch.LongTensor
         if torch.cuda.is_available():
-            logger.log('Using CUDA...')
+            utils.logger.log('Using CUDA...')
             net = net.cuda()
             Tensor = torch.cuda.LongTensor
 
@@ -209,7 +209,7 @@ class PyBiLstm(BaseModel):
 
                 total_loss += loss.item()
 
-            logger.log_loss(loss=(total_loss / B), epoch=epoch)
+            utils.logger.log_loss(loss=(total_loss / B), epoch=epoch)
 
         return (net, optimizer)
 

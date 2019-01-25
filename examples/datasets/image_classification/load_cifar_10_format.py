@@ -12,10 +12,10 @@ from tqdm import tqdm
 from itertools import chain
 from PIL import Image
 
-from rafiki.model import dataset_utils
+from rafiki.model import utils
 
 def load(dataset_url, label_to_name, out_train_dataset_path, out_val_dataset_path, 
-        out_test_dataset_path, out_meta_csv_path, validation_split=0.05):
+        out_test_dataset_path, out_meta_csv_path, validation_split=0.05, limit=None):
     '''
         Loads and converts an image dataset of the CIFAR-10 format to the DatasetType `IMAGE_FILES`.
         Refer to https://www.cs.toronto.edu/~kriz/cifar.html for the CIFAR-10 dataset format for.
@@ -27,14 +27,15 @@ def load(dataset_url, label_to_name, out_train_dataset_path, out_val_dataset_pat
         :param str out_test_dataset_path: Path to save the output test dataset file
         :param str out_meta_csv_path: Path to save the output dataset metadata .CSV file
         :param float validation_split: Proportion (0-1) to carve out validation dataset from the originl train dataset
+        :param int limit: Maximum number of train & validation samples (for purposes of testing)
     '''
 
     print('Downloading dataset archive...')
-    dataset_zip_file_path = dataset_utils.download_dataset_from_uri(dataset_url)
+    dataset_zip_file_path = utils.dataset.download_dataset_from_uri(dataset_url)
 
     print('Loading datasets into memory...')
     (train_images, train_labels, test_images, test_labels) = _load_dataset_from_zip_file(dataset_zip_file_path)
-    (train_images, train_labels, val_images, val_labels) = _split_train_dataset(train_images, train_labels, validation_split)
+    (train_images, train_labels, val_images, val_labels) = _split_train_dataset(train_images, train_labels, validation_split, limit)
 
     print('Converting and writing datasets...')
 
@@ -52,12 +53,19 @@ def load(dataset_url, label_to_name, out_train_dataset_path, out_val_dataset_pat
     _write_dataset(test_images, test_labels, label_to_index, out_test_dataset_path)
     print('Test dataset file is saved at {}'.format(out_test_dataset_path))
 
-def _split_train_dataset(train_images, train_labels, validation_split):
+def _split_train_dataset(train_images, train_labels, validation_split, limit):
     val_start_idx = int(len(train_images) * (1 - validation_split))
     val_images = train_images[val_start_idx:]
     val_labels = train_labels[val_start_idx:]
     train_images = train_images[:val_start_idx]
     train_labels = train_labels[:val_start_idx]
+
+    if limit is not None:
+        val_images = val_images[:limit]
+        val_labels = val_labels[:limit]
+        train_images = train_images[:limit]
+        train_labels = train_labels[:limit]
+
     return (train_images, train_labels, val_images, val_labels)
 
 def _write_meta_csv(labels, label_to_name, out_meta_csv_path):

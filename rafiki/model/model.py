@@ -11,7 +11,6 @@ from rafiki.advisor import Advisor, AdvisorType
 from rafiki.predictor import ensemble_predictions
 from rafiki.constants import TaskType, ModelDependency
 
-from .dataset import ModelDatasetUtils
 from .knob import BaseKnob, serialize_knob_config, deserialize_knob_config
 
 class InvalidModelClassException(Exception): pass
@@ -146,7 +145,7 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
     The model instance's methods will be called in an order similar to that in Rafiki.
 
     :param str model_file_path: Path to a single Python file that contains the definition for the model class
-    :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
+    :param str model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
     :param str task: Task type of model
     :param dict[str, str] dependencies: Model's dependencies
     :param str train_dataset_uri: URI of the train dataset for testing the training of model
@@ -172,7 +171,7 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         f = open(model_file_path, 'rb')
         model_file_bytes = f.read()
         f.close()
-        py_model_class = load_model_class(model_file_bytes, model_class, temp_mod_name='your-model-file-temp')
+        py_model_class = load_model_class(model_file_bytes, model_class, temp_mod_name=model_class)
         _check_model_class(py_model_class)
 
         _print_header('Checking model configuration...')
