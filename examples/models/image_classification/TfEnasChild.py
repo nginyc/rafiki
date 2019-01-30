@@ -195,8 +195,6 @@ class TfEnasChild(BaseModel):
 
                     (w, h, ch) = (w // 2, h // 2, ch * 2) 
 
-                layers.append(X)
-
         # Global average pooling
         X = self._add_global_pooling(X, w, h, ch)
 
@@ -384,7 +382,6 @@ class TfEnasChild(BaseModel):
 
         X = tf.reshape(X, (-1, w // 2, h // 2, ch * 2)) # Sanity shape check
 
-        X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
         return X                
 
     # def _add_pooling(self, X, w, h, ch):
