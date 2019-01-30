@@ -53,6 +53,7 @@ class UserType():
 class AdvisorType():
     SKOPT = 'SKOPT'
     BTB_GP = 'BTB_GP'
+    RANDOM = 'RANDOM'
 
 class DatasetType():
     IMAGE_FILES = 'IMAGE_FILES'

@@ -2,7 +2,7 @@ from btb.tuning import GP
 from btb import HyperParameter, ParamTypes
 
 from rafiki.model import BaseKnob, FloatKnob, IntegerKnob, CategoricalKnob, FixedKnob
-from ..advisor import BaseAdvisor
+from ..advisor import BaseAdvisor, UnsupportedKnobTypeError
 
 class BtbGpAdvisor(BaseAdvisor):
     '''
@@ -58,4 +58,5 @@ def _knob_to_tunable(knob):
             return HyperParameter(ParamTypes.FLOAT_EXP, [knob.value_min, knob.value_max])
         else:
             return HyperParameter(ParamTypes.FLOAT, [knob.value_min, knob.value_max])
-    
+    else:
+        raise UnsupportedKnobTypeError(knob.__class__)

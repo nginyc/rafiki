@@ -1,5 +1,6 @@
 import abc
 import json
+import pickle
 
 class BaseKnob(abc.ABC):
     '''
@@ -8,30 +9,8 @@ class BaseKnob(abc.ABC):
 
     # TODO: Support conditional and validation logic
 
-    def __init__(self, knob_args={}):
-        self._knob_args = knob_args
-
-    def to_json(self):
-        return json.dumps({
-            'type': self.__class__.__name__,
-            'args': self._knob_args
-        })
-
-    @classmethod
-    def from_json(cls, json_str):
-        json_dict = json.loads(json_str)
-
-        if 'type' not in json_dict or 'args' not in json_dict:
-            raise ValueError('Invalid JSON representation of knob: {}.'.format(json_str))
-
-        knob_type = json_dict['type']
-        knob_args = json_dict['args']
-        knob_classes = [CategoricalKnob, IntegerKnob, FloatKnob, FixedKnob]
-        for clazz in knob_classes:
-            if clazz.__name__ == knob_type:
-                return clazz(**knob_args)
-
-        raise ValueError('Invalid knob type: {}'.format(knob_type))
+    def __init__(self):
+        pass
 
 class CategoricalKnob(BaseKnob):
     '''
@@ -39,8 +18,7 @@ class CategoricalKnob(BaseKnob):
     A generated value of this knob would be an element of ``values``.
     '''
     def __init__(self, values):
-        knob_args = { 'values': values }
-        super().__init__(knob_args)
+        super().__init__()
         self._values = values
         (self._value_type) = self._validate_values(values)
 
@@ -79,8 +57,7 @@ class FixedKnob(BaseKnob):
     Essentially, this represents a knob that does not require tuning.
     '''
     def __init__(self, value):
-        knob_args = { 'value': value }
-        super().__init__(knob_args)
+        super().__init__()
         self._value = value
         (self._value_type) = self._validate_value(value)
 
@@ -114,8 +91,7 @@ class IntegerKnob(BaseKnob):
     '''
 
     def __init__(self, value_min, value_max, is_exp=False):
-        knob_args = { 'value_min': value_min, 'value_max': value_max, 'is_exp': is_exp }
-        super().__init__(knob_args)
+        super().__init__()
         self._validate_values(value_min, value_max)
         self._value_min = value_min
         self._value_max = value_max
@@ -152,8 +128,7 @@ class FloatKnob(BaseKnob):
     '''
 
     def __init__(self, value_min, value_max, is_exp=False):
-        knob_args = { 'value_min': value_min, 'value_max': value_max, 'is_exp': is_exp }
-        super().__init__(knob_args)
+        super().__init__()
         self._validate_values(value_min, value_max)
         self._value_min = value_min
         self._value_max = value_max
@@ -182,18 +157,89 @@ class FloatKnob(BaseKnob):
         if value_min > value_max:
             raise ValueError('`value_max` should be at least `value_min`')
 
+class ListKnob(BaseKnob):
+    '''
+    Knob type represent a list of knobs of a static size 
+    '''
+    def __init__(self, list_len, get_item=None, items=None):
+        (self._list_len, self._items) = \
+            self._validate_values(list_len, get_item, items)
+        super().__init__()
 
-def deserialize_knob_config(knob_config_str):
-    knob_config = {
-        name: BaseKnob.from_json(knob_str)
-        for (name, knob_str) in json.loads(knob_config_str).items()
-    }
+    @property  
+    def items(self):
+        return self._items
+
+    @property    
+    def list_len(self):
+        return self._list_len
+
+    @staticmethod
+    def _validate_values(list_len, get_item, items):
+        if not isinstance(list_len, int) or list_len < 0:
+            raise ValueError('`len_mlist_lenin` should be a non-negative `int`')
+        
+        if items is None:
+            if get_item is None:
+                raise ValueError('`get_item` should be specified if `items` is not')
+
+            items = [get_item(i) for i in range(list_len)]
+
+        for (i, knob) in enumerate(items):
+            if not isinstance(knob, BaseKnob):
+                raise ValueError('Item {} should be of type `BaseKnob`'.format(i))
+
+        return (list_len, items)
+
+class DynamicListKnob(BaseKnob):
+    '''
+    Knob type represent a list of knobs of a dynamic size 
+    '''
+
+    def __init__(self, len_min, len_max, get_item=None, items=None):
+        (self._len_min, self._len_max, self._items) = \
+            self._validate_values(len_min, len_max, get_item, items)
+        super().__init__()
+        
+    @property
+    def items(self):
+        return self._items
+
+    @property
+    def len_min(self):
+        return self._len_min
+    
+    @property
+    def len_max(self):
+        return self._len_max
+    
+    @staticmethod
+    def _validate_values(len_min, len_max, get_item, items):
+        if not isinstance(len_min, int) or len_min < 0:
+            raise ValueError('`len_min` should be a non-negative `int`')
+        
+        if not isinstance(len_max, int) or len_max < len_min:
+            raise ValueError('`len_max` should be a `int` at least `len_min`')
+
+        if items is None:
+            if get_item is None:
+                raise ValueError('`get_item` should be specified if `items` is not')
+
+            items = [get_item(i) for i in range(0, len_max)]
+
+        print (items)
+
+        for (i, knob) in enumerate(items):
+            if not isinstance(knob, BaseKnob):
+                raise ValueError('Item {} should be of type `BaseKnob`'.format(i))
+
+        return (len_min, len_max, items)
+
+def deserialize_knob_config(knob_config_bytes):
+    knob_config = pickle.loads(knob_config_bytes)
     return knob_config
 
 def serialize_knob_config(knob_config):
-    knob_config_str = json.dumps({
-        name: knob.to_json()
-        for (name, knob) in knob_config.items()
-    })
-    return knob_config_str
+    knob_config_bytes = pickle.dumps(knob_config)
+    return knob_config_bytes
     

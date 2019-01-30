@@ -10,8 +10,9 @@ import base64
 
 from rafiki.config import APP_MODE
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, utils
-from rafiki.constants import TaskType, ModelDependency
+                        IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, \
+                        ListKnob, DynamicListKnob, utils
+from rafiki.constants import TaskType, ModelDependency, AdvisorType
 
 class TfEnasChild(BaseModel):
     '''
@@ -21,6 +22,14 @@ class TfEnasChild(BaseModel):
     '''
     @staticmethod
     def get_knob_config():
+        def cell_arch_block(i):
+            return ListKnob(4, items=[
+                CategoricalKnob([0, 1]), # index 1
+                CategoricalKnob([0, 1, 2, 3, 4]), # op 1
+                CategoricalKnob([0, 1]), # index 2
+                CategoricalKnob([0, 1, 2, 3, 4]) # op 2
+            ])
+
         return {
             'max_image_size': FixedKnob(32),
             'max_epochs': FixedKnob(10),
@@ -32,7 +41,14 @@ class TfEnasChild(BaseModel):
             'opt_momentum': FixedKnob(0.9),
             'sgdr_alpha': FixedKnob(0.02),
             'sgdr_first_decay_steps': FixedKnob(5000),
-            'sgdr_t_mul': FixedKnob(2)
+            'sgdr_t_mul': FixedKnob(2),
+            'cell_arch': DynamicListKnob(1, 12, cell_arch_block)
+        }
+
+    @staticmethod
+    def get_train_config():
+        return {
+            'advisor_type': AdvisorType.RANDOM
         }
 
     def __init__(self, **knobs):
@@ -192,7 +208,7 @@ class TfEnasChild(BaseModel):
                     for j in range(len(layers)):
                         with tf.variable_scope('from_layer_{}'.format(j - 1)):
                             layers[j] = self._add_factorized_reduction(layers[j], w, h, ch)
-
+                    
                     (w, h, ch) = (w // 2, h // 2, ch * 2) 
 
         # Global average pooling
@@ -258,7 +274,7 @@ class TfEnasChild(BaseModel):
         if self._sess is not None:
             self._sess.close()
 
-        config = tf.ConfigProto()
+        config = tf.ConfigProto(allow_soft_placement=True)
         config.gpu_options.allow_growth = True
         self._sess = tf.Session(config=config)
 
@@ -367,13 +383,13 @@ class TfEnasChild(BaseModel):
             half_1 = tf.nn.avg_pool(X, ksize=(1, 1, 1, 1), strides=(1, 2, 2, 1), padding='VALID')
             shifted_X = tf.pad(X, ((0, 0), (0, 1), (0, 1), (0, 0)))[:, 1:, 1:, :]
             half_2 = tf.nn.avg_pool(shifted_X, ksize=(1, 1, 1, 1), strides=(1, 2, 2, 1), padding='VALID')
-        
+
             # Apply 1 x 1 convolution to each half separately
             W_half_1 = self._create_weights('W_half_1', (1, 1, ch, ch))
             X_half_1 = tf.nn.conv2d(half_1, W_half_1, (1, 1, 1, 1), padding='SAME')
             W_half_2 = self._create_weights('W_half_2', (1, 1, ch, ch))
             X_half_2 = tf.nn.conv2d(half_2, W_half_2, (1, 1, 1, 1), padding='SAME')
-
+            
             # Concat both halves across channels
             X = tf.concat([X_half_1, X_half_2], axis=3)
 
@@ -382,7 +398,7 @@ class TfEnasChild(BaseModel):
 
         X = tf.reshape(X, (-1, w // 2, h // 2, ch * 2)) # Sanity shape check
 
-        return X                
+        return X
 
     # def _add_pooling(self, X, w, h, ch):
     #     assert w % 2 == 0 and h % 2 == 0, 'Width & height ({} & {}) must both be even!'.format(w, H)
@@ -521,18 +537,18 @@ class TfEnasChild(BaseModel):
         arc.extend([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         arc.extend([2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0])
         arc.extend([0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1])
-        arc.extend([2, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0])
-        arc.extend([1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1])
-        arc.extend([0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0])
-        arc.extend([2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1])
-        arc.extend([2, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0])
-        arc.extend([2, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1])
-        arc.extend([3, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0])
-        arc.extend([3, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1])
-        arc.extend([0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0])
-        arc.extend([3, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0])
-        arc.extend([0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0])
-        arc.extend([0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 0])
+        # arc.extend([2, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0])
+        # arc.extend([1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1])
+        # arc.extend([0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0])
+        # arc.extend([2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1])
+        # arc.extend([2, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0])
+        # arc.extend([2, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1])
+        # arc.extend([3, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0])
+        # arc.extend([3, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1])
+        # arc.extend([0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0])
+        # arc.extend([3, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0])
+        # arc.extend([0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0])
+        # arc.extend([0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 0])
         return arc
 
 if __name__ == '__main__':

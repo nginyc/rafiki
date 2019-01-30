@@ -2,7 +2,7 @@ from skopt.space import Real, Integer, Categorical
 from skopt.optimizer import Optimizer
 
 from rafiki.model import BaseKnob, FloatKnob, IntegerKnob, CategoricalKnob, FixedKnob
-from ..advisor import BaseAdvisor
+from ..advisor import BaseAdvisor, UnsupportedKnobTypeError
 
 class SkoptAdvisor(BaseAdvisor):
     '''
@@ -40,4 +40,5 @@ def _knob_to_dimension(knob):
             return Real(knob.value_min, knob.value_max, 'log-uniform')
         else:
             return Real(knob.value_min, knob.value_max, 'uniform')
-    
+    else:
+        raise UnsupportedKnobTypeError(knob.__class__)

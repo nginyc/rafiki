@@ -37,7 +37,6 @@ class BaseModel(abc.ABC):
             ...
             self._build_model(self.knob1, self.knob2)
 
-
     :param knobs: Dictionary of knob values for this model instance
     :type knobs: dict[str, any]
     '''   
@@ -332,8 +331,8 @@ def _check_knob_config(knob_config):
         raise Exception('Static method `get_knob_config()` should return a dict[str, BaseKnob]')
 
     # Try serializing and deserialize knob config
-    knob_config_str = serialize_knob_config(knob_config)
-    knob_config = deserialize_knob_config(knob_config_str)
+    knob_config_bytes = serialize_knob_config(knob_config)
+    knob_config = deserialize_knob_config(knob_config_bytes)
 
 def _info(msg):
     msg_color = '\033[94m'

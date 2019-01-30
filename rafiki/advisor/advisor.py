@@ -4,6 +4,7 @@ import numpy as np
 from rafiki.constants import AdvisorType
 
 class InvalidAdvisorTypeError(Exception): pass
+class UnsupportedKnobTypeError(Exception): pass
 
 class BaseAdvisor(abc.ABC):
     '''
@@ -53,6 +54,9 @@ class Advisor():
         elif advisor_type == AdvisorType.BTB_GP:
             from .types.btb_gp_advisor import BtbGpAdvisor
             return BtbGpAdvisor(knob_config)
+        elif advisor_type == AdvisorType.RANDOM:
+            from .types.random_advisor import RandomAdvisor
+            return RandomAdvisor(knob_config)
         else:
             raise InvalidAdvisorTypeError()
 
