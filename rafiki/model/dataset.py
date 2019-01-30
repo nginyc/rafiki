@@ -86,9 +86,9 @@ class DatasetUtils():
             return images
 
         if mean is None:
-            mean = np.mean(images, axis=(0, 1, 2)) # shape = (channels,)
+            mean = np.mean(images, axis=(0, 1, 2)).tolist() # shape = (channels,)
         if std is None:
-            std = np.std(images, axis=(0, 1, 2)) # shape = (channels,)
+            std = np.std(images, axis=(0, 1, 2)).tolist() # shape = (channels,)
 
         # Normalize all images
         images = np.transpose((np.transpose(images, (1, 0, 2, 3)) - mean) / std, (1, 0, 2, 3))

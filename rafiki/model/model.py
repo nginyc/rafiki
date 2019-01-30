@@ -104,28 +104,18 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def dump_parameters(self):
+    def save_parameters(self, params_dir):
         '''
-        Return a dictionary of model parameters that fully define this model instance's trained state. 
-        This dictionary should be serializable by the Python's ``pickle`` module.
-        This will be used for trained model serialization within Rafiki.
+        Saves the parameters of this model to a directory.
         This will be called only when model is *trained*.
-
-        :returns: Dictionary of model parameters
-        :rtype: dict[string, any]
         '''
-
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def load_parameters(self, params):
+    def load_parameters(self, params_dir):
         '''
-        Load a dictionary of model parameters into this model instance.
-        This will be used for trained model deserialization within Rafiki.
+        Loads the parameters of this model from a directory.
         The model will be considered *trained* subsequently.
-
-        :param params: Dictionary of model parameters
-        :type params: dict[string, any]
         '''
         raise NotImplementedError()
 
@@ -138,7 +128,7 @@ class BaseModel(abc.ABC):
         pass
 
 def test_model_class(model_file_path, model_class, task, dependencies, \
-                    train_dataset_uri, val_dataset_uri, \
+                    train_dataset_uri, val_dataset_uri, params_dir='params/local/', \
                     enable_gpu=False, queries=[], knobs=None):
     '''
     Tests whether a model class is properly defined by running a full train-inference flow.
@@ -150,6 +140,7 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
     :param dict[str, str] dependencies: Model's dependencies
     :param str train_dataset_uri: URI of the train dataset for testing the training of model
     :param str val_dataset_uri: URI of the validation dataset for testing the evaluation of model
+    :param str params_dir: Folder path to save model parameters
     :param list[any] queries: List of queries for testing predictions with the trained model
     :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used
     :type knobs: dict[str, any]
@@ -197,23 +188,15 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
 
         print('Score: {}'.format(score))
 
-        _print_header('Checking dumping of parameters of model...')
-        parameters = model_inst.dump_parameters()
-
-        if not isinstance(parameters, dict):
-            raise Exception('`dump_parameters()` should return a dict[str, any]')
-
-        try:
-            # Model parameters are pickled and put into DB
-            parameters = pickle.loads(pickle.dumps(parameters))
-        except Exception:
-            traceback.print_stack()
-            raise Exception('`parameters` should be serializable by `pickle`')
+        _print_header('Checking saving of parameters of model...')
+        if not os.path.exists(params_dir):
+            os.mkdir(params_dir)
+        model_inst.save_parameters(params_dir)
 
         _print_header('Checking loading of parameters of model...')
         model_inst.destroy()
         model_inst = py_model_class(**knobs)
-        model_inst.load_parameters(parameters)
+        model_inst.load_parameters(params_dir)
 
         _print_header('Checking predictions with model...')
         print('Using queries: {}'.format(queries))

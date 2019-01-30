@@ -24,12 +24,15 @@ class TfEnasChild(BaseModel):
         return {
             'max_image_size': FixedKnob(32),
             'max_epochs': FixedKnob(10),
-            'batch_size': FixedKnob(64),
-            'learning_rate': FixedKnob(0.001),
+            'batch_size': FixedKnob(128),
+            'learning_rate': FixedKnob(0.05), 
             'start_ch': FixedKnob(96),
             'l2_reg': FixedKnob(2e-4),
             'dropout_keep_prob': FixedKnob(0.5),
-            'opt_momentum': FixedKnob(0.9)
+            'opt_momentum': FixedKnob(0.9),
+            'sgdr_alpha': FixedKnob(0.02),
+            'sgdr_first_decay_steps': FixedKnob(5000),
+            'sgdr_t_mul': FixedKnob(2)
         }
 
     def __init__(self, **knobs):
@@ -54,6 +57,7 @@ class TfEnasChild(BaseModel):
 
         with self._graph.as_default():
             self._build_model()
+            self._init_session()
             self._train_model(images, classes)
 
     def evaluate(self, dataset_uri):
@@ -76,7 +80,7 @@ class TfEnasChild(BaseModel):
         norm_mean = self._train_params['norm_mean']
         norm_std = self._train_params['norm_std']
 
-        images = utils.dataset.transform_images(queries, image_size=image_size)
+        images = utils.dataset.transform_images(queries, image_size=image_size, mode='RGB')
         (images, _, _) = utils.dataset.normalize_images(images, norm_mean, norm_std)
         with self._graph.as_default():
             probs = self._predict_with_model(images)
@@ -87,44 +91,32 @@ class TfEnasChild(BaseModel):
         if self._sess is not None:
             self._sess.close()
 
-    def dump_parameters(self):
-        params = {}
-
-        # Save model parameters
-        with tempfile.NamedTemporaryFile() as tmp:
-            # Save whole model to temp h5 file
-            with self._graph.as_default():
-                self._model.save(tmp.name)
-        
-            # Read from temp h5 file & encode it to base64 string
-            with open(tmp.name, 'rb') as f:
-                h5_model_bytes = f.read()
-
-            params['h5_model_base64'] = base64.b64encode(h5_model_bytes).decode('utf-8')
+    def save_parameters(self, params_dir):
+        # Save model
+        model_file_path = os.path.join(params_dir, 'model')
+        saver = tf.train.Saver(self._tf_vars)
+        saver.save(self._sess, model_file_path) 
 
         # Save pre-processing params
-        params['train_params'] = self._train_params
+        train_params_file_path = os.path.join(params_dir, 'train_params.json')
+        with open(train_params_file_path, 'w') as f:
+            f.write(json.dumps(self._train_params))
 
-        return params
+    def load_parameters(self, params_dir):
+        # Load pre-processing params
+        train_params_file_path = os.path.join(params_dir, 'train_params.json')
+        with open(train_params_file_path, 'r') as f:
+            json_str = f.read()
+            self._train_params = json.loads(json_str)
 
-    def load_parameters(self, params):
+        # Build model
+        self._build_model()
+
         # Load model parameters
-        h5_model_base64 = params.get('h5_model_base64', None)
-        if h5_model_base64 is None:
-            raise InvalidModelParamsException()
-
-        with tempfile.NamedTemporaryFile() as tmp:
-            # Convert back to bytes & write to temp file
-            h5_model_bytes = base64.b64decode(h5_model_base64.encode('utf-8'))
-            with open(tmp.name, 'wb') as f:
-                f.write(h5_model_bytes)
-
-            # Load model from temp file
-            with self._graph.as_default():
-                self._model = keras.models.load_model(tmp.name)
-
-        # Load training params
-        self._train_params = params['train_params']
+        self._init_session()
+        model_file_path = os.path.join(params_dir, 'model')
+        saver = tf.train.Saver(self._tf_vars)
+        saver.restore(self._sess, model_file_path)
 
     def _build_model(self):
         N = self._knobs['batch_size'] 
@@ -166,6 +158,7 @@ class TfEnasChild(BaseModel):
         self._steps = steps
         self._images_ph = images_ph
         self._classes_ph = classes_ph
+        self._tf_vars = tf_vars
         self._is_train_ph = is_train
 
     def _inference(self, X, is_train):
@@ -181,6 +174,7 @@ class TfEnasChild(BaseModel):
         layer_defs = self._arch_to_layer_defs(arch)
         L = len(layer_defs) # Number of layers
         
+        # Stores previous layers. layers[i] = <previous layer (i - 1) as input to layer i>
         layers = []
 
         # "Stem" convolution layer
@@ -190,18 +184,16 @@ class TfEnasChild(BaseModel):
         # Core op layers
         for (i, layer_def) in enumerate(layer_defs):
             with tf.variable_scope('layer_{}'.format(i)):
-                X = self._add_op(X, layer_def, layers, w, h, ch)
+                X = self._add_op(layers[i], layer_def, layers, w, h, ch)
+                layers.append(X)
 
-                # Situationally add transition layers
+                # At certain layers, reduce each layer to a smaller area 
                 if i in [L // 3 - 1, L // 3 * 2 - 1]:
-                    X = self._add_pooling(X, w, h, ch, 2)
-                    
-                    # Downsample prev layers to new width & height (for skip connections)
                     for j in range(len(layers)):
-                        layers[j] = self._add_pooling(layers[j], w, h, ch, 2)
+                        with tf.variable_scope('from_layer_{}'.format(j - 1)):
+                            layers[j] = self._add_factorized_reduction(layers[j], w, h, ch)
 
-                    w //= 2
-                    h //= 2
+                    (w, h, ch) = (w // 2, h // 2, ch * 2) 
 
                 layers.append(X)
 
@@ -245,12 +237,18 @@ class TfEnasChild(BaseModel):
         return X
 
     def _optimize(self, loss, tf_vars):
-        lr = self._knobs['learning_rate'] # Learning rate 
+        lr_max = self._knobs['learning_rate'] # Learning rate
         opt_momentum = self._knobs['opt_momentum'] # Momentum optimizer momentum
+        alpha = self._knobs['sgdr_alpha'] 
+        first_decay_steps = self._knobs['sgdr_first_decay_steps']
+        t_mul = self._knobs['sgdr_t_mul']
 
-        # TODO: Add cosine schedule for learning rate
-
+        # Initialize steps variable
         steps = tf.Variable(0, name='steps', dtype=tf.int32, trainable=False)
+
+        # Apply Stoachastic Gradient Descent with Warm Restarts (SGDR)
+        lr = tf.train.cosine_decay_restarts(lr_max, steps, first_decay_steps, t_mul=t_mul, alpha=alpha)
+
         grads = tf.gradients(loss, tf_vars)
         opt = tf.train.MomentumOptimizer(lr, opt_momentum, use_locking=True, use_nesterov=True)
         train_op = opt.apply_gradients(zip(grads, tf_vars), global_step=steps)
@@ -264,14 +262,14 @@ class TfEnasChild(BaseModel):
 
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
-        self._sess = tf.train.SingularMonitoredSession(config=config, hooks=[])
+        self._sess = tf.Session(config=config)
 
     def _train_model(self, images, classes):
         num_epochs = self._knobs['max_epochs']
 
         utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
-        self._init_session()
+        self._sess.run(tf.global_variables_initializer())
         for epoch in range(num_epochs):
             utils.logger.log(epoch=epoch)
 
@@ -324,7 +322,9 @@ class TfEnasChild(BaseModel):
 
     def _count_model_parameters(self, tf_vars):
         num_params = 0
+        print('Model parameters:')
         for var in tf_vars:
+            print(var, var.get_shape())
             num_params += np.prod([dim.value for dim in var.get_shape()])
 
         return num_params
@@ -358,23 +358,44 @@ class TfEnasChild(BaseModel):
         X = tf.reshape(X, (-1, in_ch)) # Sanity shape check
         return X
 
-    # def _add_channel_multiply(self, X, w, h, ch, ch_mul):
-    #     with tf.variable_scope('ch_mul'):
-    #         W = self._create_weights('W', (1, 1, ch, ch * ch_mul))
-    #         X = tf.nn.conv2d(X, W, [1, 1, 1, 1], padding='SAME')
+    def _add_factorized_reduction(self, X, w, h, ch):
+        '''
+        Output is of shape (w // 2, h // 2, ch * 2)
+        '''
+        assert w % 2 == 0 and h % 2 == 0, 'Width & height ({} & {}) must both be even!'.format(w, h)
 
-    #     X = tf.reshape(X, (-1, w, h, ch * ch_mul)) # Sanity shape check
-    #     return X
+        with tf.variable_scope('fac_reduc'):
+            # Split area into 2 halves 
+            half_1 = tf.nn.avg_pool(X, ksize=(1, 1, 1, 1), strides=(1, 2, 2, 1), padding='VALID')
+            shifted_X = tf.pad(X, ((0, 0), (0, 1), (0, 1), (0, 0)))[:, 1:, 1:, :]
+            half_2 = tf.nn.avg_pool(shifted_X, ksize=(1, 1, 1, 1), strides=(1, 2, 2, 1), padding='VALID')
         
-    def _add_pooling(self, X, w, h, ch, stride):
-        assert w % 2 == 0 and h % 2 == 0, 'Width & height ({} & {}) must both be even!'.format(w, H)
+            # Apply 1 x 1 convolution to each half separately
+            W_half_1 = self._create_weights('W_half_1', (1, 1, ch, ch))
+            X_half_1 = tf.nn.conv2d(half_1, W_half_1, (1, 1, 1, 1), padding='SAME')
+            W_half_2 = self._create_weights('W_half_2', (1, 1, ch, ch))
+            X_half_2 = tf.nn.conv2d(half_2, W_half_2, (1, 1, 1, 1), padding='SAME')
 
-        with tf.variable_scope('pool'):
-            X = tf.nn.avg_pool(X, ksize=(1, stride, stride, 1), 
-                            strides=(1, stride, stride, 1), padding='SAME')
+            # Concat both halves across channels
+            X = tf.concat([X_half_1, X_half_2], axis=3)
+
+            # Apply batch normalization
+            X = self._add_batch_norm(X)
+
+        X = tf.reshape(X, (-1, w // 2, h // 2, ch * 2)) # Sanity shape check
 
         X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
         return X                
+
+    # def _add_pooling(self, X, w, h, ch):
+    #     assert w % 2 == 0 and h % 2 == 0, 'Width & height ({} & {}) must both be even!'.format(w, H)
+
+    #     with tf.variable_scope('pool'):
+    #         X = tf.nn.max_pool(X, ksize=(1, 2, 2, 1), 
+    #                         strides=(1, 2, 2, 1), padding='SAME')
+
+    #     X = tf.reshape(X, (-1, w // 2, h // 2, ch)) # Sanity shape check
+    #     return X                
 
     def _add_op(self, X, layer_def, layers, w, h, ch):
         (op_code, skips) = layer_def
@@ -408,7 +429,7 @@ class TfEnasChild(BaseModel):
                             lambda: tf.zeros_like(layers[i])))
                             
             outs.append(X)
-            X = tf.concat(outs, 3) # TODO: Verify that it should NOT be `tf.add_n` (original is)
+            X = tf.concat(outs, axis=3)
 
             # Apply stablizing convolution
             W = self._create_weights('W', (1, 1, ch_comb, ch))
@@ -522,6 +543,7 @@ if __name__ == '__main__':
         model_file_path=__file__,
         model_class='TfEnasChild',
         task=TaskType.IMAGE_CLASSIFICATION,
+        enable_gpu=True,
         dependencies={
             ModelDependency.TENSORFLOW: '1.12.0'
         },
