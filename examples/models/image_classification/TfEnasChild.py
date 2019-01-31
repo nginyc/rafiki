@@ -24,9 +24,9 @@ class TfEnasChild(BaseModel):
     def get_knob_config():
         def cell_arch_block(i):
             return ListKnob(4, items=[
-                CategoricalKnob([0, 1]), # index 1
+                CategoricalKnob(list(range(i + 2))), # index 1
                 CategoricalKnob([0, 1, 2, 3, 4]), # op 1
-                CategoricalKnob([0, 1]), # index 2
+                CategoricalKnob(list(range(i + 2))), # index 2
                 CategoricalKnob([0, 1, 2, 3, 4]) # op 2
             ])
 
@@ -35,14 +35,16 @@ class TfEnasChild(BaseModel):
             'max_epochs': FixedKnob(10),
             'batch_size': FixedKnob(128),
             'learning_rate': FixedKnob(0.05), 
-            'start_ch': FixedKnob(96),
+            'start_ch': FixedKnob(36),
             'l2_reg': FixedKnob(2e-4),
-            'dropout_keep_prob': FixedKnob(0.5),
+            'dropout_keep_prob': FixedKnob(0.8),
             'opt_momentum': FixedKnob(0.9),
             'sgdr_alpha': FixedKnob(0.02),
             'sgdr_first_decay_steps': FixedKnob(5000),
             'sgdr_t_mul': FixedKnob(2),
-            'cell_arch': DynamicListKnob(1, 12, cell_arch_block)
+            'num_layers': FixedKnob(10),
+            'normal_cell_arch': DynamicListKnob(1, 12, cell_arch_block),
+            'reduction_cell_arch': DynamicListKnob(1, 12, cell_arch_block)
         }
 
     @staticmethod
@@ -180,39 +182,43 @@ class TfEnasChild(BaseModel):
     def _inference(self, X, is_train):
         K = self._train_params['K'] # No. of classes
         in_ch = 3 # Num channels of input images
-
         w = self._train_params['image_size'] # Current input width
         h = self._train_params['image_size'] # Current input height
         ch = self._knobs['start_ch'] # Current no. of channels
         dropout_keep_prob = self._knobs['dropout_keep_prob']
+        L = self._knobs['num_layers'] # Total number of layers
 
-        arch = self._get_arch()
-        layer_defs = self._arch_to_layer_defs(arch)
-        L = len(layer_defs) # Number of layers
+        (normal_arch, reduction_arch) = self._get_arch()
         
-        # Stores previous layers. layers[i] = <previous layer (i - 1) as input to layer i>
+        # Stores previous layers. layers[i] = (<previous layer (i - 1) as input to layer i>, <# of downsamples>, channels)
         layers = []
 
-        # "Stem" convolution layer
+        # "Stem" convolution layer (layer 0)
         X = self._add_stem_conv(X, w, h, in_ch, ch) 
-        layers.append(X)
+        layers.append((X, 0, ch))
 
-        # Core op layers
-        for (i, layer_def) in enumerate(layer_defs):
-            with tf.variable_scope('layer_{}'.format(i)):
-                X = self._add_op(layers[i], layer_def, layers, w, h, ch)
-                layers.append(X)
+        # Core layers of cells
+        for l in range(1, L + 1):
+            with tf.variable_scope('layer_{}'.format(l)):
+                if l in [L // 3, L // 3 * 2 + 1]:
+                    # Add reduction cell
+                    (X, ds, ch) = self._add_cell(reduction_arch, layers, l, w, h)
 
-                # At certain layers, reduce each layer to a smaller area 
-                if i in [L // 3 - 1, L // 3 * 2 - 1]:
-                    for j in range(len(layers)):
-                        with tf.variable_scope('from_layer_{}'.format(j - 1)):
-                            layers[j] = self._add_factorized_reduction(layers[j], w, h, ch)
-                    
-                    (w, h, ch) = (w // 2, h // 2, ch * 2) 
+                    # Downsample output
+                    X = self._add_factorized_reduction(X, w // 2**ds, h // 2**ds, ch)
+                    ds += 1
+                    ch *= 2
+                else:
+                    # Add normal cell
+                    (X, ds, ch) = self._add_cell(normal_arch, layers, l, w, h)
+
+                layers.append((X, ds, ch))
 
         # Global average pooling
-        X = self._add_global_pooling(X, w, h, ch)
+        (X, _, _) = layers[-1] # Get final layer
+        X = self._add_global_pooling(X, w // 2**ds, h // 2**ds, ch)
+
+        # TODO: Maybe add auxiliary heads
 
         # Add dropout
         X = tf.case(
@@ -338,7 +344,7 @@ class TfEnasChild(BaseModel):
         num_params = 0
         print('Model parameters:')
         for var in tf_vars:
-            print(var, var.get_shape())
+            print(var)
             num_params += np.prod([dim.value for dim in var.get_shape()])
 
         return num_params
@@ -371,6 +377,38 @@ class TfEnasChild(BaseModel):
         X = tf.reduce_mean(X, (1, 2))
         X = tf.reshape(X, (-1, in_ch)) # Sanity shape check
         return X
+
+    def _combine_outputs(self, outputs, w, h):
+        '''
+        Combines the multiple outputs of various shapes.
+        Returns (X, ds, ch)
+        '''
+        # Downsample each output to the maximum downsamples across all outputs
+        ds = max([ds for (_, ds, _) in outputs])
+        for i in range(len(outputs)):
+            (X, ds_x, ch_x) = outputs[i]
+            while ds_x < ds:
+                with tf.variable_scope('downsample_x{}_{}'.format(i, ds + 1)):
+                    X = self._add_factorized_reduction(X, w // 2**ds_x, h // 2**ds_x, ch_x)
+                ds_x += 1
+                ch_x *= 2
+            outputs[i] = (X, ds_x, ch_x)
+
+        # Here, all outputs have the same downsamples, width x height
+        # Concat them and conv them to minimum channels across all outputs
+        ch = min([ch for (_, _, ch) in outputs])
+        comb_ch = sum([ch for (_, _, ch) in outputs])
+        with tf.variable_scope('combine_conv'):
+            X = tf.concat([X for (X, _, _) in outputs], axis=3)
+            X = tf.nn.relu(X)
+            W = self._create_weights('W', (1, 1, comb_ch, ch))
+            X = tf.nn.conv2d(X, W, strides=(1, 1, 1, 1), padding='SAME')
+            X = self._add_batch_norm(X)
+
+        X = tf.reshape(X, (-1, w // 2**ds, h // 2**ds, ch)) # Sanity shape check
+        
+        return (X, ds, ch)
+
 
     def _add_factorized_reduction(self, X, w, h, ch):
         '''
@@ -410,67 +448,85 @@ class TfEnasChild(BaseModel):
     #     X = tf.reshape(X, (-1, w // 2, h // 2, ch)) # Sanity shape check
     #     return X                
 
-    def _add_op(self, X, layer_def, layers, w, h, ch):
-        (op_code, skips) = layer_def
+    def _add_cell(self, cell_arch, layers, l, w, h):
+        b = len(cell_arch) # no. of blocks
+        blocks = [] # Stores the list of blocks in this cell as (X, ds, ch)
 
-        # Apply operation
+        def idx_to_layer(idx):
+            if idx == 0:
+                # Previous layer
+                return layers[max(l - 1, 0)]
+            elif idx == 1:
+                # Previous previous layer
+                return layers[max(l - 2, 0)]
+            else:
+                # Some previous block in cell
+                return blocks[idx - 2] 
+
+        for bi in range(b):
+            with tf.variable_scope('block_{}'.format(bi)):
+                (idx1, op1, indx2, op2) = cell_arch[bi]
+                (X1, ds1, ch1) = idx_to_layer(idx1)
+                (X2, ds2, ch2) = idx_to_layer(indx2)
+
+                with tf.variable_scope('X1'):
+                    X1 = self._add_op(X1, op1, w // 2**ds1, h // 2**ds1, ch1)
+
+                with tf.variable_scope('X2'):
+                    X2 = self._add_op(X2, op2, w // 2**ds2, h // 2**ds2, ch2)
+
+                # TODO: Apply drop path to each output
+
+                with tf.variable_scope('combine'):
+                    (X, ds_block, ch_block) = self._combine_outputs([(X1, ds1, ch1), (X2, ds2, ch2)], w, h)
+
+            blocks.append((X, ds_block, ch_block))
+
+        # Combine all blocks' outputs
+        # TODO: Maybe only concat unused blocks
+        with tf.variable_scope('combine'):
+            (X, ds, ch) = self._combine_outputs(blocks, w, h)
+
+        return (X, ds, ch)
+
+    def _add_op(self, X, op, w, h, ch):
         ops = {
-            0: lambda X, ch: self._add_conv_op(X, ch, filter_size=3),
-            1: lambda X, ch: self._add_separable_conv_op(X, ch, filter_size=3),
-            2: lambda X, ch: self._add_conv_op(X, ch, filter_size=5),
-            3: lambda X, ch: self._add_separable_conv_op(X, ch, filter_size=5)
+            0: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=3),
+            1: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=5),
+            2: lambda: self._add_avg_pool_op(X, w, h, ch, filter_size=3),
+            3: lambda: self._add_max_pool_op(X, w, h, ch, filter_size=3),
+            4: lambda: X, # identity
+            5: lambda: self._add_conv_op(X, w, h, ch, filter_size=3),
+            6: lambda: self._add_conv_op(X, w, h, ch, filter_size=5)
         }
 
-        with tf.variable_scope('op'):
-            op = ops[op_code]
-            X = op(X, ch)
-
-        # Concat skip connections
-        X = self._add_skips(X, skips, layers, w, h, ch)
-
+        X = ops[op]()
         return X
 
-    def _add_skips(self, X, skips, layers, w, h, ch):
-        ch_comb = (len(skips) + 1) * ch
+    # def _add_skips(self, X, skips, layers, w, h, ch):
+    #     ch_comb = (len(skips) + 1) * ch
 
-        with tf.variable_scope('skips'):
-            # Accumulate all layers' outputs into an array according to `skips`, including X, then concat them
-            outs = []
-            for i in range(len(skips)):
-                outs.append(tf.cond(tf.equal(skips[i], 1),
-                            lambda: layers[i],
-                            lambda: tf.zeros_like(layers[i])))
+    #     with tf.variable_scope('skips'):
+    #         # Accumulate all layers' outputs into an array according to `skips`, including X, then concat them
+    #         outs = []
+    #         for i in range(len(skips)):
+    #             outs.append(tf.cond(tf.equal(skips[i], 1),
+    #                         lambda: layers[i],
+    #                         lambda: tf.zeros_like(layers[i])))
                             
-            outs.append(X)
-            X = tf.concat(outs, axis=3)
+    #         outs.append(X)
+    #         X = tf.concat(outs, axis=3)
 
-            # Apply stablizing convolution
-            W = self._create_weights('W', (1, 1, ch_comb, ch))
-            X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding='SAME')
-            X = self._add_batch_norm(X)
-            X = tf.nn.relu(X)
+    #         # Apply stablizing convolution
+    #         W = self._create_weights('W', (1, 1, ch_comb, ch))
+    #         X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding='SAME')
+    #         X = self._add_batch_norm(X)
+    #         X = tf.nn.relu(X)
         
-        X = tf.reshape(X, (-1, w, h, ch)) # Sanity shape check
+    #     X = tf.reshape(X, (-1, w, h, ch)) # Sanity shape check
 
-        return X
+    #     return X
     
-    def _add_separable_conv_op(self, X, ch, filter_size, ch_mul=1):
-        with tf.variable_scope('separable_conv_op'):
-            W_d = self._create_weights('W_d', (filter_size, filter_size, ch, ch_mul))
-            W_p = self._create_weights('W_p', (1, 1, ch_mul * ch, ch))
-            X = tf.nn.separable_conv2d(X, W_d, W_p, strides=[1, 1, 1, 1], padding='SAME')
-            X = self._add_batch_norm(X)
-            X = tf.nn.relu(X)
-        return X
-
-    def _add_conv_op(self, X, ch, filter_size):
-        with tf.variable_scope('conv_op'):
-            W = self._create_weights('W', (filter_size, filter_size, ch, ch))
-            X = tf.nn.conv2d(X, W, strides=[1, 1, 1, 1], padding='SAME')
-            X = self._add_batch_norm(X)
-            X = tf.nn.relu(X)
-        return X
-
     # Model's stem layer
     # Converts data to a fixed out channel count of `ch` from 3 RGB channels
     def _add_stem_conv(self, X, w, h, in_ch, ch):
@@ -507,49 +563,43 @@ class TfEnasChild(BaseModel):
             initializer = tf.contrib.keras.initializers.he_normal()
         return tf.get_variable(name, shape, initializer=initializer)
 
-    def _arch_to_layer_defs(self, arch):
-        idx = 0
-        num_layers = 0
-        layer_defs = []
-
-        while idx < len(arch):
-            op_code = arch[idx]
-            skips = arch[(idx + 1):(idx + 1 + num_layers)]
-            assert len(skips) == num_layers, 'Invalid architecture string - parse error at index {}'.format(idx)
-            layer_def = (op_code, skips)
-            layer_defs.append(layer_def)
-            idx += (1 + num_layers)
-            num_layers += 1
-        
-        return layer_defs
-
     def _get_arch(self):
-        arc = []
-        arc.extend([0])
-        arc.extend([3, 0])
-        arc.extend([0, 1, 0])
-        arc.extend([2, 0, 0, 1])
-        arc.extend([2, 0, 0, 0, 0])
-        arc.extend([3, 1, 1, 0, 1, 0])
-        arc.extend([2, 0, 0, 0, 0, 0, 1])
-        arc.extend([2, 0, 1, 1, 0, 1, 1, 1])
-        arc.extend([1, 0, 1, 1, 1, 0, 1, 0, 1])
-        arc.extend([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-        arc.extend([2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0])
-        arc.extend([0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1])
-        # arc.extend([2, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0])
-        # arc.extend([1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1])
-        # arc.extend([0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0])
-        # arc.extend([2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1])
-        # arc.extend([2, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0])
-        # arc.extend([2, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1])
-        # arc.extend([3, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0])
-        # arc.extend([3, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1])
-        # arc.extend([0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0])
-        # arc.extend([3, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0])
-        # arc.extend([0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0])
-        # arc.extend([0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 0])
-        return arc
+        normal_arch = [[0, 2, 0, 0], [0, 4, 0, 1], [0, 4, 1, 1], [1, 0, 0, 1], [0, 2, 1, 1]]
+        reduction_arch = [[1, 0, 1, 0], [0, 3, 0, 2], [1, 1, 3, 1], [1, 0, 0, 4], [0, 3, 1, 1]]
+        return (normal_arch, reduction_arch)
+
+    # OPS
+
+    def _add_avg_pool_op(self, X, w, h, ch, filter_size):
+        with tf.variable_scope('avg_pool_op'):
+            X = tf.nn.avg_pool(X, ksize=(1, filter_size, filter_size, 1), strides=[1, 1, 1, 1], padding='SAME')
+        X = tf.reshape(X, (-1, w, h, ch)) # Sanity shape check
+        return X
+    
+    def _add_max_pool_op(self, X, w, h, ch, filter_size):
+        with tf.variable_scope('max_pool_op'):
+            X = tf.nn.max_pool(X, ksize=(1, filter_size, filter_size, 1), strides=[1, 1, 1, 1], padding='SAME')
+        X = tf.reshape(X, (-1, w, h, ch)) # Sanity shape check
+        return X
+    
+    def _add_separable_conv_op(self, X, w, h, ch, filter_size, ch_mul=1):
+        with tf.variable_scope('separable_conv_op'):
+            W_d = self._create_weights('W_d', (filter_size, filter_size, ch, ch_mul))
+            W_p = self._create_weights('W_p', (1, 1, ch_mul * ch, ch))
+            X = tf.nn.separable_conv2d(X, W_d, W_p, strides=[1, 1, 1, 1], padding='SAME')
+            X = self._add_batch_norm(X)
+            X = tf.nn.relu(X)
+        X = tf.reshape(X, (-1, w, h, ch)) # Sanity shape check
+        return X
+
+    def _add_conv_op(self, X, w, h, ch, filter_size):
+        with tf.variable_scope('conv_op'):
+            W = self._create_weights('W', (filter_size, filter_size, ch, ch))
+            X = tf.nn.conv2d(X, W, strides=[1, 1, 1, 1], padding='SAME')
+            X = self._add_batch_norm(X)
+            X = tf.nn.relu(X)
+        X = tf.reshape(X, (-1, w, h, ch)) # Sanity shape check
+        return X
 
 if __name__ == '__main__':
     test_model_class(

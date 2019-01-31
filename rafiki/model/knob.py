@@ -227,8 +227,6 @@ class DynamicListKnob(BaseKnob):
 
             items = [get_item(i) for i in range(0, len_max)]
 
-        print (items)
-
         for (i, knob) in enumerate(items):
             if not isinstance(knob, BaseKnob):
                 raise ValueError('Item {} should be of type `BaseKnob`'.format(i))
