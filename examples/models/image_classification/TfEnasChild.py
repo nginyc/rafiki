@@ -193,6 +193,7 @@ class TfEnasChild(BaseModel):
         # Stores previous layers. layers[i] = (<previous layer (i - 1) as input to layer i>, <# of downsamples>)
         layers = []
         ds = 0 # Current no. of downsamples
+        reduction_layers = [L // 3, L // 3 * 2 + 1] # Layers with reduction cells (otherwise, normal cells)
 
         # "Stem" convolution layer (layer 0)
         X = self._add_stem_conv(X, w, h, in_ch, ch) 
@@ -201,7 +202,9 @@ class TfEnasChild(BaseModel):
         # Core layers of cells
         for l in range(1, L + 1):
             prev_layers = [layers[-1], layers[-2] if len(layers) > 1 else layers[-1]]
-            if l in [L // 3, L // 3 * 2 + 1]:
+
+            # Either add a reduction cell or normal cell
+            if l in reduction_layers:
                 with tf.variable_scope('layer_{}_reduc'.format(l)):
                     X = self._add_reduction_cell(reduction_arch, prev_layers, w, h, ch, ds)
                     ds += 1
@@ -209,7 +212,7 @@ class TfEnasChild(BaseModel):
                 with tf.variable_scope('layer_{}_norm'.format(l)):
                     X = self._add_normal_cell(normal_arch, prev_layers, w, h, ch, ds)
 
-                layers.append((X, ds))
+            layers.append((X, ds))
 
         # Global average pooling
         (X, _) = layers[-1] # Get final layer
@@ -345,7 +348,6 @@ class TfEnasChild(BaseModel):
             W = self._create_weights('W', (ch, num_classes))
             X = tf.matmul(X, W)
             y = tf.nn.softmax(X)
-
         return y
 
     def _compute_loss(self, logits, tf_vars, classes):
