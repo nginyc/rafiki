@@ -77,6 +77,9 @@ class TfEnasChild(BaseModel):
             self._build_model()
             self._init_session()
             self._train_model(images, classes)
+            utils.logger.log('Evaluating model on train dataset...')
+            acc = self._evaluate_model(images, classes)
+            utils.logger.log('Train accuracy: {}'.format(acc))
 
     def evaluate(self, dataset_uri):
         max_image_size = self._knobs['max_image_size']
@@ -88,10 +91,11 @@ class TfEnasChild(BaseModel):
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         (images, _, _) = utils.dataset.normalize_images(images, norm_mean, norm_std)
         with self._graph.as_default():
-            accuracy = self._evaluate_model(images, classes)
-            utils.logger.log('Validation accuracy: {}'.format(accuracy))
+            utils.logger.log('Evaluating model on validation dataset...')
+            acc = self._evaluate_model(images, classes)
+            utils.logger.log('Validation accuracy: {}'.format(acc))
 
-        return accuracy
+        return acc
 
     def predict(self, queries):
         image_size = self._train_params['image_size']
