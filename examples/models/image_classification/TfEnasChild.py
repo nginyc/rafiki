@@ -32,7 +32,7 @@ class TfEnasChild(BaseModel):
 
         return {
             'max_image_size': FixedKnob(32),
-            'max_epochs': FixedKnob(10),
+            'max_epochs': FixedKnob(1),
             'batch_size': FixedKnob(64),
             'learning_rate': FixedKnob(0.05), 
             'start_ch': FixedKnob(36),
@@ -43,6 +43,7 @@ class TfEnasChild(BaseModel):
             'sgdr_first_decay_steps': FixedKnob(5000),
             'sgdr_t_mul': FixedKnob(2),
             'num_layers': FixedKnob(15),
+            'aux_loss_mul': FixedKnob(0.4),
             'normal_cell_arch': DynamicListKnob(1, 12, cell_arch_block),
             'reduction_cell_arch': DynamicListKnob(1, 12, cell_arch_block)
         }
@@ -158,7 +159,7 @@ class TfEnasChild(BaseModel):
         X = self._preprocess(images, is_train, w, h, in_ch)
 
         # Do inference
-        (probs, preds, logits) = self._inference(X, is_train)
+        (probs, preds, logits, aux_logits_list) = self._inference(X, is_train)
 
         # Determine all model parameters and count them
         tf_vars = self._get_all_variables()
@@ -166,7 +167,7 @@ class TfEnasChild(BaseModel):
         utils.logger.log('Model has {} parameters'.format(model_params_count))
 
         # Compute training loss & accuracy
-        loss = self._compute_loss(logits, tf_vars, classes)
+        loss = self._compute_loss(logits, aux_logits_list, tf_vars, classes)
         acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
         # Optimize training loss
@@ -194,10 +195,13 @@ class TfEnasChild(BaseModel):
 
         (normal_arch, reduction_arch) = self._get_arch()
         
+        reduction_layers = [L // 3, L // 3 * 2 + 1] # Layers with reduction cells (otherwise, normal cells)
+        aux_head_layers = [reduction_layers[-1] + 1] # Layers with auxiliary heads
+
         # Stores previous layers. layers[i] = (<previous layer (i - 1) as input to layer i>, <# of downsamples>)
         layers = []
         ds = 0 # Current no. of downsamples
-        reduction_layers = [L // 3, L // 3 * 2 + 1] # Layers with reduction cells (otherwise, normal cells)
+        aux_logits_list = [] # Stores list of logits from aux heads
 
         # "Stem" convolution layer (layer 0)
         X = self._add_stem_conv(X, w, h, in_ch, ch) 
@@ -205,16 +209,23 @@ class TfEnasChild(BaseModel):
 
         # Core layers of cells
         for l in range(1, L + 1):
-            prev_layers = [layers[-1], layers[-2] if len(layers) > 1 else layers[-1]]
+            with tf.variable_scope('layer_{}'.format(l)):
+                prev_layers = [layers[-1], layers[-2] if len(layers) > 1 else layers[-1]]
 
-            # Either add a reduction cell or normal cell
-            if l in reduction_layers:
-                with tf.variable_scope('layer_{}_reduc'.format(l)):
-                    X = self._add_reduction_cell(reduction_arch, prev_layers, w, h, ch, ds)
-                    ds += 1
-            else:
-                with tf.variable_scope('layer_{}_norm'.format(l)):
-                    X = self._add_normal_cell(normal_arch, prev_layers, w, h, ch, ds)
+                # Either add a reduction cell or normal cell
+                if l in reduction_layers:
+                    with tf.variable_scope('reduction_cell'):
+                        X = self._add_reduction_cell(reduction_arch, prev_layers, w, h, ch, ds)
+                        ds += 1
+                else:
+                    with tf.variable_scope('normal_cell'):
+                        X = self._add_normal_cell(normal_arch, prev_layers, w, h, ch, ds)
+
+                # Add auxiliary heads
+                if l in aux_head_layers:
+                    with tf.variable_scope('aux_head'):
+                        aux_logits = self._add_aux_head(X, w >> ds, h >> ds, ch << ds, K)
+                    aux_logits_list.append(aux_logits)
 
             layers.append((X, ds))
 
@@ -232,13 +243,14 @@ class TfEnasChild(BaseModel):
         )
 
         # Compute logits from X
-        logits = self._compute_logits(X, (ch << ds,), K)
+        X = self._add_fully_connected(X, (ch << ds,), K)
+        logits = tf.nn.softmax(X)
 
         # Compute probabilities and predictions
         probs = tf.nn.softmax(logits)
         preds = tf.argmax(logits, axis=1, output_type=tf.int64)
         
-        return (probs, preds, logits) 
+        return (probs, preds, logits, aux_logits_list) 
 
     def _preprocess(self, images, is_train, w, h, in_ch):
         def preprocess(x):
@@ -345,30 +357,56 @@ class TfEnasChild(BaseModel):
         reduction_arch = [[1, 0, 1, 0], [0, 3, 0, 2], [1, 1, 3, 1], [1, 0, 0, 4], [0, 3, 1, 1]]
         return (normal_arch, reduction_arch)
 
-    def _compute_logits(self, X, in_shape, num_classes):
-        with tf.variable_scope('softmax'):
-            ch = np.prod(in_shape)
-            X = tf.reshape(X, (-1, ch))
-            W = self._create_weights('W', (ch, num_classes))
-            X = tf.matmul(X, W)
-            y = tf.nn.softmax(X)
-        return y
+ 
+    def _add_aux_head(self, X, in_w, in_h, in_ch, K):
+        pool_ksize = 5
+        pool_stride = 2
+        conv_out_ch = in_ch >> 2
 
-    def _compute_loss(self, logits, tf_vars, classes):
+        # Pool
+        with tf.variable_scope('pool'):
+            X = tf.nn.relu(X)
+            X = tf.nn.avg_pool(X, ksize=(1, pool_ksize, pool_ksize, 1), strides=(1, pool_stride, pool_stride, 1), 
+                            padding='SAME')
+        
+        # Conv 1x1
+        with tf.variable_scope('conv'):
+            W = self._create_weights('W', (1, 1, in_ch, conv_out_ch)) 
+            X = tf.nn.conv2d(X, W, strides=(1, 1, 1, 1), padding='SAME')
+            X = self._add_batch_norm(X, conv_out_ch)
+            X = tf.nn.relu(X)
+        
+        # Global pooling
+        X = self._add_global_pooling(X, in_w // pool_stride, in_h // pool_stride, conv_out_ch)
+
+        # Fully connected
+        X = self._add_fully_connected(X, (conv_out_ch,), K)
+        logits = tf.nn.softmax(X)
+
+        return logits
+
+    def _compute_loss(self, logits, aux_logits_list, tf_vars, classes):
         l2_reg = self._knobs['l2_reg']
+        aux_loss_mul = self._knobs['aux_loss_mul'] # Multiplier for auxiliary loss
 
         # Compute sparse softmax cross entropy loss from logits & labels
         log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=classes)
-        loss = tf.reduce_mean(log_probs)
+        total_loss = tf.reduce_mean(log_probs)
 
         # Apply L2 regularization
         l2_losses = [tf.reduce_sum(var ** 2) for var in tf_vars]
         l2_loss = tf.add_n(l2_losses)
-        loss += l2_reg * l2_loss
+        total_loss += l2_reg * l2_loss
 
-        return loss
+        # Add loss from auxiliary logits
+        for aux_logits in aux_logits_list:
+            log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=aux_logits, labels=classes)
+            aux_loss = tf.reduce_mean(log_probs)
+            total_loss += aux_loss_mul * aux_loss
 
-    def _add_global_pooling(self, X, w, h, in_ch):
+        return total_loss
+
+    def _add_global_pooling(self, X, in_w, in_h, in_ch):
         X = tf.reduce_mean(X, (1, 2))
         X = tf.reshape(X, (-1, in_ch)) # Sanity shape check
         return X
@@ -498,34 +536,12 @@ class TfEnasChild(BaseModel):
 
     #     X = ops[op]()
     #     return X
-
-    # def _add_skips(self, X, skips, layers, w, h, ch):
-    #     ch_comb = (len(skips) + 1) * ch
-
-    #     with tf.variable_scope('skips'):
-    #         # Accumulate all layers' outputs into an array according to `skips`, including X, then concat them
-    #         outs = []
-    #         for i in range(len(skips)):
-    #             outs.append(tf.cond(tf.equal(skips[i], 1),
-    #                         lambda: layers[i],
-    #                         lambda: tf.zeros_like(layers[i])))
-                            
-    #         outs.append(X)
-    #         X = tf.concat(outs, axis=3)
-
-    #         # Apply stablizing convolution
-    #         W = self._create_weights('W', (1, 1, ch_comb, ch))
-    #         X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding='SAME')
-    #         X = self._add_batch_norm(X)
-    #         X = tf.nn.relu(X)
-        
-    #     X = tf.reshape(X, (-1, w, h, ch)) # Sanity shape check
-
-    #     return X
     
-    # Model's stem layer
-    # Converts data to a fixed out channel count of `ch` from 3 RGB channels
     def _add_stem_conv(self, X, w, h, in_ch, ch):
+        '''
+        Model's stem layer
+        Converts data to a fixed out channel count of `ch` from 3 RGB channels
+        '''
         with tf.variable_scope('stem_conv'):
             W = self._create_weights('W', (3, 3, in_ch, ch))
             X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding='SAME')
@@ -586,6 +602,16 @@ class TfEnasChild(BaseModel):
             X = self._add_batch_norm(X, out_ch)
 
         X = tf.reshape(X, (-1, in_w, in_h, out_ch)) # Sanity shape check
+        return X
+
+    def _add_fully_connected(self, X, in_shape, out_ch):
+        with tf.variable_scope('fully_connected'):
+            ch = np.prod(in_shape)
+            X = tf.reshape(X, (-1, ch))
+            W = self._create_weights('W', (ch, out_ch))
+            X = tf.matmul(X, W)
+
+        X = tf.reshape(X, (-1, out_ch)) # Sanity shape check
         return X
 
     def _add_factorized_reduction(self, X, in_w, in_h, in_ch):
