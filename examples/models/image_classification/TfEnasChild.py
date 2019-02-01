@@ -33,7 +33,7 @@ class TfEnasChild(BaseModel):
         return {
             'max_image_size': FixedKnob(32),
             'max_epochs': FixedKnob(10),
-            'batch_size': FixedKnob(128),
+            'batch_size': FixedKnob(64),
             'learning_rate': FixedKnob(0.05), 
             'start_ch': FixedKnob(36),
             'l2_reg': FixedKnob(2e-4),
@@ -42,7 +42,7 @@ class TfEnasChild(BaseModel):
             'sgdr_alpha': FixedKnob(0.02),
             'sgdr_first_decay_steps': FixedKnob(5000),
             'sgdr_t_mul': FixedKnob(2),
-            'num_layers': FixedKnob(10),
+            'num_layers': FixedKnob(15),
             'normal_cell_arch': DynamicListKnob(1, 12, cell_arch_block),
             'reduction_cell_arch': DynamicListKnob(1, 12, cell_arch_block)
         }
@@ -182,41 +182,38 @@ class TfEnasChild(BaseModel):
     def _inference(self, X, is_train):
         K = self._train_params['K'] # No. of classes
         in_ch = 3 # Num channels of input images
-        w = self._train_params['image_size'] # Current input width
-        h = self._train_params['image_size'] # Current input height
-        ch = self._knobs['start_ch'] # Current no. of channels
+        w = self._train_params['image_size'] # Initial input width
+        h = self._train_params['image_size'] # Initial input height
+        ch = self._knobs['start_ch'] # Initial no. of channels
         dropout_keep_prob = self._knobs['dropout_keep_prob']
         L = self._knobs['num_layers'] # Total number of layers
 
         (normal_arch, reduction_arch) = self._get_arch()
         
-        # Stores previous layers. layers[i] = (<previous layer (i - 1) as input to layer i>, <# of downsamples>, channels)
+        # Stores previous layers. layers[i] = (<previous layer (i - 1) as input to layer i>, <# of downsamples>)
         layers = []
+        ds = 0 # Current no. of downsamples
 
         # "Stem" convolution layer (layer 0)
         X = self._add_stem_conv(X, w, h, in_ch, ch) 
-        layers.append((X, 0, ch))
+        layers.append((X, ds))
 
         # Core layers of cells
         for l in range(1, L + 1):
-            with tf.variable_scope('layer_{}'.format(l)):
-                if l in [L // 3, L // 3 * 2 + 1]:
-                    # Add reduction cell
-                    (X, ds, ch) = self._add_cell(reduction_arch, layers, l, w, h)
-
-                    # Downsample output
-                    X = self._add_factorized_reduction(X, w // 2**ds, h // 2**ds, ch)
+            prev_layers = [layers[-1], layers[-2] if len(layers) > 1 else layers[-1]]
+            if l in [L // 3, L // 3 * 2 + 1]:
+                with tf.variable_scope('layer_{}_reduc'.format(l)):
+                    X = self._add_reduction_cell(reduction_arch, prev_layers, w, h, ch, ds)
                     ds += 1
-                    ch *= 2
-                else:
-                    # Add normal cell
-                    (X, ds, ch) = self._add_cell(normal_arch, layers, l, w, h)
+            else:
+                with tf.variable_scope('layer_{}_norm'.format(l)):
+                    X = self._add_normal_cell(normal_arch, prev_layers, w, h, ch, ds)
 
-                layers.append((X, ds, ch))
+                layers.append((X, ds))
 
         # Global average pooling
-        (X, _, _) = layers[-1] # Get final layer
-        X = self._add_global_pooling(X, w // 2**ds, h // 2**ds, ch)
+        (X, _) = layers[-1] # Get final layer
+        X = self._add_global_pooling(X, w >> ds, h >> ds, ch << ds)
 
         # TODO: Maybe add auxiliary heads
 
@@ -228,7 +225,7 @@ class TfEnasChild(BaseModel):
         )
 
         # Compute logits from X
-        logits = self._compute_logits(X, (ch,), K)
+        logits = self._compute_logits(X, (ch << ds,), K)
 
         # Compute probabilities and predictions
         probs = tf.nn.softmax(logits)
@@ -336,18 +333,10 @@ class TfEnasChild(BaseModel):
 
         return np.asarray(probs)
 
-    def _get_all_variables(self):
-        tf_vars = [var for var in tf.trainable_variables()]
-        return tf_vars
-
-    def _count_model_parameters(self, tf_vars):
-        num_params = 0
-        print('Model parameters:')
-        for var in tf_vars:
-            print(var)
-            num_params += np.prod([dim.value for dim in var.get_shape()])
-
-        return num_params
+    def _get_arch(self):
+        normal_arch = [[0, 2, 0, 0], [0, 4, 0, 1], [0, 4, 1, 1], [1, 0, 0, 1], [0, 2, 1, 1]]
+        reduction_arch = [[1, 0, 1, 0], [0, 3, 0, 2], [1, 1, 3, 1], [1, 0, 0, 4], [0, 3, 1, 1]]
+        return (normal_arch, reduction_arch)
 
     def _compute_logits(self, X, in_shape, num_classes):
         with tf.variable_scope('softmax'):
@@ -378,130 +367,131 @@ class TfEnasChild(BaseModel):
         X = tf.reshape(X, (-1, in_ch)) # Sanity shape check
         return X
 
-    def _combine_outputs(self, outputs, w, h):
+    def _downsample(self, X, ds_x, ds, w, h, ch):
         '''
-        Combines the multiple outputs of various shapes.
-        Returns (X, ds, ch)
+        Downsample X from `ds_x` downsamples to `ds` downsamples
         '''
-        # Downsample each output to the maximum downsamples across all outputs
-        ds = max([ds for (_, ds, _) in outputs])
-        for i in range(len(outputs)):
-            (X, ds_x, ch_x) = outputs[i]
-            while ds_x < ds:
-                with tf.variable_scope('downsample_x{}_{}'.format(i, ds + 1)):
-                    X = self._add_factorized_reduction(X, w // 2**ds_x, h // 2**ds_x, ch_x)
-                ds_x += 1
-                ch_x *= 2
-            outputs[i] = (X, ds_x, ch_x)
+        for ds_i in range(ds_x + 1, ds + 1):
+            with tf.variable_scope('downsample_{}x'.format(ds_i)):
+                X = self._add_factorized_reduction(X, w >> ds_x, h >> ds_x, ch << ds_x)
 
-        # Here, all outputs have the same downsamples, width x height
-        # Concat them and conv them to minimum channels across all outputs
-        ch = min([ch for (_, _, ch) in outputs])
-        comb_ch = sum([ch for (_, _, ch) in outputs])
-        with tf.variable_scope('combine_conv'):
-            X = tf.concat([X for (X, _, _) in outputs], axis=3)
-            X = tf.nn.relu(X)
-            W = self._create_weights('W', (1, 1, comb_ch, ch))
-            X = tf.nn.conv2d(X, W, strides=(1, 1, 1, 1), padding='SAME')
-            X = self._add_batch_norm(X)
-
-        X = tf.reshape(X, (-1, w // 2**ds, h // 2**ds, ch)) # Sanity shape check
-        
-        return (X, ds, ch)
-
-
-    def _add_factorized_reduction(self, X, w, h, ch):
-        '''
-        Output is of shape (w // 2, h // 2, ch * 2)
-        '''
-        assert w % 2 == 0 and h % 2 == 0, 'Width & height ({} & {}) must both be even!'.format(w, h)
-
-        with tf.variable_scope('fac_reduc'):
-            # Split area into 2 halves 
-            half_1 = tf.nn.avg_pool(X, ksize=(1, 1, 1, 1), strides=(1, 2, 2, 1), padding='VALID')
-            shifted_X = tf.pad(X, ((0, 0), (0, 1), (0, 1), (0, 0)))[:, 1:, 1:, :]
-            half_2 = tf.nn.avg_pool(shifted_X, ksize=(1, 1, 1, 1), strides=(1, 2, 2, 1), padding='VALID')
-
-            # Apply 1 x 1 convolution to each half separately
-            W_half_1 = self._create_weights('W_half_1', (1, 1, ch, ch))
-            X_half_1 = tf.nn.conv2d(half_1, W_half_1, (1, 1, 1, 1), padding='SAME')
-            W_half_2 = self._create_weights('W_half_2', (1, 1, ch, ch))
-            X_half_2 = tf.nn.conv2d(half_2, W_half_2, (1, 1, 1, 1), padding='SAME')
-            
-            # Concat both halves across channels
-            X = tf.concat([X_half_1, X_half_2], axis=3)
-
-            # Apply batch normalization
-            X = self._add_batch_norm(X)
-
-        X = tf.reshape(X, (-1, w // 2, h // 2, ch * 2)) # Sanity shape check
-
+        X = tf.reshape(X, (-1, w >> ds, h >> ds, ch << ds)) # Sanity shape check
         return X
 
-    # def _add_pooling(self, X, w, h, ch):
-    #     assert w % 2 == 0 and h % 2 == 0, 'Width & height ({} & {}) must both be even!'.format(w, H)
+    def _count_model_parameters(self, tf_vars):
+        num_params = 0
+        print('Model parameters:')
+        for var in tf_vars:
+            print(var)
+            num_params += np.prod([dim.value for dim in var.get_shape()])
 
-    #     with tf.variable_scope('pool'):
-    #         X = tf.nn.max_pool(X, ksize=(1, 2, 2, 1), 
-    #                         strides=(1, 2, 2, 1), padding='SAME')
+        return num_params
 
-    #     X = tf.reshape(X, (-1, w // 2, h // 2, ch)) # Sanity shape check
-    #     return X                
-
-    def _add_cell(self, cell_arch, layers, l, w, h):
+    def _add_reduction_cell(self, cell_arch, inputs, w, h, ch, ds):
         b = len(cell_arch) # no. of blocks
-        blocks = [] # Stores the list of blocks in this cell as (X, ds, ch)
+        hidden_states = [] # Stores hidden states for this cell, which includes blocks
 
-        def idx_to_layer(idx):
-            if idx == 0:
-                # Previous layer
-                return layers[max(l - 1, 0)]
-            elif idx == 1:
-                # Previous previous layer
-                return layers[max(l - 2, 0)]
-            else:
-                # Some previous block in cell
-                return blocks[idx - 2] 
+        # Downsample previous layers as necessary and add them to hidden states
+        for (i, (inp, ds_inp)) in enumerate(inputs):
+            with tf.variable_scope('input_{}_downsample'.format(i)):
+                inp = self._downsample(inp, ds_inp, ds, w, h, ch)
+                hidden_states.append(inp)
 
         for bi in range(b):
             with tf.variable_scope('block_{}'.format(bi)):
-                (idx1, op1, indx2, op2) = cell_arch[bi]
-                (X1, ds1, ch1) = idx_to_layer(idx1)
-                (X2, ds2, ch2) = idx_to_layer(indx2)
+                (idx1, op1, idx2, op2) = cell_arch[bi]
+                X1 = hidden_states[idx1]
+                X2 = hidden_states[idx2]
 
                 with tf.variable_scope('X1'):
-                    X1 = self._add_op(X1, op1, w // 2**ds1, h // 2**ds1, ch1)
+                    X1 = self._add_op(X1, op1, w >> ds, h >> ds, ch << ds)
 
                 with tf.variable_scope('X2'):
-                    X2 = self._add_op(X2, op2, w // 2**ds2, h // 2**ds2, ch2)
+                    X2 = self._add_op(X2, op2, w >> ds, h >> ds, ch << ds)
 
                 # TODO: Apply drop path to each output
 
-                with tf.variable_scope('combine'):
-                    (X, ds_block, ch_block) = self._combine_outputs([(X1, ds1, ch1), (X2, ds2, ch2)], w, h)
+                X = tf.add_n([X1, X2])
 
-            blocks.append((X, ds_block, ch_block))
+            hidden_states.append(X)
 
-        # Combine all blocks' outputs
+        # Combine all hidden states
         # TODO: Maybe only concat unused blocks
+        comb_ch = len(hidden_states) * (ch << ds)
+        out_ch = ch << ds
         with tf.variable_scope('combine'):
-            (X, ds, ch) = self._combine_outputs(blocks, w, h)
+            X = self._concat(hidden_states, w >> ds, h >> ds, comb_ch, out_ch)
 
-        return (X, ds, ch)
+        # Downsample output once
+        with tf.variable_scope('downsample'):
+            X = self._downsample(X, ds, ds + 1, w, h, ch)
+
+        return X
+
+    def _add_normal_cell(self, cell_arch, inputs, w, h, ch, ds):
+        b = len(cell_arch) # no. of blocks
+        hidden_states = [] # Stores hidden states for this cell, which includes blocks
+
+        # Downsample previous layers as necessary and add them to hidden states
+        for (i, (inp, ds_inp)) in enumerate(inputs):
+            with tf.variable_scope('input_{}_downsample'.format(i)):
+                inp = self._downsample(inp, ds_inp, ds, w, h, ch)
+                hidden_states.append(inp)
+
+        for bi in range(b):
+            with tf.variable_scope('block_{}'.format(bi)):
+                (idx1, op1, idx2, op2) = cell_arch[bi]
+                X1 = hidden_states[idx1]
+                X2 = hidden_states[idx2]
+
+                with tf.variable_scope('X1'):
+                    X1 = self._add_op(X1, op1, w >> ds, h >> ds, ch << ds)
+
+                with tf.variable_scope('X2'):
+                    X2 = self._add_op(X2, op2, w >> ds, h >> ds, ch << ds)
+
+                # TODO: Apply drop path to each output
+
+                X = tf.add_n([X1, X2])
+
+            hidden_states.append(X)
+
+        # Combine all hidden states
+        # TODO: Maybe only concat unused blocks
+        comb_ch = len(hidden_states) * (ch << ds)
+        out_ch = ch << ds
+        with tf.variable_scope('combine'):
+            X = self._concat(hidden_states, w >> ds, h >> ds, comb_ch, out_ch)
+
+        return X
 
     def _add_op(self, X, op, w, h, ch):
         ops = {
-            0: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=3),
-            1: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=5),
-            2: lambda: self._add_avg_pool_op(X, w, h, ch, filter_size=3),
-            3: lambda: self._add_max_pool_op(X, w, h, ch, filter_size=3),
-            4: lambda: X, # identity
-            5: lambda: self._add_conv_op(X, w, h, ch, filter_size=3),
-            6: lambda: self._add_conv_op(X, w, h, ch, filter_size=5)
+            0: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=3, stride=1),
+            1: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=5, stride=1),
+            2: lambda: self._add_avg_pool_op(X, w, h, ch, filter_size=3, stride=1),
+            3: lambda: self._add_max_pool_op(X, w, h, ch, filter_size=3, stride=1),
+            4: lambda: self._add_max_pool_op(X, w, h, ch, filter_size=1, stride=1), # identity
+            5: lambda: self._add_conv_op(X, w, h, ch, filter_size=3,stride=1),
+            6: lambda: self._add_conv_op(X, w, h, ch, filter_size=5, stride=1)
         }
 
         X = ops[op]()
         return X
+
+    # def _add_reduction_op(self, X, op, w, h, ch):
+    #     ops = {
+    #         0: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=3, stride=2),
+    #         1: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=5, stride=2),
+    #         2: lambda: self._add_avg_pool_op(X, w, h, ch, filter_size=3, stride=2),
+    #         3: lambda: self._add_max_pool_op(X, w, h, ch, filter_size=3, stride=2),
+    #         4: lambda: self._add_max_pool_op(X, w, h, ch, filter_size=1, stride=2), # identity
+    #         5: lambda: self._add_conv_op(X, w, h, ch, filter_size=3, stride=2),
+    #         6: lambda: self._add_conv_op(X, w, h, ch, filter_size=5, stride=2)
+    #     }
+
+    #     X = ops[op]()
+    #     return X
 
     # def _add_skips(self, X, skips, layers, w, h, ch):
     #     ch_comb = (len(skips) + 1) * ch
@@ -533,73 +523,120 @@ class TfEnasChild(BaseModel):
         with tf.variable_scope('stem_conv'):
             W = self._create_weights('W', (3, 3, in_ch, ch))
             X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding='SAME')
-            X = self._add_batch_norm(X)
+            X = self._add_batch_norm(X, ch)
         X = tf.reshape(X, (-1, w, h, ch)) # Sanity shape check
         return X
 
-    def _add_batch_norm(self, x, decay=0.9, epsilon=1e-5, name='batch_norm'):
-        shape = (x.get_shape()[3])
 
-        with tf.variable_scope(name):
-            offset = tf.get_variable('offset', shape, 
+    ####################################
+    # Block Ops
+    ####################################
+
+    def _add_avg_pool_op(self, X, w, h, ch, filter_size, stride):
+        with tf.variable_scope('avg_pool_op'):
+            X = tf.nn.avg_pool(X, ksize=(1, filter_size, filter_size, 1), strides=[1, stride, stride, 1], padding='SAME')
+        X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
+        return X
+    
+    def _add_max_pool_op(self, X, w, h, ch, filter_size, stride):
+        with tf.variable_scope('max_pool_op'):
+            X = tf.nn.max_pool(X, ksize=(1, filter_size, filter_size, 1), strides=[1, stride, stride, 1], padding='SAME')
+        X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
+        return X
+    
+    def _add_separable_conv_op(self, X, w, h, ch, filter_size, stride, ch_mul=1):
+        with tf.variable_scope('separable_conv_op'):
+            W_d = self._create_weights('W_d', (filter_size, filter_size, ch, ch_mul))
+            W_p = self._create_weights('W_p', (1, 1, ch_mul * ch, ch))
+            X = tf.nn.separable_conv2d(X, W_d, W_p, strides=[1, stride, stride, 1], padding='SAME')
+            X = self._add_batch_norm(X, ch)
+            X = tf.nn.relu(X)
+        X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
+        return X
+
+    def _add_conv_op(self, X, w, h, ch, filter_size, stride):
+        with tf.variable_scope('conv_op'):
+            W = self._create_weights('W', (filter_size, filter_size, ch, ch))
+            X = tf.nn.conv2d(X, W, strides=[1, stride, stride, 1], padding='SAME')
+            X = self._add_batch_norm(X, ch)
+            X = tf.nn.relu(X)
+        X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
+        return X
+
+    
+    ####################################
+    # Utils
+    ####################################
+    
+    def _concat(self, inputs, in_w, in_h, in_ch, out_ch):
+        '''
+        Concatenate inputs (which must have the same `in_w` x `in_h`) across a combined `in_ch` channels to produce `out_ch` channels
+        '''
+        with tf.variable_scope('concat'):
+            X = tf.concat(inputs, axis=3)
+            X = tf.nn.relu(X)
+            W = self._create_weights('W', (1, 1, in_ch, out_ch))
+            X = tf.nn.conv2d(X, W, strides=(1, 1, 1, 1), padding='SAME')
+            X = self._add_batch_norm(X, out_ch)
+
+        X = tf.reshape(X, (-1, in_w, in_h, out_ch)) # Sanity shape check
+        return X
+
+    def _add_factorized_reduction(self, X, in_w, in_h, in_ch):
+        '''
+        Output is of shape (in_w // 2, in_h // 2, in_ch * 2)
+        '''
+        assert in_w % 2 == 0 and in_h % 2 == 0, 'Width & height ({} & {}) must both be even!'.format(in_w, in_h)
+
+        with tf.variable_scope('fac_reduc'):
+            # Split area into 2 halves 
+            half_1 = tf.nn.avg_pool(X, ksize=(1, 1, 1, 1), strides=(1, 2, 2, 1), padding='VALID')
+            shifted_X = tf.pad(X, ((0, 0), (0, 1), (0, 1), (0, 0)))[:, 1:, 1:, :]
+            half_2 = tf.nn.avg_pool(shifted_X, ksize=(1, 1, 1, 1), strides=(1, 2, 2, 1), padding='VALID')
+
+            # Apply 1 x 1 convolution to each half separately
+            W_half_1 = self._create_weights('W_half_1', (1, 1, in_ch, in_ch))
+            X_half_1 = tf.nn.conv2d(half_1, W_half_1, (1, 1, 1, 1), padding='SAME')
+            W_half_2 = self._create_weights('W_half_2', (1, 1, in_ch, in_ch))
+            X_half_2 = tf.nn.conv2d(half_2, W_half_2, (1, 1, 1, 1), padding='SAME')
+            
+            # Concat both halves across channels
+            X = tf.concat([X_half_1, X_half_2], axis=3)
+
+            # Apply batch normalization
+            X = self._add_batch_norm(X, in_ch * 2)
+
+        X = tf.reshape(X, (-1, in_w // 2, in_h // 2, in_ch * 2)) # Sanity shape check
+
+        return X
+
+    def _add_batch_norm(self, X, in_ch, decay=0.9, epsilon=1e-5):
+        with tf.variable_scope('batch_norm'):
+            offset = tf.get_variable('offset', (in_ch,), 
                                     initializer=tf.constant_initializer(0.0, dtype=tf.float32))
-            scale = tf.get_variable('scale', shape, 
+            scale = tf.get_variable('scale', (in_ch,), 
                                     initializer=tf.constant_initializer(1.0, dtype=tf.float32))
-            moving_mean = tf.get_variable('moving_mean', shape, trainable=False, 
+            moving_mean = tf.get_variable('moving_mean', (in_ch,), trainable=False, 
                                         initializer=tf.constant_initializer(0.0, dtype=tf.float32))
-            moving_variance = tf.get_variable('moving_variance', shape, trainable=False, 
+            moving_variance = tf.get_variable('moving_variance', (in_ch,), trainable=False, 
                                             initializer=tf.constant_initializer(1.0, dtype=tf.float32))
-            (x, mean, variance) = tf.nn.fused_batch_norm(x, scale, offset, epsilon=epsilon)
+            (X, mean, variance) = tf.nn.fused_batch_norm(X, scale, offset, epsilon=epsilon)
             update_mean = moving_averages.assign_moving_average(moving_mean, mean, decay)
             update_variance = moving_averages.assign_moving_average(moving_variance, variance, decay)
             
             with tf.control_dependencies([update_mean, update_variance]):
-                x = tf.identity(x)
+                X = tf.identity(X)
 
-            return x
+            return X
 
     def _create_weights(self, name, shape, initializer=None):
         if initializer is None:
             initializer = tf.contrib.keras.initializers.he_normal()
         return tf.get_variable(name, shape, initializer=initializer)
-
-    def _get_arch(self):
-        normal_arch = [[0, 2, 0, 0], [0, 4, 0, 1], [0, 4, 1, 1], [1, 0, 0, 1], [0, 2, 1, 1]]
-        reduction_arch = [[1, 0, 1, 0], [0, 3, 0, 2], [1, 1, 3, 1], [1, 0, 0, 4], [0, 3, 1, 1]]
-        return (normal_arch, reduction_arch)
-
-    # OPS
-
-    def _add_avg_pool_op(self, X, w, h, ch, filter_size):
-        with tf.variable_scope('avg_pool_op'):
-            X = tf.nn.avg_pool(X, ksize=(1, filter_size, filter_size, 1), strides=[1, 1, 1, 1], padding='SAME')
-        X = tf.reshape(X, (-1, w, h, ch)) # Sanity shape check
-        return X
     
-    def _add_max_pool_op(self, X, w, h, ch, filter_size):
-        with tf.variable_scope('max_pool_op'):
-            X = tf.nn.max_pool(X, ksize=(1, filter_size, filter_size, 1), strides=[1, 1, 1, 1], padding='SAME')
-        X = tf.reshape(X, (-1, w, h, ch)) # Sanity shape check
-        return X
-    
-    def _add_separable_conv_op(self, X, w, h, ch, filter_size, ch_mul=1):
-        with tf.variable_scope('separable_conv_op'):
-            W_d = self._create_weights('W_d', (filter_size, filter_size, ch, ch_mul))
-            W_p = self._create_weights('W_p', (1, 1, ch_mul * ch, ch))
-            X = tf.nn.separable_conv2d(X, W_d, W_p, strides=[1, 1, 1, 1], padding='SAME')
-            X = self._add_batch_norm(X)
-            X = tf.nn.relu(X)
-        X = tf.reshape(X, (-1, w, h, ch)) # Sanity shape check
-        return X
-
-    def _add_conv_op(self, X, w, h, ch, filter_size):
-        with tf.variable_scope('conv_op'):
-            W = self._create_weights('W', (filter_size, filter_size, ch, ch))
-            X = tf.nn.conv2d(X, W, strides=[1, 1, 1, 1], padding='SAME')
-            X = self._add_batch_norm(X)
-            X = tf.nn.relu(X)
-        X = tf.reshape(X, (-1, w, h, ch)) # Sanity shape check
-        return X
+    def _get_all_variables(self):
+        tf_vars = [var for var in tf.trainable_variables()]
+        return tf_vars
 
 if __name__ == '__main__':
     test_model_class(
