@@ -221,7 +221,7 @@ class TfEnasChild(BaseModel):
                     with tf.variable_scope('normal_cell'):
                         X = self._add_normal_cell(normal_arch, prev_layers, w, h, ch, ds)
 
-                # Add auxiliary heads
+                # Maybe add auxiliary heads 
                 if l in aux_head_layers:
                     with tf.variable_scope('aux_head'):
                         aux_logits = self._add_aux_head(X, w >> ds, h >> ds, ch << ds, K)
@@ -232,8 +232,6 @@ class TfEnasChild(BaseModel):
         # Global average pooling
         (X, _) = layers[-1] # Get final layer
         X = self._add_global_pooling(X, w >> ds, h >> ds, ch << ds)
-
-        # TODO: Maybe add auxiliary heads
 
         # Add dropout
         X = tf.case(
@@ -307,7 +305,7 @@ class TfEnasChild(BaseModel):
 
         self._sess.run(tf.global_variables_initializer())
         for epoch in range(num_epochs):
-            utils.logger.log(epoch=epoch)
+            utils.logger.log('Running epoch {}...'.format(epoch))
 
             # Initialize dataset
             self._sess.run(self._init_op, feed_dict={
@@ -315,17 +313,29 @@ class TfEnasChild(BaseModel):
                 self._classes_ph: np.asarray(classes)
             })
 
+            avg_batch_loss = 0
+            avg_batch_acc = 0
+            n = 0
             while True:
                 try:
-                    (loss_batch, acc_batch, steps_batch, _) = self._sess.run(
+                    (batch_loss, batch_acc, steps, _) = self._sess.run(
                         [self._loss, self._acc, self._steps, self._train_op],
                         feed_dict={
                             self._is_train_ph: True
                         }
                     )
-                    utils.logger.log(loss=float(loss_batch), acc=float(acc_batch), steps=int(steps_batch))
+
+                    avg_batch_acc = avg_batch_acc * (n / (n + 1)) + batch_acc * (1 / (n + 1))
+                    avg_batch_loss = avg_batch_loss * (n / (n + 1)) + batch_loss * (1 / (n + 1))
+                    n += 1
+                    
                 except tf.errors.OutOfRangeError:
                     break
+        
+            utils.logger.log(epoch=epoch,
+                            avg_batch_loss=float(avg_batch_loss), 
+                            avg_batch_acc=float(avg_batch_acc), 
+                            steps=int(steps))
         
     def _evaluate_model(self, images, classes):
         probs = self._predict_with_model(images)
@@ -361,7 +371,7 @@ class TfEnasChild(BaseModel):
     def _add_aux_head(self, X, in_w, in_h, in_ch, K):
         pool_ksize = 5
         pool_stride = 2
-        conv_out_ch = in_ch >> 2
+        conv_out_ch = in_ch
 
         # Pool
         with tf.variable_scope('pool'):
