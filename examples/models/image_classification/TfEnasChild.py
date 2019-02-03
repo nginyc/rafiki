@@ -44,6 +44,7 @@ class TfEnasChild(BaseModel):
             'sgdr_t_mul': FixedKnob(2),
             'num_layers': FixedKnob(15),
             'aux_loss_mul': FixedKnob(0.4),
+            'drop_path_keep_prob': FixedKnob(0.6),
             'normal_cell_arch': DynamicListKnob(1, 12, cell_arch_block),
             'reduction_cell_arch': DynamicListKnob(1, 12, cell_arch_block)
         }
@@ -143,6 +144,7 @@ class TfEnasChild(BaseModel):
 
     def _build_model(self):
         N = self._knobs['batch_size'] 
+        num_epochs = self._knobs['max_epochs']
         w = self._train_params['image_size']
         h = self._train_params['image_size']
         in_ch = 3 # Num channels of input images
@@ -150,6 +152,9 @@ class TfEnasChild(BaseModel):
         images_ph = tf.placeholder(tf.int8, name='images_ph', shape=(None, w, h, in_ch))
         classes_ph = tf.placeholder(tf.int64, name='classes_ph', shape=(None,))
         is_train = tf.placeholder(tf.bool, name='is_train_ph')
+        epoch = tf.placeholder(tf.int64, name='epoch_ph')
+        
+        epochs_ratio = epoch / num_epochs
         
         dataset = tf.data.Dataset.from_tensor_slices((images_ph, classes_ph)).batch(N)
         dataset_itr = dataset.make_initializable_iterator()
@@ -159,7 +164,7 @@ class TfEnasChild(BaseModel):
         X = self._preprocess(images, is_train, w, h, in_ch)
 
         # Do inference
-        (probs, preds, logits, aux_logits_list) = self._inference(X, is_train)
+        (probs, preds, logits, aux_logits_list) = self._inference(X, epochs_ratio, is_train)
 
         # Determine all model parameters and count them
         tf_vars = self._get_all_variables()
@@ -183,8 +188,9 @@ class TfEnasChild(BaseModel):
         self._classes_ph = classes_ph
         self._tf_vars = tf_vars
         self._is_train_ph = is_train
+        self._epoch_ph = epoch
 
-    def _inference(self, X, is_train):
+    def _inference(self, X, epochs_ratio, is_train):
         K = self._train_params['K'] # No. of classes
         in_ch = 3 # Num channels of input images
         w = self._train_params['image_size'] # Initial input width
@@ -210,16 +216,19 @@ class TfEnasChild(BaseModel):
         # Core layers of cells
         for l in range(1, L + 1):
             with tf.variable_scope('layer_{}'.format(l)):
+                layers_ratio = l / (L + 1)
                 prev_layers = [layers[-1], layers[-2] if len(layers) > 1 else layers[-1]]
 
                 # Either add a reduction cell or normal cell
                 if l in reduction_layers:
                     with tf.variable_scope('reduction_cell'):
-                        X = self._add_reduction_cell(reduction_arch, prev_layers, w, h, ch, ds)
+                        X = self._add_reduction_cell(reduction_arch, prev_layers, w, h, ch, ds, 
+                                                    epochs_ratio, layers_ratio, is_train)
                         ds += 1
                 else:
                     with tf.variable_scope('normal_cell'):
-                        X = self._add_normal_cell(normal_arch, prev_layers, w, h, ch, ds)
+                        X = self._add_normal_cell(normal_arch, prev_layers, w, h, ch, ds, 
+                                                epochs_ratio, layers_ratio, is_train)
 
                 # Maybe add auxiliary heads 
                 if l in aux_head_layers:
@@ -321,7 +330,8 @@ class TfEnasChild(BaseModel):
                     (batch_loss, batch_acc, steps, _) = self._sess.run(
                         [self._loss, self._acc, self._steps, self._train_op],
                         feed_dict={
-                            self._is_train_ph: True
+                            self._is_train_ph: True,
+                            self._epoch_ph: epoch
                         }
                     )
 
@@ -354,7 +364,8 @@ class TfEnasChild(BaseModel):
         while True:
             try:
                 probs_batch = self._sess.run(self._probs, {
-                    self._is_train_ph: False
+                    self._is_train_ph: False,
+                    self._epoch_ph: 0
                 })
                 probs.extend(probs_batch)
             except tf.errors.OutOfRangeError:
@@ -394,6 +405,25 @@ class TfEnasChild(BaseModel):
         logits = tf.nn.softmax(X)
 
         return logits
+
+    def _add_drop_path(self, X, epochs_ratio, layers_ratio):
+        keep_prob = self._knobs['drop_path_keep_prob']
+        
+        # Decrease keep prob deeper into network
+        keep_prob = 1 - layers_ratio * (1 - keep_prob)
+        
+        # Decrease keep prob with increasing epochs 
+        keep_prob = 1 - epochs_ratio * (1 - keep_prob)
+
+        # Apply dropout
+        keep_prob = tf.to_float(keep_prob)
+        batch_size = tf.shape(X)[0]
+        noise_shape = (batch_size, 1, 1, 1)
+        random_tensor = keep_prob + tf.random_uniform(noise_shape, dtype=tf.float32)
+        binary_tensor = tf.floor(random_tensor)
+        X = tf.div(X, keep_prob) * binary_tensor
+
+        return X
 
     def _compute_loss(self, logits, aux_logits_list, tf_vars, classes):
         l2_reg = self._knobs['l2_reg']
@@ -441,7 +471,8 @@ class TfEnasChild(BaseModel):
 
         return num_params
 
-    def _add_reduction_cell(self, cell_arch, inputs, w, h, ch, ds):
+    def _add_reduction_cell(self, cell_arch, inputs, w, h, ch, ds, 
+                            epochs_ratio, layers_ratio, is_train):
         b = len(cell_arch) # no. of blocks
         hidden_states = [] # Stores hidden states for this cell, which includes blocks
 
@@ -459,11 +490,19 @@ class TfEnasChild(BaseModel):
 
                 with tf.variable_scope('X1'):
                     X1 = self._add_op(X1, op1, w >> ds, h >> ds, ch << ds)
+                    X1 = tf.case(
+                        { is_train: (lambda: self._add_drop_path(X1, epochs_ratio, layers_ratio)) }, 
+                        default=lambda: X1,
+                        exclusive=True
+                    )
 
                 with tf.variable_scope('X2'):
                     X2 = self._add_op(X2, op2, w >> ds, h >> ds, ch << ds)
-
-                # TODO: Apply drop path to each output
+                    X2 = tf.case(
+                        { is_train: (lambda: self._add_drop_path(X2, epochs_ratio, layers_ratio)) }, 
+                        default=lambda: X2,
+                        exclusive=True
+                    )
 
                 X = tf.add_n([X1, X2])
 
@@ -482,7 +521,8 @@ class TfEnasChild(BaseModel):
 
         return X
 
-    def _add_normal_cell(self, cell_arch, inputs, w, h, ch, ds):
+    def _add_normal_cell(self, cell_arch, inputs, w, h, ch, ds, 
+                        epochs_ratio, layers_ratio, is_train):
         b = len(cell_arch) # no. of blocks
         hidden_states = [] # Stores hidden states for this cell, which includes blocks
 
@@ -500,11 +540,19 @@ class TfEnasChild(BaseModel):
 
                 with tf.variable_scope('X1'):
                     X1 = self._add_op(X1, op1, w >> ds, h >> ds, ch << ds)
+                    X1 = tf.case(
+                        { is_train: (lambda: self._add_drop_path(X1, epochs_ratio, layers_ratio)) }, 
+                        default=lambda: X1,
+                        exclusive=True
+                    )
 
                 with tf.variable_scope('X2'):
                     X2 = self._add_op(X2, op2, w >> ds, h >> ds, ch << ds)
-
-                # TODO: Apply drop path to each output
+                    X2 = tf.case(
+                        { is_train: (lambda: self._add_drop_path(X2, epochs_ratio, layers_ratio)) }, 
+                        default=lambda: X2,
+                        exclusive=True
+                    )
 
                 X = tf.add_n([X1, X2])
 
