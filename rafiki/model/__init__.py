@@ -1,4 +1,4 @@
-from .model import BaseModel, test_model_class, load_model_class, \
+from .model import BaseModel, test_model_class, load_model_class, tune_model, \
     parse_model_install_command, InvalidModelClassException, InvalidModelParamsException
 from .knob import BaseKnob, CategoricalKnob, IntegerKnob, FloatKnob, FixedKnob, ListKnob, DynamicListKnob, \
                     serialize_knob_config, deserialize_knob_config

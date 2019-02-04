@@ -126,9 +126,72 @@ class BaseModel(abc.ABC):
         '''
         pass
 
-def test_model_class(model_file_path, model_class, task, dependencies, \
-                    train_dataset_uri, val_dataset_uri, params_dir='params/local/', \
-                    enable_gpu=False, queries=[], knobs=None):
+
+def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_uri: str, num_trials: int,
+                params_root_dir: str = 'params/', enable_gpu: bool = False):
+    '''
+    Tunes a model on a given dataset.
+
+    :param BaseModel py_model_class: The Python class for the model
+    :param str train_dataset_uri: URI of the train dataset for testing the training of model
+    :param str val_dataset_uri: URI of the validation dataset for testing the evaluation of model
+    :param int num_trials: Number of trials to tune the model over
+    :param str params_root_dir: Root folder path to create subfolders to save each trial's model parameters
+    :param bool enable_gpu: Whether to enable GPU during model training
+    :returns: The best trained model
+    '''
+    # Retrieve config of model
+    knob_config = py_model_class.get_knob_config()
+    train_config = py_model_class.get_train_config()
+    
+    # Init advisor
+    advisor_type = train_config.get('advisor_type', AdvisorType.SKOPT)
+    print('Creating advisor of type "{}"...'.format(advisor_type))
+    advisor = Advisor(knob_config, advisor_type)
+
+    best_score = 0
+    best_model_inst = None
+
+    # For every trial
+    for i in range(1, num_trials + 1):
+        trial_id = str(uuid.uuid4())
+        _print_header('Trial #{} (ID: "{}")'.format(i, trial_id))
+        
+        # Generate knobs
+        knobs = advisor.propose()
+        print('Knobs:', knobs)
+        model_inst = py_model_class(**knobs)
+
+        # Train model
+        print('Training model...')
+        model_inst.train(train_dataset_uri)
+
+        # Evaluate model
+        print('Evaluating model...')
+        score = model_inst.evaluate(val_dataset_uri)
+        print('Score:', score)
+        advisor.feedback(knobs, score)
+
+        # Update best model
+        if score > best_score:
+            _info('Best model so far! Beats previous best of score {}!'.format(best_score))
+            best_model_inst = model_inst
+            best_score = score
+
+        # Save model parameters
+        print('Saving model parameters...')
+        params_dir = os.path.join(params_root_dir, trial_id + '/')
+        if not os.path.exists(params_dir):
+            os.mkdir(params_dir)
+        model_inst.save_parameters(params_dir)
+        print('Model parameters saved in {}'.format(params_dir))
+    
+    return best_model_inst
+    
+
+def test_model_class(model_file_path: str, model_class: str, task: str, dependencies: dict,
+                    train_dataset_uri: str, val_dataset_uri: str, params_dir: str = 'params/local/',
+                    enable_gpu: bool = False, queries: list = [], knobs: dict = None):
     '''
     Tests whether a model class is properly defined by running a full train-inference flow.
     The model instance's methods will be called in an order similar to that in Rafiki.
@@ -140,6 +203,7 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
     :param str train_dataset_uri: URI of the train dataset for testing the training of model
     :param str val_dataset_uri: URI of the validation dataset for testing the evaluation of model
     :param str params_dir: Folder path to save model parameters
+    :param bool enable_gpu: Whether to enable GPU during model training
     :param list[any] queries: List of queries for testing predictions with the trained model
     :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used
     :type knobs: dict[str, any]
@@ -168,7 +232,7 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         knob_config = py_model_class.get_knob_config()
         _check_knob_config(knob_config)
         train_config = py_model_class.get_train_config()
-        advisor_type = train_config.get('advisor_type') or AdvisorType.SKOPT
+        advisor_type = train_config.get('advisor_type', AdvisorType.SKOPT)
         advisor = Advisor(knob_config, advisor_type)
 
         _print_header('Checking model initialization...')

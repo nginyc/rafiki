@@ -37,8 +37,17 @@ def _knob_to_dimension(knob):
         return Integer(knob.value_min, knob.value_max)
     elif isinstance(knob, FloatKnob):
         if knob.is_exp:
-            return Real(knob.value_min, knob.value_max, 'log-uniform')
+            # Avoid error in skopt when low/high are 0
+            value_min = knob.value_min if knob.value_min != 0 else 1e-12
+            value_max = knob.value_max if knob.value_max != 0 else 1e-12
+            return Real(value_min, value_max, 'log-uniform')
         else:
             return Real(knob.value_min, knob.value_max, 'uniform')
     else:
         raise UnsupportedKnobTypeError(knob.__class__)
+
+
+def _unzeroify(self, value):
+    if value == 0:
+        return 1e-9
+    

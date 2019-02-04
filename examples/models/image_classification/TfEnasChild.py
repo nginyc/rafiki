@@ -9,7 +9,7 @@ import numpy as np
 import base64
 
 from rafiki.config import APP_MODE
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
+from rafiki.model import BaseModel, InvalidModelParamsException, tune_model, \
                         IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, \
                         ListKnob, DynamicListKnob, utils
 from rafiki.constants import TaskType, ModelDependency, AdvisorType
@@ -32,27 +32,27 @@ class TfEnasChild(BaseModel):
 
         return {
             'max_image_size': FixedKnob(32),
-            'max_epochs': FixedKnob(1),
-            'batch_size': FixedKnob(64),
-            'learning_rate': FixedKnob(0.05), 
-            'start_ch': FixedKnob(36),
-            'l2_reg': FixedKnob(2e-4),
-            'dropout_keep_prob': FixedKnob(0.8),
-            'opt_momentum': FixedKnob(0.9),
-            'sgdr_alpha': FixedKnob(0.02),
-            'sgdr_first_decay_steps': FixedKnob(5000),
-            'sgdr_t_mul': FixedKnob(2),
-            'num_layers': FixedKnob(15),
-            'aux_loss_mul': FixedKnob(0.4),
-            'drop_path_keep_prob': FixedKnob(0.6),
-            'normal_cell_arch': DynamicListKnob(1, 12, cell_arch_block),
-            'reduction_cell_arch': DynamicListKnob(1, 12, cell_arch_block)
+            'max_epochs': FixedKnob(100),
+            'batch_size': CategoricalKnob([8, 16, 32, 64]), # FixedKnob(64),
+            'learning_rate': FloatKnob(1e-4, 1, is_exp=True), # FixedKnob(0.05), 
+            'start_ch': IntegerKnob(8, 64), # FixedKnob(36),
+            'l2_reg': FloatKnob(0, 1e-1, is_exp=True), # FixedKnob(2e-4),
+            'dropout_keep_prob': FloatKnob(0.5, 1), # FixedKnob(0.8),
+            'opt_momentum': FloatKnob(0, 1), # FixedKnob(0.9),
+            'sgdr_alpha': FloatKnob(0, 1), # FixedKnob(0.02),
+            'sgdr_first_decay_steps': IntegerKnob(100, 10000), # FixedKnob(5000),
+            'sgdr_t_mul': FloatKnob(1, 2), # FixedKnob(2),  
+            'num_layers': IntegerKnob(8, 16), # FixedKnob(15), 
+            'aux_loss_mul': FloatKnob(0, 0.5), # FixedKnob(0.4),
+            'drop_path_keep_prob': FloatKnob(0.5, 1), # FixedKnob(0.6),
+            # 'normal_cell_arch': DynamicListKnob(1, 12, cell_arch_block),
+            # 'reduction_cell_arch': DynamicListKnob(1, 12, cell_arch_block)
         }
 
     @staticmethod
     def get_train_config():
         return {
-            'advisor_type': AdvisorType.RANDOM
+            'advisor_type': AdvisorType.SKOPT
         }
 
     def __init__(self, **knobs):
@@ -153,7 +153,7 @@ class TfEnasChild(BaseModel):
         classes_ph = tf.placeholder(tf.int64, name='classes_ph', shape=(None,))
         is_train = tf.placeholder(tf.bool, name='is_train_ph')
         epoch = tf.placeholder(tf.int64, name='epoch_ph')
-        
+
         epochs_ratio = epoch / num_epochs
         
         dataset = tf.data.Dataset.from_tensor_slices((images_ph, classes_ph)).batch(N)
@@ -309,8 +309,11 @@ class TfEnasChild(BaseModel):
 
     def _train_model(self, images, classes):
         num_epochs = self._knobs['max_epochs']
+        best_loss_patience_epochs = 3 # No. of epochs where there should be an decrease in best batch loss, otherwise training stops 
 
         utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
+
+        best_loss, best_loss_patience_count = 0, 0
 
         self._sess.run(tf.global_variables_initializer())
         for epoch in range(num_epochs):
@@ -322,9 +325,7 @@ class TfEnasChild(BaseModel):
                 self._classes_ph: np.asarray(classes)
             })
 
-            avg_batch_loss = 0
-            avg_batch_acc = 0
-            n = 0
+            avg_batch_loss, avg_batch_acc, n = 0, 0, 0
             while True:
                 try:
                     (batch_loss, batch_acc, steps, _) = self._sess.run(
@@ -335,13 +336,25 @@ class TfEnasChild(BaseModel):
                         }
                     )
 
+                    # Update batch no, loss & acc
                     avg_batch_acc = avg_batch_acc * (n / (n + 1)) + batch_acc * (1 / (n + 1))
                     avg_batch_loss = avg_batch_loss * (n / (n + 1)) + batch_loss * (1 / (n + 1))
                     n += 1
                     
                 except tf.errors.OutOfRangeError:
                     break
-        
+
+            # Determine whether training should stop due to patience
+            if avg_batch_loss < best_loss:
+                utils.logger.log('Best batch loss so far: {}'.format(avg_batch_loss))
+                best_loss = avg_batch_loss
+                best_loss_patience_count = 0
+            else:
+                best_loss_patience_count += 1
+                if best_loss_patience_count >= best_loss_patience_epochs:
+                    utils.logger.log('Batch loss has not increased for {} epochs'.format(best_loss_patience_epochs))
+                    break
+
             utils.logger.log(epoch=epoch,
                             avg_batch_loss=float(avg_batch_loss), 
                             avg_batch_acc=float(avg_batch_acc), 
@@ -464,9 +477,7 @@ class TfEnasChild(BaseModel):
 
     def _count_model_parameters(self, tf_vars):
         num_params = 0
-        print('Model parameters:')
         for var in tf_vars:
-            print(var)
             num_params += np.prod([dim.value for dim in var.get_shape()])
 
         return num_params
@@ -503,7 +514,7 @@ class TfEnasChild(BaseModel):
                         default=lambda: X2,
                         exclusive=True
                     )
-
+                    
                 X = tf.add_n([X1, X2])
 
             hidden_states.append(X)
@@ -729,44 +740,10 @@ class TfEnasChild(BaseModel):
         return tf_vars
 
 if __name__ == '__main__':
-    test_model_class(
-        model_file_path=__file__,
-        model_class='TfEnasChild',
-        task=TaskType.IMAGE_CLASSIFICATION,
-        enable_gpu=True,
-        dependencies={
-            ModelDependency.TENSORFLOW: '1.12.0'
-        },
+    tune_model(
+        TfEnasChild, 
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
         val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-        queries=[
-            [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 7, 0, 37, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 27, 84, 11, 0, 0, 0, 0, 0, 0, 119, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 88, 143, 110, 0, 0, 0, 0, 22, 93, 106, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 53, 129, 120, 147, 175, 157, 166, 135, 154, 168, 140, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 11, 137, 130, 128, 160, 176, 159, 167, 178, 149, 151, 144, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 0, 3, 0, 0, 115, 114, 106, 137, 168, 153, 156, 165, 167, 143, 157, 158, 11, 0], 
-            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 89, 139, 90, 94, 153, 149, 131, 151, 169, 172, 143, 159, 169, 48, 0], 
-            [0, 0, 0, 0, 0, 0, 2, 4, 1, 0, 0, 0, 98, 136, 110, 109, 110, 162, 135, 144, 149, 159, 167, 144, 158, 169, 119, 0], 
-            [0, 0, 2, 2, 1, 2, 0, 0, 0, 0, 26, 108, 117, 99, 111, 117, 136, 156, 134, 154, 154, 156, 160, 141, 147, 156, 178, 0], 
-            [3, 0, 0, 0, 0, 0, 0, 21, 53, 92, 117, 111, 103, 115, 129, 134, 143, 154, 165, 170, 154, 151, 154, 143, 138, 150, 165, 43], 
-            [0, 0, 23, 54, 65, 76, 85, 118, 128, 123, 111, 113, 118, 127, 125, 139, 133, 136, 160, 140, 155, 161, 144, 155, 172, 161, 189, 62], 
-            [0, 68, 94, 90, 111, 114, 111, 114, 115, 127, 135, 136, 143, 126, 127, 151, 154, 143, 148, 125, 162, 162, 144, 138, 153, 162, 196, 58], 
-            [70, 169, 129, 104, 98, 100, 94, 97, 98, 102, 108, 106, 119, 120, 129, 149, 156, 167, 190, 190, 196, 198, 198, 187, 197, 189, 184, 36], 
-            [16, 126, 171, 188, 188, 184, 171, 153, 135, 120, 126, 127, 146, 185, 195, 209, 208, 255, 209, 177, 245, 252, 251, 251, 247, 220, 206, 49], 
-            [0, 0, 0, 12, 67, 106, 164, 185, 199, 210, 211, 210, 208, 190, 150, 82, 8, 0, 0, 0, 178, 208, 188, 175, 162, 158, 151, 11], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-        ]
+        num_trials=100,
+        enable_gpu=True
     )

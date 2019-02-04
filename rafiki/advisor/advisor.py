@@ -64,5 +64,7 @@ class Advisor():
         # TODO: Support int64 & other non-serializable data formats
         if isinstance(value, np.int64) or isinstance(value, np.int32):
             return int(value)
+        elif isinstance(value, np.float64) or isinstance(value, np.float32):
+            return float(value)
 
         return value
