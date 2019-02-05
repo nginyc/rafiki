@@ -33,18 +33,20 @@ class TfEnasChild(BaseModel):
         return {
             'max_image_size': FixedKnob(32),
             'max_epochs': FixedKnob(100),
-            'batch_size': CategoricalKnob([8, 16, 32, 64]), # FixedKnob(64),
-            'learning_rate': FloatKnob(1e-4, 1, is_exp=True), # FixedKnob(0.05), 
-            'start_ch': IntegerKnob(8, 64), # FixedKnob(36),
-            'l2_reg': FloatKnob(0, 1e-1, is_exp=True), # FixedKnob(2e-4),
-            'dropout_keep_prob': FloatKnob(0.5, 1), # FixedKnob(0.8),
-            'opt_momentum': FloatKnob(0, 1), # FixedKnob(0.9),
-            'sgdr_alpha': FloatKnob(0, 1), # FixedKnob(0.02),
-            'sgdr_first_decay_steps': IntegerKnob(100, 10000), # FixedKnob(5000),
-            'sgdr_t_mul': FloatKnob(1, 2), # FixedKnob(2),  
-            'num_layers': IntegerKnob(8, 16), # FixedKnob(15), 
-            'aux_loss_mul': FloatKnob(0, 0.5), # FixedKnob(0.4),
-            'drop_path_keep_prob': FloatKnob(0.5, 1), # FixedKnob(0.6),
+            'batch_size': FixedKnob(64),
+            'learning_rate': CategoricalKnob([0.001, 0.005, 0.01, 0.05]), 
+            'start_ch': FixedKnob(36),
+            'l2_reg': FixedKnob(2e-4),
+            'dropout_keep_prob': FixedKnob(0.8),
+            'opt_momentum': FixedKnob(0.9),
+            'use_sgdr': FixedKnob(True),
+            'sgdr_alpha': FixedKnob(0.02),
+            'sgdr_decay_epochs': FixedKnob(1),
+            'sgdr_t_mul': FixedKnob(2),  
+            'num_layers': FixedKnob(15), 
+            'aux_loss_mul': FixedKnob(0.4),
+            'drop_path_keep_prob': FixedKnob(0.6),
+            'cutout_size': FixedKnob(16)
             # 'normal_cell_arch': DynamicListKnob(1, 12, cell_arch_block),
             # 'reduction_cell_arch': DynamicListKnob(1, 12, cell_arch_block)
         }
@@ -176,7 +178,7 @@ class TfEnasChild(BaseModel):
         acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
         # Optimize training loss
-        (train_op, steps) = self._optimize(loss, tf_vars)
+        (train_op, steps) = self._optimize(loss, tf_vars, epoch)
 
         self._loss = loss
         self._acc = acc
@@ -260,14 +262,18 @@ class TfEnasChild(BaseModel):
         return (probs, preds, logits, aux_logits_list) 
 
     def _preprocess(self, images, is_train, w, h, in_ch):
-        def preprocess(x):
-            x = tf.pad(x, [[4, 4], [4, 4], [0, 0]])
-            x = tf.image.random_crop(x, [w, h, in_ch])
-            x = tf.image.random_flip_left_right(x)
+        cutout_size = self._knobs['cutout_size']
 
-            # TODO: Add CutOut
+        def preprocess(image):
+            # Do random crop + horizontal flip
+            image = tf.pad(image, [[4, 4], [4, 4], [0, 0]])
+            image = tf.image.random_crop(image, [w, h, in_ch])
+            image = tf.image.random_flip_left_right(image)
 
-            return x
+            if cutout_size > 0:
+                image = self._do_cutout(image, w, h, cutout_size)
+
+            return image
 
         # Only preprocess images during train
         images = tf.case(
@@ -279,24 +285,34 @@ class TfEnasChild(BaseModel):
         X = tf.cast(images, tf.float32)
         return X
 
-    def _optimize(self, loss, tf_vars):
-        lr_max = self._knobs['learning_rate'] # Learning rate
+    def _optimize(self, loss, tf_vars, epoch):
         opt_momentum = self._knobs['opt_momentum'] # Momentum optimizer momentum
-        alpha = self._knobs['sgdr_alpha'] 
-        first_decay_steps = self._knobs['sgdr_first_decay_steps']
-        t_mul = self._knobs['sgdr_t_mul']
 
         # Initialize steps variable
         steps = tf.Variable(0, name='steps', dtype=tf.int32, trainable=False)
 
-        # Apply Stoachastic Gradient Descent with Warm Restarts (SGDR)
-        lr = tf.train.cosine_decay_restarts(lr_max, steps, first_decay_steps, t_mul=t_mul, alpha=alpha)
-
+        # Compute learning rate, gradients
+        lr = self._get_learning_rate(epoch)
         grads = tf.gradients(loss, tf_vars)
+
+        # Init optimizer
         opt = tf.train.MomentumOptimizer(lr, opt_momentum, use_locking=True, use_nesterov=True)
         train_op = opt.apply_gradients(zip(grads, tf_vars), global_step=steps)
 
         return (train_op, steps)
+
+    def _get_learning_rate(self, epoch):
+        lr = self._knobs['learning_rate'] # Learning rate
+        use_sgdr = self._knobs['use_sgdr']
+        sgdr_decay_epochs = self._knobs['sgdr_decay_epochs']
+        sgdr_alpha = self._knobs['sgdr_alpha'] 
+        sgdr_t_mul = self._knobs['sgdr_t_mul']
+
+        if use_sgdr is True:
+            # Apply Stoachastic Gradient Descent with Warm Restarts (SGDR)
+            lr = tf.train.cosine_decay_restarts(lr, epoch, sgdr_decay_epochs, t_mul=sgdr_t_mul, alpha=sgdr_alpha)
+
+        return lr
 
     def _init_session(self):
         # (Re-)create session
@@ -309,11 +325,11 @@ class TfEnasChild(BaseModel):
 
     def _train_model(self, images, classes):
         num_epochs = self._knobs['max_epochs']
-        best_loss_patience_epochs = 3 # No. of epochs where there should be an decrease in best batch loss, otherwise training stops 
+        best_loss_patience_epochs = 10 # No. of epochs where there should be an decrease in best batch loss, otherwise training stops 
 
         utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
-        best_loss, best_loss_patience_count = 0, 0
+        best_loss, best_loss_patience_count = float('inf'), 0
 
         self._sess.run(tf.global_variables_initializer())
         for epoch in range(num_epochs):
@@ -658,6 +674,18 @@ class TfEnasChild(BaseModel):
     ####################################
     # Utils
     ####################################
+
+    def _do_cutout(self, image, im_width, im_height, cutout_size):
+        mask = tf.ones([cutout_size, cutout_size], dtype=tf.int32)
+        start_x = tf.random.uniform(shape=(1,), minval=0, maxval=im_width, dtype=tf.int32)
+        start_y = tf.random.uniform(shape=(1,), minval=0, maxval=im_height, dtype=tf.int32)
+        mask = tf.pad(mask, [[cutout_size + start_y[0], im_height - start_y[0]],
+                            [cutout_size + start_x[0], im_width - start_x[0]]])
+        mask = mask[cutout_size: cutout_size + im_height,
+                    cutout_size: cutout_size + im_width]
+        mask = tf.tile(tf.reshape(mask, (im_height, im_width, 1)), (1, 1, 3))
+        image = tf.where(tf.equal(mask, 0), x=image, y=tf.zeros_like(image))
+        return image
     
     def _concat(self, inputs, in_w, in_h, in_ch, out_ch):
         '''
@@ -743,7 +771,7 @@ if __name__ == '__main__':
     tune_model(
         TfEnasChild, 
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-        val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
+        val_dataset_uri='data/cifar_10_for_image_classification_train.zip',
         num_trials=100,
         enable_gpu=True
     )
