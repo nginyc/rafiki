@@ -51,3 +51,4 @@ export IMAGE_REDIS=redis:5.0.3-alpine3.8
 
 # Utility configuration
 export PYTHONPATH=$PWD # Ensures that `rafiki` module can be imported at project root
+export PYTHONUNBUFFERED=1 # Ensures logs from Python appear instantly 
