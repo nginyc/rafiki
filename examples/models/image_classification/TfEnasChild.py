@@ -484,7 +484,7 @@ class TfEnasChild(BaseModel):
         b = len(cell_arch) # no. of blocks
         hidden_states = [] # Stores hidden states for this cell, which includes blocks
 
-        # Downsample previous layers as necessary and add them to hidden states
+        # Downsample inputs as necessary and add them to hidden states
         for (i, (inp, ds_inp)) in enumerate(inputs):
             with tf.variable_scope('input_{}_downsample'.format(i)):
                 inp = self._downsample(inp, ds_inp, ds, w, h, ch)
@@ -514,12 +514,13 @@ class TfEnasChild(BaseModel):
 
             hidden_states.append(X)
 
-        # Combine all hidden states
+        # Combine all blocks
         # TODO: Maybe only concat unused blocks
-        comb_ch = len(hidden_states) * (ch << ds)
+        blocks = hidden_states[len(inputs):]
+        comb_ch = len(blocks) * (ch << ds)
         out_ch = ch << (ds + 1)
         with tf.variable_scope('combine'):
-            X = self._concat(hidden_states, w >> (ds + 1), h >> (ds + 1), comb_ch, out_ch)
+            X = self._concat(blocks, w >> (ds + 1), h >> (ds + 1), comb_ch, out_ch)
 
         return X
 
@@ -528,7 +529,7 @@ class TfEnasChild(BaseModel):
         b = len(cell_arch) # no. of blocks
         hidden_states = [] # Stores hidden states for this cell, which includes blocks
 
-        # Downsample previous layers as necessary and add them to hidden states
+        # Downsample inputs as necessary and add them to hidden states
         for (i, (inp, ds_inp)) in enumerate(inputs):
             with tf.variable_scope('input_{}_downsample'.format(i)):
                 inp = self._downsample(inp, ds_inp, ds, w, h, ch)
@@ -554,10 +555,11 @@ class TfEnasChild(BaseModel):
 
         # Combine all hidden states
         # TODO: Maybe only concat unused blocks
-        comb_ch = len(hidden_states) * (ch << ds)
+        blocks = hidden_states[len(inputs):]
+        comb_ch = len(blocks) * (ch << ds)
         out_ch = ch << ds
         with tf.variable_scope('combine'):
-            X = self._concat(hidden_states, w >> ds, h >> ds, comb_ch, out_ch)
+            X = self._concat(blocks, w >> ds, h >> ds, comb_ch, out_ch)
 
         return X
 
