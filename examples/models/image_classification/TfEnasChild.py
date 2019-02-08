@@ -435,25 +435,6 @@ class TfEnasChild(BaseModel):
 
         return logits
 
-    def _add_drop_path(self, X, epochs_ratio, layers_ratio):
-        keep_prob = self._knobs['drop_path_keep_prob']
-        
-        # Decrease keep prob deeper into network
-        keep_prob = 1 - layers_ratio * (1 - keep_prob)
-        
-        # Decrease keep prob with increasing epochs 
-        keep_prob = 1 - epochs_ratio * (1 - keep_prob)
-
-        # Apply dropout
-        keep_prob = tf.to_float(keep_prob)
-        batch_size = tf.shape(X)[0]
-        noise_shape = (batch_size, 1, 1, 1)
-        random_tensor = keep_prob + tf.random_uniform(noise_shape, dtype=tf.float32)
-        binary_tensor = tf.floor(random_tensor)
-        X = tf.div(X, keep_prob) * binary_tensor
-
-        return X
-
     def _compute_loss(self, logits, aux_logits_list, tf_vars, classes):
         l2_reg = self._knobs['l2_reg']
         aux_loss_mul = self._knobs['aux_loss_mul'] # Multiplier for auxiliary loss
@@ -516,20 +497,18 @@ class TfEnasChild(BaseModel):
                 X2 = hidden_states[idx2]
 
                 with tf.variable_scope('X1'):
-                    X1 = self._add_op(X1, op1, w >> ds, h >> ds, ch << ds)
-                    X1 = tf.case(
-                        { is_train: (lambda: self._add_drop_path(X1, epochs_ratio, layers_ratio)) }, 
-                        default=lambda: X1,
-                        exclusive=True
-                    )
+                    if idx1 < len(inputs):
+                        X1 = self._add_op(X1, op1, w >> ds, h >> ds, ch << ds, stride=2)
+                    else:
+                        X1 = self._add_op(X1, op1, w >> (ds + 1), h >> (ds + 1), ch << ds)
+                    X1 = self._add_drop_path(X1, epochs_ratio, layers_ratio, is_train)
 
                 with tf.variable_scope('X2'):
-                    X2 = self._add_op(X2, op2, w >> ds, h >> ds, ch << ds)
-                    X2 = tf.case(
-                        { is_train: (lambda: self._add_drop_path(X2, epochs_ratio, layers_ratio)) }, 
-                        default=lambda: X2,
-                        exclusive=True
-                    )
+                    if idx2 < len(inputs):
+                        X2 = self._add_op(X2, op2, w >> ds, h >> ds, ch << ds, stride=2)
+                    else:
+                        X2 = self._add_op(X2, op2, w >> (ds + 1), h >> (ds + 1), ch << ds)
+                    X2 = self._add_drop_path(X2, epochs_ratio, layers_ratio, is_train)
                     
                 X = tf.add_n([X1, X2])
 
@@ -538,13 +517,9 @@ class TfEnasChild(BaseModel):
         # Combine all hidden states
         # TODO: Maybe only concat unused blocks
         comb_ch = len(hidden_states) * (ch << ds)
-        out_ch = ch << ds
+        out_ch = ch << (ds + 1)
         with tf.variable_scope('combine'):
-            X = self._concat(hidden_states, w >> ds, h >> ds, comb_ch, out_ch)
-
-        # Downsample output once
-        with tf.variable_scope('downsample'):
-            X = self._downsample(X, ds, ds + 1, w, h, ch)
+            X = self._concat(hidden_states, w >> (ds + 1), h >> (ds + 1), comb_ch, out_ch)
 
         return X
 
@@ -567,19 +542,11 @@ class TfEnasChild(BaseModel):
 
                 with tf.variable_scope('X1'):
                     X1 = self._add_op(X1, op1, w >> ds, h >> ds, ch << ds)
-                    X1 = tf.case(
-                        { is_train: (lambda: self._add_drop_path(X1, epochs_ratio, layers_ratio)) }, 
-                        default=lambda: X1,
-                        exclusive=True
-                    )
+                    X1 = self._add_drop_path(X1, epochs_ratio, layers_ratio, is_train)
 
                 with tf.variable_scope('X2'):
                     X2 = self._add_op(X2, op2, w >> ds, h >> ds, ch << ds)
-                    X2 = tf.case(
-                        { is_train: (lambda: self._add_drop_path(X2, epochs_ratio, layers_ratio)) }, 
-                        default=lambda: X2,
-                        exclusive=True
-                    )
+                    X2 = self._add_drop_path(X2, epochs_ratio, layers_ratio, is_train)
 
                 X = tf.add_n([X1, X2])
 
@@ -594,34 +561,34 @@ class TfEnasChild(BaseModel):
 
         return X
 
-    def _add_op(self, X, op, w, h, ch):
-        ops = {
-            0: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=3, stride=1),
-            1: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=5, stride=1),
-            2: lambda: self._add_avg_pool_op(X, w, h, ch, filter_size=3, stride=1),
-            3: lambda: self._add_max_pool_op(X, w, h, ch, filter_size=3, stride=1),
-            4: lambda: self._add_max_pool_op(X, w, h, ch, filter_size=1, stride=1), # identity
-            5: lambda: self._add_conv_op(X, w, h, ch, filter_size=3,stride=1),
-            6: lambda: self._add_conv_op(X, w, h, ch, filter_size=5, stride=1)
-        }
+    def _add_drop_path(self, X, epochs_ratio, layers_ratio, is_train):
+        keep_prob = self._knobs['drop_path_keep_prob']
 
+        # Only drop path during training
+        X = tf.case(
+            { is_train: (lambda: self._do_drop_path(X, epochs_ratio, layers_ratio, keep_prob)) }, 
+            default=lambda: X,
+            exclusive=True
+        )
+
+        return X
+
+    def _add_op(self, X, op, w, h, ch, stride=1):
+        '''
+        Applies a specific operation to input
+        '''
+        ops = {
+            0: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=3, stride=stride),
+            1: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=5, stride=stride),
+            2: lambda: self._add_avg_pool_op(X, w, h, ch, filter_size=3, stride=stride),
+            3: lambda: self._add_max_pool_op(X, w, h, ch, filter_size=3, stride=stride),
+            4: lambda: self._add_max_pool_op(X, w, h, ch, filter_size=1, stride=stride), # identity
+            5: lambda: self._add_conv_op(X, w, h, ch, filter_size=3, stride=stride),
+            6: lambda: self._add_conv_op(X, w, h, ch, filter_size=5, stride=stride)
+        }
         X = ops[op]()
         return X
 
-    # def _add_reduction_op(self, X, op, w, h, ch):
-    #     ops = {
-    #         0: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=3, stride=2),
-    #         1: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=5, stride=2),
-    #         2: lambda: self._add_avg_pool_op(X, w, h, ch, filter_size=3, stride=2),
-    #         3: lambda: self._add_max_pool_op(X, w, h, ch, filter_size=3, stride=2),
-    #         4: lambda: self._add_max_pool_op(X, w, h, ch, filter_size=1, stride=2), # identity
-    #         5: lambda: self._add_conv_op(X, w, h, ch, filter_size=3, stride=2),
-    #         6: lambda: self._add_conv_op(X, w, h, ch, filter_size=5, stride=2)
-    #     }
-
-    #     X = ops[op]()
-    #     return X
-    
     def _add_stem_conv(self, X, w, h, in_ch, ch):
         '''
         Model's stem layer
@@ -693,6 +660,24 @@ class TfEnasChild(BaseModel):
         mask = tf.tile(tf.reshape(mask, (im_height, im_width, 1)), (1, 1, 3))
         image = tf.where(tf.equal(mask, 0), x=image, y=tf.zeros_like(image))
         return image
+
+    
+    def _do_drop_path(self, X, epochs_ratio, layers_ratio, keep_prob):
+        # Decrease keep prob deeper into network
+        keep_prob = 1 - layers_ratio * (1 - keep_prob)
+        
+        # Decrease keep prob with increasing epochs 
+        keep_prob = 1 - epochs_ratio * (1 - keep_prob)
+
+        # Apply dropout
+        keep_prob = tf.to_float(keep_prob)
+        batch_size = tf.shape(X)[0]
+        noise_shape = (batch_size, 1, 1, 1)
+        random_tensor = keep_prob + tf.random_uniform(noise_shape, dtype=tf.float32)
+        binary_tensor = tf.floor(random_tensor)
+        X = tf.div(X, keep_prob) * binary_tensor
+
+        return X
     
     def _concat(self, inputs, in_w, in_h, in_ch, out_ch):
         '''
