@@ -32,9 +32,9 @@ class TfEnasChild(BaseModel):
 
         return {
             'max_image_size': FixedKnob(32),
-            'max_epochs': FixedKnob(100),
+            'max_epochs': FixedKnob(126),
             'batch_size': FixedKnob(64),
-            'learning_rate': CategoricalKnob([0.001, 0.005, 0.01, 0.05]), 
+            'learning_rate': FixedKnob(0.05), 
             'start_ch': FixedKnob(36),
             'l2_reg': FixedKnob(2e-4),
             'dropout_keep_prob': FixedKnob(0.8),
@@ -325,11 +325,11 @@ class TfEnasChild(BaseModel):
 
     def _train_model(self, images, classes):
         num_epochs = self._knobs['max_epochs']
-        best_loss_patience_epochs = 10 # No. of epochs where there should be an decrease in best batch loss, otherwise training stops 
+        # best_loss_patience_epochs = 10 # No. of epochs where there should be an decrease in best batch loss, otherwise training stops 
 
         utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
-        best_loss, best_loss_patience_count = float('inf'), 0
+        # best_loss, best_loss_patience_count = float('inf'), 0
 
         self._sess.run(tf.global_variables_initializer())
         for epoch in range(num_epochs):
@@ -360,16 +360,16 @@ class TfEnasChild(BaseModel):
                 except tf.errors.OutOfRangeError:
                     break
 
-            # Determine whether training should stop due to patience
-            if avg_batch_loss < best_loss:
-                utils.logger.log('Best batch loss so far: {}'.format(avg_batch_loss))
-                best_loss = avg_batch_loss
-                best_loss_patience_count = 0
-            else:
-                best_loss_patience_count += 1
-                if best_loss_patience_count >= best_loss_patience_epochs:
-                    utils.logger.log('Batch loss has not increased for {} epochs'.format(best_loss_patience_epochs))
-                    break
+            # # Determine whether training should stop due to patience
+            # if avg_batch_loss < best_loss:
+            #     utils.logger.log('Best batch loss so far: {}'.format(avg_batch_loss))
+            #     best_loss = avg_batch_loss
+            #     best_loss_patience_count = 0
+            # else:
+            #     best_loss_patience_count += 1
+            #     if best_loss_patience_count >= best_loss_patience_epochs:
+            #         utils.logger.log('Batch loss has not increased for {} epochs'.format(best_loss_patience_epochs))
+            #         break
 
             utils.logger.log(epoch=epoch,
                             avg_batch_loss=float(avg_batch_loss), 
