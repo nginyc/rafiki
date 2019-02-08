@@ -32,7 +32,7 @@ class TfEnasChild(BaseModel):
 
         return {
             'max_image_size': FixedKnob(32),
-            'max_epochs': FixedKnob(126),
+            'max_epochs': FixedKnob(150),
             'batch_size': FixedKnob(64),
             'learning_rate': FixedKnob(0.05), 
             'start_ch': FixedKnob(36),
@@ -41,7 +41,7 @@ class TfEnasChild(BaseModel):
             'opt_momentum': FixedKnob(0.9),
             'use_sgdr': FixedKnob(True),
             'sgdr_alpha': FixedKnob(0.02),
-            'sgdr_decay_epochs': FixedKnob(1),
+            'sgdr_decay_epochs': FixedKnob(10),
             'sgdr_t_mul': FixedKnob(2),  
             'num_layers': FixedKnob(15), 
             'aux_loss_mul': FixedKnob(0.4),
@@ -651,13 +651,20 @@ class TfEnasChild(BaseModel):
         X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
         return X
     
-    def _add_separable_conv_op(self, X, w, h, ch, filter_size, stride, ch_mul=1):
+    def _add_separable_conv_op(self, X, w, h, ch, filter_size, stride, ch_mul=1, num_stacks=2):
         with tf.variable_scope('separable_conv_op'):
-            W_d = self._create_weights('W_d', (filter_size, filter_size, ch, ch_mul))
-            W_p = self._create_weights('W_p', (1, 1, ch_mul * ch, ch))
-            X = tf.nn.separable_conv2d(X, W_d, W_p, strides=[1, stride, stride, 1], padding='SAME')
-            X = self._add_batch_norm(X, ch)
-            X = tf.nn.relu(X)
+            # For each stack of separable convolution (default of 2)
+            for stack_no in range(num_stacks):
+                # Only have > 1 stride for first stack 
+                stack_stride = stride if stack_no == 0 else 1 
+
+                with tf.variable_scope('stack_{}'.format(stack_no)):
+                    W_d = self._create_weights('W_d', (filter_size, filter_size, ch, ch_mul))
+                    W_p = self._create_weights('W_p', (1, 1, ch_mul * ch, ch))
+                    X = tf.nn.separable_conv2d(X, W_d, W_p, strides=[1, stack_stride, stack_stride, 1], padding='SAME')
+                    X = self._add_batch_norm(X, ch)
+                    X = tf.nn.relu(X)
+
         X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
         return X
 
@@ -771,7 +778,7 @@ if __name__ == '__main__':
     tune_model(
         TfEnasChild, 
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-        val_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-        num_trials=100,
+        val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
+        num_trials=1,
         enable_gpu=True
     )
