@@ -40,7 +40,7 @@ class TfEnasChild(BaseModel):
             'dropout_keep_prob': FixedKnob(0.8),
             'opt_momentum': FixedKnob(0.9),
             'use_sgdr': FixedKnob(True),
-            'sgdr_alpha': FixedKnob(0.02),
+            'sgdr_alpha': FixedKnob(0.002),
             'sgdr_decay_epochs': FixedKnob(10),
             'sgdr_t_mul': FixedKnob(2),  
             'num_layers': FixedKnob(15), 
@@ -178,7 +178,7 @@ class TfEnasChild(BaseModel):
         acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
         # Optimize training loss
-        (train_op, steps) = self._optimize(loss, tf_vars, epoch)
+        (train_op, steps, lr) = self._optimize(loss, tf_vars, epoch)
 
         self._loss = loss
         self._acc = acc
@@ -191,6 +191,7 @@ class TfEnasChild(BaseModel):
         self._tf_vars = tf_vars
         self._is_train_ph = is_train
         self._epoch_ph = epoch
+        self._lr = lr
 
     def _inference(self, X, epochs_ratio, is_train):
         K = self._train_params['K'] # No. of classes
@@ -299,7 +300,7 @@ class TfEnasChild(BaseModel):
         opt = tf.train.MomentumOptimizer(lr, opt_momentum, use_locking=True, use_nesterov=True)
         train_op = opt.apply_gradients(zip(grads, tf_vars), global_step=steps)
 
-        return (train_op, steps)
+        return (train_op, steps, lr)
 
     def _get_learning_rate(self, epoch):
         lr = self._knobs['learning_rate'] # Learning rate
@@ -344,8 +345,8 @@ class TfEnasChild(BaseModel):
             avg_batch_loss, avg_batch_acc, n = 0, 0, 0
             while True:
                 try:
-                    (batch_loss, batch_acc, steps, _) = self._sess.run(
-                        [self._loss, self._acc, self._steps, self._train_op],
+                    (batch_loss, batch_acc, steps, lr, _,) = self._sess.run(
+                        [self._loss, self._acc, self._steps, self._lr, self._train_op],
                         feed_dict={
                             self._is_train_ph: True,
                             self._epoch_ph: epoch
@@ -353,8 +354,8 @@ class TfEnasChild(BaseModel):
                     )
 
                     # Update batch no, loss & acc
-                    avg_batch_acc = avg_batch_acc * (n / (n + 1)) + batch_acc * (1 / (n + 1))
-                    avg_batch_loss = avg_batch_loss * (n / (n + 1)) + batch_loss * (1 / (n + 1))
+                    avg_batch_acc = avg_batch_acc * n / (n + 1) + batch_acc / (n + 1)
+                    avg_batch_loss = avg_batch_loss * n / (n + 1) + batch_loss / (n + 1)
                     n += 1
                     
                 except tf.errors.OutOfRangeError:
@@ -373,7 +374,8 @@ class TfEnasChild(BaseModel):
 
             utils.logger.log(epoch=epoch,
                             avg_batch_loss=float(avg_batch_loss), 
-                            avg_batch_acc=float(avg_batch_acc), 
+                            avg_batch_acc=float(avg_batch_acc),
+                            lr=float(lr), 
                             steps=int(steps))
         
     def _evaluate_model(self, images, classes):
