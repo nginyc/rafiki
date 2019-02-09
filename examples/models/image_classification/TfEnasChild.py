@@ -632,9 +632,9 @@ class TfEnasChild(BaseModel):
                 with tf.variable_scope('stack_{}'.format(stack_no)):
                     W_d = self._create_weights('W_d', (filter_size, filter_size, ch, ch_mul))
                     W_p = self._create_weights('W_p', (1, 1, ch_mul * ch, ch))
-                    X = tf.nn.separable_conv2d(X, W_d, W_p, strides=[1, stack_stride, stack_stride, 1], padding='SAME')
-                    X = self._add_batch_norm(X, ch)
                     X = tf.nn.relu(X)
+                    X = tf.nn.separable_conv2d(X, W_d, W_p, strides=(1, stack_stride, stack_stride, 1), padding='SAME')
+                    X = self._add_batch_norm(X, ch)
 
         X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
         return X
@@ -642,9 +642,9 @@ class TfEnasChild(BaseModel):
     def _add_conv_op(self, X, w, h, ch, filter_size, stride):
         with tf.variable_scope('conv_op'):
             W = self._create_weights('W', (filter_size, filter_size, ch, ch))
+            X = tf.nn.relu(X)
             X = tf.nn.conv2d(X, W, strides=[1, stride, stride, 1], padding='SAME')
             X = self._add_batch_norm(X, ch)
-            X = tf.nn.relu(X)
         X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
         return X
 
