@@ -32,10 +32,11 @@ class TfEnasChild(BaseModel):
 
         return {
             'max_image_size': FixedKnob(32),
-            'max_epochs': FixedKnob(150),
+            'max_epochs': FixedKnob(10),
             'batch_size': FixedKnob(64),
             'learning_rate': FixedKnob(0.05), 
-            'start_ch': FixedKnob(36),
+            'initial_block_ch': FixedKnob(36),
+            'stem_ch': FixedKnob(108),
             'l2_reg': FixedKnob(2e-4),
             'dropout_keep_prob': FixedKnob(0.8),
             'opt_momentum': FixedKnob(0.9),
@@ -46,7 +47,7 @@ class TfEnasChild(BaseModel):
             'num_layers': FixedKnob(15), 
             'aux_loss_mul': FixedKnob(0.4),
             'drop_path_keep_prob': FixedKnob(0.6),
-            'cutout_size': FixedKnob(16)
+            'cutout_size': FixedKnob(0)
             # 'normal_cell_arch': DynamicListKnob(1, 12, cell_arch_block),
             # 'reduction_cell_arch': DynamicListKnob(1, 12, cell_arch_block)
         }
@@ -80,6 +81,7 @@ class TfEnasChild(BaseModel):
         with self._graph.as_default():
             self._build_model()
             self._init_session()
+            self._add_logging()
             self._train_model(images, classes)
             utils.logger.log('Evaluating model on train dataset...')
             acc = self._evaluate_model(images, classes)
@@ -128,6 +130,13 @@ class TfEnasChild(BaseModel):
         with open(train_params_file_path, 'w') as f:
             f.write(json.dumps(self._train_params))
 
+        # Dump train summaries
+        summaries_dir_path = os.path.join(params_dir, 'summaries')
+        os.mkdir(summaries_dir_path)
+        writer = tf.summary.FileWriter(summaries_dir_path, self._graph)
+        for summary in self._train_summaries:
+            writer.add_summary(summary)
+
     def load_parameters(self, params_dir):
         # Load pre-processing params
         train_params_file_path = os.path.join(params_dir, 'train_params.json')
@@ -167,13 +176,9 @@ class TfEnasChild(BaseModel):
 
         # Do inference
         (probs, preds, logits, aux_logits_list) = self._inference(X, epochs_ratio, is_train)
-
-        # Determine all model parameters and count them
-        tf_vars = self._get_all_variables()
-        model_params_count = self._count_model_parameters(tf_vars)
-        utils.logger.log('Model has {} parameters'.format(model_params_count))
-
+        
         # Compute training loss & accuracy
+        tf_vars = self._get_all_variables()
         loss = self._compute_loss(logits, aux_logits_list, tf_vars, classes)
         acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
@@ -193,14 +198,30 @@ class TfEnasChild(BaseModel):
         self._epoch_ph = epoch
         self._lr = lr
 
+    def _add_logging(self):
+        # Log available devices 
+        utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
+
+        # Count model parameters
+        tf_vars = self._get_all_variables()
+        model_params_count = self._count_model_parameters(tf_vars)
+        utils.logger.log('Model has {} parameters'.format(model_params_count))
+
+        # Make summaries 
+        tf.summary.scalar('loss', self._loss)
+        tf.summary.scalar('accuracy', self._acc)
+        tf.summary.scalar('learning_rate', self._lr)
+        self._summary_op = tf.summary.merge_all()
+
     def _inference(self, X, epochs_ratio, is_train):
         K = self._train_params['K'] # No. of classes
         in_ch = 3 # Num channels of input images
         w = self._train_params['image_size'] # Initial input width
         h = self._train_params['image_size'] # Initial input height
-        ch = self._knobs['start_ch'] # Initial no. of channels
         dropout_keep_prob = self._knobs['dropout_keep_prob']
         L = self._knobs['num_layers'] # Total number of layers
+        stem_ch = self._knobs['stem_ch'] # No. of channels for stem convolution
+        initial_block_ch = self._knobs['initial_block_ch'] # Initial no. of channels for operations in block
 
         (normal_arch, reduction_arch) = self._get_arch()
         
@@ -209,41 +230,42 @@ class TfEnasChild(BaseModel):
 
         # Stores previous layers. layers[i] = (<previous layer (i - 1) as input to layer i>, <# of downsamples>)
         layers = []
-        ds = 0 # Current no. of downsamples
         aux_logits_list = [] # Stores list of logits from aux heads
 
-        # "Stem" convolution layer (layer 0)
-        X = self._add_stem_conv(X, w, h, in_ch, ch) 
-        layers.append((X, ds))
+        # "Stem" convolution layer (layer -1)
+        with tf.variable_scope('layer_stem'):
+            X = self._do_conv(X, w, h, in_ch, stem_ch, filter_size=3) # 3x3 convolution
+            layers.append((X, w, h, stem_ch))
 
         # Core layers of cells
+        block_ch = initial_block_ch
         for l in range(1, L + 1):
             with tf.variable_scope('layer_{}'.format(l)):
                 layers_ratio = l / (L + 1)
-                prev_layers = [layers[-1], layers[-2] if len(layers) > 1 else layers[-1]]
+                prev_layers = [layers[-2] if len(layers) > 1 else layers[-1], layers[-1]]
 
                 # Either add a reduction cell or normal cell
                 if l in reduction_layers:
                     with tf.variable_scope('reduction_cell'):
-                        X = self._add_reduction_cell(reduction_arch, prev_layers, w, h, ch, ds, 
-                                                    epochs_ratio, layers_ratio, is_train)
-                        ds += 1
+                        block_ch *= 2
+                        (X, w, h, ch) = self._add_reduction_cell(reduction_arch, prev_layers, block_ch,
+                                                                epochs_ratio, layers_ratio, is_train)
                 else:
                     with tf.variable_scope('normal_cell'):
-                        X = self._add_normal_cell(normal_arch, prev_layers, w, h, ch, ds, 
-                                                epochs_ratio, layers_ratio, is_train)
+                        (X, w, h, ch) = self._add_normal_cell(normal_arch, prev_layers, block_ch,
+                                                            epochs_ratio, layers_ratio, is_train)
 
                 # Maybe add auxiliary heads 
                 if l in aux_head_layers:
                     with tf.variable_scope('aux_head'):
-                        aux_logits = self._add_aux_head(X, w >> ds, h >> ds, ch << ds, K)
+                        aux_logits = self._add_aux_head(X, w, h, ch, K)
                     aux_logits_list.append(aux_logits)
 
-            layers.append((X, ds))
-
+            layers.append((X, w, h, ch))
+    
         # Global average pooling
-        (X, _) = layers[-1] # Get final layer
-        X = self._add_global_pooling(X, w >> ds, h >> ds, ch << ds)
+        (X, w, h, ch) = layers[-1] # Get final layer
+        X = self._add_global_pooling(X, w, h, ch)
 
         # Add dropout
         X = tf.case(
@@ -253,7 +275,7 @@ class TfEnasChild(BaseModel):
         )
 
         # Compute logits from X
-        X = self._add_fully_connected(X, (ch << ds,), K)
+        X = self._add_fully_connected(X, (ch,), K)
         logits = tf.nn.softmax(X)
 
         # Compute probabilities and predictions
@@ -328,9 +350,8 @@ class TfEnasChild(BaseModel):
         num_epochs = self._knobs['max_epochs']
         # best_loss_patience_epochs = 10 # No. of epochs where there should be an decrease in best batch loss, otherwise training stops 
 
-        utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
-
         # best_loss, best_loss_patience_count = float('inf'), 0
+        train_summaries = []
 
         self._sess.run(tf.global_variables_initializer())
         for epoch in range(num_epochs):
@@ -345,8 +366,8 @@ class TfEnasChild(BaseModel):
             avg_batch_loss, avg_batch_acc, n = 0, 0, 0
             while True:
                 try:
-                    (batch_loss, batch_acc, steps, lr, _,) = self._sess.run(
-                        [self._loss, self._acc, self._steps, self._lr, self._train_op],
+                    (batch_loss, batch_acc, steps, summary, _) = self._sess.run(
+                        [self._loss, self._acc, self._steps, self._summary_op, self._train_op],
                         feed_dict={
                             self._is_train_ph: True,
                             self._epoch_ph: epoch
@@ -356,6 +377,7 @@ class TfEnasChild(BaseModel):
                     # Update batch no, loss & acc
                     avg_batch_acc = avg_batch_acc * n / (n + 1) + batch_acc / (n + 1)
                     avg_batch_loss = avg_batch_loss * n / (n + 1) + batch_loss / (n + 1)
+                    train_summaries.append(summary)
                     n += 1
                     
                 except tf.errors.OutOfRangeError:
@@ -375,9 +397,10 @@ class TfEnasChild(BaseModel):
             utils.logger.log(epoch=epoch,
                             avg_batch_loss=float(avg_batch_loss), 
                             avg_batch_acc=float(avg_batch_acc),
-                            lr=float(lr), 
                             steps=int(steps))
-        
+
+        self._train_summaries = train_summaries
+            
     def _evaluate_model(self, images, classes):
         probs = self._predict_with_model(images)
         preds = np.argmax(probs, axis=1)
@@ -463,33 +486,26 @@ class TfEnasChild(BaseModel):
         X = tf.reshape(X, (-1, in_ch)) # Sanity shape check
         return X
 
-    def _downsample(self, X, ds_x, ds, w, h, ch):
-        '''
-        Downsample X from `ds_x` downsamples to `ds` downsamples
-        '''
-        for ds_i in range(ds_x + 1, ds + 1):
-            with tf.variable_scope('downsample_{}x'.format(ds_i)):
-                X = self._add_factorized_reduction(X, w >> ds_x, h >> ds_x, ch << ds_x)
-
-        X = tf.reshape(X, (-1, w >> ds, h >> ds, ch << ds)) # Sanity shape check
-        return X
-
     def _count_model_parameters(self, tf_vars):
         num_params = 0
+        utils.logger.log('Model parameters:')
         for var in tf_vars:
+            utils.logger.log(str(var))
             num_params += np.prod([dim.value for dim in var.get_shape()])
 
         return num_params
 
-    def _add_reduction_cell(self, cell_arch, inputs, w, h, ch, ds, 
-                            epochs_ratio, layers_ratio, is_train):
+    def _add_reduction_cell(self, cell_arch, inputs, block_ch, epochs_ratio, layers_ratio, is_train):
         b = len(cell_arch) # no. of blocks
         hidden_states = [] # Stores hidden states for this cell, which includes blocks
 
-        # Downsample inputs as necessary and add them to hidden states
-        for (i, (inp, ds_inp)) in enumerate(inputs):
-            with tf.variable_scope('input_{}_downsample'.format(i)):
-                inp = self._downsample(inp, ds_inp, ds, w, h, ch)
+        # Initial width & height for this cell as the final input
+        (_, w, h, _) = inputs[-1]
+
+        # Calibrate inputs as necessary and add them to hidden states
+        for (i, (inp, w_inp, h_inp, ch_inp)) in enumerate(inputs):
+            with tf.variable_scope('input_{}_calibrate'.format(i)):
+                inp = self._calibrate(inp, w_inp, h_inp, ch_inp, w, h, block_ch)
                 hidden_states.append(inp)
 
         for bi in range(b):
@@ -500,16 +516,16 @@ class TfEnasChild(BaseModel):
 
                 with tf.variable_scope('X1'):
                     if idx1 < len(inputs):
-                        X1 = self._add_op(X1, op1, w >> ds, h >> ds, ch << ds, stride=2)
+                        X1 = self._add_op(X1, op1, w, h, block_ch, stride=2)
                     else:
-                        X1 = self._add_op(X1, op1, w >> (ds + 1), h >> (ds + 1), ch << ds)
+                        X1 = self._add_op(X1, op1, w >> 1, h >> 1, block_ch)
                     X1 = self._add_drop_path(X1, epochs_ratio, layers_ratio, is_train)
 
                 with tf.variable_scope('X2'):
                     if idx2 < len(inputs):
-                        X2 = self._add_op(X2, op2, w >> ds, h >> ds, ch << ds, stride=2)
+                        X2 = self._add_op(X2, op2, w, h, block_ch, stride=2)
                     else:
-                        X2 = self._add_op(X2, op2, w >> (ds + 1), h >> (ds + 1), ch << ds)
+                        X2 = self._add_op(X2, op2, w >> 1, h >> 1, block_ch)
                     X2 = self._add_drop_path(X2, epochs_ratio, layers_ratio, is_train)
                     
                 X = tf.add_n([X1, X2])
@@ -519,22 +535,25 @@ class TfEnasChild(BaseModel):
         # Combine all blocks
         # TODO: Maybe only concat unused blocks
         blocks = hidden_states[len(inputs):]
-        comb_ch = len(blocks) * (ch << ds)
-        out_ch = ch << (ds + 1)
+        comb_ch = len(blocks) * block_ch
         with tf.variable_scope('combine'):
-            X = self._concat(blocks, w >> (ds + 1), h >> (ds + 1), comb_ch, out_ch)
+            X = tf.concat(blocks, axis=3)
 
-        return X
+        X = tf.reshape(X, (-1, w >> 1, h >> 1, comb_ch)) # Sanity shape check
 
-    def _add_normal_cell(self, cell_arch, inputs, w, h, ch, ds, 
-                        epochs_ratio, layers_ratio, is_train):
+        return (X, w >> 1, h >> 1, comb_ch)
+
+    def _add_normal_cell(self, cell_arch, inputs, block_ch, epochs_ratio, layers_ratio, is_train):
         b = len(cell_arch) # no. of blocks
         hidden_states = [] # Stores hidden states for this cell, which includes blocks
 
-        # Downsample inputs as necessary and add them to hidden states
-        for (i, (inp, ds_inp)) in enumerate(inputs):
-            with tf.variable_scope('input_{}_downsample'.format(i)):
-                inp = self._downsample(inp, ds_inp, ds, w, h, ch)
+        # Initial width & height for this cell as the final input
+        (_, w, h, _) = inputs[-1]
+
+        # Calibrate inputs as necessary and add them to hidden states
+        for (i, (inp, w_inp, h_inp, ch_inp)) in enumerate(inputs):
+            with tf.variable_scope('input_{}_calibrate'.format(i)):
+                inp = self._calibrate(inp, w_inp, h_inp, ch_inp, w, h, block_ch)
                 hidden_states.append(inp)
 
         for bi in range(b):
@@ -544,26 +563,27 @@ class TfEnasChild(BaseModel):
                 X2 = hidden_states[idx2]
 
                 with tf.variable_scope('X1'):
-                    X1 = self._add_op(X1, op1, w >> ds, h >> ds, ch << ds)
+                    X1 = self._add_op(X1, op1, w, h, block_ch, stride=1)
                     X1 = self._add_drop_path(X1, epochs_ratio, layers_ratio, is_train)
 
                 with tf.variable_scope('X2'):
-                    X2 = self._add_op(X2, op2, w >> ds, h >> ds, ch << ds)
+                    X2 = self._add_op(X2, op2, w, h, block_ch, stride=1)
                     X2 = self._add_drop_path(X2, epochs_ratio, layers_ratio, is_train)
 
                 X = tf.add_n([X1, X2])
 
             hidden_states.append(X)
 
-        # Combine all hidden states
+        # Combine all blocks
         # TODO: Maybe only concat unused blocks
         blocks = hidden_states[len(inputs):]
-        comb_ch = len(blocks) * (ch << ds)
-        out_ch = ch << ds
+        comb_ch = len(blocks) * block_ch
         with tf.variable_scope('combine'):
-            X = self._concat(blocks, w >> ds, h >> ds, comb_ch, out_ch)
+            X = tf.concat(blocks, axis=3)
 
-        return X
+        X = tf.reshape(X, (-1, w, h, comb_ch)) # Sanity shape check
+
+        return (X, w, h, comb_ch)
 
     def _add_drop_path(self, X, epochs_ratio, layers_ratio, is_train):
         keep_prob = self._knobs['drop_path_keep_prob']
@@ -593,19 +613,7 @@ class TfEnasChild(BaseModel):
         X = ops[op]()
         return X
 
-    def _add_stem_conv(self, X, w, h, in_ch, ch):
-        '''
-        Model's stem layer
-        Converts data to a fixed out channel count of `ch` from 3 RGB channels
-        '''
-        with tf.variable_scope('stem_conv'):
-            W = self._create_weights('W', (3, 3, in_ch, ch))
-            X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding='SAME')
-            X = self._add_batch_norm(X, ch)
-        X = tf.reshape(X, (-1, w, h, ch)) # Sanity shape check
-        return X
-
-
+    
     ####################################
     # Block Ops
     ####################################
@@ -682,19 +690,36 @@ class TfEnasChild(BaseModel):
         X = tf.div(X, keep_prob) * binary_tensor
 
         return X
-    
-    def _concat(self, inputs, in_w, in_h, in_ch, out_ch):
-        '''
-        Concatenate inputs (which must have the same `in_w` x `in_h`) across a combined `in_ch` channels to produce `out_ch` channels
-        '''
-        with tf.variable_scope('concat'):
-            X = tf.concat(inputs, axis=3)
-            X = tf.nn.relu(X)
-            W = self._create_weights('W', (1, 1, in_ch, out_ch))
-            X = tf.nn.conv2d(X, W, strides=(1, 1, 1, 1), padding='SAME')
-            X = self._add_batch_norm(X, out_ch)
 
-        X = tf.reshape(X, (-1, in_w, in_h, out_ch)) # Sanity shape check
+    def _do_conv(self, X, w, h, in_ch, ch, filter_size=1):
+        with tf.variable_scope('unit_conv'):
+            W = self._create_weights('W', (filter_size, filter_size, in_ch, ch))
+            X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding='SAME')
+            X = self._add_batch_norm(X, ch)
+
+        X = tf.reshape(X, (-1, w, h, ch)) # Sanity shape check
+        return X
+
+    def _calibrate(self, X, w, h, ch, w_out, h_out, ch_out):
+        '''
+        Calibrate input of shape (-1, w, h, ch) to (-1, w_out, h_out, ch_out), assuming (w, h) / (w_out, h_out) is power of 2
+        '''
+        # Downsample with factorized reduction
+        downsample_no = 0
+        while w > w_out or h > h_out:
+            downsample_no += 1
+            with tf.variable_scope('downsample_{}x'.format(downsample_no)):
+                X = self._add_factorized_reduction(X, w, h, ch)
+                ch <<= 1
+                w >>= 1
+                h >>= 1
+
+        # Convert channel counts with 1x1 conv
+        if ch != ch_out:
+            with tf.variable_scope('convert_conv'):
+                X = self._do_conv(X, w, h, ch, ch_out, filter_size=1)
+
+        X = tf.reshape(X, (-1, w_out, h_out, ch_out)) # Sanity shape check
         return X
 
     def _add_fully_connected(self, X, in_shape, out_ch):
