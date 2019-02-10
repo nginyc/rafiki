@@ -29,7 +29,7 @@ class RandomAdvisor(BaseAdvisor):
         elif isinstance(knob, FixedKnob):
             return knob.value
         elif isinstance(knob, ListKnob):
-            return [self._propose(knob.items[i]) for i in range(knob.list_len)]
+            return [self._propose(knob.items[i]) for i in range(len(knob))]
         elif isinstance(knob, DynamicListKnob):
             list_len = knob.len_min + int(u * (knob.len_max - knob.len_min + 1))
             return [self._propose(knob.items[i]) for i in range(list_len)]

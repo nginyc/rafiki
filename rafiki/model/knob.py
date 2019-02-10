@@ -170,8 +170,7 @@ class ListKnob(BaseKnob):
     def items(self):
         return self._items
 
-    @property    
-    def list_len(self):
+    def __len__(self):
         return self._list_len
 
     @staticmethod

@@ -22,23 +22,34 @@ class TfEnasChild(BaseModel):
     '''
     @staticmethod
     def get_knob_config():
-        def cell_arch_block(i):
-            return ListKnob(4, items=[
-                CategoricalKnob(list(range(i + 2))), # index 1
-                CategoricalKnob([0, 1, 2, 3, 4]), # op 1
-                CategoricalKnob(list(range(i + 2))), # index 2
-                CategoricalKnob([0, 1, 2, 3, 4]) # op 2
-            ])
+        def cell_arch_item(i, num_blocks):
+            b = i // 4 # block no
+            idx = i % 4 # item index within block
+        
+            # First half of blocks are for normal cell
+            if b < num_blocks:
+                if idx in [0, 2]:
+                    return CategoricalKnob(list(range(b + 2))) # input index 1/2
+                elif idx in [1, 3]:
+                    return CategoricalKnob([0, 1, 2, 3, 4]) # op for input 1/2
+            
+            # Last half of blocks are for reduction cell
+            else:
+                b -= num_blocks # block no
+                if idx in [0, 2]:
+                    return CategoricalKnob(list(range(b + 2))) # input index 1/2
+                elif idx in [1, 3]:
+                    return CategoricalKnob([0, 1, 2, 3, 4]) # op for input 1/2
 
         return {
             'max_image_size': FixedKnob(32),
-            'max_epochs': FixedKnob(10),
+            'max_epochs': FixedKnob(30),
             'batch_size': FixedKnob(64),
             'learning_rate': FixedKnob(0.05), 
             'initial_block_ch': FixedKnob(36),
             'stem_ch': FixedKnob(108),
-            'l2_reg': FixedKnob(2e-4),
-            'dropout_keep_prob': FixedKnob(0.8),
+            'l2_reg': FixedKnob(0),
+            'dropout_keep_prob': FixedKnob(1),
             'opt_momentum': FixedKnob(0.9),
             'use_sgdr': FixedKnob(True),
             'sgdr_alpha': FixedKnob(0.002),
@@ -46,16 +57,15 @@ class TfEnasChild(BaseModel):
             'sgdr_t_mul': FixedKnob(2),  
             'num_layers': FixedKnob(15), 
             'aux_loss_mul': FixedKnob(0.4),
-            'drop_path_keep_prob': FixedKnob(0.6),
-            'cutout_size': FixedKnob(0)
-            # 'normal_cell_arch': DynamicListKnob(1, 12, cell_arch_block),
-            # 'reduction_cell_arch': DynamicListKnob(1, 12, cell_arch_block)
+            'drop_path_keep_prob': FixedKnob(1),
+            'cutout_size': FixedKnob(0),
+            'cell_archs': ListKnob(2 * 5 * 4, lambda i: cell_arch_item(i, 5)),
         }
 
     @staticmethod
     def get_train_config():
         return {
-            'advisor_type': AdvisorType.SKOPT
+            'advisor_type': AdvisorType.ENAS
         }
 
     def __init__(self, **knobs):
@@ -428,10 +438,11 @@ class TfEnasChild(BaseModel):
         return np.asarray(probs)
 
     def _get_arch(self):
-        normal_arch = [[0, 2, 0, 0], [0, 4, 0, 1], [0, 4, 1, 1], [1, 0, 0, 1], [0, 2, 1, 1]]
-        reduction_arch = [[1, 0, 1, 0], [0, 3, 0, 2], [1, 1, 3, 1], [1, 0, 0, 4], [0, 3, 1, 1]]
+        cell_archs = self._knobs['cell_archs']
+        num_blocks = 5
+        normal_arch = [cell_archs[(4 * i):(4 * i + 4)] for i in range(num_blocks)]
+        reduction_arch = [cell_archs[(4 * i):(4 * i + 4)] for i in range(num_blocks, num_blocks + num_blocks)]
         return (normal_arch, reduction_arch)
-
  
     def _add_aux_head(self, X, in_w, in_h, in_ch, K):
         pool_ksize = 5
@@ -515,6 +526,7 @@ class TfEnasChild(BaseModel):
                 X2 = hidden_states[idx2]
 
                 with tf.variable_scope('X1'):
+                    # Don't halve dimensions if X1 is a fellow block
                     if idx1 < len(inputs):
                         X1 = self._add_op(X1, op1, w, h, block_ch, stride=2)
                     else:
@@ -792,7 +804,7 @@ if __name__ == '__main__':
     tune_model(
         TfEnasChild, 
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-        val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-        num_trials=1,
+        val_dataset_uri='data/cifar_10_for_image_classification_train.zip',
+        num_trials=10,
         enable_gpu=True
     )

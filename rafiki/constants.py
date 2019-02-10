@@ -53,6 +53,7 @@ class UserType():
 class AdvisorType():
     SKOPT = 'SKOPT'
     BTB_GP = 'BTB_GP'
+    ENAS = 'ENAS'
     RANDOM = 'RANDOM'
 
 class DatasetType():
