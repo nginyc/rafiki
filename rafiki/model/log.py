@@ -3,6 +3,7 @@ import traceback
 import datetime
 import json
 import logging
+import numpy as np
 
 MODEL_LOG_DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S'
 
@@ -97,7 +98,7 @@ class LoggerUtils():
         
         if metrics:
             self._log(LogType.METRICS, metrics)
-    
+
     # - INTERNAL METHOD -
     # Set the Python logger internally used.
     # During model training, this method will be called by Rafiki to inject a Python logger 
@@ -108,8 +109,17 @@ class LoggerUtils():
     def _log(self, log_type, log_dict={}):
         log_dict['type'] = log_type
         log_dict['time'] = datetime.datetime.now().strftime(MODEL_LOG_DATETIME_FORMAT)
+        log_dict = { k: self._simplify_value(v) for (k, v) in log_dict.items()}
         log_line = json.dumps(log_dict)
         self._logger.info(log_line)
+
+    def _simplify_value(self, value):
+        if isinstance(value, np.int64) or isinstance(value, np.int32):
+            return int(value)
+        elif isinstance(value, np.float64) or isinstance(value, np.float32):
+            return float(value)
+
+        return value
 
     @staticmethod
     # Parses a logged line into a dictionary.

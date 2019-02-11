@@ -189,38 +189,41 @@ class TfEnasChild(BaseModel):
         
         # Compute training loss & accuracy
         tf_vars = self._get_all_variables()
-        loss = self._compute_loss(logits, aux_logits_list, tf_vars, classes)
+        (total_loss, loss, l2_loss, aux_loss) = self._compute_loss(logits, aux_logits_list, tf_vars, classes)
         acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
         # Optimize training loss
-        (train_op, steps, lr) = self._optimize(loss, tf_vars, epoch)
+        (train_op, steps, lr) = self._optimize(total_loss, tf_vars, epoch)
 
-        self._loss = loss
-        self._acc = acc
+        self._monitored_values = {
+            'acc': acc,
+            'loss': loss,
+            'aux_loss': aux_loss,
+            'l2_loss': l2_loss,
+            'lr': lr,
+            'steps': steps
+        }
         self._probs = probs
         self._init_op = dataset_itr.initializer
         self._train_op = train_op
-        self._steps = steps
         self._images_ph = images_ph
         self._classes_ph = classes_ph
         self._tf_vars = tf_vars
         self._is_train_ph = is_train
         self._epoch_ph = epoch
-        self._lr = lr
 
     def _add_logging(self):
         # Log available devices 
         utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
         # Count model parameters
-        tf_vars = self._get_all_variables()
-        model_params_count = self._count_model_parameters(tf_vars)
-        utils.logger.log('Model has {} parameters'.format(model_params_count))
+        # model_params_count = self._count_model_parameters(self._tf_vars
+        # utils.logger.log('Model has {} parameters'.format(model_params_count))
 
         # Make summaries 
-        tf.summary.scalar('loss', self._loss)
-        tf.summary.scalar('accuracy', self._acc)
-        tf.summary.scalar('learning_rate', self._lr)
+        for (name, value) in self._monitored_values.items():
+            tf.summary.scalar(name, value)
+
         self._summary_op = tf.summary.merge_all()
 
     def _inference(self, X, epochs_ratio, is_train):
@@ -373,25 +376,26 @@ class TfEnasChild(BaseModel):
                 self._classes_ph: np.asarray(classes)
             })
 
-            avg_batch_loss, avg_batch_acc, n = 0, 0, 0
+            # To track monitored values
+            (monitored_names, monitored_values) = zip(*self._monitored_values.items())
+
             while True:
                 try:
-                    (batch_loss, batch_acc, steps, summary, _) = self._sess.run(
-                        [self._loss, self._acc, self._steps, self._summary_op, self._train_op],
+                    (_, summary, *values) = self._sess.run(
+                        [self._train_op, self._summary_op, *monitored_values],
                         feed_dict={
                             self._is_train_ph: True,
                             self._epoch_ph: epoch
                         }
                     )
 
-                    # Update batch no, loss & acc
-                    avg_batch_acc = avg_batch_acc * n / (n + 1) + batch_acc / (n + 1)
-                    avg_batch_loss = avg_batch_loss * n / (n + 1) + batch_loss / (n + 1)
                     train_summaries.append(summary)
-                    n += 1
                     
                 except tf.errors.OutOfRangeError:
                     break
+
+            # Print monitored values at end of epoch
+            utils.logger.log(**{ k: v for (k, v) in zip(monitored_names, values) })
 
             # # Determine whether training should stop due to patience
             # if avg_batch_loss < best_loss:
@@ -403,11 +407,6 @@ class TfEnasChild(BaseModel):
             #     if best_loss_patience_count >= best_loss_patience_epochs:
             #         utils.logger.log('Batch loss has not increased for {} epochs'.format(best_loss_patience_epochs))
             #         break
-
-            utils.logger.log(epoch=epoch,
-                            avg_batch_loss=float(avg_batch_loss), 
-                            avg_batch_acc=float(avg_batch_acc),
-                            steps=int(steps))
 
         self._train_summaries = train_summaries
             
@@ -477,20 +476,21 @@ class TfEnasChild(BaseModel):
 
         # Compute sparse softmax cross entropy loss from logits & labels
         log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=classes)
-        total_loss = tf.reduce_mean(log_probs)
+        loss = tf.reduce_mean(log_probs)
 
         # Apply L2 regularization
         l2_losses = [tf.reduce_sum(var ** 2) for var in tf_vars]
-        l2_loss = tf.add_n(l2_losses)
-        total_loss += l2_reg * l2_loss
+        l2_loss = l2_reg * tf.add_n(l2_losses)
 
         # Add loss from auxiliary logits
+        aux_loss = 0
         for aux_logits in aux_logits_list:
             log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=aux_logits, labels=classes)
-            aux_loss = tf.reduce_mean(log_probs)
-            total_loss += aux_loss_mul * aux_loss
+            aux_loss += aux_loss_mul * tf.reduce_mean(log_probs)
 
-        return total_loss
+        total_loss = loss + l2_loss + aux_loss      
+
+        return (total_loss, loss, l2_loss, aux_loss)
 
     def _add_global_pooling(self, X, in_w, in_h, in_ch):
         X = tf.reduce_mean(X, (1, 2))
@@ -804,7 +804,7 @@ if __name__ == '__main__':
     tune_model(
         TfEnasChild, 
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-        val_dataset_uri='data/cifar_10_for_image_classification_train.zip',
+        val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
         num_trials=10,
         enable_gpu=True
     )

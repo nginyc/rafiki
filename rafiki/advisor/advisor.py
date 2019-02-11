@@ -64,7 +64,6 @@ class Advisor():
             raise InvalidAdvisorTypeError()
 
     def _simplify_value(self, value):
-        # TODO: Support int64 & other non-serializable data formats
         if isinstance(value, np.int64) or isinstance(value, np.int32):
             return int(value)
         elif isinstance(value, np.float64) or isinstance(value, np.float32):
