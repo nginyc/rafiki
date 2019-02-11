@@ -1,29 +1,35 @@
 import tensorflow as tf
 import numpy as np
-from rafiki.model import BaseKnob, ListKnob, CategoricalKnob, FixedKnob
-from ..advisor import BaseAdvisor, UnsupportedKnobTypeError
+import bisect
+
+from .. import BaseAdvisor, UnsupportedKnobTypeError, CategoricalKnob, FixedKnob, ListKnob
 
 class EnasAdvisor(BaseAdvisor):
     '''
     Implements the controller of "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
     
     Paper: https://arxiv.org/abs/1802.03268
-    '''   
-    def __init__(self, knob_config):
+    '''
+    def start(self, knob_config):
         self._knob_config = self._validate_knob_config(knob_config)
         self._list_knob_models = self._build_models()
+        self._param_scores = []
 
     def propose(self):
         knobs = {}
         for (name, knob) in self._knob_config.items():
             knobs[name] = self._propose_for_knob(name, knob)
 
-        return knobs
+        param_id = self._propose_params()
+        return (knobs, param_id)
 
-    def feedback(self, knobs, score):
+    def feedback(self, score, knobs, param_id=None):
         for (name, value) in knobs.items():
             knob = self._knob_config[name]
             self._feedback_for_knob(name, knob, value, score)
+    
+        if param_id is not None:
+            self._feedback_for_params(param_id, score)
 
     def _validate_knob_config(self, knob_config):
         for knob in knob_config.values():
@@ -39,6 +45,18 @@ class EnasAdvisor(BaseAdvisor):
                 raise UnsupportedKnobTypeError(knob.__class__)
 
         return knob_config
+
+    def _propose_params(self):
+        # Return params with the best score so far
+        if len(self._param_scores) == 0:
+            return None
+
+        (score, param_id) = self._param_scores[-1]
+
+        return param_id
+
+    def _feedback_for_params(self, param_id, score):
+        bisect.insort(self._param_scores, (score, param_id))
 
     def _feedback_for_knob(self, name, knob, knob_value, score):
         if isinstance(knob, FixedKnob):
@@ -76,6 +94,10 @@ class ListKnobModel():
             self._build_model()
             self._make_train_op()
             self._start_session()
+
+            tf_vars = self._get_all_variables()
+            model_params_count = self._count_model_parameters(tf_vars)
+            print('Model has {} parameters'.format(model_params_count))
 
     def propose(self):
         item_knobs = self._knob.items
@@ -169,13 +191,17 @@ class ListKnobModel():
         item_idxs = []
         item_logits = []
         lstm_states = [None]
-        outputs = [tf.zeros((1, H))]
         for i in range(N):
             K = Ks[i] # No of categories for output
+
             with tf.variable_scope('item_{}'.format(i)):
+                # Run previous item index through embedding lookup (`K` if first index)
+                prev_item_idx = item_idxs[-1] if len(item_idxs) > 0 else K
+                embeds = self._make_var('W_embeds', (K + 1, H)) 
+                prev_item_embed = tf.reshape(tf.nn.embedding_lookup(embeds, prev_item_idx), (1, -1))
+
                 # Run input through LSTM to get output
-                (X, lstm_state) = self._apply_lstm(outputs[-1], lstm, H, prev_state=lstm_states[-1])
-                outputs.append(X)
+                (X, lstm_state) = self._apply_lstm(prev_item_embed, lstm, H, prev_state=lstm_states[-1])
                 lstm_states.append(lstm_state)
 
                 # Add fully connected layer and transform to `K` channels
@@ -185,8 +211,6 @@ class ListKnobModel():
                 # Draw and save item index from probability distribution by `X`
                 item_idx = self._sample_from_logits(logits)
                 item_idxs.append(item_idx)
-
-                # TODO: Add item embeddings
 
         self._item_idxs = item_idxs
         self._item_logits = item_logits
@@ -212,19 +236,28 @@ class ListKnobModel():
         idx = tf.multinomial(tf.reshape(logits, (1, -1)), 1)[0][0]
         return idx
 
+    def _count_model_parameters(self, tf_vars):
+        num_params = 0
+        # print('Model parameters:')
+        for var in tf_vars:
+            # print(var)
+            num_params += np.prod([dim.value for dim in var.get_shape()])
+
+        return num_params
+
     def _add_fully_connected(self, X, in_shape, out_ch):
         with tf.variable_scope('fully_connected'):
             ch = np.prod(in_shape)
             X = tf.reshape(X, (-1, ch))
-            W = self._create_weights('W', (ch, out_ch))
-            b = self._create_weights('b', (1, out_ch))
+            W = self._make_var('W', (ch, out_ch))
+            b = self._make_var('b', (1, out_ch))
             X = tf.matmul(X, W) + b
         X = tf.reshape(X, (-1, out_ch)) # Sanity shape check
         return X
 
     def _apply_lstm(self, X, lstm, H, prev_state=None):
         '''
-        Assumes 1 time step.
+        Assumes 1 time step
         '''
         N = tf.shape(X)[0]
         prev_state = prev_state if prev_state is not None else lstm.zero_state(N, dtype=tf.float32)
@@ -248,7 +281,7 @@ class ListKnobModel():
         lstm = tf.nn.rnn_cell.MultiRNNCell(lstm_cells)
         return lstm
 
-    def _create_weights(self, name, shape, initializer=None):
+    def _make_var(self, name, shape, initializer=None):
         if initializer is None:
             initializer = tf.random_uniform_initializer(minval=-0.1, maxval=0.1)
         return tf.get_variable(name, shape, initializer=initializer)

@@ -1,12 +1,11 @@
 import random
-from rafiki.model import BaseKnob, FloatKnob, IntegerKnob, CategoricalKnob, FixedKnob, DynamicListKnob, ListKnob
-from ..advisor import BaseAdvisor, UnsupportedKnobTypeError
+from .. import BaseAdvisor, UnsupportedKnobTypeError, FloatKnob, IntegerKnob, CategoricalKnob, FixedKnob, DynamicListKnob, ListKnob
 
 class RandomAdvisor(BaseAdvisor):
     '''
     Advisor that randomly chooses knobs with no mathematical guarantee. 
     '''   
-    def __init__(self, knob_config):
+    def start(self, knob_config):
         self._knob_config = knob_config
 
     def propose(self):

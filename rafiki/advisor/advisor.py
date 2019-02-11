@@ -1,32 +1,35 @@
 import abc
 import numpy as np
 
-from rafiki.constants import AdvisorType
-
-class InvalidAdvisorTypeError(Exception): pass
 class UnsupportedKnobTypeError(Exception): pass
 
 class BaseAdvisor(abc.ABC):
     '''
-    Rafiki's base advisor class
+    Rafiki's base advisor class.
     '''   
     @abc.abstractmethod
-    def __init__(self, knob_config):
+    def start(self, knob_config: dict):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def propose(self):
+    def propose(self) -> (dict, str):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def feedback(self, knobs, score):
+    def feedback(self, score: float, knobs: dict, param_id: str = None):
         raise NotImplementedError()
 
 # Generalized Advisor class that wraps & hides implementation-specific advisor class
 class Advisor():
-    def __init__(self, knob_config, advisor_type):
-        self._advisor = self._make_advisor(knob_config, advisor_type)
+    def __init__(self, knob_config, advisor=None):
+        # Default advisor as `SkoptAdvisor`
+        if advisor is None:
+            from .types.skopt_advisor import SkoptAdvisor
+            advisor = SkoptAdvisor() 
+
+        self._advisor = advisor
         self._knob_config = knob_config
+        advisor.start(knob_config)
 
     @property
     def knob_config(self):
@@ -46,22 +49,6 @@ class Advisor():
 
     def feedback(self, knobs, score):
         self._advisor.feedback(knobs, score)
-
-    def _make_advisor(self, knob_config, advisor_type):
-        if advisor_type == AdvisorType.SKOPT:
-            from .types.skopt_advisor import SkoptAdvisor
-            return SkoptAdvisor(knob_config)
-        elif advisor_type == AdvisorType.BTB_GP:
-            from .types.btb_gp_advisor import BtbGpAdvisor
-            return BtbGpAdvisor(knob_config)
-        elif advisor_type == AdvisorType.ENAS:
-            from .types.enas_advisor import EnasAdvisor
-            return EnasAdvisor(knob_config)
-        elif advisor_type == AdvisorType.RANDOM:
-            from .types.random_advisor import RandomAdvisor
-            return RandomAdvisor(knob_config)
-        else:
-            raise InvalidAdvisorTypeError()
 
     def _simplify_value(self, value):
         if isinstance(value, np.int64) or isinstance(value, np.int32):

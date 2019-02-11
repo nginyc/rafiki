@@ -49,13 +49,7 @@ class UserType():
     MODEL_DEVELOPER = 'MODEL_DEVELOPER'
     APP_DEVELOPER = 'APP_DEVELOPER'
     USER = 'USER'
-
-class AdvisorType():
-    SKOPT = 'SKOPT'
-    BTB_GP = 'BTB_GP'
-    ENAS = 'ENAS'
-    RANDOM = 'RANDOM'
-
+    
 class DatasetType():
     IMAGE_FILES = 'IMAGE_FILES'
 

@@ -7,11 +7,10 @@ import uuid
 from importlib import import_module
 import inspect
 
-from rafiki.advisor import Advisor, AdvisorType
+from rafiki.advisor import Advisor, BaseAdvisor, BaseKnob, serialize_knob_config, deserialize_knob_config
+from rafiki.advisor.types.skopt_advisor import SkoptAdvisor
 from rafiki.predictor import ensemble_predictions
 from rafiki.constants import TaskType, ModelDependency
-
-from .knob import BaseKnob, serialize_knob_config, deserialize_knob_config
 
 class InvalidModelClassException(Exception): pass
 class InvalidModelParamsException(Exception): pass
@@ -20,7 +19,7 @@ class BaseModel(abc.ABC):
     '''
     Rafiki's base model class that Rafiki models should extend. 
     Rafiki models should implement all abstract methods according to their associated tasks' specifications,
-    together with the static methods ``get_knob_config()`` and ``get_train_config()`` (optional).
+    together with the static methods ``get_knob_config()`` and ``get_advisor()`` (optional).
 
     In the model's ``__init__`` method, call ``super().__init__(**knobs)`` as the first line, 
     followed by the model's initialization logic. The model should be initialize itself with ``knobs``, 
@@ -55,16 +54,13 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @staticmethod
-    def get_train_config():
+    def get_advisor() -> BaseAdvisor:
         '''
-        Return a dictionary defining how this model class should be trained & tuned.
+        Return the advisor to use for tuning this model.
 
-        :returns: Dictionary defining this model's training configuration 
-        :rtype: dict[str, str]
+        :rtype: BaseAdvisor
         '''
-        return {
-            'advisor_type': None
-        }
+        return SkoptAdvisor() 
 
     @abc.abstractmethod
     def train(self, dataset_uri):
@@ -142,35 +138,37 @@ def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_ur
     '''
     # Retrieve config of model
     knob_config = py_model_class.get_knob_config()
-    train_config = py_model_class.get_train_config()
+    advisor = py_model_class.get_advisor()
+    advisor.start(knob_config)
     
-    # Init advisor
-    advisor_type = train_config.get('advisor_type', AdvisorType.SKOPT)
-    print('Creating advisor of type "{}"...'.format(advisor_type))
-    advisor = Advisor(knob_config, advisor_type)
-
+    # Variables to track over trials
     best_score = 0
     best_model_inst = None
+    trial_to_params_dir = {}
 
     # For every trial
     for i in range(1, num_trials + 1):
         trial_id = str(uuid.uuid4())
         _print_header('Trial #{} (ID: "{}")'.format(i, trial_id))
         
-        # Generate knobs
-        knobs = advisor.propose()
+        # Generate proposal from advisor
+        (knobs, train_params_trial_id) = advisor.propose()
         print('Knobs:', knobs)
+        if train_params_trial_id is not None:
+            print('Training on parameters from trial of ID: "{}"'.format(train_params_trial_id))
+
+        # Load model
         model_inst = py_model_class(**knobs)
 
         # Train model
         print('Training model...')
-        model_inst.train(train_dataset_uri)
+        params_dir = trial_to_params_dir[train_params_trial_id] if train_params_trial_id is not None else None
+        model_inst.train(train_dataset_uri, params_dir)
 
         # Evaluate model
         print('Evaluating model...')
         score = model_inst.evaluate(val_dataset_uri)
         print('Score:', score)
-        advisor.feedback(knobs, score)
 
         # Update best model
         if score > best_score:
@@ -184,7 +182,11 @@ def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_ur
         if not os.path.exists(params_dir):
             os.mkdir(params_dir)
         model_inst.save_parameters(params_dir)
+        trial_to_params_dir[trial_id] = params_dir
         print('Model parameters saved in {}'.format(params_dir))
+
+        # Feedback to advisor
+        advisor.feedback(score, knobs, trial_id)
     
     return best_model_inst
     
@@ -231,13 +233,14 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
         _print_header('Checking model configuration...')
         knob_config = py_model_class.get_knob_config()
         _check_knob_config(knob_config)
-        train_config = py_model_class.get_train_config()
-        advisor_type = train_config.get('advisor_type', AdvisorType.SKOPT)
-        advisor = Advisor(knob_config, advisor_type)
+
+        _print_header('Checking model\'s advisor..')
+        advisor = py_model_class.get_advisor()
+        advisor.start(knob_config)
+        if knobs is None: 
+            (knobs, _) = advisor.propose()
 
         _print_header('Checking model initialization...')
-        if knobs is None: 
-            knobs = advisor.propose()
         print('Using knobs: {}'.format(knobs))
         model_inst = py_model_class(**knobs)
         _check_model_inst(model_inst)

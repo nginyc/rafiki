@@ -1,18 +1,16 @@
-from btb.tuning import GP
-from btb import HyperParameter, ParamTypes
+import btb
 
-from rafiki.model import BaseKnob, FloatKnob, IntegerKnob, CategoricalKnob, FixedKnob
-from ..advisor import BaseAdvisor, UnsupportedKnobTypeError
+from .. import BaseAdvisor, UnsupportedKnobTypeError, FloatKnob, IntegerKnob, CategoricalKnob, FixedKnob
 
 class BtbGpAdvisor(BaseAdvisor):
     '''
     Uses BTB's GP tuner
     '''   
-    def __init__(self, knob_config):
+    def start(self, knob_config):
         tunables = self._get_tunables(knob_config)
 
         # TODO: Allow configuration of tuner
-        self._tuner = GP(tunables=tunables)
+        self._tuner = btb.tuning.GP(tunables=tunables)
 
     def propose(self):
         knobs = self._tuner.propose()
@@ -32,31 +30,31 @@ class BtbGpAdvisor(BaseAdvisor):
 def _knob_to_tunable(knob):
     if isinstance(knob, CategoricalKnob):
         if knob.value_type is int:
-            return HyperParameter(ParamTypes.INT_CAT, knob.values)
+            return btb.HyperParameter(btb.ParamTypes.INT_CAT, knob.values)
         elif knob.value_type is float:
-            return HyperParameter(ParamTypes.FLOAT_CAT, knob.values)
+            return btb.HyperParameter(btb.ParamTypes.FLOAT_CAT, knob.values)
         elif knob.value_type is str:
-            return HyperParameter(ParamTypes.STRING, knob.values)
+            return btb.HyperParameter(btb.ParamTypes.STRING, knob.values)
         elif knob.value_type is bool:
-            return HyperParameter(ParamTypes.BOOL, knob.values)
+            return btb.HyperParameter(btb.ParamTypes.BOOL, knob.values)
     elif isinstance(knob, FixedKnob):
         if knob.value_type is int:
-            return HyperParameter(ParamTypes.INT_CAT, [knob.value])
+            return btb.HyperParameter(btb.ParamTypes.INT_CAT, [knob.value])
         elif knob.value_type is float:
-            return HyperParameter(ParamTypes.FLOAT_CAT, [knob.value])
+            return btb.HyperParameter(btb.ParamTypes.FLOAT_CAT, [knob.value])
         elif knob.value_type is str:
-            return HyperParameter(ParamTypes.STRING, [knob.value])
+            return btb.HyperParameter(btb.ParamTypes.STRING, [knob.value])
         elif knob.value_type is bool:
-            return HyperParameter(ParamTypes.BOOL, [knob.value])
+            return btb.HyperParameter(btb.ParamTypes.BOOL, [knob.value])
     elif isinstance(knob, IntegerKnob):
         if knob.is_exp:
-            return HyperParameter(ParamTypes.INT_EXP, [knob.value_min, knob.value_max])
+            return btb.HyperParameter(btb.ParamTypes.INT_EXP, [knob.value_min, knob.value_max])
         else:
-            return HyperParameter(ParamTypes.INT, [knob.value_min, knob.value_max])
+            return btb.HyperParameter(btb.ParamTypes.INT, [knob.value_min, knob.value_max])
     elif isinstance(knob, FloatKnob):
         if knob.is_exp:
-            return HyperParameter(ParamTypes.FLOAT_EXP, [knob.value_min, knob.value_max])
+            return btb.HyperParameter(btb.ParamTypes.FLOAT_EXP, [knob.value_min, knob.value_max])
         else:
-            return HyperParameter(ParamTypes.FLOAT, [knob.value_min, knob.value_max])
+            return btb.HyperParameter(btb.ParamTypes.FLOAT, [knob.value_min, knob.value_max])
     else:
         raise UnsupportedKnobTypeError(knob.__class__)

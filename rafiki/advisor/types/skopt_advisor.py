@@ -1,14 +1,14 @@
 from skopt.space import Real, Integer, Categorical
 from skopt.optimizer import Optimizer
-
-from rafiki.model import BaseKnob, FloatKnob, IntegerKnob, CategoricalKnob, FixedKnob
-from ..advisor import BaseAdvisor, UnsupportedKnobTypeError
+    
+from .. import BaseAdvisor, UnsupportedKnobTypeError, BaseAdvisor, FloatKnob, IntegerKnob, CategoricalKnob, FixedKnob
 
 class SkoptAdvisor(BaseAdvisor):
     '''
     Uses `skopt`'s `Optimizer`
     '''   
-    def __init__(self, knob_config):
+
+    def start(self, knob_config):
         self._dimensions = self._get_dimensions(knob_config)
         self._optimizer = Optimizer(list(self._dimensions.values()))
 

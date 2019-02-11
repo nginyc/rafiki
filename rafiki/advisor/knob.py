@@ -79,8 +79,12 @@ class FixedKnob(BaseKnob):
             value_type = bool
         elif isinstance(value, str):
             value_type = str
+        elif isinstance(value, list):
+            value_type = list
+            for x in value:
+                FixedKnob._validate_value(x)
         else:
-            raise TypeError('Only the following types for `value` are supported: `int`, `float`, `bool`, `str`')
+            raise TypeError('Only the following types for `value` are supported: `int`, `float`, `bool`, `str`, `list`')
         
         return (value_type)
 

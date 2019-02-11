@@ -9,10 +9,10 @@ import numpy as np
 import base64
 
 from rafiki.config import APP_MODE
-from rafiki.model import BaseModel, InvalidModelParamsException, tune_model, \
-                        IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, \
-                        ListKnob, DynamicListKnob, utils
-from rafiki.constants import TaskType, ModelDependency, AdvisorType
+from rafiki.advisor import IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, ListKnob
+from rafiki.advisor.types.enas_advisor import EnasAdvisor
+from rafiki.model import utils, InvalidModelParamsException, tune_model, BaseModel
+from rafiki.constants import TaskType, ModelDependency
 
 class TfEnasChild(BaseModel):
     '''
@@ -43,7 +43,7 @@ class TfEnasChild(BaseModel):
 
         return {
             'max_image_size': FixedKnob(32),
-            'max_epochs': FixedKnob(30),
+            'max_epochs': FixedKnob(10),
             'batch_size': FixedKnob(64),
             'learning_rate': FixedKnob(0.05), 
             'initial_block_ch': FixedKnob(36),
@@ -59,27 +59,28 @@ class TfEnasChild(BaseModel):
             'aux_loss_mul': FixedKnob(0.4),
             'drop_path_keep_prob': FixedKnob(0.6),
             'cutout_size': FixedKnob(0),
-            'cell_archs': FixedKnob([
-                # Normal
-                0, 2, 0, 0, 
-                0, 4, 0, 1, 
-                0, 4, 1, 1, 
-                1, 0, 0, 1, 
-                0, 2, 1, 1,
-                # Reduction
-                1, 0, 1, 0,
-                0, 3, 0, 2,
-                1, 1, 3, 1,
-                1, 0, 0, 4,
-                0, 3, 1, 1
-            ]) # ListKnob(2 * 5 * 4, lambda i: cell_arch_item(i, 5)),
+            'cell_archs': ListKnob(2 * 5 * 4, lambda i: cell_arch_item(i, 5)) 
         }
+        '''
+        FixedKnob([
+            # Normal
+            0, 2, 0, 0, 
+            0, 4, 0, 1, 
+            0, 4, 1, 1, 
+            1, 0, 0, 1, 
+            0, 2, 1, 1,
+            # Reduction
+            1, 0, 1, 0,
+            0, 3, 0, 2,
+            1, 1, 3, 1,
+            1, 0, 0, 4,
+            0, 3, 1, 1
+        ]) 
+        '''
 
     @staticmethod
-    def get_train_config():
-        return {
-            'advisor_type': AdvisorType.ENAS
-        }
+    def get_advisor():
+        return EnasAdvisor()
 
     def __init__(self, **knobs):
         super().__init__(**knobs)
@@ -87,7 +88,7 @@ class TfEnasChild(BaseModel):
         self._graph = tf.Graph()
         self._sess = None
         
-    def train(self, dataset_uri):
+    def train(self, dataset_uri, train_params_dir):
         max_image_size = self._knobs['max_image_size']
 
         dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
@@ -104,6 +105,10 @@ class TfEnasChild(BaseModel):
         with self._graph.as_default():
             self._build_model()
             self._init_session()
+
+            if train_params_dir is not None:
+                self._restore_tf_vars(train_params_dir)
+
             self._add_logging()
             self._train_model(images, classes)
             utils.logger.log('Evaluating model on train dataset...')
@@ -143,10 +148,8 @@ class TfEnasChild(BaseModel):
             self._sess.close()
 
     def save_parameters(self, params_dir):
-        # Save model
-        model_file_path = os.path.join(params_dir, 'model')
-        saver = tf.train.Saver(self._tf_vars)
-        saver.save(self._sess, model_file_path) 
+        # Save model parameters
+        self._save_tf_vars(params_dir)
 
         # Save pre-processing params
         train_params_file_path = os.path.join(params_dir, 'train_params.json')
@@ -172,8 +175,41 @@ class TfEnasChild(BaseModel):
 
         # Load model parameters
         self._init_session()
+        self._restore_tf_vars(params_dir, restore_all=True)
+    
+    def _save_tf_vars(self, params_dir):
+        tf_vars = self._tf_vars
+
+        # Save list of shared variable names
+        shared_tf_vars = [x.name for x in tf_vars if '__SHARED__' in x.name]
+        shared_tf_vars_file_path = os.path.join(params_dir, 'shared_tf_vars.json')
+        with open(shared_tf_vars_file_path, 'w') as f:
+            f.write(json.dumps(shared_tf_vars))
+
+        # Save all model parameters
         model_file_path = os.path.join(params_dir, 'model')
-        saver = tf.train.Saver(self._tf_vars)
+        saver = tf.train.Saver(tf_vars)
+        saver.save(self._sess, model_file_path)
+
+    def _restore_tf_vars(self, params_dir, restore_all=False):
+        tf_vars = self._tf_vars
+        tf_vars_to_restore = tf_vars
+
+        if not restore_all:
+            # Load list of shared variable names
+            shared_tf_vars_file_path = os.path.join(params_dir, 'shared_tf_vars.json')
+            with open(shared_tf_vars_file_path, 'r') as f:
+                json_str = f.read()
+                shared_tf_vars = json.loads(json_str)
+
+            # Only to restore common shared variables
+            shared_tf_vars = set(shared_tf_vars)
+            tf_vars_to_restore = [x for x in tf_vars if x.name in shared_tf_vars]
+
+        # Restore model parameters
+        print('Restoring {} / {} common variables...'.format(len(tf_vars_to_restore), len(tf_vars)))
+        model_file_path = os.path.join(params_dir, 'model')
+        saver = tf.train.Saver(tf_vars_to_restore)
         saver.restore(self._sess, model_file_path)
 
     def _build_model(self):
@@ -254,7 +290,7 @@ class TfEnasChild(BaseModel):
         reduction_layers = [L // 3, L // 3 * 2 + 1] # Layers with reduction cells (otherwise, normal cells)
         aux_head_layers = [reduction_layers[-1] + 1] # Layers with auxiliary heads
 
-        # Stores previous layers. layers[i] = (<previous layer (i - 1) as input to layer i>, <# of downsamples>)
+        # Stores previous layers. layers[i] = (<previous layer (i - 1) as input to layer i>, <width>, <height>, <channels>)
         layers = []
         aux_logits_list = [] # Stores list of logits from aux heads
 
@@ -673,8 +709,8 @@ class TfEnasChild(BaseModel):
                 stack_stride = stride if stack_no == 0 else 1 
 
                 with tf.variable_scope('stack_{}'.format(stack_no)):
-                    W_d = self._create_weights('W_d', (filter_size, filter_size, ch, ch_mul))
-                    W_p = self._create_weights('W_p', (1, 1, ch_mul * ch, ch))
+                    W_d = self._make_var('W_d', (filter_size, filter_size, ch, ch_mul))
+                    W_p = self._make_var('W_p', (1, 1, ch_mul * ch, ch))
                     X = tf.nn.relu(X)
                     X = tf.nn.separable_conv2d(X, W_d, W_p, strides=(1, stack_stride, stack_stride, 1), padding='SAME')
                     X = self._add_batch_norm(X, ch)
@@ -684,7 +720,7 @@ class TfEnasChild(BaseModel):
 
     def _add_conv_op(self, X, w, h, ch, filter_size, stride):
         with tf.variable_scope('conv_op'):
-            W = self._create_weights('W', (filter_size, filter_size, ch, ch))
+            W = self._make_var('W', (filter_size, filter_size, ch, ch))
             X = tf.nn.relu(X)
             X = tf.nn.conv2d(X, W, strides=[1, stride, stride, 1], padding='SAME')
             X = self._add_batch_norm(X, ch)
@@ -728,7 +764,7 @@ class TfEnasChild(BaseModel):
 
     def _do_conv(self, X, w, h, in_ch, ch, filter_size=1, do_relu=False):
         with tf.variable_scope('conv'):
-            W = self._create_weights('W', (filter_size, filter_size, in_ch, ch))
+            W = self._make_var('W', (filter_size, filter_size, in_ch, ch))
             if do_relu:
                 X = tf.nn.relu(X)
             X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding='SAME')
@@ -763,7 +799,7 @@ class TfEnasChild(BaseModel):
         with tf.variable_scope('fully_connected'):
             ch = np.prod(in_shape)
             X = tf.reshape(X, (-1, ch))
-            W = self._create_weights('W', (ch, out_ch))
+            W = self._make_var('W', (ch, out_ch))
             X = tf.matmul(X, W)
 
         X = tf.reshape(X, (-1, out_ch)) # Sanity shape check
@@ -782,9 +818,9 @@ class TfEnasChild(BaseModel):
             half_2 = tf.nn.avg_pool(shifted_X, ksize=(1, 1, 1, 1), strides=(1, 2, 2, 1), padding='VALID')
 
             # Apply 1 x 1 convolution to each half separately
-            W_half_1 = self._create_weights('W_half_1', (1, 1, in_ch, in_ch))
+            W_half_1 = self._make_var('W_half_1', (1, 1, in_ch, in_ch))
             X_half_1 = tf.nn.conv2d(half_1, W_half_1, (1, 1, 1, 1), padding='SAME')
-            W_half_2 = self._create_weights('W_half_2', (1, 1, in_ch, in_ch))
+            W_half_2 = self._make_var('W_half_2', (1, 1, in_ch, in_ch))
             X_half_2 = tf.nn.conv2d(half_2, W_half_2, (1, 1, 1, 1), padding='SAME')
             
             # Concat both halves across channels
@@ -799,9 +835,9 @@ class TfEnasChild(BaseModel):
 
     def _add_batch_norm(self, X, in_ch, decay=0.9, epsilon=1e-5):
         with tf.variable_scope('batch_norm'):
-            offset = tf.get_variable('offset', (in_ch,), 
+            offset = self._make_var('offset', (in_ch,),
                                     initializer=tf.constant_initializer(0.0, dtype=tf.float32))
-            scale = tf.get_variable('scale', (in_ch,), 
+            scale = self._make_var('scale', (in_ch,), 
                                     initializer=tf.constant_initializer(1.0, dtype=tf.float32))
             moving_mean = tf.get_variable('moving_mean', (in_ch,), trainable=False, 
                                         initializer=tf.constant_initializer(0.0, dtype=tf.float32))
@@ -816,9 +852,17 @@ class TfEnasChild(BaseModel):
 
             return X
 
-    def _create_weights(self, name, shape, initializer=None):
+    def _make_var(self, name, shape, no_share=False, initializer=None):
+        # Ensure that name is unique by shape too
+        name += '-shape-{}'.format('x'.join([str(x) for x in shape]))
+
+        # Mark var as shared
+        if not no_share:
+            name += '-__SHARED__'
+
         if initializer is None:
             initializer = tf.contrib.keras.initializers.he_normal()
+
         return tf.get_variable(name, shape, initializer=initializer)
     
     def _get_all_variables(self):
@@ -830,6 +874,6 @@ if __name__ == '__main__':
         TfEnasChild, 
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
         val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-        num_trials=1,
+        num_trials=10,
         enable_gpu=True
     )
