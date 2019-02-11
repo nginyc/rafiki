@@ -48,8 +48,8 @@ class TfEnasChild(BaseModel):
             'learning_rate': FixedKnob(0.05), 
             'initial_block_ch': FixedKnob(36),
             'stem_ch': FixedKnob(108),
-            'l2_reg': FixedKnob(0),
-            'dropout_keep_prob': FixedKnob(1),
+            'l2_reg': FixedKnob(2e-4),
+            'dropout_keep_prob': FixedKnob(0.8),
             'opt_momentum': FixedKnob(0.9),
             'use_sgdr': FixedKnob(True),
             'sgdr_alpha': FixedKnob(0.002),
@@ -57,9 +57,22 @@ class TfEnasChild(BaseModel):
             'sgdr_t_mul': FixedKnob(2),  
             'num_layers': FixedKnob(15), 
             'aux_loss_mul': FixedKnob(0.4),
-            'drop_path_keep_prob': FixedKnob(1),
+            'drop_path_keep_prob': FixedKnob(0.6),
             'cutout_size': FixedKnob(0),
-            'cell_archs': ListKnob(2 * 5 * 4, lambda i: cell_arch_item(i, 5)),
+            'cell_archs': FixedKnob([
+                # Normal
+                0, 2, 0, 0, 
+                0, 4, 0, 1, 
+                0, 4, 1, 1, 
+                1, 0, 0, 1, 
+                0, 2, 1, 1,
+                # Reduction
+                1, 0, 1, 0,
+                0, 3, 0, 2,
+                1, 1, 3, 1,
+                1, 0, 0, 4,
+                0, 3, 1, 1
+            ]) # ListKnob(2 * 5 * 4, lambda i: cell_arch_item(i, 5)),
         }
 
     @staticmethod
@@ -217,8 +230,8 @@ class TfEnasChild(BaseModel):
         utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
         # Count model parameters
-        # model_params_count = self._count_model_parameters(self._tf_vars
-        # utils.logger.log('Model has {} parameters'.format(model_params_count))
+        model_params_count = self._count_model_parameters(self._tf_vars)
+        utils.logger.log('Model has {} parameters'.format(model_params_count))
 
         # Make summaries 
         for (name, value) in self._monitored_values.items():
@@ -446,26 +459,36 @@ class TfEnasChild(BaseModel):
     def _add_aux_head(self, X, in_w, in_h, in_ch, K):
         pool_ksize = 5
         pool_stride = 2
-        conv_out_ch = in_ch
+        conv_ch = 128
+        global_conv_ch = 768
+
+        w = in_w
+        h = in_h
+        ch = in_ch
 
         # Pool
         with tf.variable_scope('pool'):
             X = tf.nn.relu(X)
             X = tf.nn.avg_pool(X, ksize=(1, pool_ksize, pool_ksize, 1), strides=(1, pool_stride, pool_stride, 1), 
                             padding='SAME')
-        
+        w //= pool_stride
+        h //= pool_stride
+
         # Conv 1x1
-        with tf.variable_scope('conv'):
-            W = self._create_weights('W', (1, 1, in_ch, conv_out_ch)) 
-            X = tf.nn.conv2d(X, W, strides=(1, 1, 1, 1), padding='SAME')
-            X = self._add_batch_norm(X, conv_out_ch)
-            X = tf.nn.relu(X)
+        with tf.variable_scope('conv_0'):
+            X = self._do_conv(X, w, h, ch, conv_ch, filter_size=1, do_relu=True)
+        ch = conv_ch
+
+        # Global conv
+        with tf.variable_scope('conv_1'):
+            X = self._do_conv(X, w, h, ch, global_conv_ch, filter_size=w, do_relu=True)
+        ch = global_conv_ch
         
         # Global pooling
-        X = self._add_global_pooling(X, in_w // pool_stride, in_h // pool_stride, conv_out_ch)
+        X = self._add_global_pooling(X, w, h, ch)
 
         # Fully connected
-        X = self._add_fully_connected(X, (conv_out_ch,), K)
+        X = self._add_fully_connected(X, (ch,), K)
         logits = tf.nn.softmax(X)
 
         return logits
@@ -499,9 +522,9 @@ class TfEnasChild(BaseModel):
 
     def _count_model_parameters(self, tf_vars):
         num_params = 0
-        utils.logger.log('Model parameters:')
+        # utils.logger.log('Model parameters:')
         for var in tf_vars:
-            utils.logger.log(str(var))
+            # utils.logger.log(str(var))
             num_params += np.prod([dim.value for dim in var.get_shape()])
 
         return num_params
@@ -703,9 +726,11 @@ class TfEnasChild(BaseModel):
 
         return X
 
-    def _do_conv(self, X, w, h, in_ch, ch, filter_size=1):
-        with tf.variable_scope('unit_conv'):
+    def _do_conv(self, X, w, h, in_ch, ch, filter_size=1, do_relu=False):
+        with tf.variable_scope('conv'):
             W = self._create_weights('W', (filter_size, filter_size, in_ch, ch))
+            if do_relu:
+                X = tf.nn.relu(X)
             X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding='SAME')
             X = self._add_batch_norm(X, ch)
 
@@ -729,7 +754,7 @@ class TfEnasChild(BaseModel):
         # Convert channel counts with 1x1 conv
         if ch != ch_out:
             with tf.variable_scope('convert_conv'):
-                X = self._do_conv(X, w, h, ch, ch_out, filter_size=1)
+                X = self._do_conv(X, w, h, ch, ch_out, filter_size=1, do_relu=True)
 
         X = tf.reshape(X, (-1, w_out, h_out, ch_out)) # Sanity shape check
         return X
@@ -805,6 +830,6 @@ if __name__ == '__main__':
         TfEnasChild, 
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
         val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-        num_trials=10,
+        num_trials=1,
         enable_gpu=True
     )
