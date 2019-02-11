@@ -62,6 +62,7 @@ class TfEnasChild(BaseModel):
             'cell_archs': ListKnob(2 * 5 * 4, lambda i: cell_arch_item(i, 5)) 
         }
         '''
+        # ENAS
         FixedKnob([
             # Normal
             0, 2, 0, 0, 
@@ -76,6 +77,22 @@ class TfEnasChild(BaseModel):
             1, 0, 0, 4,
             0, 3, 1, 1
         ]) 
+
+        # NASNET
+        FixedKnob([
+            # Normal
+            1, 0, 1, 4,
+            0, 0, 1, 1,
+            1, 2, 0, 4,
+            0, 2, 0, 2,
+            0, 1, 0, 0,
+            # Reduction
+            0, 5, 1, 1,
+            1, 3, 0, 5,
+            1, 2, 0, 1,
+            1, 3, 2, 1,
+            2, 2, 3, 4
+        ])
         '''
 
     @staticmethod
@@ -207,7 +224,7 @@ class TfEnasChild(BaseModel):
             tf_vars_to_restore = [x for x in tf_vars if x.name in shared_tf_vars]
 
         # Restore model parameters
-        print('Restoring {} / {} common variables...'.format(len(tf_vars_to_restore), len(tf_vars)))
+        utils.logger.log('Restoring {} / {} common variables...'.format(len(tf_vars_to_restore), len(tf_vars)))
         model_file_path = os.path.join(params_dir, 'model')
         saver = tf.train.Saver(tf_vars_to_restore)
         saver.restore(self._sess, model_file_path)
@@ -678,8 +695,9 @@ class TfEnasChild(BaseModel):
             2: lambda: self._add_avg_pool_op(X, w, h, ch, filter_size=3, stride=stride),
             3: lambda: self._add_max_pool_op(X, w, h, ch, filter_size=3, stride=stride),
             4: lambda: self._add_max_pool_op(X, w, h, ch, filter_size=1, stride=stride), # identity
-            5: lambda: self._add_conv_op(X, w, h, ch, filter_size=3, stride=stride),
-            6: lambda: self._add_conv_op(X, w, h, ch, filter_size=5, stride=stride)
+            5: lambda: self._add_separable_conv_op(X, w, h, ch, filter_size=7, stride=stride),
+            6: lambda: self._add_conv_op(X, w, h, ch, filter_size=3, stride=stride),
+            7: lambda: self._add_conv_op(X, w, h, ch, filter_size=5, stride=stride)
         }
         X = ops[op]()
         return X
