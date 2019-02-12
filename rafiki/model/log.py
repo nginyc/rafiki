@@ -94,9 +94,10 @@ class LoggerUtils():
         :type metrics: dict[str, int|float]
         '''
         if msg:
-            self._log(LogType.MESSAGE, { 'message': msg })
+            self._log(LogType.MESSAGE, { 'message': str(msg) })
         
         if metrics:
+            metrics = self._validate_metrics(metrics)
             self._log(LogType.METRICS, metrics)
 
     # - INTERNAL METHOD -
@@ -106,19 +107,25 @@ class LoggerUtils():
     def set_logger(self, logger):
         self._logger = logger
 
+    def _validate_metrics(self, metrics):
+        return { n: self._validate_metric(n, v) for (n, v) in metrics.items() }
+
     def _log(self, log_type, log_dict={}):
         log_dict['type'] = log_type
         log_dict['time'] = datetime.datetime.now().strftime(MODEL_LOG_DATETIME_FORMAT)
-        log_dict = { k: self._simplify_value(v) for (k, v) in log_dict.items()}
         log_line = json.dumps(log_dict)
         self._logger.info(log_line)
 
-    def _simplify_value(self, value):
+    def _validate_metric(self, name, value):
         if isinstance(value, np.int64) or isinstance(value, np.int32):
             return int(value)
         elif isinstance(value, np.float64) or isinstance(value, np.float32):
             return float(value)
 
+        if not isinstance(value, int) and not isinstance(value, float):
+            raise TypeError('Metric of name "{}" should be an `int` or `float`, but is of `{}`'
+                                .format(name, type(value)))
+        
         return value
 
     @staticmethod
