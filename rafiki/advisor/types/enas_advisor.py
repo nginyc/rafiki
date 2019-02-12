@@ -186,22 +186,21 @@ class ListKnobModel():
         # Build LSTM
         lstm  = self._build_lstm(lstm_num_layers, H)
 
+        # Initial embedding passed to LSTM
+        initial_embed = self._make_var('item_embed_initial', (1, H))
+
         # TODO: Add attention
         
         item_idxs = []
         item_logits = []
         lstm_states = [None]
+        item_embeds = [initial_embed]
         for i in range(N):
             K = Ks[i] # No of categories for output
 
             with tf.variable_scope('item_{}'.format(i)):
-                # Run previous item index through embedding lookup (`K` if first index)
-                prev_item_idx = item_idxs[-1] if len(item_idxs) > 0 else K
-                embeds = self._make_var('W_embeds', (K + 1, H)) 
-                prev_item_embed = tf.reshape(tf.nn.embedding_lookup(embeds, prev_item_idx), (1, -1))
-
                 # Run input through LSTM to get output
-                (X, lstm_state) = self._apply_lstm(prev_item_embed, lstm, H, prev_state=lstm_states[-1])
+                (X, lstm_state) = self._apply_lstm(item_embeds[-1], lstm, H, prev_state=lstm_states[-1])
                 lstm_states.append(lstm_state)
 
                 # Add fully connected layer and transform to `K` channels
@@ -211,6 +210,13 @@ class ListKnobModel():
                 # Draw and save item index from probability distribution by `X`
                 item_idx = self._sample_from_logits(logits)
                 item_idxs.append(item_idx)
+
+                # If not the final item
+                if i < N - 1:
+                    # Run item index through embedding lookup
+                    embeds = self._make_var('W_embeds', (K, H)) 
+                    item_embed = tf.reshape(tf.nn.embedding_lookup(embeds, item_idx), (1, -1))
+                    item_embeds.append(item_embed)
 
         self._item_idxs = item_idxs
         self._item_logits = item_logits
