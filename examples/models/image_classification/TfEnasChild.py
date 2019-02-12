@@ -304,8 +304,12 @@ class TfEnasChild(BaseModel):
 
         (normal_arch, reduction_arch) = self._get_arch()
         
-        reduction_layers = [L // 3, L // 3 * 2 + 1] # Layers with reduction cells (otherwise, normal cells)
-        aux_head_layers = [reduction_layers[-1] + 1] # Layers with auxiliary heads
+        # Layers with reduction cells (otherwise, normal cells)
+        reduction_layers = [L // 3, L // 3 * 2 + 1] 
+
+        # Layers with auxiliary heads
+        # Add aux heads only if downsampling width can happen 3 times
+        aux_head_layers = [reduction_layers[-1] + 1] if w % (2 << 3) == 0 else []
 
         # Stores previous layers. layers[i] = (<previous layer (i - 1) as input to layer i>, <width>, <height>, <channels>)
         layers = []
@@ -559,7 +563,7 @@ class TfEnasChild(BaseModel):
         l2_loss = l2_reg * tf.add_n(l2_losses)
 
         # Add loss from auxiliary logits
-        aux_loss = 0
+        aux_loss = tf.constant(0, dtype=tf.float32)
         for aux_logits in aux_logits_list:
             log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=aux_logits, labels=classes)
             aux_loss += aux_loss_mul * tf.reduce_mean(log_probs)
