@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.python.keras import layers
 from tensorflow import keras
 from tensorflow.python.client import device_lib
 from tensorflow.python.training import moving_averages
@@ -15,6 +16,8 @@ from rafiki.model import utils, InvalidModelParamsException, tune_model, BaseMod
 from rafiki.constants import TaskType, ModelDependency
 
 class TfEnasChild(BaseModel):
+    TF_COLLECTION_SHARED = 'SHARED'
+
     '''
     Implements the child model of "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
     
@@ -48,7 +51,7 @@ class TfEnasChild(BaseModel):
             'learning_rate': FixedKnob(0.05), 
             'initial_block_ch': FixedKnob(36),
             'stem_ch': FixedKnob(108),
-            'l2_reg': FixedKnob(2e-4),
+            'reg_decay': FixedKnob(2e-4),
             'dropout_keep_prob': FixedKnob(0.8),
             'opt_momentum': FixedKnob(0.9),
             'use_sgdr': FixedKnob(True),
@@ -198,7 +201,7 @@ class TfEnasChild(BaseModel):
         tf_vars = self._tf_vars
 
         # Save list of shared variable names
-        shared_tf_vars = [x.name for x in tf_vars if '__SHARED__' in x.name]
+        shared_tf_vars = [x.name for x in tf.get_collection(self.TF_COLLECTION_SHARED)]
         shared_tf_vars_file_path = os.path.join(params_dir, 'shared_tf_vars.json')
         with open(shared_tf_vars_file_path, 'w') as f:
             f.write(json.dumps(shared_tf_vars))
@@ -255,7 +258,7 @@ class TfEnasChild(BaseModel):
         
         # Compute training loss & accuracy
         tf_vars = self._get_all_variables()
-        (total_loss, loss, l2_loss, aux_loss) = self._compute_loss(logits, aux_logits_list, tf_vars, classes)
+        (total_loss, loss, reg_loss, aux_loss) = self._compute_loss(logits, aux_logits_list, tf_vars, classes)
         acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
         # Optimize training loss
@@ -265,7 +268,7 @@ class TfEnasChild(BaseModel):
             'acc': acc,
             'loss': loss,
             'aux_loss': aux_loss,
-            'l2_loss': l2_loss,
+            'reg_loss': reg_loss,
             'lr': lr,
             'steps': steps
         }
@@ -529,34 +532,34 @@ class TfEnasChild(BaseModel):
 
         # Conv 1x1
         with tf.variable_scope('conv_0'):
-            X = self._do_conv(X, w, h, ch, conv_ch, filter_size=1, do_relu=True)
+            X = self._do_conv(X, w, h, ch, conv_ch, filter_size=1, do_relu=True, no_reg=True)
         ch = conv_ch
 
         # Global conv
         with tf.variable_scope('conv_1'):
-            X = self._do_conv(X, w, h, ch, global_conv_ch, filter_size=w, do_relu=True)
+            X = self._do_conv(X, w, h, ch, global_conv_ch, filter_size=w, do_relu=True, no_reg=True)
         ch = global_conv_ch
         
         # Global pooling
         X = self._add_global_pooling(X, w, h, ch)
 
         # Fully connected
-        X = self._add_fully_connected(X, (ch,), K)
-        logits = tf.nn.softmax(X)
+        X = self._add_fully_connected(X, (ch,), K, no_reg=True)
+        aux_logits = tf.nn.softmax(X)
 
-        return logits
+        return aux_logits
 
     def _compute_loss(self, logits, aux_logits_list, tf_vars, classes):
-        l2_reg = self._knobs['l2_reg']
+        reg_decay = self._knobs['reg_decay']
         aux_loss_mul = self._knobs['aux_loss_mul'] # Multiplier for auxiliary loss
 
         # Compute sparse softmax cross entropy loss from logits & labels
         log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=classes)
         loss = tf.reduce_mean(log_probs)
 
-        # Apply L2 regularization
-        l2_losses = [tf.reduce_sum(var ** 2) for var in tf_vars]
-        l2_loss = l2_reg * tf.add_n(l2_losses)
+        # Add regularization loss
+        reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+        reg_loss = reg_decay * tf.add_n(reg_losses)
 
         # Add loss from auxiliary logits
         aux_loss = 0
@@ -564,9 +567,9 @@ class TfEnasChild(BaseModel):
             log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=aux_logits, labels=classes)
             aux_loss += aux_loss_mul * tf.reduce_mean(log_probs)
 
-        total_loss = loss + l2_loss + aux_loss      
+        total_loss = loss + reg_loss + aux_loss      
 
-        return (total_loss, loss, l2_loss, aux_loss)
+        return (total_loss, loss, reg_loss, aux_loss)
 
     def _add_global_pooling(self, X, in_w, in_h, in_ch):
         X = tf.reduce_mean(X, (1, 2))
@@ -780,9 +783,9 @@ class TfEnasChild(BaseModel):
 
         return X
 
-    def _do_conv(self, X, w, h, in_ch, ch, filter_size=1, do_relu=False):
+    def _do_conv(self, X, w, h, in_ch, ch, filter_size=1, do_relu=False, no_reg=False):
         with tf.variable_scope('conv'):
-            W = self._make_var('W', (filter_size, filter_size, in_ch, ch))
+            W = self._make_var('W', (filter_size, filter_size, in_ch, ch), no_reg=no_reg)
             if do_relu:
                 X = tf.nn.relu(X)
             X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding='SAME')
@@ -813,11 +816,11 @@ class TfEnasChild(BaseModel):
         X = tf.reshape(X, (-1, w_out, h_out, ch_out)) # Sanity shape check
         return X
 
-    def _add_fully_connected(self, X, in_shape, out_ch):
+    def _add_fully_connected(self, X, in_shape, out_ch, no_reg=False):
         with tf.variable_scope('fully_connected'):
             ch = np.prod(in_shape)
             X = tf.reshape(X, (-1, ch))
-            W = self._make_var('W', (ch, out_ch))
+            W = self._make_var('W', (ch, out_ch), no_reg=no_reg)
             X = tf.matmul(X, W)
 
         X = tf.reshape(X, (-1, out_ch)) # Sanity shape check
@@ -870,18 +873,25 @@ class TfEnasChild(BaseModel):
 
             return X
 
-    def _make_var(self, name, shape, no_share=False, initializer=None):
-        # Ensure that name is unique by shape too
-        name += '-shape-{}'.format('x'.join([str(x) for x in shape]))
-
-        # Mark var as shared
-        if not no_share:
-            name += '-__SHARED__'
-
+    def _make_var(self, name, shape, no_share=False, no_reg=False, initializer=None):
         if initializer is None:
             initializer = tf.contrib.keras.initializers.he_normal()
 
-        return tf.get_variable(name, shape, initializer=initializer)
+        # Ensure that name is unique by shape too
+        name += '-shape-{}'.format('x'.join([str(x) for x in shape]))
+
+        var = tf.get_variable(name, shape, initializer=initializer)
+
+        # Mark var as shared
+        if not no_share:
+            tf.add_to_collection(self.TF_COLLECTION_SHARED, var)
+
+        # Add L2 regularization node for var
+        if not no_reg:
+            l2_loss = tf.nn.l2_loss(var)
+            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, l2_loss)
+        
+        return var
     
     def _get_all_variables(self):
         tf_vars = [var for var in tf.trainable_variables()]
