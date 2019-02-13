@@ -202,7 +202,7 @@ class TfEnasChild(BaseModel):
 
         # Save list of shared variable names
         with self._graph.as_default():
-        shared_tf_vars = [x.name for x in tf.get_collection(self.TF_COLLECTION_SHARED)]
+            shared_tf_vars = [x.name for x in tf.get_collection(self.TF_COLLECTION_SHARED)]
         shared_tf_vars_file_path = os.path.join(params_dir, 'shared_tf_vars.json')
         with open(shared_tf_vars_file_path, 'w') as f:
             f.write(json.dumps(shared_tf_vars))
