@@ -115,14 +115,15 @@ class ListKnobModel():
 
         print('Training from feedback ({}, {})...'.format(items, score))
         with self._graph.as_default():
-            (reward_base, loss, item_logits, _) = self._sess.run(
-                [self._reward_base, self._loss, self._item_logits, self._train_op],
+            (reward_base, loss, reward, item_logits, _) = self._sess.run(
+                [self._reward_base, self._loss, self._reward, self._item_logits, self._train_op],
                 feed_dict={
                     self._item_idxs_ph: item_idxs,
                     self._score_ph: score
                 }
             )
 
+            print('Reward: {}'.format(reward))
             print('Reward baseline: {}'.format(reward_base))
             print('Loss: {}'.format(loss))
             # print('Logits: {}'.format(list(item_logits)))
@@ -138,27 +139,31 @@ class ListKnobModel():
         learning_rate = 0.001 * 50
         adam_beta1 = 0
         adam_epsilon = 1e-3
+        entropy_weight = 0.0001
 
         # Placeholders for item indexes and associated score
         item_idxs_ph = tf.placeholder(dtype=tf.int32, shape=(N,))
         score_ph = tf.placeholder(dtype=tf.float32)
 
-        # Compute log probs
+        # Compute log probs & entropy
         sample_log_probs = self._compute_sample_log_probs(item_idxs_ph, item_logits)
+        sample_entropy = self._compute_sample_entropy(item_logits)
+
+        # Compute reward
+        # Adding entropy encourages exploration
+        reward = score_ph
+        reward += entropy_weight * sample_entropy
 
         # Baseline reward for REINFORCE
         reward_base = tf.Variable(0., name='reward_base', dtype=tf.float32, trainable=False)
 
         # Update baseline whenever reward updates
-        reward = score_ph
         base_update = tf.assign_sub(reward_base, (1 - base_decay) * (reward_base - reward))
         with tf.control_dependencies([base_update]):
             reward = tf.identity(reward)
 
         # Compute loss
         loss = sample_log_probs * (reward - reward_base)
-
-        # TODO: Add entropy weighting
 
         # Add optimizer
         tf_vars = self._get_all_variables()
@@ -170,6 +175,7 @@ class ListKnobModel():
         
         self._train_op = train_op
         self._loss = loss
+        self._reward = reward
         self._reward_base = reward_base
         self._item_idxs_ph = item_idxs_ph
         self._score_ph = score_ph
@@ -233,6 +239,19 @@ class ListKnobModel():
             sample_log_probs += log_probs[0]
         
         return sample_log_probs
+
+    def _compute_sample_entropy(self, item_logits):
+        N = len(item_logits)
+        sample_entropy = tf.constant(0., dtype=tf.float32, name='sample_entropy')
+
+        for i in range(N):
+            logits = item_logits[i]
+            entropy = tf.nn.softmax_cross_entropy_with_logits_v2(logits=tf.reshape(logits, (1, -1)),
+                                                            labels=tf.reshape(tf.nn.softmax(logits), (1, -1)))
+            entropy = tf.stop_gradient(entropy)
+            sample_entropy += entropy[0]
+        
+        return sample_entropy
     
     ####################################
     # Utils
