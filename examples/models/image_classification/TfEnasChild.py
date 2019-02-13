@@ -34,7 +34,7 @@ class TfEnasChild(BaseModel):
                 if idx in [0, 2]:
                     return CategoricalKnob(list(range(b + 2))) # input index 1/2
                 elif idx in [1, 3]:
-                    return CategoricalKnob([0, 1, 2, 3, 4]) # op for input 1/2
+                    return CategoricalKnob([0, 1, 2, 3, 4, 5]) # op for input 1/2
             
             # Last half of blocks are for reduction cell
             else:
@@ -42,7 +42,7 @@ class TfEnasChild(BaseModel):
                 if idx in [0, 2]:
                     return CategoricalKnob(list(range(b + 2))) # input index 1/2
                 elif idx in [1, 3]:
-                    return CategoricalKnob([0, 1, 2, 3, 4]) # op for input 1/2
+                    return CategoricalKnob([0, 1, 2, 3, 4, 5]) # op for input 1/2
 
         return {
             'max_image_size': FixedKnob(32),
@@ -201,7 +201,9 @@ class TfEnasChild(BaseModel):
         tf_vars = self._tf_vars
 
         # Save list of shared variable names
+        with self._graph.as_default():
         shared_tf_vars = [x.name for x in tf.get_collection(self.TF_COLLECTION_SHARED)]
+
         shared_tf_vars_file_path = os.path.join(params_dir, 'shared_tf_vars.json')
         with open(shared_tf_vars_file_path, 'w') as f:
             f.write(json.dumps(shared_tf_vars))
@@ -271,8 +273,7 @@ class TfEnasChild(BaseModel):
             'loss': loss,
             'aux_loss': aux_loss,
             'reg_loss': reg_loss,
-            'lr': lr,
-            'steps': steps
+            'lr': lr
         })
         self._probs = probs
         self._init_op = dataset_itr.initializer
@@ -449,6 +450,7 @@ class TfEnasChild(BaseModel):
 
     def _train_model(self, images, classes):
         num_epochs = self._knobs['max_epochs']
+        log_monitored_values_every_steps = 1000
         # best_loss_patience_epochs = 10 # No. of epochs where there should be an decrease in best batch loss, otherwise training stops 
 
         # best_loss, best_loss_patience_count = float('inf'), 0
@@ -464,13 +466,14 @@ class TfEnasChild(BaseModel):
                 self._classes_ph: np.asarray(classes)
             })
 
-            # To track monitored values
+            # To track monitored values & accuracy
             (monitored_names, monitored_values) = zip(*self._monitored_values.items())
             accs = []
+
             while True:
                 try:
-                    (_, summary, acc, *values) = self._sess.run(
-                        [self._train_op, self._summary_op, self._acc, *monitored_values],
+                    (_, summary, acc, steps, *values) = self._sess.run(
+                        [self._train_op, self._summary_op, self._acc, self._steps, *monitored_values],
                         feed_dict={
                             self._is_train_ph: True,
                             self._epoch_ph: epoch
@@ -480,13 +483,16 @@ class TfEnasChild(BaseModel):
                     train_summaries.append(summary)
                     accs.append(acc)
                     
+                    # Periodically, log monitored values
+                    if steps % log_monitored_values_every_steps == 0:
+                        utils.logger.log(**{ k: v for (k, v) in zip(monitored_names, values) })
+                    
                 except tf.errors.OutOfRangeError:
                     break
 
-            # Print monitored values at end of epoch
+            # Log mean batch accuracy and epoch
             mean_acc = np.mean(accs)
-            utils.logger.log(epoch=epoch, mean_acc=mean_acc, 
-                            **{ k: v for (k, v) in zip(monitored_names, values) })
+            utils.logger.log(epoch=epoch, mean_acc=mean_acc)
 
             # # Determine whether training should stop due to patience
             # if avg_batch_loss < best_loss:
