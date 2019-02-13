@@ -202,7 +202,7 @@ class TfEnasChild(BaseModel):
 
         # Save list of shared variable names
         with self._graph.as_default():
-        shared_tf_vars = [x.name for x in tf.get_collection(self.TF_COLLECTION_SHARED)]
+            shared_tf_vars = [x.name for x in tf.get_collection(self.TF_COLLECTION_SHARED)]
 
         shared_tf_vars_file_path = os.path.join(params_dir, 'shared_tf_vars.json')
         with open(shared_tf_vars_file_path, 'w') as f:
@@ -315,6 +315,7 @@ class TfEnasChild(BaseModel):
         reduction_layers = [L // 3, L // 3 * 2 + 1] 
 
         # Layers with auxiliary heads
+        # Aux heads speed up training of good feature repsentations early in the network
         # Add aux heads only if downsampling width can happen 3 times
         aux_head_layers = [reduction_layers[-1] + 1] if w % (2 << 3) == 0 else []
 
