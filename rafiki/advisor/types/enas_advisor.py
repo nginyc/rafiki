@@ -47,7 +47,7 @@ class EnasAdvisor(BaseAdvisor):
         return knob_config
 
     def _propose_params(self):
-        # Return params with the best score so far
+        # Return most recent params
         if len(self._param_scores) == 0:
             return None
 
@@ -56,7 +56,7 @@ class EnasAdvisor(BaseAdvisor):
         return param_id
 
     def _feedback_for_params(self, param_id, score):
-        bisect.insort(self._param_scores, (score, param_id))
+        self._param_scores.append((score, param_id))
 
     def _feedback_for_knob(self, name, knob, knob_value, score):
         if isinstance(knob, FixedKnob):
