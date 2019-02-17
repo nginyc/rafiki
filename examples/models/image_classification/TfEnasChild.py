@@ -284,6 +284,7 @@ class TfEnasChild(BaseModel):
         self._is_train_ph = is_train
         self._epoch_ph = epoch
         self._acc = acc
+        self._steps = steps
 
     def _add_logging(self):
         # Log available devices 
