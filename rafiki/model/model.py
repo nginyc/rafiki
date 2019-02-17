@@ -54,12 +54,12 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def train(self, dataset_uri: str, params: Union[dict, None]) -> dict:
+    def train(self, dataset_uri: str, shared_params: Union[dict, None]) -> dict:
         '''
         Train this model instance with given dataset and initialized knob values.
 
         :param str dataset_uri: URI of the dataset in a format specified by the task
-        :param dict params: Shared parameters from previous trials
+        :param dict shared_params: Shared parameters from previous trials
         :returns: Trained parameters to share with other trials
         :rtype: dict
         '''

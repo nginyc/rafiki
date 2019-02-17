@@ -102,7 +102,7 @@ class TfEnasChild(BaseModel):
         self._graph = tf.Graph()
         self._sess = None
         
-    def train(self, dataset_uri, params):
+    def train(self, dataset_uri, shared_params):
         max_image_size = self._knobs['max_image_size']
 
         dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
@@ -119,8 +119,8 @@ class TfEnasChild(BaseModel):
         with self._graph.as_default():
             self._build_model()
             self._init_session()
-            if params is not None:
-                self._load_shareable_vars(params)
+            if shared_params is not None:
+                self._load_shareable_vars(shared_params)
             self._add_logging()
             self._train_model(images, classes)
             utils.logger.log('Evaluating model on train dataset...')
