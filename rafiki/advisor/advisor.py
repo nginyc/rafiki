@@ -32,7 +32,7 @@ class BaseParamAdvisor(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def feedback(self, score: float, param_id: str):
+    def feedback(self, score: float, params: dict):
         raise NotImplementedError() 
 
 from .skopt import SkoptKnobAdvisor
@@ -62,7 +62,7 @@ class Advisor():
     def knob_config(self) -> dict:
         return self._knob_config
 
-    def propose(self) -> (dict, str):
+    def propose(self) -> (dict, dict):
         knobs = {}
 
         # Merge knobs from advisors
@@ -79,11 +79,11 @@ class Advisor():
         }
 
         # Propose params
-        param_id = self._params_adv.propose()
+        params = self._params_adv.propose()
 
-        return (knobs, param_id)
+        return (knobs, params)
 
-    def feedback(self, knobs: dict, score: float, param_id: str = None):
+    def feedback(self, score: float, knobs: dict, params: dict = None):
         # Feedback to skopt
         skopt_knobs = { name: knob for (name, knob) in knobs.items() if name in self._skopt_knob_config }
         self._skopt_knob_adv.feedback(score, skopt_knobs)
@@ -93,8 +93,8 @@ class Advisor():
         self._enas_knob_adv.feedback(score, enas_knobs)
 
         # Feedback to params
-        if param_id is not None:
-            self._params_adv.feedback(score, param_id)
+        if params is not None:
+            self._params_adv.feedback(score, params)
 
     def _simplify_value(self, value):
         if isinstance(value, np.int64) or isinstance(value, np.int32):
@@ -106,18 +106,18 @@ class Advisor():
 
 class NaiveParamAdvisor(BaseParamAdvisor):
     def __init__(self):
-        self._param_scores = []
+        self._params = {}
 
     def propose(self):
         # Return most recent params
-        if len(self._param_scores) == 0:
+        if len(self._params) == 0:
             return None
 
-        (score, param_id) = self._param_scores[-1]
-        return param_id
+        return self._params
 
-    def feedback(self, score, param_id):
-        self._param_scores.append((score, param_id))
+    def feedback(self, score, params):
+        for (name, value) in params.items():
+            self._params[name] = value
 
 class RandomKnobAdvisor(BaseKnobAdvisor):
     '''
@@ -153,6 +153,6 @@ class RandomKnobAdvisor(BaseKnobAdvisor):
         else:
             raise UnsupportedKnobTypeError(knob.__class__)
 
-    def feedback(self, knobs, score):
+    def feedback(self, score, knobs):
         # Ignore feedback - no relevant for a random advisor
         pass

@@ -6,6 +6,7 @@ import pickle
 import uuid
 from importlib import import_module
 import inspect
+from typing import Union
 
 from rafiki.advisor import Advisor, BaseKnob, serialize_knob_config, deserialize_knob_config
 from rafiki.predictor import ensemble_predictions
@@ -53,11 +54,14 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def train(self, dataset_uri):
+    def train(self, dataset_uri: str, params: Union[dict, None]) -> dict:
         '''
         Train this model instance with given dataset and initialized knob values.
 
         :param str dataset_uri: URI of the dataset in a format specified by the task
+        :param dict params: Shared parameters from previous trials
+        :returns: Trained parameters to share with other trials
+        :rtype: dict
         '''
         raise NotImplementedError()
 
@@ -134,7 +138,6 @@ def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_ur
     # Variables to track over trials
     best_score = 0
     best_model_inst = None
-    trial_to_params_dir = {}
 
     # For every trial
     for i in range(1, num_trials + 1):
@@ -142,18 +145,17 @@ def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_ur
         _print_header('Trial #{} (ID: "{}")'.format(i, trial_id))
         
         # Generate proposal from advisor
-        (knobs, train_params_trial_id) = advisor.propose()
-        print('Knobs:', knobs)
-        if train_params_trial_id is not None:
-            print('Training on parameters from trial of ID: "{}"'.format(train_params_trial_id))
+        (knobs, params) = advisor.propose()
+        print('Advisor proposed knobs:', knobs)
+        if params is not None:
+            print('Advisor proposed {} params'.format(len(params)))
 
         # Load model
         model_inst = py_model_class(**knobs)
 
         # Train model
         print('Training model...')
-        params_dir = trial_to_params_dir[train_params_trial_id] if train_params_trial_id is not None else None
-        model_inst.train(train_dataset_uri, params_dir)
+        trial_params = model_inst.train(train_dataset_uri, params)
 
         # Evaluate model
         print('Evaluating model...')
@@ -172,11 +174,10 @@ def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_ur
         if not os.path.exists(params_dir):
             os.mkdir(params_dir)
         model_inst.save_parameters(params_dir)
-        trial_to_params_dir[trial_id] = params_dir
         print('Model parameters saved in {}'.format(params_dir))
 
         # Feedback to advisor
-        advisor.feedback(score, knobs, trial_id)
+        advisor.feedback(score, knobs, trial_params)
     
     return best_model_inst
     

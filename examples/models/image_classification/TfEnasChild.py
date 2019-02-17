@@ -45,7 +45,7 @@ class TfEnasChild(BaseModel):
 
         return {
             'max_image_size': FixedKnob(32),
-            'max_epochs': FixedKnob(10),
+            'max_epochs': FixedKnob(1),
             'batch_size': FixedKnob(64),
             'learning_rate': FixedKnob(0.05), 
             'initial_block_ch': FixedKnob(36),
@@ -102,7 +102,7 @@ class TfEnasChild(BaseModel):
         self._graph = tf.Graph()
         self._sess = None
         
-    def train(self, dataset_uri, train_params_dir):
+    def train(self, dataset_uri, params):
         max_image_size = self._knobs['max_image_size']
 
         dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
@@ -119,15 +119,14 @@ class TfEnasChild(BaseModel):
         with self._graph.as_default():
             self._build_model()
             self._init_session()
-
-            if train_params_dir is not None:
-                self._restore_tf_vars(train_params_dir)
-
+            if params is not None:
+                self._load_shareable_vars(params)
             self._add_logging()
             self._train_model(images, classes)
             utils.logger.log('Evaluating model on train dataset...')
             acc = self._evaluate_model(images, classes)
             utils.logger.log('Train accuracy: {}'.format(acc))
+            return self._get_shareable_vars()
 
     def evaluate(self, dataset_uri):
         max_image_size = self._knobs['max_image_size']
@@ -163,7 +162,9 @@ class TfEnasChild(BaseModel):
 
     def save_parameters(self, params_dir):
         # Save model parameters
-        self._save_tf_vars(params_dir)
+        model_file_path = os.path.join(params_dir, 'model')
+        saver = tf.train.Saver(self._tf_vars)
+        saver.save(self._sess, model_file_path)
 
         # Save pre-processing params
         train_params_file_path = os.path.join(params_dir, 'train_params.json')
@@ -189,44 +190,32 @@ class TfEnasChild(BaseModel):
 
         # Load model parameters
         self._init_session()
-        self._restore_tf_vars(params_dir, restore_all=True)
-    
-    def _save_tf_vars(self, params_dir):
-        tf_vars = self._tf_vars
-
-        # Save list of shared variable names
-        with self._graph.as_default():
-            shared_tf_vars = [x.name for x in tf.get_collection(self.TF_COLLECTION_SHARED)]
-
-        shared_tf_vars_file_path = os.path.join(params_dir, 'shared_tf_vars.json')
-        with open(shared_tf_vars_file_path, 'w') as f:
-            f.write(json.dumps(shared_tf_vars))
-
-        # Save all model parameters
         model_file_path = os.path.join(params_dir, 'model')
-        saver = tf.train.Saver(tf_vars)
-        saver.save(self._sess, model_file_path)
-
-    def _restore_tf_vars(self, params_dir, restore_all=False):
-        tf_vars = self._tf_vars
-        tf_vars_to_restore = tf_vars
-
-        if not restore_all:
-            # Load list of shared variable names
-            shared_tf_vars_file_path = os.path.join(params_dir, 'shared_tf_vars.json')
-            with open(shared_tf_vars_file_path, 'r') as f:
-                json_str = f.read()
-                shared_tf_vars = json.loads(json_str)
-
-            # Only to restore common shared variables
-            shared_tf_vars = set(shared_tf_vars)
-            tf_vars_to_restore = [x for x in tf_vars if x.name in shared_tf_vars]
-
-        # Restore model parameters
-        utils.logger.log('Restoring {} / {} common variables...'.format(len(tf_vars_to_restore), len(tf_vars)))
-        model_file_path = os.path.join(params_dir, 'model')
-        saver = tf.train.Saver(tf_vars_to_restore)
+        saver = tf.train.Saver(self._tf_vars)
         saver.restore(self._sess, model_file_path)
+
+    def _get_shareable_vars(self):
+        shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
+        values = self._sess.run(shareable_tf_vars)
+        shareable_vars = {
+            tf_var.name: value
+            for (tf_var, value)
+            in zip(shareable_tf_vars, values)
+        }
+        return shareable_vars
+
+    def _load_shareable_vars(self, shareable_vars):
+        shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
+        shared_vars = 0
+        var_assigns = []
+        for tf_var in shareable_tf_vars:
+            if tf_var.name in shareable_vars:
+                var_assign = tf_var.assign(shareable_vars[tf_var.name])
+                var_assigns.append(var_assign)
+                shared_vars += 1
+
+        utils.logger.log('Restoring {} / {} shareable variables...'.format(shared_vars, len(shareable_tf_vars)))
+        self._sess.run(var_assigns)
 
     def _build_model(self):
         N = self._knobs['batch_size'] 

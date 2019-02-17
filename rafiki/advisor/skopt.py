@@ -16,7 +16,7 @@ class SkoptKnobAdvisor(BaseKnobAdvisor):
         point = self._optimizer.ask()
         return { knob : value for (knob, value) in zip(self._dimensions.keys(), point) }
 
-    def feedback(self, knobs, score):
+    def feedback(self, score, knobs):
         point = [ knobs[name] for name in self._dimensions.keys() ]
         self._optimizer.tell(point, -score)
 
