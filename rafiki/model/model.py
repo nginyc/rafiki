@@ -7,8 +7,7 @@ import uuid
 from importlib import import_module
 import inspect
 
-from rafiki.advisor import Advisor, BaseAdvisor, BaseKnob, serialize_knob_config, deserialize_knob_config
-from rafiki.advisor.types.skopt_advisor import SkoptAdvisor
+from rafiki.advisor import Advisor, BaseKnob, serialize_knob_config, deserialize_knob_config
 from rafiki.predictor import ensemble_predictions
 from rafiki.constants import TaskType, ModelDependency
 
@@ -19,7 +18,7 @@ class BaseModel(abc.ABC):
     '''
     Rafiki's base model class that Rafiki models should extend. 
     Rafiki models should implement all abstract methods according to their associated tasks' specifications,
-    together with the static methods ``get_knob_config()`` and ``get_advisor()`` (optional).
+    together with the static methods ``get_knob_config()`` (optional).
 
     In the model's ``__init__`` method, call ``super().__init__(**knobs)`` as the first line, 
     followed by the model's initialization logic. The model should be initialize itself with ``knobs``, 
@@ -52,15 +51,6 @@ class BaseModel(abc.ABC):
         :rtype: dict[str, rafiki.model.BaseKnob]
         '''
         raise NotImplementedError()
-
-    @staticmethod
-    def get_advisor() -> BaseAdvisor:
-        '''
-        Return the advisor to use for tuning this model.
-
-        :rtype: BaseAdvisor
-        '''
-        return SkoptAdvisor() 
 
     @abc.abstractmethod
     def train(self, dataset_uri):
@@ -138,7 +128,7 @@ def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_ur
     '''
     # Retrieve config of model
     knob_config = py_model_class.get_knob_config()
-    advisor = py_model_class.get_advisor()
+    advisor = Advisor()
     advisor.start(knob_config)
     
     # Variables to track over trials

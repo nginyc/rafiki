@@ -11,7 +11,6 @@ import base64
 
 from rafiki.config import APP_MODE
 from rafiki.advisor import IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, ListKnob
-from rafiki.advisor.types.enas_advisor import EnasAdvisor
 from rafiki.model import utils, InvalidModelParamsException, tune_model, BaseModel
 from rafiki.constants import TaskType, ModelDependency
 
@@ -97,11 +96,6 @@ class TfEnasChild(BaseModel):
             2, 2, 3, 4
         ])
         '''
-
-    @staticmethod
-    def get_advisor():
-        return EnasAdvisor()
-
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs

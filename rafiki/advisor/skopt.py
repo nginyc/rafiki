@@ -1,13 +1,13 @@
 from skopt.space import Real, Integer, Categorical
 from skopt.optimizer import Optimizer
     
-from .. import BaseAdvisor, UnsupportedKnobTypeError, BaseAdvisor, FloatKnob, IntegerKnob, CategoricalKnob, FixedKnob
+from .advisor import BaseKnobAdvisor, UnsupportedKnobTypeError
+from .knob import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob
 
-class SkoptAdvisor(BaseAdvisor):
+class SkoptKnobAdvisor(BaseKnobAdvisor):
     '''
     Uses `skopt`'s `Optimizer`
     '''   
-
     def start(self, knob_config):
         self._dimensions = self._get_dimensions(knob_config)
         self._optimizer = Optimizer(list(self._dimensions.values()))

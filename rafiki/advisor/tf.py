@@ -2,9 +2,10 @@ import tensorflow as tf
 import numpy as np
 import bisect
 
-from .. import BaseAdvisor, UnsupportedKnobTypeError, CategoricalKnob, FixedKnob, ListKnob
+from .advisor import BaseKnobAdvisor, UnsupportedKnobTypeError
+from .knob import ListKnob, CategoricalKnob
 
-class EnasAdvisor(BaseAdvisor):
+class EnasKnobAdvisor(BaseKnobAdvisor):
     '''
     Implements the controller of "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
     
@@ -13,30 +14,22 @@ class EnasAdvisor(BaseAdvisor):
     def start(self, knob_config):
         self._knob_config = self._validate_knob_config(knob_config)
         self._list_knob_models = self._build_models()
-        self._param_scores = []
 
     def propose(self):
         knobs = {}
         for (name, knob) in self._knob_config.items():
             knobs[name] = self._propose_for_knob(name, knob)
 
-        param_id = self._propose_params()
-        return (knobs, param_id)
+        return knobs
 
-    def feedback(self, score, knobs, param_id=None):
+    def feedback(self, score, knobs):
         for (name, value) in knobs.items():
             knob = self._knob_config[name]
             self._feedback_for_knob(name, knob, value, score)
     
-        if param_id is not None:
-            self._feedback_for_params(param_id, score)
-
     def _validate_knob_config(self, knob_config):
         for knob in knob_config.values():
-            if isinstance(knob, FixedKnob):
-                # Supports `FixedKnob`
-                pass
-            elif isinstance(knob, ListKnob):
+            if isinstance(knob, ListKnob):
                 # Supports only `ListKnob` of `CategoricalKnob`
                 for knob in knob.items:
                     if not isinstance(knob, CategoricalKnob):
@@ -46,29 +39,13 @@ class EnasAdvisor(BaseAdvisor):
 
         return knob_config
 
-    def _propose_params(self):
-        # Return most recent params
-        if len(self._param_scores) == 0:
-            return None
-
-        (score, param_id) = self._param_scores[-1]
-
-        return param_id
-
-    def _feedback_for_params(self, param_id, score):
-        self._param_scores.append((score, param_id))
-
     def _feedback_for_knob(self, name, knob, knob_value, score):
-        if isinstance(knob, FixedKnob):
-            pass
-        elif isinstance(knob, ListKnob):
+        if isinstance(knob, ListKnob):
             list_knob_model = self._list_knob_models[name]
             list_knob_model.feedback(knob_value, score)
 
     def _propose_for_knob(self, name, knob):
-        if isinstance(knob, FixedKnob):
-            return knob.value
-        elif isinstance(knob, ListKnob):
+        if isinstance(knob, ListKnob):
             list_knob_model = self._list_knob_models[name]
             return list_knob_model.propose()
 
@@ -80,11 +57,11 @@ class EnasAdvisor(BaseAdvisor):
         list_knob_models = {}
         for (name, list_knob) in list_knobs:
             with tf.variable_scope(name):
-                list_knob_models[name] = ListKnobModel(list_knob)
+                list_knob_models[name] = EnasKnobAdvisorListModel(list_knob)
 
         return list_knob_models
 
-class ListKnobModel():
+class EnasKnobAdvisorListModel():
     def __init__(self, knob):
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)

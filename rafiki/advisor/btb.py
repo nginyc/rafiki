@@ -1,8 +1,9 @@
 import btb
 
-from .. import BaseAdvisor, UnsupportedKnobTypeError, FloatKnob, IntegerKnob, CategoricalKnob, FixedKnob
+from .advisor import BaseKnobAdvisor, UnsupportedKnobTypeError
+from .knob import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob
 
-class BtbGpAdvisor(BaseAdvisor):
+class BtbGpKnobAdvisor(BaseKnobAdvisor):
     '''
     Uses BTB's GP tuner
     '''   
