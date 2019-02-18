@@ -1,6 +1,7 @@
 from skopt.space import Real, Integer, Categorical
 from skopt.optimizer import Optimizer
-    
+from collections import OrderedDict
+
 from .advisor import BaseKnobAdvisor, UnsupportedKnobTypeError
 from .knob import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob
 
@@ -9,30 +10,44 @@ class SkoptKnobAdvisor(BaseKnobAdvisor):
     Uses `skopt`'s `Optimizer`
     '''   
     def start(self, knob_config):
+        self._knob_config = knob_config
         self._dimensions = self._get_dimensions(knob_config)
         self._optimizer = Optimizer(list(self._dimensions.values()))
 
     def propose(self):
+        # Ask skopt
         point = self._optimizer.ask()
-        return { knob : value for (knob, value) in zip(self._dimensions.keys(), point) }
+        point_dict = { 
+            name: value 
+            for (name, value) 
+            in zip(self._dimensions.keys(), point) 
+        }
+
+        # Form knobs from proposed skopt point, accounting for fixed knobs
+        knobs = {
+            name: point_dict[name] if type(x) != FixedKnob else x.value
+            for (name, x)
+            in self._knob_config.items()
+        }
+
+        return knobs
 
     def feedback(self, score, knobs):
         point = [ knobs[name] for name in self._dimensions.keys() ]
         self._optimizer.tell(point, -score)
 
     def _get_dimensions(self, knob_config):
-        dimensions = {
+        dimensions = OrderedDict({
             name: _knob_to_dimension(x)
                 for (name, x)
                 in knob_config.items()
-        }
+                if type(x) != FixedKnob
+        })
         return dimensions
 
 def _knob_to_dimension(knob):
     if isinstance(knob, CategoricalKnob):
         return Categorical(knob.values)
-    elif isinstance(knob, FixedKnob):
-        return Categorical([knob.value])
     elif isinstance(knob, IntegerKnob):
         return Integer(knob.value_min, knob.value_max)
     elif isinstance(knob, FloatKnob):
