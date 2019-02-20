@@ -61,6 +61,8 @@ class TfEnasChild(BaseModel):
             'aux_loss_mul': FixedKnob(0.4),
             'drop_path_keep_prob': FixedKnob(0.6),
             'cutout_size': FixedKnob(0),
+            'grad_clip_norm': FixedKnob(5.0),
+            'log_monitored_values_every_steps': FixedKnob(1000),
             'cell_archs': ListKnob(2 * 5 * 4, lambda i: cell_arch_item(i, 5)),
             'use_cell_arch_type': FixedKnob('') # '' | 'ENAS' | 'NASNET-A'
         }
@@ -219,13 +221,14 @@ class TfEnasChild(BaseModel):
         acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
         # Optimize training loss
-        (train_op, steps, lr) = self._optimize(total_loss, tf_vars, epoch)
+        (train_op, steps, lr, grads_global_norm) = self._optimize(total_loss, tf_vars, epoch)
 
         self._monitored_values.update({
             'loss': loss,
             'aux_loss': aux_loss,
             'reg_loss': reg_loss,
-            'lr': lr
+            'lr': lr,
+            'grads_global_norm': grads_global_norm
         })
         self._probs = probs
         self._init_op = dataset_itr.initializer
@@ -366,6 +369,7 @@ class TfEnasChild(BaseModel):
 
     def _optimize(self, loss, tf_vars, epoch):
         opt_momentum = self._knobs['opt_momentum'] # Momentum optimizer momentum
+        grad_clip_norm = self._knobs['grad_clip_norm'] # L2 norm to clip gradients by
 
         # Initialize steps variable
         steps = tf.Variable(0, name='steps', dtype=tf.int32, trainable=False)
@@ -374,11 +378,17 @@ class TfEnasChild(BaseModel):
         lr = self._get_learning_rate(epoch)
         grads = tf.gradients(loss, tf_vars)
 
+        # Clip gradients
+        grads = [tf.clip_by_norm(x, grad_clip_norm) for x in grads]
+
+        # Compute global norm of gradients
+        grads_global_norm = tf.global_norm(grads)
+
         # Init optimizer
         opt = tf.train.MomentumOptimizer(lr, opt_momentum, use_locking=True, use_nesterov=True)
         train_op = opt.apply_gradients(zip(grads, tf_vars), global_step=steps)
 
-        return (train_op, steps, lr)
+        return (train_op, steps, lr, grads_global_norm)
 
     def _get_learning_rate(self, epoch):
         lr = self._knobs['learning_rate'] # Learning rate
@@ -404,7 +414,7 @@ class TfEnasChild(BaseModel):
 
     def _train_model(self, images, classes):
         num_epochs = self._knobs['max_epochs']
-        log_monitored_values_every_steps = 1000
+        log_monitored_values_steps = self._knobs['log_monitored_values_steps']
         train_summaries = []
 
         self._sess.run(tf.global_variables_initializer())
@@ -435,7 +445,7 @@ class TfEnasChild(BaseModel):
                     accs.append(acc)
                     
                     # Periodically, log monitored values
-                    if steps % log_monitored_values_every_steps == 0:
+                    if steps % log_monitored_values_steps == 0:
                         utils.logger.log(**{ k: v for (k, v) in zip(monitored_names, values) })
                     
                 except tf.errors.OutOfRangeError:
