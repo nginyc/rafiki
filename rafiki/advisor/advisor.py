@@ -41,19 +41,26 @@ from .tf import EnasKnobAdvisor
 class Advisor():
     def start(self, knob_config: dict):
         self._knob_config = knob_config
-        self._skopt_knob_adv = SkoptKnobAdvisor()
-        self._enas_knob_adv = EnasKnobAdvisor()
 
         # Let skopt propose for these basic knobs
         self._skopt_knob_config = { name: knob for (name, knob) in knob_config.items() 
-                            if type(knob) in [IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob] }
+                            if type(knob) in [IntegerKnob, CategoricalKnob, FloatKnob] }
 
-        self._skopt_knob_adv.start(self._skopt_knob_config)
+        if len(self._skopt_knob_config) > 0:
+            self._skopt_knob_adv = SkoptKnobAdvisor()
+            self._skopt_knob_adv.start(self._skopt_knob_config)
 
         # Let ENAS propose for list knobs
         self._enas_knob_config = { name: knob for (name, knob) in knob_config.items() 
                             if type(knob) in [ListKnob] }
-        self._enas_knob_adv.start(self._enas_knob_config)
+
+        if len(self._enas_knob_config) > 0:
+            self._enas_knob_adv = EnasKnobAdvisor()
+            self._enas_knob_adv.start(self._enas_knob_config)
+
+        # Initialize fixed knobs
+        self._fixed_knobs = { name: knob.value for (name, knob) in knob_config.items() 
+                            if type(knob) in [FixedKnob] }
 
         # Use naive params advisor
         self._params_adv = NaiveParamAdvisor()
@@ -66,10 +73,16 @@ class Advisor():
         knobs = {}
 
         # Merge knobs from advisors
-        skopt_knobs = self._skopt_knob_adv.propose()
-        knobs.update(skopt_knobs)
-        enas_knobs = self._enas_knob_adv.propose()
-        knobs.update(enas_knobs)
+        if len(self._skopt_knob_config) > 0:
+            skopt_knobs = self._skopt_knob_adv.propose()
+            knobs.update(skopt_knobs)
+        
+        if len(self._enas_knob_config) > 0:
+            enas_knobs = self._enas_knob_adv.propose()
+            knobs.update(enas_knobs)
+    
+        # Merge fixed knobs in
+        knobs.update(self._fixed_knobs)
 
         # Simplify knobs to use JSON serializable values
         knobs = {
@@ -85,12 +98,14 @@ class Advisor():
 
     def feedback(self, score: float, knobs: dict, params: dict = None):
         # Feedback to skopt
-        skopt_knobs = { name: knob for (name, knob) in knobs.items() if name in self._skopt_knob_config }
-        self._skopt_knob_adv.feedback(score, skopt_knobs)
+        if len(self._skopt_knob_config) > 0:
+            skopt_knobs = { name: knob for (name, knob) in knobs.items() if name in self._skopt_knob_config }
+            self._skopt_knob_adv.feedback(score, skopt_knobs)
 
         # Feedback to ENAS
-        enas_knobs = { name: knob for (name, knob) in knobs.items() if name in self._enas_knob_config }
-        self._enas_knob_adv.feedback(score, enas_knobs)
+        if len(self._enas_knob_config) > 0:
+            enas_knobs = { name: knob for (name, knob) in knobs.items() if name in self._enas_knob_config }
+            self._enas_knob_adv.feedback(score, enas_knobs)
 
         # Feedback to params
         if params is not None:
