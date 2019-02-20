@@ -590,6 +590,7 @@ class TfEnasChild(BaseModel):
         return num_params
 
     def _add_reduction_cell(self, cell_arch, inputs, block_ch, drop_path_keep_prob):
+        ni = len(inputs) # no. of inputs
         b = len(cell_arch) # no. of blocks
         hidden_states = [] # Stores hidden states for this cell, which includes blocks
 
@@ -602,22 +603,26 @@ class TfEnasChild(BaseModel):
                 inp = self._calibrate(inp, w_inp, h_inp, ch_inp, w, h, block_ch)
                 hidden_states.append(inp)
 
+        # Make each block, also recording whether each block is used 
+        hidden_state_used_counts = [0 for _ in range(ni + b)]
         for bi in range(b):
             with tf.variable_scope('block_{}'.format(bi)):
                 (idx1, op1, idx2, op2) = cell_arch[bi]
                 X1 = hidden_states[idx1]
+                hidden_state_used_counts[idx1] += 1
                 X2 = hidden_states[idx2]
+                hidden_state_used_counts[idx2] += 1
 
                 with tf.variable_scope('X1'):
                     # Don't halve dimensions if X1 is a fellow block
-                    if idx1 < len(inputs):
+                    if idx1 < ni:
                         X1 = self._add_op(X1, op1, w, h, block_ch, stride=2)
                     else:
                         X1 = self._add_op(X1, op1, w >> 1, h >> 1, block_ch)
                     X1 = self._do_drop_path(X1, drop_path_keep_prob)
 
                 with tf.variable_scope('X2'):
-                    if idx2 < len(inputs):
+                    if idx2 < ni:
                         X2 = self._add_op(X2, op2, w, h, block_ch, stride=2)
                     else:
                         X2 = self._add_op(X2, op2, w >> 1, h >> 1, block_ch)
@@ -627,18 +632,18 @@ class TfEnasChild(BaseModel):
 
             hidden_states.append(X)
 
-        # Combine all blocks
-        # TODO: Maybe only concat unused blocks
-        blocks = hidden_states[len(inputs):]
-        comb_ch = len(blocks) * block_ch
+        # Combine all unused hidden states
+        comb_states = [X for (i, X) in enumerate(hidden_states) if i > ni and hidden_state_used_counts[i] == 0] 
+        comb_ch = len(comb_states) * block_ch
         with tf.variable_scope('combine'):
-            X = tf.concat(blocks, axis=3)
+            X = tf.concat(comb_states, axis=3)
 
         X = tf.reshape(X, (-1, w >> 1, h >> 1, comb_ch)) # Sanity shape check
 
         return (X, w >> 1, h >> 1, comb_ch)
 
     def _add_normal_cell(self, cell_arch, inputs, block_ch, drop_path_keep_prob):
+        ni = len(inputs) # no. of inputs
         b = len(cell_arch) # no. of blocks
         hidden_states = [] # Stores hidden states for this cell, which includes blocks
 
@@ -651,11 +656,15 @@ class TfEnasChild(BaseModel):
                 inp = self._calibrate(inp, w_inp, h_inp, ch_inp, w, h, block_ch)
                 hidden_states.append(inp)
 
+        # Make each block, also recording whether each block is used 
+        hidden_state_used_counts = [0 for _ in range(ni + b)]
         for bi in range(b):
             with tf.variable_scope('block_{}'.format(bi)):
                 (idx1, op1, idx2, op2) = cell_arch[bi]
                 X1 = hidden_states[idx1]
+                hidden_state_used_counts[idx1] += 1
                 X2 = hidden_states[idx2]
+                hidden_state_used_counts[idx2] += 1
 
                 with tf.variable_scope('X1'):
                     X1 = self._add_op(X1, op1, w, h, block_ch, stride=1)
@@ -669,12 +678,11 @@ class TfEnasChild(BaseModel):
 
             hidden_states.append(X)
 
-        # Combine all blocks
-        # TODO: Maybe only concat unused blocks
-        blocks = hidden_states[len(inputs):]
-        comb_ch = len(blocks) * block_ch
+        # Combine all unused hidden states
+        comb_states = [X for (i, X) in enumerate(hidden_states) if i > ni and hidden_state_used_counts[i] == 0] 
+        comb_ch = len(comb_states) * block_ch
         with tf.variable_scope('combine'):
-            X = tf.concat(blocks, axis=3)
+            X = tf.concat(comb_states, axis=3)
 
         X = tf.reshape(X, (-1, w, h, comb_ch)) # Sanity shape check
 
