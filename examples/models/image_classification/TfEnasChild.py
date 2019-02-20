@@ -62,7 +62,7 @@ class TfEnasChild(BaseModel):
             'drop_path_keep_prob': FixedKnob(0.6),
             'cutout_size': FixedKnob(0),
             'grad_clip_norm': FixedKnob(5.0),
-            'log_monitored_values_every_steps': FixedKnob(1000),
+            'log_monitored_values_steps': FixedKnob(1000),
             'cell_archs': ListKnob(2 * 5 * 4, lambda i: cell_arch_item(i, 5)),
             'use_cell_arch_type': FixedKnob('') # '' | 'ENAS' | 'NASNET-A'
         }
