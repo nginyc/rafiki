@@ -1,16 +1,18 @@
 import abc
 import json
 import pickle
+import argparse
 
 class BaseKnob(abc.ABC):
     '''
     The base class for a knob type.
     '''
-
-    # TODO: Support conditional and validation logic
-
     def __init__(self):
         pass
+        
+    @property
+    def value_type(self):
+        raise NotImplementedError()
 
 class CategoricalKnob(BaseKnob):
     '''
@@ -170,6 +172,10 @@ class ListKnob(BaseKnob):
             self._validate_values(list_len, get_item, items)
         super().__init__()
 
+    @property
+    def value_type(self):
+        return list
+
     @property  
     def items(self):
         return self._items
@@ -203,6 +209,10 @@ class DynamicListKnob(BaseKnob):
         (self._len_min, self._len_max, self._items) = \
             self._validate_values(len_min, len_max, get_item, items)
         super().__init__()
+
+    @property
+    def value_type(self):
+        return list
         
     @property
     def items(self):
@@ -243,4 +253,3 @@ def deserialize_knob_config(knob_config_bytes):
 def serialize_knob_config(knob_config):
     knob_config_bytes = pickle.dumps(knob_config)
     return knob_config_bytes
-    

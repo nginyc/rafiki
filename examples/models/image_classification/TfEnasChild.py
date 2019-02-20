@@ -61,41 +61,10 @@ class TfEnasChild(BaseModel):
             'aux_loss_mul': FixedKnob(0.4),
             'drop_path_keep_prob': FixedKnob(0.6),
             'cutout_size': FixedKnob(0),
-            'cell_archs': ListKnob(2 * 5 * 4, lambda i: cell_arch_item(i, 5)) 
+            'cell_archs': ListKnob(2 * 5 * 4, lambda i: cell_arch_item(i, 5)),
+            'use_cell_arch_type': FixedKnob('') # '' | 'ENAS' | 'NASNET-A'
         }
-        '''
-        # ENAS
-        FixedKnob([
-            # Normal
-            0, 2, 0, 0, 
-            0, 4, 0, 1, 
-            0, 4, 1, 1, 
-            1, 0, 0, 1, 
-            0, 2, 1, 1,
-            # Reduction
-            1, 0, 1, 0,
-            0, 3, 0, 2,
-            1, 1, 3, 1,
-            1, 0, 0, 4,
-            0, 3, 1, 1
-        ]) 
 
-        # NASNET
-        FixedKnob([
-            # Normal
-            1, 0, 1, 4,
-            0, 0, 1, 1,
-            1, 2, 0, 4,
-            0, 2, 0, 2,
-            0, 1, 0, 0,
-            # Reduction
-            0, 5, 1, 1,
-            1, 3, 0, 5,
-            1, 2, 0, 1,
-            1, 3, 2, 1,
-            2, 2, 3, 4
-        ])
-        '''
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
@@ -436,9 +405,6 @@ class TfEnasChild(BaseModel):
     def _train_model(self, images, classes):
         num_epochs = self._knobs['max_epochs']
         log_monitored_values_every_steps = 1000
-        # best_loss_patience_epochs = 10 # No. of epochs where there should be an decrease in best batch loss, otherwise training stops 
-
-        # best_loss, best_loss_patience_count = float('inf'), 0
         train_summaries = []
 
         self._sess.run(tf.global_variables_initializer())
@@ -479,17 +445,6 @@ class TfEnasChild(BaseModel):
             mean_acc = np.mean(accs)
             utils.logger.log(epoch=epoch, mean_acc=mean_acc)
 
-            # # Determine whether training should stop due to patience
-            # if avg_batch_loss < best_loss:
-            #     utils.logger.log('Best batch loss so far: {}'.format(avg_batch_loss))
-            #     best_loss = avg_batch_loss
-            #     best_loss_patience_count = 0
-            # else:
-            #     best_loss_patience_count += 1
-            #     if best_loss_patience_count >= best_loss_patience_epochs:
-            #         utils.logger.log('Batch loss has not increased for {} epochs'.format(best_loss_patience_epochs))
-            #         break
-
         self._train_summaries = train_summaries
             
     def _evaluate_model(self, images, classes):
@@ -520,6 +475,42 @@ class TfEnasChild(BaseModel):
 
     def _get_arch(self):
         cell_archs = self._knobs['cell_archs']
+        use_cell_arch_type = self._knobs['use_cell_arch_type']
+
+        if use_cell_arch_type:
+            if use_cell_arch_type == 'ENAS':
+                cell_archs = [
+                    # Normal
+                    0, 2, 0, 0, 
+                    0, 4, 0, 1, 
+                    0, 4, 1, 1, 
+                    1, 0, 0, 1, 
+                    0, 2, 1, 1,
+                    # Reduction
+                    1, 0, 1, 0,
+                    0, 3, 0, 2,
+                    1, 1, 3, 1,
+                    1, 0, 0, 4,
+                    0, 3, 1, 1
+                ]
+            elif use_cell_arch_type == 'NASNET-A':
+                cell_archs = [
+                     # Normal
+                    1, 0, 1, 4,
+                    0, 0, 1, 1,
+                    1, 2, 0, 4,
+                    0, 2, 0, 2,
+                    0, 1, 0, 0,
+                    # Reduction
+                    0, 5, 1, 1,
+                    1, 3, 0, 5,
+                    1, 2, 0, 1,
+                    1, 3, 2, 1,
+                    2, 2, 3, 4
+                ]
+            else:
+                raise InvalidModelParamsException()
+
         num_blocks = 5
         normal_arch = [cell_archs[(4 * i):(4 * i + 4)] for i in range(num_blocks)]
         reduction_arch = [cell_archs[(4 * i):(4 * i + 4)] for i in range(num_blocks, num_blocks + num_blocks)]
@@ -894,7 +885,5 @@ if __name__ == '__main__':
     tune_model(
         TfEnasChild, 
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-        val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-        num_trials=10,
-        enable_gpu=True
+        val_dataset_uri='data/cifar_10_for_image_classification_val.zip'
     )

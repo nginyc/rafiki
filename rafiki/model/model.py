@@ -6,9 +6,10 @@ import pickle
 import uuid
 from importlib import import_module
 import inspect
+import argparse
 from typing import Union
 
-from rafiki.advisor import Advisor, BaseKnob, serialize_knob_config, deserialize_knob_config
+from rafiki.advisor import Advisor, BaseKnob, serialize_knob_config, deserialize_knob_config, FixedKnob
 from rafiki.predictor import ensemble_predictions
 from rafiki.constants import TaskType, ModelDependency
 
@@ -116,22 +117,33 @@ class BaseModel(abc.ABC):
         '''
         pass
 
-
-def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_uri: str, num_trials: int,
-                params_root_dir: str = 'params/', enable_gpu: bool = False):
+def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_uri: str, num_trials: int = 25,
+                params_root_dir: str = 'params/', to_read_args: bool = True):
     '''
-    Tunes a model on a given dataset.
+    Tunes a model on a given dataset in the current environment.
 
     :param BaseModel py_model_class: The Python class for the model
     :param str train_dataset_uri: URI of the train dataset for testing the training of model
     :param str val_dataset_uri: URI of the validation dataset for testing the evaluation of model
     :param int num_trials: Number of trials to tune the model over
     :param str params_root_dir: Root folder path to create subfolders to save each trial's model parameters
-    :param bool enable_gpu: Whether to enable GPU during model training
+    :param bool to_read_args: Whether should system args be read to retrieve default values for `num_trials` and knobs
     :returns: The best trained model
     '''
     # Retrieve config of model
     knob_config = py_model_class.get_knob_config()
+
+    # Maybe read from args
+    if to_read_args:
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--num_trials', type=int)
+        (namespace_args, left_args) = parser.parse_known_args()
+        num_trials = namespace_args.num_trials if namespace_args.num_trials is not None else num_trials  
+        knob_config = _maybe_read_knob_values_from_args(knob_config, left_args)
+
+    _info('Total trial count: {}'.format(num_trials))
+
+    # Configure advisor
     advisor = Advisor()
     advisor.start(knob_config)
     
@@ -180,7 +192,6 @@ def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_ur
         advisor.feedback(score, knobs, trial_params)
     
     return best_model_inst
-    
 
 def test_model_class(model_file_path: str, model_class: str, task: str, dependencies: dict,
                     train_dataset_uri: str, val_dataset_uri: str, params_dir: str = 'params/local/',
@@ -331,6 +342,22 @@ def parse_model_install_command(dependencies, enable_gpu=False):
             commands.append('pip install {}=={}'.format(dep, ver))
 
     return '; '.join(commands)
+
+def _maybe_read_knob_values_from_args(knob_config, args):
+    parser = argparse.ArgumentParser()
+
+    for (name, knob) in knob_config.items():
+        knob_value_type = knob.value_type
+        if knob_value_type in [int, float, str]:
+            parser.add_argument('--{}'.format(name), type=knob_value_type)
+        
+    args_namespace = parser.parse_args(args)
+    for (name, value) in vars(args_namespace).items():
+        if value is not None:
+            knob_config[name] = FixedKnob(value)
+            _info('Setting knob "{}" to be fixed value of "{}"...'.format(name, value))
+
+    return knob_config
 
 def _check_dependencies(dependencies):
     for (dep, ver) in dependencies.items():
