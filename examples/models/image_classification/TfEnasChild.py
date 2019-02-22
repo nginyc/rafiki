@@ -10,7 +10,7 @@ import numpy as np
 import base64
 
 from rafiki.config import APP_MODE
-from rafiki.advisor import IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, ListKnob
+from rafiki.advisor import IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, ListKnob, Metadata, MetadataKnob
 from rafiki.model import utils, InvalidModelParamsException, tune_model, BaseModel
 from rafiki.constants import TaskType, ModelDependency
 
@@ -42,10 +42,12 @@ class TfEnasChild(BaseModel):
                     return CategoricalKnob(list(range(b + 2))) # input index 1/2
                 elif idx in [1, 3]:
                     return CategoricalKnob([0, 1, 2, 3, 4, 5]) # op for input 1/2
-
+                    
         return {
+            'num_trials': MetadataKnob(Metadata.NUM_TRIALS),
+            'total_trials': MetadataKnob(Metadata.TOTAL_TRIALS),
             'max_image_size': FixedKnob(32),
-            'max_epochs': FixedKnob(1),
+            'trial_epochs': FixedKnob(1),
             'batch_size': FixedKnob(64),
             'learning_rate': FixedKnob(0.05), 
             'initial_block_ch': FixedKnob(36),
@@ -61,8 +63,8 @@ class TfEnasChild(BaseModel):
             'aux_loss_mul': FixedKnob(0.4),
             'drop_path_keep_prob': FixedKnob(0.6),
             'cutout_size': FixedKnob(0),
-            'grad_clip_norm': FixedKnob(5.0),
-            'log_monitored_values_steps': FixedKnob(1000),
+            'grad_clip_norm': FixedKnob(0),
+            'log_monitored_values_steps': FixedKnob(100),
             'cell_archs': ListKnob(2 * 5 * 4, lambda i: cell_arch_item(i, 5)),
             'use_cell_arch_type': FixedKnob('') # '' | 'ENAS' | 'NASNET-A'
         }
@@ -190,9 +192,12 @@ class TfEnasChild(BaseModel):
 
     def _build_model(self):
         N = self._knobs['batch_size'] 
-        num_epochs = self._knobs['max_epochs']
         w = self._train_params['image_size']
         h = self._train_params['image_size']
+        total_trials = self._knobs['total_trials']
+        trial_epochs = self._knobs['trial_epochs']
+
+        total_epochs = trial_epochs * total_trials
         in_ch = 3 # Num channels of input images
         
         # To add values to monitor
@@ -203,7 +208,7 @@ class TfEnasChild(BaseModel):
         is_train = tf.placeholder(tf.bool, name='is_train_ph', shape=())
         epoch = tf.placeholder(tf.int32, name='epoch_ph', shape=())
 
-        epochs_ratio = epoch / num_epochs
+        epochs_ratio = epoch / total_epochs
         
         dataset = tf.data.Dataset.from_tensor_slices((images_ph, classes_ph)).batch(N)
         dataset_itr = dataset.make_initializable_iterator()
@@ -379,7 +384,8 @@ class TfEnasChild(BaseModel):
         grads = tf.gradients(loss, tf_vars)
 
         # Clip gradients
-        grads = [tf.clip_by_norm(x, grad_clip_norm) for x in grads]
+        if grad_clip_norm >= 0:
+            grads = [tf.clip_by_norm(x, grad_clip_norm) for x in grads]
 
         # Compute global norm of gradients
         grads_global_norm = tf.global_norm(grads)
@@ -413,13 +419,18 @@ class TfEnasChild(BaseModel):
         self._sess = tf.Session(config=config)
 
     def _train_model(self, images, classes):
-        num_epochs = self._knobs['max_epochs']
+        num_trials = self._knobs['num_trials']
+        trial_epochs = self._knobs['trial_epochs']
         log_monitored_values_steps = self._knobs['log_monitored_values_steps']
+        prev_epochs = num_trials * trial_epochs # No. of epochs that has run for past trials
+
         train_summaries = []
 
         self._sess.run(tf.global_variables_initializer())
-        for epoch in range(num_epochs):
-            utils.logger.log('Running epoch {}...'.format(epoch))
+
+        for trial_epoch in range(trial_epochs):
+            epoch = trial_epoch + prev_epochs
+            utils.logger.log('Running epoch {} (trial epoch {})...'.format(epoch, trial_epoch))
 
             # Initialize dataset
             self._sess.run(self._init_op, feed_dict={

@@ -3,7 +3,8 @@ import numpy as np
 import random
 from typing import Union
 
-from .knob import IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, ListKnob, DynamicListKnob
+from .knob import IntegerKnob, CategoricalKnob, FloatKnob, \
+                FixedKnob, ListKnob, DynamicListKnob, MetadataKnob, Metadata
 
 class UnsupportedKnobTypeError(Exception): pass
 
@@ -39,6 +40,10 @@ from .skopt import SkoptKnobAdvisor
 from .tf import EnasKnobAdvisor
 
 class Advisor():
+    def __init__(self, total_trials):
+        self._total_trials = total_trials
+        self._num_trials = 0
+
     def start(self, knob_config: dict):
         self._knob_config = knob_config
 
@@ -62,6 +67,10 @@ class Advisor():
         self._fixed_knobs = { name: knob.value for (name, knob) in knob_config.items() 
                             if type(knob) in [FixedKnob] }
 
+        # Note metadata knobs
+        self._metadata_knobs = { name: knob.metadata for (name, knob) in knob_config.items() 
+                            if type(knob) in [MetadataKnob] }
+
         # Use naive params advisor
         self._params_adv = NaiveParamAdvisor()
 
@@ -84,6 +93,11 @@ class Advisor():
         # Merge fixed knobs in
         knobs.update(self._fixed_knobs)
 
+        # Merge metadata knobs in
+        for (name, metadata) in self._metadata_knobs.items():
+            value = self._get_metadata_value(metadata)
+            knobs[name] = value
+
         # Simplify knobs to use JSON serializable values
         knobs = {
             name: self._simplify_value(value)
@@ -97,6 +111,8 @@ class Advisor():
         return (knobs, params)
 
     def feedback(self, score: float, knobs: dict, params: dict = None):
+        self._num_trials += 1
+
         # Feedback to skopt
         if len(self._skopt_knob_config) > 0:
             skopt_knobs = { name: knob for (name, knob) in knobs.items() if name in self._skopt_knob_config }
@@ -118,6 +134,14 @@ class Advisor():
             return float(value)
 
         return value
+
+    def _get_metadata_value(self, metadata):
+        if metadata == Metadata.NUM_TRIALS:
+            return self._num_trials
+        elif metadata == Metadata.TOTAL_TRIALS:
+            return self._total_trials
+        else:
+            raise ValueError('No such metadata: {}'.format(metadata))
 
 class NaiveParamAdvisor(BaseParamAdvisor):
     def __init__(self):
@@ -169,5 +193,5 @@ class RandomKnobAdvisor(BaseKnobAdvisor):
             raise UnsupportedKnobTypeError(knob.__class__)
 
     def feedback(self, score, knobs):
-        # Ignore feedback - no relevant for a random advisor
+        # Ignore feedback - not relevant for a random advisor
         pass

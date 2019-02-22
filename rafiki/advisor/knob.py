@@ -2,6 +2,7 @@ import abc
 import json
 import pickle
 import argparse
+from enum import Enum
 
 class BaseKnob(abc.ABC):
     '''
@@ -52,6 +53,33 @@ class CategoricalKnob(BaseKnob):
             raise TypeError('`values` should have elements of the same type')
 
         return (value_type)
+
+class Metadata(Enum):
+    NUM_TRIALS = ('NUM_TRIALS', int)
+    TOTAL_TRIALS = ('TOTAL_TRIALS', int)
+
+class MetadataKnob(BaseKnob):
+    '''
+    Knob type representing some piece of metadata from Rafiki.
+    '''
+    def __init__(self, metadata: Metadata):
+        super().__init__()
+        (self._metadata) = self._validate(metadata)
+
+    @property
+    def value_type(self):
+        (name, typ) = self._metadata.value
+        return typ
+
+    @property
+    def metadata(self):
+        return self._metadata
+
+    @staticmethod
+    def _validate(metadata):
+        if not isinstance(metadata, Metadata):
+            raise TypeError('`metadata` must be of type `Metadata`')
+        return (metadata)
 
 class FixedKnob(BaseKnob):
     '''

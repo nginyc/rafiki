@@ -117,7 +117,7 @@ class BaseModel(abc.ABC):
         '''
         pass
 
-def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_uri: str, num_trials: int = 25,
+def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_uri: str, total_trials: int = 25,
                 params_root_dir: str = 'params/', to_read_args: bool = True):
     '''
     Tunes a model on a given dataset in the current environment.
@@ -125,7 +125,7 @@ def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_ur
     :param BaseModel py_model_class: The Python class for the model
     :param str train_dataset_uri: URI of the train dataset for testing the training of model
     :param str val_dataset_uri: URI of the validation dataset for testing the evaluation of model
-    :param int num_trials: Number of trials to tune the model over
+    :param int total_trials: Total number of trials to tune the model over
     :param str params_root_dir: Root folder path to create subfolders to save each trial's model parameters
     :param bool to_read_args: Whether should system args be read to retrieve default values for `num_trials` and knobs
     :returns: The best trained model
@@ -136,15 +136,15 @@ def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_ur
     # Maybe read from args
     if to_read_args:
         parser = argparse.ArgumentParser()
-        parser.add_argument('--num_trials', type=int)
+        parser.add_argument('--total_trials', type=int)
         (namespace_args, left_args) = parser.parse_known_args()
-        num_trials = namespace_args.num_trials if namespace_args.num_trials is not None else num_trials  
+        total_trials = namespace_args.total_trials if namespace_args.total_trials is not None else total_trials  
         knob_config = _maybe_read_knob_values_from_args(knob_config, left_args)
 
-    _info('Total trial count: {}'.format(num_trials))
+    _info('Total trial count: {}'.format(total_trials))
 
     # Configure advisor
-    advisor = Advisor()
+    advisor = Advisor(total_trials)
     advisor.start(knob_config)
     
     # Variables to track over trials
@@ -152,7 +152,7 @@ def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_ur
     best_model_inst = None
 
     # For every trial
-    for i in range(1, num_trials + 1):
+    for i in range(1, total_trials + 1):
         trial_id = str(uuid.uuid4())
         _print_header('Trial #{} (ID: "{}")'.format(i, trial_id))
         
