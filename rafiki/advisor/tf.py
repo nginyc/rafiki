@@ -162,6 +162,8 @@ class EnasKnobAdvisorListModel():
         N = len(knob) # Length of list
         H = 32 # Number of units in LSTM
         lstm_num_layers = 2
+        temperature = 0
+        tanh_constant = 1.5
 
         # List of counts corresponding to the no. of values for each list item
         Ks = [len(item_knob.values) for item_knob in knob.items]
@@ -188,6 +190,8 @@ class EnasKnobAdvisorListModel():
 
                 # Add fully connected layer and transform to `K` channels
                 logits = self._add_fully_connected(X, (1, H), K)
+                logits = self._add_temperature(logits, temperature)
+                logits = self._add_tanh_constant(logits, tanh_constant)
                 item_logits.append(logits)
 
                 # Draw and save item index from probability distribution by `X`
@@ -246,6 +250,18 @@ class EnasKnobAdvisorListModel():
             num_params += np.prod([dim.value for dim in var.get_shape()])
 
         return num_params
+
+    def _add_temperature(self, logits, temperature):
+        if temperature > 0:
+            logits = logits / temperature
+        
+        return logits
+    
+    def _add_tanh_constant(self, logits, tanh_constant):
+        if tanh_constant > 0:
+            logits = tanh_constant * tf.tanh(logits)
+        
+        return logits
 
     def _add_fully_connected(self, X, in_shape, out_ch):
         with tf.variable_scope('fully_connected'):
