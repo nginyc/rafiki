@@ -384,7 +384,7 @@ class TfEnasChild(BaseModel):
         grads = tf.gradients(loss, tf_vars)
 
         # Clip gradients
-        if grad_clip_norm >= 0:
+        if grad_clip_norm > 0:
             grads = [tf.clip_by_norm(x, grad_clip_norm) for x in grads]
 
         # Compute global norm of gradients
