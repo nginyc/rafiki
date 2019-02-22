@@ -11,11 +11,12 @@ import shutil
 from tqdm import tqdm
 from itertools import chain
 from PIL import Image
+import argparse
 
 from rafiki.model import utils
 
 def load(dataset_url, label_to_name, out_train_dataset_path, out_val_dataset_path, 
-        out_test_dataset_path, out_meta_csv_path, validation_split=0.05, limit=None):
+        out_test_dataset_path, out_meta_csv_path, validation_split, limit=None):
     '''
         Loads and converts an image dataset of the CIFAR-10 format to the DatasetType `IMAGE_FILES`.
         Refer to https://www.cs.toronto.edu/~kriz/cifar.html for the CIFAR-10 dataset format for.
@@ -61,6 +62,7 @@ def _split_train_dataset(train_images, train_labels, validation_split, limit):
     train_labels = train_labels[:val_start_idx]
 
     if limit is not None:
+        print('Limiting train & validation examples to {}...'.format(limit))
         val_images = val_images[:limit]
         val_labels = val_labels[:limit]
         train_images = train_images[:limit]
@@ -147,6 +149,12 @@ def _cifar_images_to_images(cifar_images):
     return images
 
 if __name__ == '__main__':
+    # Read args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--limit', type=int, default=None)
+    parser.add_argument('--validation_split', type=float, default=0.05)
+    args = parser.parse_args()
+
     # Loads the official CIFAR-10 dataset as `IMAGE_FILES` DatasetType
     load(
         dataset_url='https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
@@ -165,7 +173,9 @@ if __name__ == '__main__':
         out_train_dataset_path='data/cifar_10_for_image_classification_train.zip',
         out_val_dataset_path='data/cifar_10_for_image_classification_val.zip',
         out_test_dataset_path='data/cifar_10_for_image_classification_test.zip',
-        out_meta_csv_path='data/cifar_10_for_image_classification_meta.csv'
+        out_meta_csv_path='data/cifar_10_for_image_classification_meta.csv',
+        validation_split=args.validation_split,
+        limit=args.limit
     )
 
 
