@@ -164,7 +164,7 @@ if __name__ == '__main__':
         },
         out_train_dataset_path='data/cifar_10_for_image_classification_train.zip',
         out_val_dataset_path='data/cifar_10_for_image_classification_val.zip',
-        out_test_dataset_path='data/cifar_10_for_image_classification_val.zip',
+        out_test_dataset_path='data/cifar_10_for_image_classification_test.zip',
         out_meta_csv_path='data/cifar_10_for_image_classification_meta.csv'
     )
 
