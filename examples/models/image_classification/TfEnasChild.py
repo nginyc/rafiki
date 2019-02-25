@@ -11,17 +11,18 @@ import base64
 
 from rafiki.config import APP_MODE
 from rafiki.advisor import IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, ListKnob, Metadata, MetadataKnob
-from rafiki.model import utils, InvalidModelParamsException, tune_model, BaseModel
+from rafiki.model import utils, tune_model, BaseModel
 from rafiki.constants import TaskType, ModelDependency
 
 class TfEnasChild(BaseModel):
-    TF_COLLECTION_SHARED = 'SHARED'
-
     '''
     Implements the child model of "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
     
     Paper: https://arxiv.org/abs/1802.03268
     '''
+
+    TF_COLLECTION_SHARED = 'SHARED'
+
     @staticmethod
     def get_knob_config():
         def cell_arch_item(i, num_blocks):
@@ -44,7 +45,7 @@ class TfEnasChild(BaseModel):
                     return CategoricalKnob([0, 1, 2, 3, 4, 5]) # op for input 1/2
                     
         return {
-            'num_trials': MetadataKnob(Metadata.NUM_TRIALS),
+            'trial_count': MetadataKnob(Metadata.TRIAL_COUNT),
             'total_trials': MetadataKnob(Metadata.TOTAL_TRIALS),
             'max_image_size': FixedKnob(32),
             'trial_epochs': FixedKnob(1),
@@ -92,7 +93,7 @@ class TfEnasChild(BaseModel):
         with self._graph.as_default():
             self._build_model()
             self._init_session()
-            if shared_params is not None:
+            if len(shared_params) > 0:
                 self._load_shareable_vars(shared_params)
             self._add_logging()
             self._train_model(images, classes)
@@ -419,10 +420,10 @@ class TfEnasChild(BaseModel):
         self._sess = tf.Session(config=config)
 
     def _train_model(self, images, classes):
-        num_trials = self._knobs['num_trials']
+        trial_count = self._knobs['trial_count']
         trial_epochs = self._knobs['trial_epochs']
         log_monitored_values_steps = self._knobs['log_monitored_values_steps']
-        prev_epochs = num_trials * trial_epochs # No. of epochs that has run for past trials
+        prev_epochs = trial_count * trial_epochs # No. of epochs that has run for past trials
 
         train_summaries = []
 
@@ -457,7 +458,7 @@ class TfEnasChild(BaseModel):
                     
                     # Periodically, log monitored values
                     if steps % log_monitored_values_steps == 0:
-                        utils.logger.log(**{ k: v for (k, v) in zip(monitored_names, values) })
+                        utils.logger.log(steps=steps, **{ k: v for (k, v) in zip(monitored_names, values) })
                     
                 except tf.errors.OutOfRangeError:
                     break
@@ -530,7 +531,7 @@ class TfEnasChild(BaseModel):
                     2, 2, 3, 4
                 ]
             else:
-                raise InvalidModelParamsException()
+                raise ValueError('Invalid cell architecture type: "{}"'.format(use_cell_arch_type))
 
         num_blocks = 5
         normal_arch = [cell_archs[(4 * i):(4 * i + 4)] for i in range(num_blocks)]

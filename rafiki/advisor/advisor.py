@@ -1,9 +1,9 @@
 import abc
 import numpy as np
 import random
-from typing import Union
+from typing import Union, Dict
 
-from .knob import IntegerKnob, CategoricalKnob, FloatKnob, \
+from .knob import BaseKnob, IntegerKnob, CategoricalKnob, FloatKnob, \
                 FixedKnob, ListKnob, DynamicListKnob, MetadataKnob, Metadata
 
 class UnsupportedKnobTypeError(Exception): pass
@@ -42,9 +42,9 @@ from .tf import EnasKnobAdvisor
 class Advisor():
     def __init__(self, total_trials):
         self._total_trials = total_trials
-        self._num_trials = 0
+        self._trial_count = 0
 
-    def start(self, knob_config: dict):
+    def start(self, knob_config: Dict[str, BaseKnob]):
         self._knob_config = knob_config
 
         # Let skopt propose for these basic knobs
@@ -75,10 +75,10 @@ class Advisor():
         self._params_adv = NaiveParamAdvisor()
 
     @property
-    def knob_config(self) -> dict:
+    def knob_config(self) -> Dict[str, BaseKnob]:
         return self._knob_config
 
-    def propose(self) -> (dict, dict):
+    def propose(self) -> (Dict[str, any], Dict[str, any]):
         knobs = {}
 
         # Merge knobs from advisors
@@ -110,8 +110,8 @@ class Advisor():
 
         return (knobs, params)
 
-    def feedback(self, score: float, knobs: dict, params: dict = None):
-        self._num_trials += 1
+    def feedback(self, score: float, knobs: Dict[str, any], params: Dict[str, any]):
+        self._trial_count += 1
 
         # Feedback to skopt
         if len(self._skopt_knob_config) > 0:
@@ -124,8 +124,7 @@ class Advisor():
             self._enas_knob_adv.feedback(score, enas_knobs)
 
         # Feedback to params
-        if params is not None:
-            self._params_adv.feedback(score, params)
+        self._params_adv.feedback(score, params)
 
     def _simplify_value(self, value):
         if isinstance(value, np.int64) or isinstance(value, np.int32):
@@ -136,8 +135,8 @@ class Advisor():
         return value
 
     def _get_metadata_value(self, metadata):
-        if metadata == Metadata.NUM_TRIALS:
-            return self._num_trials
+        if metadata == Metadata.TRIAL_COUNT:
+            return self._trial_count
         elif metadata == Metadata.TOTAL_TRIALS:
             return self._total_trials
         else:
@@ -150,7 +149,7 @@ class NaiveParamAdvisor(BaseParamAdvisor):
     def propose(self):
         # Return most recent params
         if len(self._params) == 0:
-            return None
+            return {}
 
         return self._params
 
