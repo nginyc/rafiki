@@ -654,7 +654,7 @@ class TfEnasChild(BaseModel):
             hidden_states.append(X)
 
         # Combine all unused hidden states
-        comb_states = [X for (i, X) in enumerate(hidden_states) if i > ni and hidden_state_used_counts[i] == 0] 
+        comb_states = [X for (i, X) in enumerate(hidden_states) if i >= ni and hidden_state_used_counts[i] == 0] 
         comb_ch = len(comb_states) * block_ch
         with tf.variable_scope('combine'):
             X = tf.concat(comb_states, axis=3)
@@ -700,7 +700,7 @@ class TfEnasChild(BaseModel):
             hidden_states.append(X)
 
         # Combine all unused hidden states
-        comb_states = [X for (i, X) in enumerate(hidden_states) if i > ni and hidden_state_used_counts[i] == 0] 
+        comb_states = [X for (i, X) in enumerate(hidden_states) if i >= ni and hidden_state_used_counts[i] == 0] 
         comb_ch = len(comb_states) * block_ch
         with tf.variable_scope('combine'):
             X = tf.concat(comb_states, axis=3)
