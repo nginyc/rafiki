@@ -292,9 +292,9 @@ class TfEnasChild(BaseModel):
 
         # Core layers of cells
         block_ch = initial_block_ch
-        for l in range(1, L + 1):
+        for l in range(L + 2):
             with tf.variable_scope('layer_{}'.format(l)):
-                layers_ratio = l / (L + 1)
+                layers_ratio = l / (L + 2)
                 prev_layers = [layers[-2] if len(layers) > 1 else layers[-1], layers[-1]]
                 drop_path_keep_prob = tf.cond(is_train, 
                                         lambda: self._get_drop_path_keep_prob(layers_ratio, epochs_ratio), 
@@ -817,12 +817,12 @@ class TfEnasChild(BaseModel):
         while w > w_out or h > h_out:
             downsample_no += 1
             with tf.variable_scope('downsample_{}x'.format(downsample_no)):
-                X = self._add_factorized_reduction(X, w, h, ch)
-                ch <<= 1
+                X = self._add_factorized_reduction(X, w, h, ch, ch_out)
+                ch = ch_out
                 w >>= 1
                 h >>= 1
 
-        # Convert channel counts with 1x1 conv
+        # If channel counts finally don't match, convert channel counts with 1x1 conv
         if ch != ch_out:
             with tf.variable_scope('convert_conv'):
                 X = self._do_conv(X, w, h, ch, ch_out, filter_size=1, do_relu=True)
@@ -840,9 +840,9 @@ class TfEnasChild(BaseModel):
         X = tf.reshape(X, (-1, out_ch)) # Sanity shape check
         return X
 
-    def _add_factorized_reduction(self, X, in_w, in_h, in_ch):
+    def _add_factorized_reduction(self, X, in_w, in_h, in_ch, out_ch):
         '''
-        Output is of shape (in_w // 2, in_h // 2, in_ch * 2)
+        Output is of shape (in_w // 2, in_h // 2, out_ch)
         '''
         assert in_w % 2 == 0 and in_h % 2 == 0, 'Width & height ({} & {}) must both be even!'.format(in_w, in_h)
 
@@ -853,18 +853,18 @@ class TfEnasChild(BaseModel):
             half_2 = tf.nn.avg_pool(shifted_X, ksize=(1, 1, 1, 1), strides=(1, 2, 2, 1), padding='VALID')
 
             # Apply 1 x 1 convolution to each half separately
-            W_half_1 = self._make_var('W_half_1', (1, 1, in_ch, in_ch))
+            W_half_1 = self._make_var('W_half_1', (1, 1, in_ch, out_ch >> 1))
             X_half_1 = tf.nn.conv2d(half_1, W_half_1, (1, 1, 1, 1), padding='SAME')
-            W_half_2 = self._make_var('W_half_2', (1, 1, in_ch, in_ch))
+            W_half_2 = self._make_var('W_half_2', (1, 1, in_ch, out_ch >> 1))
             X_half_2 = tf.nn.conv2d(half_2, W_half_2, (1, 1, 1, 1), padding='SAME')
             
             # Concat both halves across channels
             X = tf.concat([X_half_1, X_half_2], axis=3)
 
             # Apply batch normalization
-            X = self._add_batch_norm(X, in_ch * 2)
+            X = self._add_batch_norm(X, out_ch)
 
-        X = tf.reshape(X, (-1, in_w // 2, in_h // 2, in_ch * 2)) # Sanity shape check
+        X = tf.reshape(X, (-1, in_w // 2, in_h // 2, out_ch)) # Sanity shape check
 
         return X
 
