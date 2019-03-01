@@ -53,7 +53,7 @@ class TfEnasChild(BaseModel):
             'learning_rate': FixedKnob(0.05), 
             'initial_block_ch': FixedKnob(36),
             'stem_ch': FixedKnob(108),
-            'reg_decay': FixedKnob(2e-4),
+            'reg_decay': FixedKnob(4e-4),
             'dropout_keep_prob': FixedKnob(0.8),
             'opt_momentum': FixedKnob(0.9),
             'use_sgdr': FixedKnob(True),
