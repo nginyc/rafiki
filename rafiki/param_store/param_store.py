@@ -36,7 +36,7 @@ class ParamStore(object):
     '''
     def store_params(self, trial_id: str, params: Dict[str, np.array]):
         out_params = {}
-        for (name, value) in params:
+        for (name, value) in params.items():
             param_id = 'trial_{}_param_{}'.format(trial_id, name)
             self._params[param_id] = value
             out_params[name] = param_id
