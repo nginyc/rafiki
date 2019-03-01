@@ -9,12 +9,13 @@ import shutil
 from tqdm import tqdm
 from itertools import chain
 from PIL import Image
+import argparse
 
 from rafiki.model import utils
 
 def load(train_images_url, train_labels_url, test_images_url, test_labels_url, label_to_name, 
         out_train_dataset_path, out_val_dataset_path, out_test_dataset_path, 
-        out_meta_csv_path, validation_split=0.05, limit=None):
+        out_meta_csv_path, validation_split, limit=None):
     '''
         Loads and converts an image dataset of the MNIST format to the DatasetType `IMAGE_FILES`.
         Refer to http://yann.lecun.com/exdb/mnist/ for the MNIST dataset format for.
@@ -67,6 +68,7 @@ def _split_train_dataset(train_images, train_labels, validation_split, limit):
     train_labels = train_labels[:val_start_idx]
 
     if limit is not None:
+        print('Limiting train & validation examples to {}...'.format(limit))
         val_images = val_images[:limit]
         val_labels = val_labels[:limit]
         train_images = train_images[:limit]
@@ -118,6 +120,12 @@ def _load_dataset_from_files(images_file_path, labels_file_path):
     return (images, labels)
 
 if __name__ == '__main__':
+    # Read args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--limit', type=int, default=None)
+    parser.add_argument('--validation_split', type=float, default=0.05)
+    args = parser.parse_args()
+
     # Loads the official Fashion MNIST dataset as `IMAGE_FILES` DatasetType
     load(
         train_images_url='http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz',
@@ -139,7 +147,9 @@ if __name__ == '__main__':
         out_train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
         out_val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
         out_test_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
-        out_meta_csv_path='data/fashion_mnist_for_image_classification_meta.csv'
+        out_meta_csv_path='data/fashion_mnist_for_image_classification_meta.csv',
+        validation_split=args.validation_split,
+        limit=args.limit
     )
 
 

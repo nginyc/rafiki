@@ -55,8 +55,8 @@ class CategoricalKnob(BaseKnob):
         return (value_type)
 
 class Metadata(Enum):
-    NUM_TRIALS = ('NUM_TRIALS', int)
-    TOTAL_TRIALS = ('TOTAL_TRIALS', int)
+    TRIAL_COUNT = ('TRIAL_COUNT', int) # No. of trials that have been completed for model
+    TOTAL_TRIALS = ('TOTAL_TRIALS', int) # Total no. of trials to tune model over
 
 class MetadataKnob(BaseKnob):
     '''
@@ -130,6 +130,10 @@ class IntegerKnob(BaseKnob):
         self._value_min = value_min
         self._value_max = value_max
         self._is_exp = is_exp
+
+    @property
+    def value_type(self):
+        return int
     
     @property
     def value_min(self):
@@ -167,6 +171,10 @@ class FloatKnob(BaseKnob):
         self._value_min = value_min
         self._value_max = value_max
         self._is_exp = is_exp
+
+    @property
+    def value_type(self):
+        return float
     
     @property
     def value_min(self):

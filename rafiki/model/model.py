@@ -7,14 +7,15 @@ import uuid
 from importlib import import_module
 import inspect
 import argparse
-from typing import Union
+import numpy as np
+from typing import Union, Dict, Type
 
 from rafiki.advisor import Advisor, BaseKnob, serialize_knob_config, deserialize_knob_config, FixedKnob
 from rafiki.predictor import ensemble_predictions
 from rafiki.constants import TaskType, ModelDependency
+from rafiki.param_store import ParamStore
 
 class InvalidModelClassException(Exception): pass
-class InvalidModelParamsException(Exception): pass
 
 class BaseModel(abc.ABC):
     '''
@@ -44,7 +45,7 @@ class BaseModel(abc.ABC):
         pass
 
     @staticmethod
-    def get_knob_config():
+    def get_knob_config() -> Dict[str, BaseKnob]:
         '''
         Return a dictionary defining this model class' knob configuration 
         (i.e. list of knob names, their data types and their ranges).
@@ -55,7 +56,7 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def train(self, dataset_uri: str, shared_params: Union[dict, None]) -> dict:
+    def train(self, dataset_uri: str, shared_params: Dict[str, np.array]) -> Union[Dict[str, np.array], None]:
         '''
         Train this model instance with given dataset and initialized knob values.
 
@@ -68,7 +69,7 @@ class BaseModel(abc.ABC):
 
     # TODO: Allow configuration of other metrics
     @abc.abstractmethod
-    def evaluate(self, dataset_uri):
+    def evaluate(self, dataset_uri: str) -> float:
         '''
         Evaluate this model instance with given dataset after training. 
         This will be called only when model is *trained*.
@@ -80,7 +81,7 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def predict(self, queries):
+    def predict(self, queries: list) -> list:
         '''
         Make predictions on a batch of queries with this model instance after training. 
         Each prediction should be JSON serializable.
@@ -94,7 +95,7 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def save_parameters(self, params_dir):
+    def save_parameters(self, params_dir: str):
         '''
         Saves the parameters of this model to a directory.
         This will be called only when model is *trained*.
@@ -102,7 +103,7 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def load_parameters(self, params_dir):
+    def load_parameters(self, params_dir: str):
         '''
         Loads the parameters of this model from a directory.
         The model will be considered *trained* subsequently.
@@ -117,8 +118,8 @@ class BaseModel(abc.ABC):
         '''
         pass
 
-def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_uri: str, total_trials: int = 25,
-                params_root_dir: str = 'params/', to_read_args: bool = True):
+def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_dataset_uri: str, total_trials: int = 25,
+                params_root_dir: str = 'params/', to_read_args: bool = True) -> (Dict[str, any], str):
     '''
     Tunes a model on a given dataset in the current environment.
 
@@ -128,10 +129,13 @@ def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_ur
     :param int total_trials: Total number of trials to tune the model over
     :param str params_root_dir: Root folder path to create subfolders to save each trial's model parameters
     :param bool to_read_args: Whether should system args be read to retrieve default values for `num_trials` and knobs
-    :returns: The best trained model
+    :rtype: (dict, str)
+    :returns: Knobs and params directory for the best trained model
     '''
     # Retrieve config of model
+    _print_header('Checking model configuration...')
     knob_config = py_model_class.get_knob_config()
+    _check_knob_config(knob_config)
 
     # Maybe read from args
     if to_read_args:
@@ -146,10 +150,14 @@ def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_ur
     # Configure advisor
     advisor = Advisor(total_trials)
     advisor.start(knob_config)
+
+    # Configure shared params store
+    param_store = ParamStore()
     
     # Variables to track over trials
     best_score = 0
-    best_model_inst = None
+    best_knobs = None
+    best_model_params_dir = None
 
     # For every trial
     for i in range(1, total_trials + 1):
@@ -158,8 +166,9 @@ def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_ur
         
         # Generate proposal from advisor
         (knobs, params) = advisor.propose()
+        params = param_store.retrieve_params(trial_id, params)
         print('Advisor proposed knobs:', knobs)
-        if params is not None:
+        if len(params) > 0:
             print('Advisor proposed {} params'.format(len(params)))
 
         # Load model
@@ -167,35 +176,44 @@ def tune_model(py_model_class: BaseModel, train_dataset_uri: str, val_dataset_ur
 
         # Train model
         print('Training model...')
-        trial_params = model_inst.train(train_dataset_uri, params)
+        trial_params = model_inst.train(train_dataset_uri, params) or {}
 
         # Evaluate model
         print('Evaluating model...')
         score = model_inst.evaluate(val_dataset_uri)
-        print('Score:', score)
+        if not isinstance(score, float):
+            raise InvalidModelClassException('`evaluate()` should return a float!')
 
-        # Update best model
-        if score > best_score:
-            _info('Best model so far! Beats previous best of score {}!'.format(best_score))
-            best_model_inst = model_inst
-            best_score = score
+        print('Score:', score)
 
         # Save model parameters
         print('Saving model parameters...')
         params_dir = os.path.join(params_root_dir, trial_id + '/')
         if not os.path.exists(params_dir):
             os.mkdir(params_dir)
+
         model_inst.save_parameters(params_dir)
         print('Model parameters saved in {}'.format(params_dir))
+            
+        # Update best model
+        if score > best_score:
+            _info('Best model so far! Beats previous best of score {}!'.format(best_score))
+            best_model_params_dir = params_dir
+            best_knobs = knobs
+            best_score = score
+            
+        # Destroy model
+        print('Destroying model...')
+        model_inst.destroy()
 
         # Feedback to advisor
+        trial_params = param_store.store_params(trial_id, trial_params)
         advisor.feedback(score, knobs, trial_params)
     
-    return best_model_inst
+    return (best_knobs, best_model_params_dir)
 
-def test_model_class(model_file_path: str, model_class: str, task: str, dependencies: dict,
-                    train_dataset_uri: str, val_dataset_uri: str, params_dir: str = 'params/local/',
-                    enable_gpu: bool = False, queries: list = [], knobs: dict = None):
+def test_model_class(model_file_path: str, model_class: str, task: str, dependencies: Dict[str, str],
+                    train_dataset_uri: str, val_dataset_uri: str, enable_gpu: bool = False, queries: list = []):
     '''
     Tests whether a model class is properly defined by running a full train-inference flow.
     The model instance's methods will be called in an order similar to that in Rafiki.
@@ -206,90 +224,56 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
     :param dict[str, str] dependencies: Model's dependencies
     :param str train_dataset_uri: URI of the train dataset for testing the training of model
     :param str val_dataset_uri: URI of the validation dataset for testing the evaluation of model
-    :param str params_dir: Folder path to save model parameters
     :param bool enable_gpu: Whether to enable GPU during model training
     :param list[any] queries: List of queries for testing predictions with the trained model
-    :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used
     :type knobs: dict[str, any]
     :returns: The trained model
     '''
-    try:
-        _print_header('Installing & checking model dependencies...')
-        _check_dependencies(dependencies)
+    _print_header('Installing & checking model dependencies...')
+    _check_dependencies(dependencies)
 
-        # Test installation
-        if not isinstance(dependencies, dict):
-            raise Exception('`dependencies` should be a dict[str, str]')
+    # Test installation
+    if not isinstance(dependencies, dict):
+        raise InvalidModelClassException('`dependencies` should be a dict[str, str]')
 
-        install_command = parse_model_install_command(dependencies, enable_gpu=enable_gpu)
-        exit_code = os.system(install_command)
-        if exit_code != 0: raise Exception('Error in installing model dependencies')
+    install_command = parse_model_install_command(dependencies, enable_gpu=enable_gpu)
+    exit_code = os.system(install_command)
+    if exit_code != 0: 
+        raise InvalidModelClassException('Error in installing model dependencies')
 
-        _print_header('Checking loading of model & model definition...')
-        f = open(model_file_path, 'rb')
+    _print_header('Checking loading of model & model definition...')
+    with open(model_file_path, 'rb') as f:
         model_file_bytes = f.read()
-        f.close()
-        py_model_class = load_model_class(model_file_bytes, model_class, temp_mod_name=model_class)
-        _check_model_class(py_model_class)
+    py_model_class = load_model_class(model_file_bytes, model_class, temp_mod_name=model_class)
+    _check_model_class(py_model_class)
 
-        _print_header('Checking model configuration...')
-        knob_config = py_model_class.get_knob_config()
-        _check_knob_config(knob_config)
+    (best_knobs, best_model_params_dir) = tune_model(py_model_class, train_dataset_uri, val_dataset_uri, total_trials=2)
 
-        _print_header('Checking model\'s advisor..')
-        advisor = py_model_class.get_advisor()
-        advisor.start(knob_config)
-        if knobs is None: 
-            (knobs, _) = advisor.propose()
+    _print_header('Checking loading of parameters of model...')
+    model_inst = py_model_class(**best_knobs)
+    model_inst.load_parameters(best_model_params_dir)
 
-        _print_header('Checking model initialization...')
-        print('Using knobs: {}'.format(knobs))
-        model_inst = py_model_class(**knobs)
-        _check_model_inst(model_inst)
+    _print_header('Checking predictions with model...')
+    print('Using queries: {}'.format(queries))
+    predictions = model_inst.predict(queries)
 
-        _print_header('Checking training & evaluation of model...')
-        model_inst.train(train_dataset_uri)
-        score = model_inst.evaluate(val_dataset_uri)
+    try:
+        for prediction in predictions:
+            json.dumps(prediction)
+    except Exception:
+        traceback.print_stack()
+        raise InvalidModelClassException('Each `prediction` should be JSON serializable')
 
-        if not isinstance(score, float):
-            raise Exception('`evaluate()` should return a float!')
+    # Ensembling predictions in predictor
+    predictions = ensemble_predictions([predictions], task)
 
-        print('Score: {}'.format(score))
+    print('Predictions: {}'.format(predictions))
 
-        _print_header('Checking saving of parameters of model...')
-        if not os.path.exists(params_dir):
-            os.mkdir(params_dir)
-        model_inst.save_parameters(params_dir)
+    _info('The model definition is valid!')
 
-        _print_header('Checking loading of parameters of model...')
-        model_inst.destroy()
-        model_inst = py_model_class(**knobs)
-        model_inst.load_parameters(params_dir)
+    return model_inst
 
-        _print_header('Checking predictions with model...')
-        print('Using queries: {}'.format(queries))
-        predictions = model_inst.predict(queries)
-
-        try:
-            for prediction in predictions:
-                json.dumps(prediction)
-        except Exception:
-            traceback.print_stack()
-            raise Exception('Each `prediction` should be JSON serializable')
-
-        # Ensembling predictions in predictor
-        predictions = ensemble_predictions([predictions], task)
-
-        print('Predictions: {}'.format(predictions))
-
-        _info('The model definition is valid!')
-    
-        return model_inst
-
-    except Exception as e:
-        raise InvalidModelClassException(e)
-
-def load_model_class(model_file_bytes, model_class, temp_mod_name=None):
+def load_model_class(model_file_bytes, model_class, temp_mod_name=None) -> Type[BaseModel]:
     if temp_mod_name is None:
         temp_mod_name = str(uuid.uuid4())
 
@@ -380,7 +364,7 @@ def _check_dependencies(dependencies):
 
 def _check_model_class(py_model_class):
     if not issubclass(py_model_class, BaseModel):
-        raise Exception('Model should extend `rafiki.model.BaseModel`')
+        raise InvalidModelClassException('Model should extend `rafiki.model.BaseModel`')
 
     if inspect.isfunction(getattr(py_model_class, 'init', None)):
         _warn('`init` has been deprecated - use `__init__` for your model\'s initialization logic instead')
@@ -413,7 +397,7 @@ def _check_model_inst(model_inst):
 def _check_knob_config(knob_config):
     if not isinstance(knob_config, dict) or \
         any([(not isinstance(name, str) or not isinstance(knob, BaseKnob)) for (name, knob) in knob_config.items()]):
-        raise Exception('Static method `get_knob_config()` should return a dict[str, BaseKnob]')
+        raise InvalidModelClassException('Static method `get_knob_config()` should return a dict[str, BaseKnob]')
 
     # Try serializing and deserialize knob config
     knob_config_bytes = serialize_knob_config(knob_config)
