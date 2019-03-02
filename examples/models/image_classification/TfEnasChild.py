@@ -288,7 +288,7 @@ class TfEnasChild(BaseModel):
 
         # "Stem" convolution layer (layer -1)
         with tf.variable_scope('layer_stem'):
-            X = self._do_conv(X, w, h, in_ch, stem_ch, is_train, filter_size=3) # 3x3 convolution
+            X = self._do_conv(X, w, h, in_ch, stem_ch, is_train, filter_size=3, no_relu=True) # 3x3 convolution
             layers.append((X, w, h, stem_ch))
 
         # Core layers of cells
@@ -330,7 +330,8 @@ class TfEnasChild(BaseModel):
         X = tf.cond(is_train, lambda: tf.nn.dropout(X, dropout_keep_prob), lambda: X)
 
         # Compute logits from X
-        X = self._add_fully_connected(X, (ch,), K)
+        with tf.variable_scope('fully_connected'):
+            X = self._add_fully_connected(X, (ch,), K)
         logits = tf.nn.softmax(X)
 
         # Compute probabilities and predictions
@@ -565,19 +566,20 @@ class TfEnasChild(BaseModel):
 
         # Conv 1x1
         with tf.variable_scope('conv_0'):
-            X = self._do_conv(X, w, h, ch, conv_ch, is_train, filter_size=1, do_relu=True, no_reg=True)
+            X = self._do_conv(X, w, h, ch, conv_ch, is_train, filter_size=1, no_reg=True)
         ch = conv_ch
 
         # Global conv
         with tf.variable_scope('conv_1'):
-            X = self._do_conv(X, w, h, ch, global_conv_ch, is_train, filter_size=w, do_relu=True, no_reg=True)
+            X = self._do_conv(X, w, h, ch, global_conv_ch, is_train, filter_size=w, no_reg=True)
         ch = global_conv_ch
         
         # Global pooling
         X = self._add_global_pooling(X, w, h, ch)
 
         # Fully connected
-        X = self._add_fully_connected(X, (ch,), K, no_reg=True)
+        with tf.variable_scope('fully_connected'):
+            X = self._add_fully_connected(X, (ch,), K, no_reg=True)
         aux_logits = tf.nn.softmax(X)
 
         return aux_logits
@@ -630,6 +632,12 @@ class TfEnasChild(BaseModel):
         for (i, (inp, w_inp, h_inp, ch_inp)) in enumerate(inputs):
             with tf.variable_scope('input_{}_calibrate'.format(i)):
                 inp = self._calibrate(inp, w_inp, h_inp, ch_inp, w, h, block_ch, is_train)
+                        
+                # Apply conv 1x1 on last input
+                if i == len(inputs) - 1:
+                    with tf.variable_scope('input_{}_conv'.format(i)):
+                        inp = self._do_conv(inp, w, h, block_ch, block_ch, is_train)
+
                 hidden_states.append(inp)
 
         # Make each block, also recording whether each block is used 
@@ -683,7 +691,13 @@ class TfEnasChild(BaseModel):
         for (i, (inp, w_inp, h_inp, ch_inp)) in enumerate(inputs):
             with tf.variable_scope('input_{}_calibrate'.format(i)):
                 inp = self._calibrate(inp, w_inp, h_inp, ch_inp, w, h, block_ch, is_train)
-                hidden_states.append(inp)
+                
+            # Apply conv 1x1 on last input
+            if i == len(inputs) - 1:
+                with tf.variable_scope('input_{}_conv'.format(i)):
+                    inp = self._do_conv(inp, w, h, block_ch, block_ch, is_train)
+
+            hidden_states.append(inp)
 
         # Make each block, also recording whether each block is used 
         hidden_state_used_counts = [0 for _ in range(ni + b)]
@@ -804,14 +818,12 @@ class TfEnasChild(BaseModel):
         X = tf.div(X, keep_prob) * binary_tensor
         return X
 
-    def _do_conv(self, X, w, h, in_ch, out_ch, is_train, filter_size=1, do_relu=False, no_reg=False):
-        with tf.variable_scope('conv'):
-            W = self._make_var('W', (filter_size, filter_size, in_ch, out_ch), no_reg=no_reg)
-            if do_relu:
-                X = tf.nn.relu(X)
-            X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding='SAME')
-            X = self._add_batch_norm(X, out_ch, is_train)
-
+    def _do_conv(self, X, w, h, in_ch, out_ch, is_train, filter_size=1, no_relu=False, no_reg=False):
+        W = self._make_var('W', (filter_size, filter_size, in_ch, out_ch), no_reg=no_reg)
+        if not no_relu:
+            X = tf.nn.relu(X)
+        X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding='SAME')
+        X = self._add_batch_norm(X, out_ch, is_train)
         X = tf.reshape(X, (-1, w, h, out_ch)) # Sanity shape check
         return X
 
@@ -832,18 +844,16 @@ class TfEnasChild(BaseModel):
         # If channel counts finally don't match, convert channel counts with 1x1 conv
         if ch != ch_out:
             with tf.variable_scope('convert_conv'):
-                X = self._do_conv(X, w, h, ch, ch_out, is_train, filter_size=1, do_relu=True)
+                X = self._do_conv(X, w, h, ch, ch_out, is_train, filter_size=1)
 
         X = tf.reshape(X, (-1, w_out, h_out, ch_out)) # Sanity shape check
         return X
 
     def _add_fully_connected(self, X, in_shape, out_ch, no_reg=False):
-        with tf.variable_scope('fully_connected'):
-            ch = np.prod(in_shape)
-            X = tf.reshape(X, (-1, ch))
-            W = self._make_var('W', (ch, out_ch), no_reg=no_reg)
-            X = tf.matmul(X, W)
-
+        ch = np.prod(in_shape)
+        X = tf.reshape(X, (-1, ch))
+        W = self._make_var('W', (ch, out_ch), no_reg=no_reg)
+        X = tf.matmul(X, W)
         X = tf.reshape(X, (-1, out_ch)) # Sanity shape check
         return X
 
