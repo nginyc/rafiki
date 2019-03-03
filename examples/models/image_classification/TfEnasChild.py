@@ -97,7 +97,7 @@ class TfEnasChild(BaseModel):
             if len(shared_params) > 0:
                 self._load_shareable_vars(shared_params)
             self._add_logging()
-            self._train_model(images, classes)
+            self._train_model(np.asarray(images), np.asarray(classes))
             utils.logger.log('Evaluating model on train dataset...')
             acc = self._evaluate_model(images, classes)
             utils.logger.log('Train accuracy: {}'.format(acc))
@@ -210,7 +210,7 @@ class TfEnasChild(BaseModel):
         is_train = tf.placeholder(tf.bool, name='is_train_ph', shape=())
         epoch = tf.placeholder(tf.int32, name='epoch_ph', shape=())
 
-        epochs_ratio = epoch / total_epochs
+        epochs_ratio = (epoch + 1) / total_epochs
         
         dataset = tf.data.Dataset.from_tensor_slices((images_ph, classes_ph)).batch(N)
         dataset_itr = dataset.make_initializable_iterator()
@@ -295,7 +295,7 @@ class TfEnasChild(BaseModel):
         block_ch = initial_block_ch
         for l in range(L + 2):
             with tf.variable_scope('layer_{}'.format(l)):
-                layers_ratio = l / (L + 2)
+                layers_ratio = (l + 1) / (L + 2)
                 prev_layers = [layers[-2] if len(layers) > 1 else layers[-1], layers[-1]]
                 drop_path_keep_prob = self._get_drop_path_keep_prob(layers_ratio, epochs_ratio, is_train)
                 
@@ -324,7 +324,7 @@ class TfEnasChild(BaseModel):
     
         # Global average pooling
         (X, w, h, ch) = layers[-1] # Get final layer
-        X = self._add_global_pooling(X, w, h, ch)
+        X = self._add_global_avg_pool(X, w, h, ch)
 
         # Add dropout
         X = tf.cond(is_train, lambda: tf.nn.dropout(X, dropout_keep_prob), lambda: X)
@@ -348,7 +348,6 @@ class TfEnasChild(BaseModel):
         
         # Decrease keep prob with increasing epochs 
         keep_prob = 1 - epochs_ratio * (1 - keep_prob)
-
 
         # Drop path only during training 
         keeb_prob = tf.cond(is_train, 
@@ -442,8 +441,8 @@ class TfEnasChild(BaseModel):
 
             # Initialize dataset
             self._sess.run(self._init_op, feed_dict={
-                self._images_ph: np.asarray(images), 
-                self._classes_ph: np.asarray(classes)
+                self._images_ph: images, 
+                self._classes_ph: classes
             })
 
             # To track monitored values & accuracy
@@ -575,7 +574,7 @@ class TfEnasChild(BaseModel):
         ch = global_conv_ch
         
         # Global pooling
-        X = self._add_global_pooling(X, w, h, ch)
+        X = self._add_global_avg_pool(X, w, h, ch)
 
         # Fully connected
         with tf.variable_scope('fully_connected'):
@@ -606,7 +605,8 @@ class TfEnasChild(BaseModel):
 
         return (total_loss, loss, reg_loss, aux_loss)
 
-    def _add_global_pooling(self, X, in_w, in_h, in_ch):
+    def _add_global_avg_pool(self, X, in_w, in_h, in_ch):
+        X = tf.nn.relu(X)
         X = tf.reduce_mean(X, (1, 2))
         X = tf.reshape(X, (-1, in_ch)) # Sanity shape check
         return X
