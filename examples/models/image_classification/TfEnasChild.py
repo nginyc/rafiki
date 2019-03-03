@@ -24,6 +24,15 @@ class TfEnasChild(BaseModel):
 
     TF_COLLECTION_SHARED = 'SHARED'
 
+    # Memoise across trials to speed up training
+    memo = {
+        'datasets': {}, # { <dataset_uri> -> <dataset> }
+        'model': {
+            'train_params': None,
+            'knobs': None
+        }
+    }
+    
     @staticmethod
     def get_knob_config():
         def cell_arch_item(i, num_blocks):
@@ -50,6 +59,7 @@ class TfEnasChild(BaseModel):
             'total_trials': MetadataKnob(Metadata.TOTAL_TRIALS),
             'max_image_size': FixedKnob(32),
             'trial_epochs': FixedKnob(1),
+            'skip_training_trials': FixedKnob(499),
             'batch_size': FixedKnob(64),
             'learning_rate': FixedKnob(0.05), 
             'initial_block_ch': FixedKnob(36),
@@ -74,61 +84,38 @@ class TfEnasChild(BaseModel):
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
-        self._graph = tf.Graph()
-        self._sess = None
         
     def train(self, dataset_uri, shared_params):
-        max_image_size = self._knobs['max_image_size']
+        (images, classes, self._train_params) = self._prepare_dataset(dataset_uri)
+        (self._model, self._graph, self._sess, monitored_values) = self._build_model()
 
-        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
-                                                            mode='RGB')
-        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-        (images, norm_mean, norm_std) = utils.dataset.normalize_images(images)
-        self._train_params = {
-            'image_size': dataset.image_size,
-            'K': dataset.classes,
-            'norm_mean': norm_mean,
-            'norm_std': norm_std
-        }
+        if len(shared_params) > 0:
+            self._load_shareable_vars(shared_params)
 
-        with self._graph.as_default():
-            self._build_model()
-            self._init_session()
-            if len(shared_params) > 0:
-                self._load_shareable_vars(shared_params)
-            self._add_logging()
-            self._train_model(np.asarray(images), np.asarray(classes))
+        if self._if_should_train():
+            self._train_summaries = self._train_model(images, classes, monitored_values)
             utils.logger.log('Evaluating model on train dataset...')
             acc = self._evaluate_model(images, classes)
             utils.logger.log('Train accuracy: {}'.format(acc))
-            return self._get_shareable_vars()
+        else:
+            utils.logger.log('Skipping training...')
+
+        return self._get_shareable_vars()
 
     def evaluate(self, dataset_uri):
-        max_image_size = self._knobs['max_image_size']
-        norm_mean = self._train_params['norm_mean']
-        norm_std = self._train_params['norm_std']
-
-        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size,
-                                                            mode='RGB')
-        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-        (images, _, _) = utils.dataset.normalize_images(images, norm_mean, norm_std)
-        with self._graph.as_default():
-            utils.logger.log('Evaluating model on validation dataset...')
-            acc = self._evaluate_model(images, classes)
-            utils.logger.log('Validation accuracy: {}'.format(acc))
-
+        (images, classes, _) = self._prepare_dataset(dataset_uri, train_params=self._train_params)
+        utils.logger.log('Evaluating model on validation dataset...')
+        acc = self._evaluate_model(images, classes)
+        utils.logger.log('Validation accuracy: {}'.format(acc))
         return acc
 
     def predict(self, queries):
         image_size = self._train_params['image_size']
         norm_mean = self._train_params['norm_mean']
         norm_std = self._train_params['norm_std']
-
         images = utils.dataset.transform_images(queries, image_size=image_size, mode='RGB')
         (images, _, _) = utils.dataset.normalize_images(images, norm_mean, norm_std)
-        with self._graph.as_default():
-            probs = self._predict_with_model(images)
-                
+        probs = self._predict_with_model(images)
         return probs.tolist()
 
     def destroy(self):
@@ -138,7 +125,8 @@ class TfEnasChild(BaseModel):
     def save_parameters(self, params_dir):
         # Save model parameters
         model_file_path = os.path.join(params_dir, 'model')
-        saver = tf.train.Saver(self._tf_vars)
+        tf_vars = self._get_all_variables()
+        saver = tf.train.Saver(tf_vars)
         saver.save(self._sess, model_file_path)
 
         # Save pre-processing params
@@ -150,8 +138,9 @@ class TfEnasChild(BaseModel):
         summaries_dir_path = os.path.join(params_dir, 'summaries')
         os.mkdir(summaries_dir_path)
         writer = tf.summary.FileWriter(summaries_dir_path, self._graph)
-        for (steps, summary) in self._train_summaries:
-            writer.add_summary(summary, steps)
+        if self._train_summaries is not None:
+            for (steps, summary) in self._train_summaries:
+                writer.add_summary(summary, steps)
 
     def load_parameters(self, params_dir):
         # Load pre-processing params
@@ -161,17 +150,59 @@ class TfEnasChild(BaseModel):
             self._train_params = json.loads(json_str)
 
         # Build model
-        self._build_model()
+        (self._model, self._graph, self._sess, _) = self._build_model()
 
         # Load model parameters
-        self._init_session()
         model_file_path = os.path.join(params_dir, 'model')
-        saver = tf.train.Saver(self._tf_vars)
+        tf_vars = self._get_all_variables()
+        saver = tf.train.Saver(tf_vars)
         saver.restore(self._sess, model_file_path)
 
+    def _prepare_dataset(self, dataset_uri, train_params=None):
+        max_image_size = self._knobs['max_image_size']
+
+        if dataset_uri not in self.memo['datasets']:
+            utils.logger.log('Loading dataset...')
+            dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
+                                                                mode='RGB')
+            self.memo['datasets'][dataset_uri] = dataset
+        else:
+            utils.logger.log('Using memoized dataset...')
+
+        dataset = self.memo['datasets'][dataset_uri]
+        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+
+        if train_params is None:
+            (images, norm_mean, norm_std) = utils.dataset.normalize_images(images)
+            train_params = {
+                'image_size': dataset.image_size,
+                'K': dataset.classes,
+                'norm_mean': norm_mean,
+                'norm_std': norm_std
+            }
+            return (images, classes, train_params)
+        else:
+            norm_mean = train_params['norm_mean']
+            norm_std = train_params['norm_std']
+            (images, _, _) = utils.dataset.normalize_images(images, mean=norm_mean, std=norm_std)
+            return (images, classes, train_params)
+
+    def _if_should_train(self):
+        trial_count = self._knobs['trial_count']
+        skip_training_trials = self._knobs['skip_training_trials']
+
+        # Every (X + 1) trials, only train for the first trial
+        # The other X trials is for training the advisor
+        if trial_count % (skip_training_trials + 1) != 0:
+            return False
+        
+        return True
+
     def _get_shareable_vars(self):
-        shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
-        values = self._sess.run(shareable_tf_vars)
+        with self._graph.as_default():
+            shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
+            values = self._sess.run(shareable_tf_vars)
+
         shareable_vars = {
             tf_var.name: value
             for (tf_var, value)
@@ -180,7 +211,9 @@ class TfEnasChild(BaseModel):
         return shareable_vars
 
     def _load_shareable_vars(self, shareable_vars):
-        shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
+        with self._graph.as_default():
+            shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
+
         shared_vars = 0
         var_assigns = []
         for tf_var in shareable_tf_vars:
@@ -193,76 +226,69 @@ class TfEnasChild(BaseModel):
         self._sess.run(var_assigns)
 
     def _build_model(self):
-        N = self._knobs['batch_size'] 
         w = self._train_params['image_size']
         h = self._train_params['image_size']
-        total_trials = self._knobs['total_trials']
-        trial_epochs = self._knobs['trial_epochs']
-
-        total_epochs = trial_epochs * total_trials
         in_ch = 3 # Num channels of input images
         
-        # To add values to monitor
-        self._monitored_values = {}
-        
-        images_ph = tf.placeholder(tf.int8, name='images_ph', shape=(None, w, h, in_ch))
-        classes_ph = tf.placeholder(tf.int32, name='classes_ph', shape=(None,))
-        is_train = tf.placeholder(tf.bool, name='is_train_ph', shape=())
-        epoch = tf.placeholder(tf.int32, name='epoch_ph', shape=())
+        if self.memo['model']['train_params'] != self._train_params or \
+            self.memo['model']['knobs'] != self._knobs:
 
-        epochs_ratio = (epoch + 1) / total_epochs
-        
-        dataset = tf.data.Dataset.from_tensor_slices((images_ph, classes_ph)).batch(N)
-        dataset_itr = dataset.make_initializable_iterator()
-        (images, classes) = dataset_itr.get_next()
+            utils.logger.log('Building model...')
 
-        # Preprocess images
-        X = self._preprocess(images, is_train, w, h, in_ch)
+            # Create graph
+            graph = tf.Graph()
+            
+            with graph.as_default():
+                images_ph = tf.placeholder(tf.int8, name='images_ph', shape=(None, w, h, in_ch))
+                classes_ph = tf.placeholder(tf.int32, name='classes_ph', shape=(None,))
+                is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=())
+                epoch_ph = tf.placeholder(tf.int32, name='epoch_ph', shape=())
 
-        # Do inference
-        (probs, preds, logits, aux_logits_list) = self._inference(X, epochs_ratio, is_train)
-        
-        # Compute training loss & accuracy
-        tf_vars = self._get_all_variables()
-        (total_loss, loss, reg_loss, aux_loss) = self._compute_loss(logits, aux_logits_list, tf_vars, classes)
-        acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
+                # Preprocess & do inference
+                (X, classes, init_op) = self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
+                (probs, preds, logits, aux_logits_list) = self._inference(X, epoch_ph, is_train_ph)
+                
+                # Compute training loss & accuracy
+                tf_vars = self._get_all_variables()
+                (total_loss, loss, reg_loss, aux_loss) = self._compute_loss(logits, aux_logits_list, tf_vars, classes)
+                acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
-        # Optimize training loss
-        (train_op, steps, lr, grads_global_norm) = self._optimize(total_loss, tf_vars, epoch)
+                # Optimize training loss
+                (train_op, steps, lr, grads_global_norm) = self._optimize(total_loss, tf_vars, epoch_ph)
 
-        self._monitored_values.update({
-            'loss': loss,
-            'aux_loss': aux_loss,
-            'reg_loss': reg_loss,
-            'lr': lr,
-            'grads_global_norm': grads_global_norm
-        })
-        self._probs = probs
-        self._init_op = dataset_itr.initializer
-        self._train_op = train_op
-        self._images_ph = images_ph
-        self._classes_ph = classes_ph
-        self._tf_vars = tf_vars
-        self._is_train_ph = is_train
-        self._epoch_ph = epoch
-        self._acc = acc
-        self._steps = steps
+                # Initialize session
+                sess = self._make_session()
+                sess.run(tf.global_variables_initializer())
 
-    def _add_logging(self):
-        # Log available devices 
-        utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
+                # Count model parameters
+                model_params_count = self._count_model_parameters()
+                utils.logger.log('Model has {} parameters'.format(model_params_count))
 
-        # Count model parameters
-        model_params_count = self._count_model_parameters(self._tf_vars)
-        utils.logger.log('Model has {} parameters'.format(model_params_count))
+            # Values to monitor
+            monitored_values = {
+                'loss': loss,
+                'aux_loss': aux_loss,
+                'reg_loss': reg_loss,
+                'lr': lr,
+                'grads_global_norm': grads_global_norm
+            }
+            
+            model = (init_op, train_op, images_ph, classes_ph, is_train_ph, epoch_ph, probs, acc, steps)
+            self.memo['model'] = {
+                'train_params': self._train_params,
+                'knobs': self._knobs,
+                'graph': graph,
+                'sess': sess,
+                'monitored_values': monitored_values,
+                'model': model
+            }
+        else:
+            utils.logger.log('Using previously built model...')
 
-        # Make summaries 
-        for (name, value) in self._monitored_values.items():
-            tf.summary.scalar(name, value)
+        model_memo = self.memo['model']
+        return (model_memo['model'], model_memo['graph'], model_memo['sess'], model_memo['monitored_values'])
 
-        self._summary_op = tf.summary.merge_all()
-
-    def _inference(self, X, epochs_ratio, is_train):
+    def _inference(self, X, epochs, is_train):
         K = self._train_params['K'] # No. of classes
         in_ch = 3 # Num channels of input images
         w = self._train_params['image_size'] # Initial input width
@@ -271,8 +297,13 @@ class TfEnasChild(BaseModel):
         L = self._knobs['num_layers'] # Total number of layers
         stem_ch = self._knobs['stem_ch'] # No. of channels for stem convolution
         initial_block_ch = self._knobs['initial_block_ch'] # Initial no. of channels for operations in block
+        total_trials = self._knobs['total_trials']
+        trial_epochs = self._knobs['trial_epochs']
 
         (normal_arch, reduction_arch) = self._get_arch()
+
+        total_epochs = trial_epochs * total_trials
+        epochs_ratio = (epochs + 1) / total_epochs
         
         # Layers with reduction cells (otherwise, normal cells)
         reduction_layers = [L // 3, L // 3 * 2 + 1] 
@@ -318,10 +349,6 @@ class TfEnasChild(BaseModel):
 
             layers.append((X, w, h, ch))
     
-            # Track final layer's drop path keep prob
-            if l == L:
-                self._monitored_values['final_drop_path_keep_prob'] = drop_path_keep_prob
-    
         # Global average pooling
         (X, w, h, ch) = layers[-1] # Get final layer
         X = self._add_global_avg_pool(X, w, h, ch)
@@ -355,8 +382,15 @@ class TfEnasChild(BaseModel):
 
         return keeb_prob
 
-    def _preprocess(self, images, is_train, w, h, in_ch):
+    def _preprocess(self, images, classes, is_train, w, h, in_ch):
+        N = self._knobs['batch_size'] 
         cutout_size = self._knobs['cutout_size']
+
+        # Create TF dataset
+        dataset = tf.data.Dataset.from_tensor_slices((images, classes)).batch(N)
+        dataset_itr = dataset.make_initializable_iterator()
+        (images, classes) = dataset_itr.get_next()
+        init_op = dataset_itr.initializer
 
         def preprocess(image):
             # Do random crop + horizontal flip
@@ -375,7 +409,7 @@ class TfEnasChild(BaseModel):
                         lambda: images)
 
         X = tf.cast(images, tf.float32)
-        return X
+        return (X, classes, init_op)
 
     def _optimize(self, loss, tf_vars, epoch):
         opt_momentum = self._knobs['opt_momentum'] # Momentum optimizer momentum
@@ -414,24 +448,29 @@ class TfEnasChild(BaseModel):
 
         return lr
 
-    def _init_session(self):
-        # (Re-)create session
-        if self._sess is not None:
-            self._sess.close()
-
+    def _make_session(self):
         config = tf.ConfigProto(allow_soft_placement=True)
         config.gpu_options.allow_growth = True
-        self._sess = tf.Session(config=config)
+        sess = tf.Session(config=config)
+        return sess
 
-    def _train_model(self, images, classes):
+    def _train_model(self, images, classes, monitored_values):
         trial_count = self._knobs['trial_count']
         trial_epochs = self._knobs['trial_epochs']
         log_every_secs = self._knobs['log_every_secs']
         prev_epochs = trial_count * trial_epochs # No. of epochs that has run for past trials
 
         train_summaries = [] # List of (<steps>, <summary>) collected during training
+        (init_op, train_op, images_ph, classes_ph, is_train_ph, epoch_ph, probs, acc, steps) = self._model
 
-        self._sess.run(tf.global_variables_initializer())
+        # Log available devices 
+        utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
+
+        # Make summaries for monitored values
+        for (name, value) in monitored_values.items():
+            tf.summary.scalar(name, value)
+
+        summary_op = tf.summary.merge_all()
 
         last_log_time = datetime.now()
         for trial_epoch in range(trial_epochs):
@@ -439,27 +478,27 @@ class TfEnasChild(BaseModel):
             utils.logger.log('Running epoch {} (trial epoch {})...'.format(epoch, trial_epoch))
 
             # Initialize dataset
-            self._sess.run(self._init_op, feed_dict={
-                self._images_ph: images, 
-                self._classes_ph: classes
+            self._sess.run(init_op, feed_dict={
+                images_ph: images, 
+                classes_ph: classes
             })
 
             # To track monitored values & accuracy
-            (monitored_names, monitored_values) = zip(*self._monitored_values.items())
+            (monitored_names, monitored_values) = zip(*monitored_values.items())
             accs = []
 
             while True:
                 try:
-                    (_, summary, acc, steps, *values) = self._sess.run(
-                        [self._train_op, self._summary_op, self._acc, self._steps, *monitored_values],
+                    (_, summary, batch_acc, batch_steps, *values) = self._sess.run(
+                        [train_op, summary_op, acc, steps, *monitored_values],
                         feed_dict={
-                            self._is_train_ph: True,
-                            self._epoch_ph: epoch
+                            is_train_ph: True,
+                            epoch_ph: epoch
                         }
                     )
 
-                    train_summaries.append((steps, summary))
-                    accs.append(acc)
+                    train_summaries.append((batch_steps, summary))
+                    accs.append(batch_acc)
                     
                     # Periodically, log monitored values
                     if (datetime.now() - last_log_time).total_seconds() >= log_every_secs:
@@ -473,7 +512,7 @@ class TfEnasChild(BaseModel):
             mean_acc = np.mean(accs)
             utils.logger.log(epoch=epoch, mean_acc=mean_acc)
 
-        self._train_summaries = train_summaries
+        return train_summaries
             
     def _evaluate_model(self, images, classes):
         probs = self._predict_with_model(images)
@@ -482,20 +521,22 @@ class TfEnasChild(BaseModel):
         return acc
 
     def _predict_with_model(self, images):
+        (init_op, train_op, images_ph, classes_ph, is_train_ph, epoch_ph, probs, acc, steps) = self._model
+
         # Initialize dataset (mock classes)
-        self._sess.run(self._init_op, feed_dict={
-            self._images_ph: np.asarray(images), 
-            self._classes_ph: np.zeros((len(images),))
+        self._sess.run(init_op, feed_dict={
+            images_ph: images, 
+            classes_ph: np.zeros((len(images),))
         })
 
         probs = []
         while True:
             try:
-                probs_batch = self._sess.run(self._probs, {
-                    self._is_train_ph: False,
-                    self._epoch_ph: 0
+                batch_probs = self._sess.run(probs, {
+                    is_train_ph: False,
+                    epoch_ph: 0
                 })
-                probs.extend(probs_batch)
+                probs.extend(batch_probs)
             except tf.errors.OutOfRangeError:
                 break
 
@@ -609,7 +650,8 @@ class TfEnasChild(BaseModel):
         X = tf.reshape(X, (-1, in_ch)) # Sanity shape check
         return X
 
-    def _count_model_parameters(self, tf_vars):
+    def _count_model_parameters(self):
+        tf_vars = self._get_all_variables()
         num_params = 0
         # utils.logger.log('Model parameters:')
         for var in tf_vars:
@@ -937,5 +979,5 @@ if __name__ == '__main__':
     tune_model(
         TfEnasChild, 
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-        val_dataset_uri='data/cifar_10_for_image_classification_val.zip'
+        val_dataset_uri='data/cifar_10_for_image_classification_train.zip'
     )

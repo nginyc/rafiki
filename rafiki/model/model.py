@@ -185,19 +185,20 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
             raise InvalidModelClassException('`evaluate()` should return a float!')
 
         print('Score:', score)
-
-        # Save model parameters
-        print('Saving model parameters...')
-        params_dir = os.path.join(params_root_dir, trial_id + '/')
-        if not os.path.exists(params_dir):
-            os.mkdir(params_dir)
-
-        model_inst.save_parameters(params_dir)
-        print('Model parameters saved in {}'.format(params_dir))
             
         # Update best model
         if score > best_score:
             _info('Best model so far! Beats previous best of score {}!'.format(best_score))
+
+             # Only save parameters of best model so far
+            print('Saving model parameters...')
+            params_dir = os.path.join(params_root_dir, trial_id + '/')
+            if not os.path.exists(params_dir):
+                os.mkdir(params_dir)
+
+            model_inst.save_parameters(params_dir)
+            print('Model parameters saved in {}'.format(params_dir))
+
             best_model_params_dir = params_dir
             best_knobs = knobs
             best_score = score

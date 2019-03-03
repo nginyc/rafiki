@@ -92,8 +92,8 @@ class EnasKnobAdvisorListModel():
 
         print('Training from feedback ({}, {})...'.format(items, score))
         with self._graph.as_default():
-            (reward_base, loss, reward, item_logits, _) = self._sess.run(
-                [self._reward_base, self._loss, self._reward, self._item_logits, self._train_op],
+            (reward_base, loss, reward, _) = self._sess.run(
+                [self._reward_base, self._loss, self._reward, self._train_op],
                 feed_dict={
                     self._item_idxs_ph: item_idxs,
                     self._score_ph: score
@@ -113,7 +113,7 @@ class EnasKnobAdvisorListModel():
         item_logits = self._item_logits
         N = len(knob) # Length of list
         base_decay = 0.99
-        learning_rate = 0.001 * 50
+        learning_rate = 0.001
         adam_beta1 = 0
         adam_epsilon = 1e-3
         entropy_weight = 0.0001

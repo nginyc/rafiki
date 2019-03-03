@@ -20,7 +20,7 @@ class ParamStore(object):
     '''
     def retrieve_params(self, trial_id: str, params: Dict[str, str]):
         out_params = {}
-        for (name, param_id) in params:
+        for (name, param_id) in params.items():
             if param_id in self._params:
                 out_params[name] = self._params[param_id]
 
