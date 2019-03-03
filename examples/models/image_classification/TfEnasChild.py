@@ -331,8 +331,7 @@ class TfEnasChild(BaseModel):
 
         # Compute logits from X
         with tf.variable_scope('fully_connected'):
-            X = self._add_fully_connected(X, (ch,), K)
-        logits = tf.nn.softmax(X)
+            logits = self._add_fully_connected(X, (ch,), K)
 
         # Compute probabilities and predictions
         probs = tf.nn.softmax(logits)
@@ -578,8 +577,7 @@ class TfEnasChild(BaseModel):
 
         # Fully connected
         with tf.variable_scope('fully_connected'):
-            X = self._add_fully_connected(X, (ch,), K, no_reg=True)
-        aux_logits = tf.nn.softmax(X)
+            aux_logits = self._add_fully_connected(X, (ch,), K, no_reg=True)
 
         return aux_logits
 
