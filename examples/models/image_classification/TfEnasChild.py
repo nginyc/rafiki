@@ -91,7 +91,8 @@ class TfEnasChild(BaseModel):
         
     def train(self, dataset_uri, shared_params):
         (images, classes, self._train_params) = self._prepare_dataset(dataset_uri)
-        (self._model, self._graph, self._sess, monitored_values) = self._build_model()
+        (self._model, self._graph, monitored_values) = self._build_model()
+        self._sess = self._make_session()
 
         if len(shared_params) > 0:
             self._load_shareable_vars(shared_params)
@@ -129,9 +130,10 @@ class TfEnasChild(BaseModel):
     def save_parameters(self, params_dir):
         # Save model parameters
         model_file_path = os.path.join(params_dir, 'model')
-        tf_vars = self._get_all_variables()
-        saver = tf.train.Saver(tf_vars)
-        saver.save(self._sess, model_file_path)
+        with self._graph.as_default():
+            tf_vars = self._get_all_variables()
+            saver = tf.train.Saver(tf_vars)
+            saver.save(self._sess, model_file_path)
 
         # Save pre-processing params
         train_params_file_path = os.path.join(params_dir, 'train_params.json')
@@ -154,13 +156,15 @@ class TfEnasChild(BaseModel):
             self._train_params = json.loads(json_str)
 
         # Build model
-        (self._model, self._graph, self._sess, _) = self._build_model()
+        (self._model, self._graph, _) = self._build_model()
+        self._sess = self._make_session()
 
         # Load model parameters
         model_file_path = os.path.join(params_dir, 'model')
-        tf_vars = self._get_all_variables()
-        saver = tf.train.Saver(tf_vars)
-        saver.restore(self._sess, model_file_path)
+        with self._graph.as_default():
+            tf_vars = self._get_all_variables()
+            saver = tf.train.Saver(tf_vars)
+            saver.restore(self._sess, model_file_path)
 
     ####################################
     # Private methods
@@ -220,24 +224,23 @@ class TfEnasChild(BaseModel):
         return shareable_vars
 
     def _load_shareable_vars(self, shareable_vars):
-        with self._graph.as_default():
-            shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
-
         shared_vars = 0
         var_assigns = []
-        for tf_var in shareable_tf_vars:
-            if tf_var.name in shareable_vars:
-                var_assign = tf_var.assign(shareable_vars[tf_var.name])
-                var_assigns.append(var_assign)
-                shared_vars += 1
+        with self._graph.as_default():
+            shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
+            for tf_var in shareable_tf_vars:
+                if tf_var.name in shareable_vars:
+                    var_assign = tf_var.assign(shareable_vars[tf_var.name])
+                    var_assigns.append(var_assign)
+                    shared_vars += 1
 
-        utils.logger.log('Restoring {} / {} shareable variables...'.format(shared_vars, len(shareable_tf_vars)))
-        self._sess.run(var_assigns)
+            utils.logger.log('Restoring {} / {} shareable variables...'.format(shared_vars, len(shareable_tf_vars)))
+            self._sess.run(var_assigns)
 
     def _build_model(self):
         w = self._train_params['image_size']
         h = self._train_params['image_size']
-        cell_num_blocks = self._train_params['cell_num_blocks']
+        cell_num_blocks = self._knobs['cell_num_blocks']
         in_ch = 3 # Num channels of input images
         
         if self.memo['model']['train_params'] != self._train_params or \
@@ -269,10 +272,6 @@ class TfEnasChild(BaseModel):
                 # Optimize training loss
                 (train_op, steps, lr, grads_global_norm) = self._optimize(total_loss, tf_vars, epoch_ph)
 
-                # Initialize session
-                sess = self._make_session()
-                sess.run(tf.global_variables_initializer())
-
                 # Count model parameters
                 model_params_count = self._count_model_parameters()
                 utils.logger.log('Model has {} parameters'.format(model_params_count))
@@ -285,13 +284,14 @@ class TfEnasChild(BaseModel):
                 'lr': lr,
                 'grads_global_norm': grads_global_norm
             }
-            
-            model = (init_op, train_op, images_ph, classes_ph, is_train_ph, epoch_ph, probs, acc, steps)
+
+            model = (init_op, train_op, images_ph, classes_ph, is_train_ph, epoch_ph, 
+                    normal_arch_ph, reduction_arch_ph, probs, acc, steps)
+
             self.memo['model'] = {
                 'train_params': self._train_params,
                 'knobs': self._knobs,
                 'graph': graph,
-                'sess': sess,
                 'monitored_values': monitored_values,
                 'model': model
             }
@@ -299,7 +299,7 @@ class TfEnasChild(BaseModel):
             utils.logger.log('Using previously built model...')
 
         model_memo = self.memo['model']
-        return (model_memo['model'], model_memo['graph'], model_memo['sess'], model_memo['monitored_values'])
+        return (model_memo['model'], model_memo['graph'], model_memo['monitored_values'])
 
     def _inference(self, X, epochs, normal_arch, reduction_arch, is_train):
         K = self._train_params['K'] # No. of classes
@@ -462,7 +462,8 @@ class TfEnasChild(BaseModel):
     def _make_session(self):
         config = tf.ConfigProto(allow_soft_placement=True)
         config.gpu_options.allow_growth = True
-        sess = tf.Session(config=config)
+        sess = tf.Session(config=config, graph=self._graph)
+        sess.run(tf.global_variables_initializer())
         return sess
 
     def _train_model(self, images, classes, monitored_values):
@@ -470,9 +471,11 @@ class TfEnasChild(BaseModel):
         trial_epochs = self._knobs['trial_epochs']
         log_every_secs = self._knobs['log_every_secs']
         prev_epochs = trial_count * trial_epochs # No. of epochs that has run for past trials
+        (normal_arch, reduction_arch) = self._get_arch()
 
         train_summaries = [] # List of (<steps>, <summary>) collected during training
-        (init_op, train_op, images_ph, classes_ph, is_train_ph, epoch_ph, probs, acc, steps) = self._model
+        (init_op, train_op, images_ph, classes_ph, is_train_ph, epoch_ph, normal_arch_ph, 
+            reduction_arch_ph, probs, acc, steps) = self._model
 
         # Log available devices 
         utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
@@ -504,7 +507,9 @@ class TfEnasChild(BaseModel):
                         [train_op, summary_op, acc, steps, *monitored_values],
                         feed_dict={
                             is_train_ph: True,
-                            epoch_ph: epoch
+                            epoch_ph: epoch,
+                            normal_arch_ph: normal_arch,
+                            reduction_arch_ph: reduction_arch
                         }
                     )
 
@@ -532,7 +537,9 @@ class TfEnasChild(BaseModel):
         return acc
 
     def _predict_with_model(self, images):
-        (init_op, train_op, images_ph, classes_ph, is_train_ph, epoch_ph, probs, acc, steps) = self._model
+        (normal_arch, reduction_arch) = self._get_arch()
+        (init_op, train_op, images_ph, classes_ph, is_train_ph, epoch_ph, normal_arch_ph,
+            reduction_arch_ph, probs, acc, steps) = self._model
 
         # Initialize dataset (mock classes)
         self._sess.run(init_op, feed_dict={
@@ -545,7 +552,9 @@ class TfEnasChild(BaseModel):
             try:
                 batch_probs = self._sess.run(probs, {
                     is_train_ph: False,
-                    epoch_ph: 0
+                    epoch_ph: 0,
+                    normal_arch_ph: normal_arch,
+                    reduction_arch_ph: reduction_arch
                 })
                 probs.extend(batch_probs)
             except tf.errors.OutOfRangeError:
@@ -674,7 +683,8 @@ class TfEnasChild(BaseModel):
     def _add_reduction_cell(self, cell_arch, inputs, block_ch, is_train, drop_path_keep_prob):
         b = self._knobs['cell_num_blocks'] # no. of blocks
         ni = len(inputs) # no. of inputs
-        hidden_states = [] # Stores hidden states for this cell <no. of hidden states> x (N, w, h, ch), which includes blocks
+        cell_inputs = []
+        blocks = [] 
 
         # Initial width & height for this cell as the final input
         (_, w, h, _) = inputs[-1]
@@ -689,13 +699,12 @@ class TfEnasChild(BaseModel):
                     with tf.variable_scope('input_{}_conv'.format(i)):
                         inp = self._do_conv(inp, w, h, block_ch, block_ch, is_train)
 
-                hidden_states.append(inp)
+                cell_inputs.append(inp)
 
-        # Make each block, also recording whether each block is used 
-        block_inputs_usage = [] # b x (ni + b,)
-        
+        cell_inputs = tf.stack(cell_inputs)
+
         for bi in range(b):
-            block_inputs = tf.stack(hidden_states) # (<no. of hidden states>, N, w, h, ch)
+            block_inputs = tf.stack(blocks)
 
             with tf.variable_scope('block_{}'.format(bi)):
                 idx1 = cell_arch[bi][0]
@@ -703,51 +712,41 @@ class TfEnasChild(BaseModel):
                 idx2 = cell_arch[bi][2]
                 op2 = cell_arch[bi][3]
 
-                # Map input indices to inputs, and record usages
-                X1 = block_inputs[idx1]
-                X2 = block_inputs[idx2]
-                inputs_usage = tf.one_hot(idx1, depth=(ni + b)) + tf.one_hot(idx2, depth=(ni + b))
-                block_inputs_usage.append(inputs_usage)
-
                 with tf.variable_scope('X1'):
                     # Don't halve dimensions if X1 is a fellow block
                     X1 = tf.cond(
                         tf.less(idx1, ni), 
-                        lambda: self._add_op(X1, op1, w, h, block_ch, is_train, stride=2),
-                        lambda: self._add_op(X1, op1, w >> 1, h >> 1, block_ch, is_train)
+                        lambda: self._add_op('from_cell_input', cell_inputs[idx1], op1, w, h, block_ch, is_train),
+                        lambda: self._add_op('from_block', block_inputs[idx1 - ni], op1, w >> 1, h >> 1, block_ch, is_train)
                     )
                     X1 = self._do_drop_path(X1, drop_path_keep_prob)
 
                 with tf.variable_scope('X2'):
                     X2 = tf.cond(
                         tf.less(idx2, ni),
-                        lambda: self._add_op(X2, op2, w, h, block_ch, is_train, stride=2),
-                        lambda: self._add_op(X2, op2, w >> 1, h >> 1, block_ch, is_train)
+                        lambda: self._add_op('from_cell_input', cell_inputs[idx2], op2, w, h, block_ch, is_train),
+                        lambda: self._add_op('from_block', block_inputs[idx2 - ni], op2, w >> 1, h >> 1, block_ch, is_train)
                     )
                     X2 = self._do_drop_path(X2, drop_path_keep_prob)
                     
                 X = tf.add_n([X1, X2])
 
-            hidden_states.append(X)
+            blocks.append(X)
 
-        # Determine which hidden states were not used
-        inputs_usage = tf.add_n(block_inputs_usage) # (ni + b,)
-        unused_states_idxs = tf.where(tf.equal(inputs_usage, 0)) 
-        num_unused_states = tf.size(unused_states_idxs)
-        unused_states = tf.gather(tf.stack(hidden_states), unused_states_idxs) # (<no. of unused hidden states>, N, w, h, ch)
-
-        # Concat all unused hidden states
-        comb_ch = num_unused_states * block_ch
+        # Concat all blocks
+        comb_ch = b * block_ch
         with tf.variable_scope('combine'):
-            # For each batch, concat across unused hidden states and channels
-            X = tf.reshape(tf.transpose(unused_states, (1, 2, 3, 0, 4)), (-1, w >> 1, h >> 1, comb_ch))
+            X = tf.concat(blocks, axis=3)
+
+        X = tf.reshape(X, (-1, w >> 1, h >> 1, comb_ch)) # Sanity shape check
 
         return (X, w >> 1, h >> 1, comb_ch)
 
     def _add_normal_cell(self, cell_arch, inputs, block_ch, is_train, drop_path_keep_prob):
+        b = self._knobs['cell_num_blocks'] # no. of blocks
         ni = len(inputs) # no. of inputs
-        b = len(cell_arch) # no. of blocks
-        hidden_states = [] # Stores hidden states for this cell, which includes blocks
+        cell_inputs = []
+        blocks = [] 
 
         # Initial width & height for this cell as the final input
         (_, w, h, _) = inputs[-1]
@@ -756,113 +755,116 @@ class TfEnasChild(BaseModel):
         for (i, (inp, w_inp, h_inp, ch_inp)) in enumerate(inputs):
             with tf.variable_scope('input_{}_calibrate'.format(i)):
                 inp = self._calibrate(inp, w_inp, h_inp, ch_inp, w, h, block_ch, is_train)
-                
-            # Apply conv 1x1 on last input
-            if i == len(inputs) - 1:
-                with tf.variable_scope('input_{}_conv'.format(i)):
-                    inp = self._do_conv(inp, w, h, block_ch, block_ch, is_train)
+                        
+                # Apply conv 1x1 on last input
+                if i == len(inputs) - 1:
+                    with tf.variable_scope('input_{}_conv'.format(i)):
+                        inp = self._do_conv(inp, w, h, block_ch, block_ch, is_train)
 
-            hidden_states.append(inp)
+                cell_inputs.append(inp)
 
-        # Make each block, also recording whether each block is used 
-        hidden_state_used_counts = [0 for _ in range(ni + b)]
+        cell_inputs = tf.stack(cell_inputs)
+
         for bi in range(b):
+            block_inputs = tf.stack(blocks)
+
             with tf.variable_scope('block_{}'.format(bi)):
-                (idx1, op1, idx2, op2) = cell_arch[bi]
-                X1 = hidden_states[idx1]
-                hidden_state_used_counts[idx1] += 1
-                X2 = hidden_states[idx2]
-                hidden_state_used_counts[idx2] += 1
+                idx1 = cell_arch[bi][0]
+                op1 = cell_arch[bi][1]
+                idx2 = cell_arch[bi][2]
+                op2 = cell_arch[bi][3]
 
                 with tf.variable_scope('X1'):
-                    X1 = self._add_op(X1, op1, w, h, block_ch, is_train, stride=1)
+                    X1 = tf.cond(
+                        tf.less(idx1, ni), 
+                        lambda: self._add_op('from_cell_input', cell_inputs[idx1], op1, w, h, block_ch, is_train),
+                        lambda: self._add_op('from_block', block_inputs[idx1 - ni], op1, w, h, block_ch, is_train),
+                    )
                     X1 = self._do_drop_path(X1, drop_path_keep_prob)
 
                 with tf.variable_scope('X2'):
-                    X2 = self._add_op(X2, op2, w, h, block_ch, is_train, stride=1)
+                    X2 = tf.cond(
+                        tf.less(idx2, ni), 
+                        lambda: self._add_op('from_cell_input', cell_inputs[idx2], op2, w, h, block_ch, is_train),
+                        lambda: self._add_op('from_block', block_inputs[idx2 - ni], op2, w, h, block_ch, is_train),
+                    )
                     X2 = self._do_drop_path(X2, drop_path_keep_prob)
 
                 X = tf.add_n([X1, X2])
 
-            hidden_states.append(X)
+            blocks.append(X)
 
-        # Combine all unused hidden states
-        comb_states = [X for (i, X) in enumerate(hidden_states) if i >= ni and hidden_state_used_counts[i] == 0] 
-        comb_ch = len(comb_states) * block_ch
+        # Concat all blocks
+        comb_ch = b * block_ch
         with tf.variable_scope('combine'):
-            X = tf.concat(comb_states, axis=3)
+            X = tf.concat(blocks, axis=3)
 
         X = tf.reshape(X, (-1, w, h, comb_ch)) # Sanity shape check
 
         return (X, w, h, comb_ch)
-
-    def _add_op(self, X, op, w, h, ch, is_train, stride=1):
-        '''
-        Applies a specific operation to input
-        '''
-
-        # List of all possible operations and their associated numbers
-        ops = {
-            0: lambda: self._add_separable_conv_op(X, w, h, ch, is_train, filter_size=3, stride=stride),
-            1: lambda: self._add_separable_conv_op(X, w, h, ch, is_train, filter_size=5, stride=stride),
-            2: lambda: self._add_avg_pool_op(X, w, h, ch, is_train, filter_size=3, stride=stride),
-            3: lambda: self._add_max_pool_op(X, w, h, ch, is_train, filter_size=3, stride=stride),
-            4: lambda: self._add_max_pool_op(X, w, h, ch, is_train, filter_size=1, stride=stride), # identity
-            5: lambda: self._add_separable_conv_op(X, w, h, ch, is_train, filter_size=7, stride=stride),
-            6: lambda: self._add_conv_op(X, w, h, ch, is_train, filter_size=3, stride=stride),
-            7: lambda: self._add_conv_op(X, w, h, ch, is_train, filter_size=5, stride=stride)
-        }
-
-        X = tf.case({
-            tf.equal(op, op_no): ops[op_no]
-            for op_no in ops.keys()
-        })
-        return X
-
     
     ####################################
     # Block Ops
     ####################################
 
-    def _add_avg_pool_op(self, X, w, h, ch, is_train, filter_size, stride):
-        with tf.variable_scope('avg_pool_op'):
+    def _add_op(self, name, X, op, w, h, ch, is_train, stride=1):
+        # List of all possible operations and their associated numbers
+        ops = {
+            0: lambda: self._add_separable_conv_3x3_op(X, w, h, ch, is_train, stride),
+            1: lambda: self._add_separable_conv_5x5_op(X, w, h, ch, is_train, stride),
+            2: lambda: self._add_avg_pool_3x3_op(X, w, h, ch, is_train, stride),
+            3: lambda: self._add_max_pool_3x3_op(X, w, h, ch, is_train, stride),
+            4: lambda: self._add_identity_op(X, w, h, ch, is_train, stride), 
+            5: lambda: self._add_separable_conv_7x7_op(X, w, h, ch, is_train, stride)
+        }
+
+        with tf.variable_scope(name):
+            X = tf.case({
+                tf.equal(op, op_no): ops[op_no]
+                for op_no in ops.keys()
+            }, exclusive=True)
+
+        return X
+
+    def _add_avg_pool_3x3_op(self, X, w, h, ch, is_train, stride):
+        filter_size = 3
+        with tf.variable_scope('avg_pool_3x3_op'):
             X = tf.nn.avg_pool(X, ksize=(1, filter_size, filter_size, 1), strides=[1, stride, stride, 1], padding='SAME')
         X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
         return X
     
-    def _add_max_pool_op(self, X, w, h, ch, is_train, filter_size, stride):
-        with tf.variable_scope('max_pool_op'):
+    def _add_identity_op(self, X, w, h, ch, is_train, stride):
+        filter_size = 1
+        with tf.variable_scope('identity_op'):
             X = tf.nn.max_pool(X, ksize=(1, filter_size, filter_size, 1), strides=[1, stride, stride, 1], padding='SAME')
         X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
         return X
     
-    def _add_separable_conv_op(self, X, w, h, ch, is_train, filter_size, stride, ch_mul=1, num_stacks=2):
-        with tf.variable_scope('separable_conv_op'):
-            # For each stack of separable convolution (default of 2)
-            for stack_no in range(num_stacks):
-                # Only have > 1 stride for first stack 
-                stack_stride = stride if stack_no == 0 else 1 
-
-                with tf.variable_scope('stack_{}'.format(stack_no)):
-                    W_d = self._make_var('W_d', (filter_size, filter_size, ch, ch_mul))
-                    W_p = self._make_var('W_p', (1, 1, ch_mul * ch, ch))
-                    X = tf.nn.relu(X)
-                    X = tf.nn.separable_conv2d(X, W_d, W_p, strides=(1, stack_stride, stack_stride, 1), padding='SAME')
-                    X = self._add_batch_norm(X, ch, is_train)
-
+    def _add_max_pool_3x3_op(self, X, w, h, ch, is_train, stride):
+        filter_size = 3
+        with tf.variable_scope('max_pool_3x3_op'):
+            X = tf.nn.max_pool(X, ksize=(1, filter_size, filter_size, 1), strides=[1, stride, stride, 1], padding='SAME')
         X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
         return X
-
-    def _add_conv_op(self, X, w, h, ch, is_train, filter_size, stride):
-        with tf.variable_scope('conv_op'):
-            W = self._make_var('W', (filter_size, filter_size, ch, ch))
-            X = tf.nn.relu(X)
-            X = tf.nn.conv2d(X, W, strides=[1, stride, stride, 1], padding='SAME')
-            X = self._add_batch_norm(X, ch, is_train)
-        X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
-        return X
-
     
+    def _add_separable_conv_3x3_op(self, X, w, h, ch, is_train, stride):
+        filter_size = 3
+        with tf.variable_scope('separable_conv_3x3_op'):
+            X = self._do_separable_conv(X, w, h, ch, is_train, filter_size, stride)
+        return X
+
+    def _add_separable_conv_5x5_op(self, X, w, h, ch, is_train, stride):
+        filter_size = 5
+        with tf.variable_scope('separable_conv_5x5_op'):
+            X = self._do_separable_conv(X, w, h, ch, is_train, filter_size, stride)
+        return X
+
+    def _add_separable_conv_7x7_op(self, X, w, h, ch, is_train, stride):
+        filter_size = 7
+        with tf.variable_scope('separable_conv_7x7_op'):
+            X = self._do_separable_conv(X, w, h, ch, is_train, filter_size, stride)
+        return X
+
     ####################################
     # Utils
     ####################################
@@ -896,6 +898,22 @@ class TfEnasChild(BaseModel):
         X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding='SAME')
         X = self._add_batch_norm(X, out_ch, is_train)
         X = tf.reshape(X, (-1, w, h, out_ch)) # Sanity shape check
+        return X
+
+    def _do_separable_conv(self, X, w, h, ch, is_train, filter_size=3, stride=1, ch_mul=1, num_stacks=2):
+        # For each stack of separable convolution (default of 2)
+        for stack_no in range(num_stacks):
+            # Only have > 1 stride for first stack 
+            stack_stride = stride if stack_no == 0 else 1 
+
+            with tf.variable_scope('stack_{}'.format(stack_no)):
+                W_d = self._make_var('W_d', (filter_size, filter_size, ch, ch_mul))
+                W_p = self._make_var('W_p', (1, 1, ch_mul * ch, ch))
+                X = tf.nn.relu(X)
+                X = tf.nn.separable_conv2d(X, W_d, W_p, strides=(1, stack_stride, stack_stride, 1), padding='SAME')
+                X = self._add_batch_norm(X, ch, is_train)
+
+        X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
         return X
 
     def _calibrate(self, X, w, h, ch, w_out, h_out, ch_out, is_train):
