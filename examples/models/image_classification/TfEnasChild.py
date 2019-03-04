@@ -23,6 +23,7 @@ class TfEnasChild(BaseModel):
     '''
 
     TF_COLLECTION_SHARED = 'SHARED'
+    CELL_NUM_BLOCKS = 5
 
     # Memoise across trials to speed up training
     memo = {
@@ -35,12 +36,14 @@ class TfEnasChild(BaseModel):
     
     @staticmethod
     def get_knob_config():
-        def cell_arch_item(i, num_blocks):
+        cell_num_blocks = TfEnasChild.CELL_NUM_BLOCKS
+
+        def cell_arch_item(i):
             b = i // 4 # block no
             idx = i % 4 # item index within block
         
             # First half of blocks are for normal cell
-            if b < num_blocks:
+            if b < cell_num_blocks:
                 if idx in [0, 2]:
                     return CategoricalKnob(list(range(b + 2))) # input index 1/2
                 elif idx in [1, 3]:
@@ -48,7 +51,7 @@ class TfEnasChild(BaseModel):
             
             # Last half of blocks are for reduction cell
             else:
-                b -= num_blocks # block no
+                b -= cell_num_blocks # block no
                 if idx in [0, 2]:
                     return CategoricalKnob(list(range(b + 2))) # input index 1/2
                 elif idx in [1, 3]:
@@ -63,6 +66,7 @@ class TfEnasChild(BaseModel):
             'batch_size': FixedKnob(64),
             'learning_rate': FixedKnob(0.05), 
             'initial_block_ch': FixedKnob(36),
+            'cell_num_blocks': FixedKnob(cell_num_blocks),
             'stem_ch': FixedKnob(108),
             'reg_decay': FixedKnob(4e-4),
             'dropout_keep_prob': FixedKnob(0.8),
@@ -77,7 +81,7 @@ class TfEnasChild(BaseModel):
             'cutout_size': FixedKnob(0),
             'grad_clip_norm': FixedKnob(0),
             'log_every_secs': FixedKnob(60),
-            'cell_archs': ListKnob(2 * 5 * 4, lambda i: cell_arch_item(i, 5)),
+            'cell_archs': ListKnob(2 * 5 * 4, lambda i: cell_arch_item(i)),
             'use_cell_arch_type': FixedKnob('') # '' | 'ENAS' | 'NASNET-A'
         }
 
@@ -158,9 +162,14 @@ class TfEnasChild(BaseModel):
         saver = tf.train.Saver(tf_vars)
         saver.restore(self._sess, model_file_path)
 
+    ####################################
+    # Private methods
+    ####################################
+
     def _prepare_dataset(self, dataset_uri, train_params=None):
         max_image_size = self._knobs['max_image_size']
 
+        # Try to use memoized dataset
         if dataset_uri not in self.memo['datasets']:
             utils.logger.log('Loading dataset...')
             dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
@@ -228,6 +237,7 @@ class TfEnasChild(BaseModel):
     def _build_model(self):
         w = self._train_params['image_size']
         h = self._train_params['image_size']
+        cell_num_blocks = self._train_params['cell_num_blocks']
         in_ch = 3 # Num channels of input images
         
         if self.memo['model']['train_params'] != self._train_params or \
@@ -239,14 +249,17 @@ class TfEnasChild(BaseModel):
             graph = tf.Graph()
             
             with graph.as_default():
-                images_ph = tf.placeholder(tf.int8, name='images_ph', shape=(None, w, h, in_ch))
-                classes_ph = tf.placeholder(tf.int32, name='classes_ph', shape=(None,))
-                is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=())
-                epoch_ph = tf.placeholder(tf.int32, name='epoch_ph', shape=())
+                # Define input placeholders to graph
+                images_ph = tf.placeholder(tf.int8, name='images_ph', shape=(None, w, h, in_ch)) # Images
+                classes_ph = tf.placeholder(tf.int32, name='classes_ph', shape=(None,)) # Classes
+                is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=()) # Are we training or predicting?
+                epoch_ph = tf.placeholder(tf.int32, name='epoch_ph', shape=()) # Current epoch
+                normal_arch_ph = tf.placeholder(tf.int32, name='normal_arch_ph', shape=(cell_num_blocks, 4))
+                reduction_arch_ph = tf.placeholder(tf.int32, name='normal_arch_ph', shape=(cell_num_blocks, 4))
 
                 # Preprocess & do inference
                 (X, classes, init_op) = self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
-                (probs, preds, logits, aux_logits_list) = self._inference(X, epoch_ph, is_train_ph)
+                (probs, preds, logits, aux_logits_list) = self._inference(X, epoch_ph, normal_arch_ph, reduction_arch_ph, is_train_ph)
                 
                 # Compute training loss & accuracy
                 tf_vars = self._get_all_variables()
@@ -288,7 +301,7 @@ class TfEnasChild(BaseModel):
         model_memo = self.memo['model']
         return (model_memo['model'], model_memo['graph'], model_memo['sess'], model_memo['monitored_values'])
 
-    def _inference(self, X, epochs, is_train):
+    def _inference(self, X, epochs, normal_arch, reduction_arch, is_train):
         K = self._train_params['K'] # No. of classes
         in_ch = 3 # Num channels of input images
         w = self._train_params['image_size'] # Initial input width
@@ -299,8 +312,6 @@ class TfEnasChild(BaseModel):
         initial_block_ch = self._knobs['initial_block_ch'] # Initial no. of channels for operations in block
         total_trials = self._knobs['total_trials']
         trial_epochs = self._knobs['trial_epochs']
-
-        (normal_arch, reduction_arch) = self._get_arch()
 
         total_epochs = trial_epochs * total_trials
         epochs_ratio = (epochs + 1) / total_epochs
@@ -313,7 +324,7 @@ class TfEnasChild(BaseModel):
         # Add aux heads only if downsampling width can happen 3 times
         aux_head_layers = [reduction_layers[-1] + 1] if w % (2 << 3) == 0 else []
 
-        # Stores previous layers. layers[i] = (<previous layer (i - 1) as input to layer i>, <width>, <height>, <channels>)
+        # Stores previous layers. layers[i] = (<previous layer (i - 1) as input to layer i>, <width>, <height>, <channels (tensor)>)
         layers = []
         aux_logits_list = [] # Stores list of logits from aux heads
 
@@ -545,6 +556,7 @@ class TfEnasChild(BaseModel):
     def _get_arch(self):
         cell_archs = self._knobs['cell_archs']
         use_cell_arch_type = self._knobs['use_cell_arch_type']
+        num_blocks = 5
 
         if use_cell_arch_type:
             if use_cell_arch_type == 'ENAS':
@@ -580,7 +592,6 @@ class TfEnasChild(BaseModel):
             else:
                 raise ValueError('Invalid cell architecture type: "{}"'.format(use_cell_arch_type))
 
-        num_blocks = 5
         normal_arch = [cell_archs[(4 * i):(4 * i + 4)] for i in range(num_blocks)]
         reduction_arch = [cell_archs[(4 * i):(4 * i + 4)] for i in range(num_blocks, num_blocks + num_blocks)]
         return (normal_arch, reduction_arch)
@@ -661,9 +672,9 @@ class TfEnasChild(BaseModel):
         return num_params
 
     def _add_reduction_cell(self, cell_arch, inputs, block_ch, is_train, drop_path_keep_prob):
+        b = self._knobs['cell_num_blocks'] # no. of blocks
         ni = len(inputs) # no. of inputs
-        b = len(cell_arch) # no. of blocks
-        hidden_states = [] # Stores hidden states for this cell, which includes blocks
+        hidden_states = [] # Stores hidden states for this cell <no. of hidden states> x (N, w, h, ch), which includes blocks
 
         # Initial width & height for this cell as the final input
         (_, w, h, _) = inputs[-1]
@@ -681,41 +692,55 @@ class TfEnasChild(BaseModel):
                 hidden_states.append(inp)
 
         # Make each block, also recording whether each block is used 
-        hidden_state_used_counts = [0 for _ in range(ni + b)]
+        block_inputs_usage = [] # b x (ni + b,)
+        
         for bi in range(b):
+            block_inputs = tf.stack(hidden_states) # (<no. of hidden states>, N, w, h, ch)
+
             with tf.variable_scope('block_{}'.format(bi)):
-                (idx1, op1, idx2, op2) = cell_arch[bi]
-                X1 = hidden_states[idx1]
-                hidden_state_used_counts[idx1] += 1
-                X2 = hidden_states[idx2]
-                hidden_state_used_counts[idx2] += 1
+                idx1 = cell_arch[bi][0]
+                op1 = cell_arch[bi][1]
+                idx2 = cell_arch[bi][2]
+                op2 = cell_arch[bi][3]
+
+                # Map input indices to inputs, and record usages
+                X1 = block_inputs[idx1]
+                X2 = block_inputs[idx2]
+                inputs_usage = tf.one_hot(idx1, depth=(ni + b)) + tf.one_hot(idx2, depth=(ni + b))
+                block_inputs_usage.append(inputs_usage)
 
                 with tf.variable_scope('X1'):
                     # Don't halve dimensions if X1 is a fellow block
-                    if idx1 < ni:
-                        X1 = self._add_op(X1, op1, w, h, block_ch, is_train, stride=2)
-                    else:
-                        X1 = self._add_op(X1, op1, w >> 1, h >> 1, block_ch, is_train)
+                    X1 = tf.cond(
+                        tf.less(idx1, ni), 
+                        lambda: self._add_op(X1, op1, w, h, block_ch, is_train, stride=2),
+                        lambda: self._add_op(X1, op1, w >> 1, h >> 1, block_ch, is_train)
+                    )
                     X1 = self._do_drop_path(X1, drop_path_keep_prob)
 
                 with tf.variable_scope('X2'):
-                    if idx2 < ni:
-                        X2 = self._add_op(X2, op2, w, h, block_ch, is_train, stride=2)
-                    else:
-                        X2 = self._add_op(X2, op2, w >> 1, h >> 1, block_ch, is_train)
+                    X2 = tf.cond(
+                        tf.less(idx2, ni),
+                        lambda: self._add_op(X2, op2, w, h, block_ch, is_train, stride=2),
+                        lambda: self._add_op(X2, op2, w >> 1, h >> 1, block_ch, is_train)
+                    )
                     X2 = self._do_drop_path(X2, drop_path_keep_prob)
                     
                 X = tf.add_n([X1, X2])
 
             hidden_states.append(X)
 
-        # Combine all unused hidden states
-        comb_states = [X for (i, X) in enumerate(hidden_states) if i >= ni and hidden_state_used_counts[i] == 0] 
-        comb_ch = len(comb_states) * block_ch
-        with tf.variable_scope('combine'):
-            X = tf.concat(comb_states, axis=3)
+        # Determine which hidden states were not used
+        inputs_usage = tf.add_n(block_inputs_usage) # (ni + b,)
+        unused_states_idxs = tf.where(tf.equal(inputs_usage, 0)) 
+        num_unused_states = tf.size(unused_states_idxs)
+        unused_states = tf.gather(tf.stack(hidden_states), unused_states_idxs) # (<no. of unused hidden states>, N, w, h, ch)
 
-        X = tf.reshape(X, (-1, w >> 1, h >> 1, comb_ch)) # Sanity shape check
+        # Concat all unused hidden states
+        comb_ch = num_unused_states * block_ch
+        with tf.variable_scope('combine'):
+            # For each batch, concat across unused hidden states and channels
+            X = tf.reshape(tf.transpose(unused_states, (1, 2, 3, 0, 4)), (-1, w >> 1, h >> 1, comb_ch))
 
         return (X, w >> 1, h >> 1, comb_ch)
 
@@ -775,6 +800,8 @@ class TfEnasChild(BaseModel):
         '''
         Applies a specific operation to input
         '''
+
+        # List of all possible operations and their associated numbers
         ops = {
             0: lambda: self._add_separable_conv_op(X, w, h, ch, is_train, filter_size=3, stride=stride),
             1: lambda: self._add_separable_conv_op(X, w, h, ch, is_train, filter_size=5, stride=stride),
@@ -785,7 +812,11 @@ class TfEnasChild(BaseModel):
             6: lambda: self._add_conv_op(X, w, h, ch, is_train, filter_size=3, stride=stride),
             7: lambda: self._add_conv_op(X, w, h, ch, is_train, filter_size=5, stride=stride)
         }
-        X = ops[op]()
+
+        X = tf.case({
+            tf.equal(op, op_no): ops[op_no]
+            for op_no in ops.keys()
+        })
         return X
 
     
@@ -979,5 +1010,5 @@ if __name__ == '__main__':
     tune_model(
         TfEnasChild, 
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-        val_dataset_uri='data/cifar_10_for_image_classification_train.zip'
+        val_dataset_uri='data/cifar_10_for_image_classification_val.zip'
     )
