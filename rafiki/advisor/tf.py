@@ -113,7 +113,7 @@ class EnasKnobAdvisorListModel():
         item_logits = self._item_logits
         N = len(knob) # Length of list
         base_decay = 0.99
-        learning_rate = 0.001
+        learning_rate = 0.0035
         adam_beta1 = 0
         adam_epsilon = 1e-3
         entropy_weight = 0.0001
@@ -163,7 +163,7 @@ class EnasKnobAdvisorListModel():
         H = 32 # Number of units in LSTM
         lstm_num_layers = 2
         temperature = 0
-        tanh_constant = 1.5
+        tanh_constant = 1.1
 
         # List of counts corresponding to the no. of values for each list item
         Ks = [len(item_knob.values) for item_knob in knob.items]
