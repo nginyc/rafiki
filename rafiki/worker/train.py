@@ -107,9 +107,6 @@ class TrainWorker(object):
                                 val_dataset_uri):
         logger.info('Training & evaluating model...')
 
-        # Provide trial ID to model
-        model_utils.set_trial_id(self._trial_id)
-        
         # Add log handlers for trial, including adding handler to root logger 
         # to capture any logs emitted with level above INFO during model training & evaluation
         def handle_log(log_line, log_lvl):
@@ -143,9 +140,6 @@ class TrainWorker(object):
         # Remove log handlers from loggers for this trial
         root_logger.removeHandler(log_handler)
         py_model_logger.removeHandler(log_handler)
-
-        # Unset trial ID
-        model_utils.set_trial_id(None)
 
         logger.info('Trial score: {}'.format(score))
 
