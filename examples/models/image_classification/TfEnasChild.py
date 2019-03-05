@@ -224,7 +224,7 @@ class TfEnasChild(BaseModel):
         num_epochs = trial_epochs if (trial_count % (skip_training_trials + 1) == 0) else 0 
 
         # How many epochs has training been done over in past trials
-        prev_epochs = (trial_count - 1) // (skip_training_trials + 1) if trial_count > 0 else 0
+        prev_epochs = (trial_count - 1) // (skip_training_trials + 1) + 1 if trial_count > 0 else 0
 
         return (num_epochs, prev_epochs)
     
