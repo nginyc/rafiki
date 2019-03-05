@@ -205,4 +205,4 @@ class LoggerUtilsDebugHandler(logging.Handler):
             self._print(log_line)
         
     def _print(self, message):
-        print('[{}]'.format(__name__), message)
+        print('[{}][{}]'.format(__name__, str(datetime.datetime.now())), message)
