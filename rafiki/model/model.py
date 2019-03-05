@@ -55,6 +55,20 @@ class BaseModel(abc.ABC):
         '''
         raise NotImplementedError()
 
+    @staticmethod
+    def setup(self):
+        '''
+        Runs class-wide setup logic (e.g. initialize a graph/session shared across trials).
+        '''
+        pass
+
+    @staticmethod
+    def teardown(self):
+        '''
+        Runs class-wide teardown logic (e.g. closes a session shared across trials).
+        '''
+        pass
+
     @abc.abstractmethod
     def train(self, dataset_uri: str, shared_params: Dict[str, np.array]) -> Union[Dict[str, np.array], None]:
         '''
@@ -110,14 +124,6 @@ class BaseModel(abc.ABC):
         '''
         raise NotImplementedError()
 
-    @abc.abstractmethod
-    def destroy(self):
-        '''
-        Destroy this model instance, closing any sessions or freeing any connections.
-        No other methods will be called subsequently.
-        '''
-        pass
-
 def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_dataset_uri: str, total_trials: int = 25,
                 params_root_dir: str = 'params/', to_read_args: bool = True) -> (Dict[str, any], str):
     '''
@@ -158,6 +164,10 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     best_score = 0
     best_knobs = None
     best_model_params_dir = None
+
+    # Setup model class
+    print('Running model class setup...')
+    py_model_class.setup()
 
     # For every trial
     for i in range(1, total_trials + 1):
@@ -202,14 +212,14 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
             best_model_params_dir = params_dir
             best_knobs = knobs
             best_score = score
-            
-        # Destroy model
-        print('Destroying model...')
-        model_inst.destroy()
 
         # Feedback to advisor
         trial_params = param_store.store_params(trial_id, trial_params)
         advisor.feedback(score, knobs, trial_params)
+    
+    # Teardown model class
+    print('Running model class teardown...')
+    py_model_class.teardown()
     
     return (best_knobs, best_model_params_dir)
 
