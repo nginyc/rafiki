@@ -7,6 +7,7 @@ import json
 import os
 import tempfile
 from datetime import datetime
+from collections import namedtuple
 import numpy as np
 import base64
 
@@ -86,17 +87,14 @@ class TfEnasChild(BaseModel):
         # Memoise across trials to speed up training
         TfEnasChild.memo = {
             'datasets': {}, # { <dataset_uri> -> <dataset> }
-            'model': {
-                'train_params': None,
-                'knobs': None
-            }
+            'model': None # of class `_MemoModel``
         }
 
     @staticmethod
     def teardown():
         memo = TfEnasChild.memo
-        if 'sess' in memo['model']:
-            memo['model']['sess'].close()
+        if memo['model'] is not None:
+            memo['model'].sess.close()
         TfEnasChild.memo = {}
 
     def __init__(self, **knobs):
@@ -105,11 +103,12 @@ class TfEnasChild(BaseModel):
         
     def train(self, dataset_uri, shared_params):
         (images, classes, self._train_params) = self._prepare_dataset(dataset_uri)
-        (self._model, self._graph, self._sess, self._monitored_values) = self._build_model()
+        (self._model, self._graph, self._sess, self._saver, 
+            self._monitored_values) = self._build_model()
         
         with self._graph.as_default():
             if len(shared_params) > 0:
-                self._load_shareable_vars(shared_params)
+                self._load_shared_vars(shared_params)
 
             self._train_summaries = []
             (num_epochs, prev_epochs) = self._get_train_status()
@@ -145,9 +144,7 @@ class TfEnasChild(BaseModel):
         # Save model parameters
         model_file_path = os.path.join(params_dir, 'model')
         with self._graph.as_default():
-            tf_vars = self._get_all_variables()
-            saver = tf.train.Saver(tf_vars)
-            saver.save(self._sess, model_file_path)
+            self._saver.save(self._sess, model_file_path)
 
         # Save pre-processing params
         train_params_file_path = os.path.join(params_dir, 'train_params.json')
@@ -170,14 +167,12 @@ class TfEnasChild(BaseModel):
             self._train_params = json.loads(json_str)
 
         # Build model
-        (self._model, self._graph, self._sess, _) = self._build_model()
+        (self._model, self._graph, self._sess, self._saver, _) = self._build_model()
 
         with self._graph.as_default():
             # Load model parameters
             model_file_path = os.path.join(params_dir, 'model')
-            tf_vars = self._get_all_variables()
-            saver = tf.train.Saver(tf_vars)
-            saver.restore(self._sess, model_file_path)
+            self._saver.restore(self._sess, model_file_path)
 
     ####################################
     # Private methods
@@ -238,18 +233,23 @@ class TfEnasChild(BaseModel):
         }
         return shareable_vars
 
-    def _load_shareable_vars(self, shareable_vars):
-        shared_vars = 0
-        var_assigns = []
-        shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
-        for tf_var in shareable_tf_vars:
-            if tf_var.name in shareable_vars:
-                var_assign = tf_var.assign(shareable_vars[tf_var.name])
-                var_assigns.append(var_assign)
-                shared_vars += 1
+    def _load_shared_vars(self, shared_vars):
+        m = self._model
 
-        utils.logger.log('Restoring {} / {} shareable variables...'.format(shared_vars, len(shareable_tf_vars)))
-        self._sess.run(var_assigns)
+        # Get current values for vars
+        shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
+        values = self._sess.run(shareable_tf_vars)
+
+        # Build feed dict for op for loading shared params
+        # For each param, use current value of param in session if not in shareable vars
+        var_feeddict = {
+            m.shared_params_phs[tf_var.name]: shared_vars[tf_var.name] 
+            if tf_var.name in shared_vars else values[i]
+            for (i, tf_var) in enumerate(shareable_tf_vars)
+        }
+        
+        utils.logger.log('Restoring {} / {} shareable variables...'.format(len(shared_vars), len(shareable_tf_vars)))
+        self._sess.run(m.shared_params_assign_op, feed_dict=var_feeddict)
 
     def _build_model(self):
         w = self._train_params['image_size']
@@ -258,14 +258,17 @@ class TfEnasChild(BaseModel):
         in_ch = 3 # Num channels of input images
 
         def if_model_same(model_memo):
+            if model_memo is None:
+                return False
+
             # Must have the same train params
-            if self._train_params != model_memo['train_params']:
+            if self._train_params != model_memo.train_params:
                 return False
 
             # Must have the same knobs, except for certain knobs that don't affect model
             ignored_knobs = ['cell_archs', 'trial_count']
             for (name, value) in self._knobs.items():
-                if name not in ignored_knobs and value != model_memo['knobs'].get(name):
+                if name not in ignored_knobs and value != model_memo.knobs.get(name):
                     utils.logger.log('Detected that knob "{}" is different!'.format(name))
                     return False
             
@@ -308,25 +311,38 @@ class TfEnasChild(BaseModel):
                     tf.summary.scalar(value.name, value)
                 summary_op = tf.summary.merge_all()
 
+                # Allow loading of shared parameters
+                shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
+                shared_params_phs = {
+                    tf_var.name: tf.placeholder(tf.float32, shape=tf_var.shape)
+                    for tf_var in shareable_tf_vars
+                }
+                shared_params_assign_op = tf.group([
+                    tf.assign(tf_var, ph) 
+                    for (tf_var, ph) in zip(shareable_tf_vars, shared_params_phs.values())
+                ], name='shared_params_assign_op')
+
+                # Add saver
+                saver = tf.train.Saver(tf_vars)
+
                 # Make session
                 sess = self._make_session()
 
-            model = (init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, epoch_ph, 
-                    normal_arch_ph, reduction_arch_ph, probs, acc, steps)
+            model = _Model(init_op, train_op, summary_op, shared_params_assign_op, 
+                    images_ph, classes_ph, is_train_ph, epoch_ph, normal_arch_ph, 
+                    reduction_arch_ph, shared_params_phs, probs, acc, steps)
 
-            self.memo['model'] = {
-                'train_params': self._train_params,
-                'knobs': self._knobs,
-                'graph': graph,
-                'sess': sess,
-                'monitored_values': monitored_values,
-                'model': model
-            }
+            self.memo['model'] = _ModelMemo(
+                self._train_params, self._knobs, graph, sess,
+                saver, monitored_values, model
+            )
         else:
             utils.logger.log('Using previously built model...')
 
         model_memo = self.memo['model']
-        return (model_memo['model'], model_memo['graph'], model_memo['sess'], model_memo['monitored_values'])
+        
+        return (model_memo.model, model_memo.graph, model_memo.sess, model_memo.saver, 
+                model_memo.monitored_values)
 
     def _inference(self, X, epochs, normal_arch, reduction_arch, is_train):
         K = self._train_params['K'] # No. of classes
@@ -501,11 +517,10 @@ class TfEnasChild(BaseModel):
     def _train_model(self, images, classes, initial_epoch, num_epochs):
         log_every_secs = self._knobs['log_every_secs']
         (normal_arch, reduction_arch) = self._get_arch()
+        m = self._model
 
         train_summaries = [] # List of (<steps>, <summary>) collected during training
-        (init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, epoch_ph, normal_arch_ph, 
-            reduction_arch_ph, probs, acc, steps) = self._model
-        
+
         # Log available devices 
         utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
@@ -515,9 +530,9 @@ class TfEnasChild(BaseModel):
             utils.logger.log('Running epoch {} (trial epoch {})...'.format(epoch, trial_epoch))
 
             # Initialize dataset
-            self._sess.run(init_op, feed_dict={
-                images_ph: images, 
-                classes_ph: classes
+            self._sess.run(m.init_op, feed_dict={
+                m.images_ph: images, 
+                m.classes_ph: classes
             })
 
             # To track mean batch accuracy
@@ -525,12 +540,12 @@ class TfEnasChild(BaseModel):
             while True:
                 try:
                     (_, summary, batch_acc, batch_steps, *values) = self._sess.run(
-                        [train_op, summary_op, acc, steps, *self._monitored_values],
+                        [m.train_op, m.summary_op, m.acc, m.steps, *self._monitored_values],
                         feed_dict={
-                            is_train_ph: True,
-                            epoch_ph: epoch,
-                            normal_arch_ph: normal_arch,
-                            reduction_arch_ph: reduction_arch
+                            m.is_train_ph: True,
+                            m.epoch_ph: epoch,
+                            m.normal_arch_ph: normal_arch,
+                            m.reduction_arch_ph: reduction_arch
                         }
                     )
                     train_summaries.append((batch_steps, summary))
@@ -558,23 +573,22 @@ class TfEnasChild(BaseModel):
 
     def _predict_with_model(self, images):
         (normal_arch, reduction_arch) = self._get_arch()
-        (init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, epoch_ph, normal_arch_ph, 
-            reduction_arch_ph, probs, acc, steps) = self._model
+        m = self._model
         
         # Initialize dataset (mock classes)
-        self._sess.run(init_op, feed_dict={
-            images_ph: images, 
-            classes_ph: np.zeros((len(images),))
+        self._sess.run(m.init_op, feed_dict={
+            m.images_ph: images, 
+            m.classes_ph: np.zeros((len(images),))
         })
 
         all_probs = []
         while True:
             try:
-                batch_probs = self._sess.run(probs, {
-                    is_train_ph: False,
-                    epoch_ph: 0,
-                    normal_arch_ph: normal_arch,
-                    reduction_arch_ph: reduction_arch
+                batch_probs = self._sess.run(m.probs, {
+                    m.is_train_ph: False,
+                    m.epoch_ph: 0,
+                    m.normal_arch_ph: normal_arch,
+                    m.reduction_arch_ph: reduction_arch
                 })
                 all_probs.extend(batch_probs)
             except tf.errors.OutOfRangeError:
@@ -1071,6 +1085,13 @@ class TfEnasChild(BaseModel):
     def _get_all_variables(self):
         tf_vars = [var for var in tf.trainable_variables()]
         return tf_vars
+
+_Model = namedtuple('_Model', ['init_op', 'train_op', 'summary_op', 'shared_params_assign_op', 
+        'images_ph', 'classes_ph', 'is_train_ph', 'epoch_ph', 'normal_arch_ph', 'reduction_arch_ph', 
+        'shared_params_phs', 'probs', 'acc', 'steps'])
+
+_ModelMemo = namedtuple('_ModelMemo', ['train_params', 'knobs', 'graph', 'sess', 'saver', 
+            'monitored_values', 'model'])
 
 if __name__ == '__main__':
     tune_model(

@@ -171,8 +171,6 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     py_model_class.setup()
 
     # For every trial
-    import objgraph
-    import random
     for i in range(1, total_trials + 1):
         trial_id = str(uuid.uuid4())
         _print_header('Trial #{} (ID: "{}")'.format(i, trial_id))
@@ -219,10 +217,6 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         # Feedback to advisor
         trial_params = param_store.store_params(session_id, trial_params, prefix=trial_id)
         advisor.feedback(score, knobs, trial_params)
-
-        objgraph.show_growth()
-        if i > 1:
-            objgraph.show_chain(objgraph.find_backref_chain(random.choice(objgraph.by_type('Operation')), objgraph.is_proper_module), filename='leak.png')
     
     # Teardown model class
     print('Running model class teardown...')
