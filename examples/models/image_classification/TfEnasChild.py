@@ -984,6 +984,7 @@ class TfEnasChild(BaseModel):
         while w > w_out or h > h_out:
             downsample_no += 1
             with tf.variable_scope('downsample_{}x'.format(downsample_no)):
+                X = tf.nn.relu(X)
                 X = self._add_factorized_reduction(X, w, h, ch, ch_out, is_train)
                 ch = ch_out
                 w >>= 1
