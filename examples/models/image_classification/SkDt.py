@@ -5,7 +5,6 @@ import os
 import base64
 import numpy as np
 
-from rafiki.config import APP_MODE
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
                         IntegerKnob, CategoricalKnob, dataset_utils, logger
 from rafiki.constants import TaskType, ModelDependency
@@ -17,7 +16,7 @@ class SkDt(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'max_depth': IntegerKnob(2, 16 if APP_MODE != 'DEV' else 4),
+            'max_depth': IntegerKnob(2, 4),
             'criterion': CategoricalKnob(['gini', 'entropy'])
         }
 

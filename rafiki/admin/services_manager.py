@@ -122,9 +122,11 @@ class ServicesManager(object):
         train_job = self._db.get_train_job(train_job_id)
 
         # Stop all workers for train job
-        workers = self._db.get_workers_of_train_job(train_job_id)
-        for worker in workers:
-            self._stop_train_job_worker(worker)
+        sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(train_job_id)
+        for sub_train_job in sub_train_jobs:
+            workers = self._db.get_workers_of_sub_train_job(sub_train_job.id)
+            for worker in workers:
+                self._stop_train_job_worker(worker)
 
         return train_job
         
@@ -357,7 +359,7 @@ class ServicesManager(object):
             port += 1
 
         return port
-
+    
     def _get_best_trials_for_inference(self, inference_job):
         best_trials = self._db.get_best_trials_of_train_job(inference_job.train_job_id)
         return best_trials

@@ -2,7 +2,6 @@ import os
 
 # Global
 APP_SECRET = 'rafiki'
-APP_MODE = 'DEV' # DEV or PROD
 SUPERADMIN_EMAIL = 'superadmin@rafiki'
 SUPERADMIN_PASSWORD = 'rafiki'
 
