@@ -12,4 +12,4 @@ if __name__ == '__main__':
     # Initialize client
     client = Client(admin_host=rafiki_host, admin_port=admin_port)
     client.login(email=user_email, password=user_password)
-    client.stop_all_jobs()
+    print(client.stop_all_jobs())
