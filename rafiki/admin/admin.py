@@ -8,7 +8,7 @@ import csv
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType, InferenceJobStatus, \
     TrainJobStatus, ModelAccessRight, BudgetType
-from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
+from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.model import ModelLogger
 from rafiki.container import DockerSwarmContainerManager 
 
