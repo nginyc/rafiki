@@ -26,10 +26,11 @@ class InferenceJob(Base):
     predictor_service_id = Column(String, ForeignKey('service.id'))
     datetime_stopped = Column(DateTime, default=None)
 
-class InferenceJobWorker(Base):
-    __tablename__ = 'inference_job_worker'
+class SubInferenceJob(Base):
+    __tablename__ = 'sub_inference_job'
 
-    service_id = Column(String, ForeignKey('service.id'), primary_key=True)
+    id = Column(String, primary_key=True, default=generate_uuid)
+    service_id = Column(String, ForeignKey('service.id'))
     inference_job_id = Column(String, ForeignKey('inference_job.id'))
     trial_id = Column(String, ForeignKey('trial.id'), nullable=False)
 
@@ -83,19 +84,14 @@ class SubTrainJob(Base):
     __tablename__ = 'sub_train_job'
 
     id = Column(String, primary_key=True, default=generate_uuid)
+    service_id = Column(String, ForeignKey('service.id'))
     train_job_id = Column(String, ForeignKey('train_job.id'))
     model_id = Column(String, ForeignKey('model.id'))
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
     status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     datetime_stopped = Column(DateTime, default=None)
-
-class TrainJobWorker(Base):
-    __tablename__ = 'train_job_worker'
-
-    service_id = Column(String, ForeignKey('service.id'), primary_key=True)
-    train_job_id = Column(String, ForeignKey('train_job.id'))
-    sub_train_job_id = Column(String, ForeignKey('sub_train_job.id'), nullable=False)
+    config = Column(JSON, nullable=False)
 
 class Trial(Base):
     __tablename__ = 'trial'
@@ -105,9 +101,10 @@ class Trial(Base):
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     status = Column(String, nullable=False, default=TrialStatus.STARTED)
+    shared_params_count = Column(Integer, nullable=False)
+    params_dir = Column(String, default=None)
     knobs = Column(JSON, default=None)
     score = Column(Float, default=0)
-    param_id = Column(String, default=None)
     datetime_stopped = Column(DateTime, default=None)
 
 class TrialLog(Base):

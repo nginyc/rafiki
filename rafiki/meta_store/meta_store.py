@@ -110,11 +110,12 @@ class MetaStore(object):
     # Sub Train Jobs
     ####################################  
 
-    def create_sub_train_job(self, train_job_id, model_id, user_id):
+    def create_sub_train_job(self, train_job_id, model_id, user_id, config):
         sub_train_job = SubTrainJob(
             train_job_id=train_job_id,
             model_id=model_id,
-            user_id=user_id
+            user_id=user_id,
+            config=config
         )
         self._session.add(sub_train_job)
         return sub_train_job
@@ -130,9 +131,10 @@ class MetaStore(object):
         sub_train_job = self._session.query(SubTrainJob).get(id)
         return sub_train_job
 
-    def mark_sub_train_job_as_running(self, sub_train_job):
+    def mark_sub_train_job_as_running(self, sub_train_job, service_id):
         sub_train_job.status = TrainJobStatus.RUNNING
         sub_train_job.datetime_stopped = None
+        sub_train_job.service_id = service_id
         self._session.add(sub_train_job)
         return sub_train_job
 
@@ -145,15 +147,6 @@ class MetaStore(object):
     ####################################
     # Train Job Workers
     ####################################
-
-    def create_train_job_worker(self, service_id, train_job_id, sub_train_job_id):
-        train_job_worker = TrainJobWorker(
-            train_job_id=train_job_id,
-            sub_train_job_id=sub_train_job_id,
-            service_id=service_id
-        )
-        self._session.add(train_job_worker)
-        return train_job_worker
 
     def get_train_job_worker(self, service_id):
         train_job_worker = self._session.query(TrainJobWorker).get(service_id)
@@ -412,9 +405,10 @@ class MetaStore(object):
 
         return trials
 
-    def mark_trial_as_running(self, trial, knobs):
+    def mark_trial_as_running(self, trial, knobs, shared_params_count):
         trial.status = TrialStatus.RUNNING
         trial.knobs = knobs
+        trial.shared_params_count = shared_params_count
         self._session.add(trial)
         return trial
 
@@ -424,11 +418,10 @@ class MetaStore(object):
         self._session.add(trial)
         return trial
 
-    def mark_trial_as_complete(self, trial, score, param_id):
+    def mark_trial_as_complete(self, trial, score):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
         trial.datetime_stopped = datetime.datetime.utcnow()
-        trial.param_id = param_id
         self._session.add(trial)
         return trial
 

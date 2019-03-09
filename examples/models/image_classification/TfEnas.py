@@ -11,27 +11,28 @@ from collections import namedtuple
 import numpy as np
 import base64
 
-from rafiki.advisor import IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, ListKnob, Metadata, MetadataKnob
+from rafiki.advisor import Advisor, IntegerKnob, CategoricalKnob, FloatKnob, \
+                            FixedKnob, ListKnob, Metadata, MetadataKnob
 from rafiki.model import utils, tune_model, BaseModel
 from rafiki.constants import TaskType, ModelDependency
 
-class TfEnasChild(BaseModel):
+
+class TfEnasBase(BaseModel):
     '''
     Implements the child model of "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
     
     Paper: https://arxiv.org/abs/1802.03268
     '''
 
-    TF_COLLECTION_SHARED = 'SHARED'
     TF_COLLECTION_MONITORED = 'MONITORED'
     CELL_NUM_BLOCKS = 5
-    OPS_TO_SEARCH = [0, 1, 2, 3, 4]
+    OPS = [0, 1, 2, 3, 4]
     memo = {}
 
     @staticmethod
     def get_knob_config():
-        cell_num_blocks = TfEnasChild.CELL_NUM_BLOCKS
-        ops_to_search = TfEnasChild.OPS_TO_SEARCH
+        cell_num_blocks = TfEnasBase.CELL_NUM_BLOCKS
+        ops = TfEnasBase.OPS
 
         def cell_arch_item(i):
             b = i // 4 # block no
@@ -42,7 +43,7 @@ class TfEnasChild(BaseModel):
                 if idx in [0, 2]:
                     return CategoricalKnob(list(range(b + 2))) # input index 1/2
                 elif idx in [1, 3]:
-                    return CategoricalKnob(ops_to_search) # op for input 1/2
+                    return CategoricalKnob(ops) # op for input 1/2
             
             # Last half of blocks are for reduction cell
             else:
@@ -50,30 +51,30 @@ class TfEnasChild(BaseModel):
                 if idx in [0, 2]:
                     return CategoricalKnob(list(range(b + 2))) # input index 1/2
                 elif idx in [1, 3]:
-                    return CategoricalKnob(ops_to_search) # op for input 1/2
+                    return CategoricalKnob(ops) # op for input 1/2
                     
         return {
             'trial_count': MetadataKnob(Metadata.TRIAL_COUNT),
-            'total_trials': MetadataKnob(Metadata.TOTAL_TRIALS),
             'max_image_size': FixedKnob(32),
-            'trial_epochs': FixedKnob(1),
-            'skip_training_trials': FixedKnob(299),
-            'ops_to_search': FixedKnob(ops_to_search),
+            'trial_epochs': FixedKnob(630), # No. of epochs to run trial over
+            'initial_epoch': FixedKnob(0), # Initial epoch no.
+            'ops': FixedKnob(ops),
             'batch_size': FixedKnob(64),
             'learning_rate': FixedKnob(0.05), 
-            'initial_block_ch': FixedKnob(20), # FixedKnob(36),
+            'initial_block_ch': FixedKnob(36),
             'cell_num_blocks': FixedKnob(cell_num_blocks),
             'stem_ch_mul': FixedKnob(3),
-            'reg_decay': FixedKnob(1e-4), # FixedKnob(4e-4),
+            'reg_decay': FixedKnob(4e-4),
             'dropout_keep_prob': FixedKnob(0.8),
             'opt_momentum': FixedKnob(0.9),
             'use_sgdr': FixedKnob(True),
             'sgdr_alpha': FixedKnob(0.002),
             'sgdr_decay_epochs': FixedKnob(10),
             'sgdr_t_mul': FixedKnob(2),  
-            'num_layers': FixedKnob(6), # FixedKnob(15)
+            'num_layers': FixedKnob(15),
             'aux_loss_mul': FixedKnob(0.4),
             'drop_path_keep_prob': FixedKnob(0.6),
+            'drop_path_decay_epochs': FixedKnob(630),
             'cutout_size': FixedKnob(0),
             'grad_clip_norm': FixedKnob(0),
             'log_every_secs': FixedKnob(60),
@@ -82,44 +83,82 @@ class TfEnasChild(BaseModel):
         }
 
     @staticmethod
+    def validate_knobs(knobs):
+        use_cell_arch_type = knobs['use_cell_arch_type']
+        cell_archs = knobs['cell_archs']
+        
+        # Use fixed architectures if specified
+        if use_cell_arch_type:
+            if use_cell_arch_type == 'ENAS':
+                cell_archs = [
+                    # Normal
+                    0, 2, 0, 0, 
+                    0, 4, 0, 1, 
+                    0, 4, 1, 1, 
+                    1, 0, 0, 1, 
+                    0, 2, 1, 1,
+                    # Reduction
+                    1, 0, 1, 0,
+                    0, 3, 0, 2,
+                    1, 1, 3, 1,
+                    1, 0, 0, 4,
+                    0, 3, 1, 1
+                ]
+            elif use_cell_arch_type == 'NASNET-A':
+                cell_archs = [
+                     # Normal
+                    1, 0, 1, 4,
+                    0, 0, 1, 1,
+                    1, 2, 0, 4,
+                    0, 2, 0, 2,
+                    0, 1, 0, 0,
+                    # Reduction
+                    0, 5, 1, 1,
+                    1, 3, 0, 5,
+                    1, 2, 0, 1,
+                    1, 3, 2, 1,
+                    2, 2, 3, 4
+                ]
+            else:
+                # Invalid cell architecture type
+                return None
+
+        knobs = {
+            **knobs,
+            'cell_archs': cell_archs
+        }
+        
+        return knobs
+
+    @staticmethod
     def setup():
         # Memoise across trials to speed up training
-        TfEnasChild.memo = {
+        TfEnasBase.memo = {
             'datasets': {}, # { <dataset_uri> -> <dataset> }
-            'model': None # of class `_MemoModel``
         }
+
+        # Log available devices 
+        utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
     @staticmethod
     def teardown():
-        memo = TfEnasChild.memo
-        if memo['model'] is not None:
-            memo['model'].sess.close()
-        TfEnasChild.memo = {}
+        TfEnasBase.memo = {}
 
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
-        
+
     def train(self, dataset_uri, shared_params):
+        num_epochs = self._knobs['trial_epochs']
         (images, classes, self._train_params) = self._prepare_dataset(dataset_uri)
         (self._model, self._graph, self._sess, self._saver, 
             self._monitored_values) = self._build_model()
         
         with self._graph.as_default():
-            if len(shared_params) > 0:
-                self._load_shared_vars(shared_params)
-
-            self._train_summaries = []
-            (num_epochs, prev_epochs) = self._get_train_status()
-            if num_epochs > 0:
-                self._train_summaries = self._train_model(images, classes, prev_epochs, num_epochs)
-                utils.logger.log('Evaluating model on train dataset...')
-                acc = self._evaluate_model(images, classes)
-                utils.logger.log('Train accuracy: {}'.format(acc))
-            else:
-                utils.logger.log('Skipping training...')
-
-            return self._get_shareable_vars()
+            self._train_summaries = self._train_model(images, classes, num_epochs)
+            utils.logger.log('Evaluating model on train dataset...')
+            acc = self._evaluate_model(images, classes)
+            utils.logger.log('Train accuracy: {}'.format(acc))
 
     def evaluate(self, dataset_uri):
         (images, classes, _) = self._prepare_dataset(dataset_uri, train_params=self._train_params)
@@ -207,141 +246,56 @@ class TfEnasChild(BaseModel):
             (images, _, _) = utils.dataset.normalize_images(images, mean=norm_mean, std=norm_std)
             return (images, classes, train_params)
 
-    def _get_train_status(self):
-        trial_epochs = self._knobs['trial_epochs']
-        trial_count = self._knobs['trial_count']
-        skip_training_trials = self._knobs['skip_training_trials']
-
-        # Every (X + 1) trials, only train for the first trial
-        # The other X trials is for training the advisor
-        # Number of epochs this trial should run for
-        num_epochs = trial_epochs if (trial_count % (skip_training_trials + 1) == 0) else 0 
-
-        # How many epochs has training been done over in past trials
-        prev_epochs = (trial_count - 1) // (skip_training_trials + 1) + 1 if trial_count > 0 else 0
-
-        return (num_epochs, prev_epochs)
-    
-    def _get_shareable_vars(self):
-        shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
-        values = self._sess.run(shareable_tf_vars)
-        shareable_vars = {
-            tf_var.name: value
-            for (tf_var, value)
-            in zip(shareable_tf_vars, values)
-        }
-        return shareable_vars
-
-    def _load_shared_vars(self, shared_vars):
-        m = self._model
-
-        # Get current values for vars
-        shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
-        values = self._sess.run(shareable_tf_vars)
-
-        # Build feed dict for op for loading shared params
-        # For each param, use current value of param in session if not in shareable vars
-        var_feeddict = {
-            m.shared_params_phs[tf_var.name]: shared_vars[tf_var.name] 
-            if tf_var.name in shared_vars else values[i]
-            for (i, tf_var) in enumerate(shareable_tf_vars)
-        }
-        
-        utils.logger.log('Restoring {} / {} shareable variables...'.format(len(shared_vars), len(shareable_tf_vars)))
-        self._sess.run(m.shared_params_assign_op, feed_dict=var_feeddict)
-
     def _build_model(self):
         w = self._train_params['image_size']
         h = self._train_params['image_size']
-        cell_num_blocks = self._knobs['cell_num_blocks']
         in_ch = 3 # Num channels of input images
+        (normal_arch, reduction_arch) = self._get_arch() # Fixed architecture
 
-        def if_model_same(model_memo):
-            if model_memo is None:
-                return False
+        utils.logger.log('Building model...')
 
-            # Must have the same train params
-            if self._train_params != model_memo.train_params:
-                return False
-
-            # Must have the same knobs, except for certain knobs that don't affect model
-            ignored_knobs = ['cell_archs', 'trial_count']
-            for (name, value) in self._knobs.items():
-                if name not in ignored_knobs and value != model_memo.knobs.get(name):
-                    utils.logger.log('Detected that knob "{}" is different!'.format(name))
-                    return False
-            
-            return True
-
-        if not if_model_same(self.memo['model']):
-            utils.logger.log('Building model...')
-
-            # Create graph
-            graph = tf.Graph()
-            
-            with graph.as_default():
-                # Define input placeholders to graph
-                images_ph = tf.placeholder(tf.int8, name='images_ph', shape=(None, w, h, in_ch)) # Images
-                classes_ph = tf.placeholder(tf.int32, name='classes_ph', shape=(None,)) # Classes
-                is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=()) # Are we training or predicting?
-                epoch_ph = tf.placeholder(tf.int32, name='epoch_ph', shape=()) # Current epoch
-                normal_arch_ph = tf.placeholder(tf.int32, name='normal_arch_ph', shape=(cell_num_blocks, 4))
-                reduction_arch_ph = tf.placeholder(tf.int32, name='reduction_arch_ph', shape=(cell_num_blocks, 4))
-
-                # Preprocess & do inference
-                (X, classes, init_op) = self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
-                (probs, preds, logits, aux_logits_list) = self._inference(X, epoch_ph, normal_arch_ph, reduction_arch_ph, is_train_ph)
-                
-                # Compute training loss & accuracy
-                tf_vars = self._get_all_variables()
-                total_loss = self._compute_loss(logits, aux_logits_list, tf_vars, classes)
-                acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
-
-                # Optimize training loss
-                (train_op, steps) = self._optimize(total_loss, tf_vars, epoch_ph)
-
-                # Count model parameters
-                model_params_count = self._count_model_parameters()
-                utils.logger.log('Model has {} parameters'.format(model_params_count))
-
-                # Make summaries for monitored values
-                monitored_values = tf.get_collection(self.TF_COLLECTION_MONITORED)
-                for value in monitored_values:
-                    tf.summary.scalar(value.name, value)
-                summary_op = tf.summary.merge_all()
-
-                # Allow loading of shared parameters
-                shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
-                shared_params_phs = {
-                    tf_var.name: tf.placeholder(tf.float32, shape=tf_var.shape)
-                    for tf_var in shareable_tf_vars
-                }
-                shared_params_assign_op = tf.group([
-                    tf.assign(tf_var, ph) 
-                    for (tf_var, ph) in zip(shareable_tf_vars, shared_params_phs.values())
-                ], name='shared_params_assign_op')
-
-                # Add saver
-                saver = tf.train.Saver(tf_vars)
-
-                # Make session
-                sess = self._make_session()
-
-            model = _Model(init_op, train_op, summary_op, shared_params_assign_op, 
-                    images_ph, classes_ph, is_train_ph, epoch_ph, normal_arch_ph, 
-                    reduction_arch_ph, shared_params_phs, probs, acc, steps)
-
-            self.memo['model'] = _ModelMemo(
-                self._train_params, self._knobs, graph, sess,
-                saver, monitored_values, model
-            )
-        else:
-            utils.logger.log('Using previously built model...')
-
-        model_memo = self.memo['model']
+        # Create graph
+        graph = tf.Graph()
         
-        return (model_memo.model, model_memo.graph, model_memo.sess, model_memo.saver, 
-                model_memo.monitored_values)
+        with graph.as_default():
+            # Define input placeholders to graph
+            images_ph = tf.placeholder(tf.int8, name='images_ph', shape=(None, w, h, in_ch)) # Images
+            classes_ph = tf.placeholder(tf.int32, name='classes_ph', shape=(None,)) # Classes
+            is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=()) # Are we training or predicting?
+            epoch_ph = tf.placeholder(tf.int32, name='epoch_ph', shape=()) # Current epoch
+
+            # Preprocess & do inference
+            (X, classes, init_op) = self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
+            (probs, preds, logits, aux_logits_list) = self._inference(X, epoch_ph, normal_arch, reduction_arch, is_train_ph)
+            
+            # Compute training loss & accuracy
+            tf_vars = self._get_all_variables()
+            total_loss = self._compute_loss(logits, aux_logits_list, tf_vars, classes)
+            acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
+
+            # Optimize training loss
+            (train_op, steps) = self._optimize(total_loss, tf_vars, epoch_ph)
+
+            # Count model parameters
+            model_params_count = self._count_model_parameters()
+            utils.logger.log('Model has {} parameters'.format(model_params_count))
+
+            # Make summaries for monitored values
+            monitored_values = tf.get_collection(self.TF_COLLECTION_MONITORED)
+            for value in monitored_values:
+                tf.summary.scalar(value.name, value)
+            summary_op = tf.summary.merge_all()
+
+            # Add saver
+            saver = tf.train.Saver(tf_vars)
+
+            # Make session
+            sess = self._make_session()
+
+        model = _Model(init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, epoch_ph, 
+                    probs, acc, steps, None, None, None, None)
+
+        return (model, graph, sess, saver, monitored_values)
 
     def _inference(self, X, epochs, normal_arch, reduction_arch, is_train):
         K = self._train_params['K'] # No. of classes
@@ -352,12 +306,7 @@ class TfEnasChild(BaseModel):
         L = self._knobs['num_layers'] # Total number of layers
         initial_block_ch = self._knobs['initial_block_ch'] # Initial no. of channels for operations in block
         stem_ch_mul = self._knobs['stem_ch_mul'] # No. of channels for stem convolution as multiple of initial block channels
-        total_trials = self._knobs['total_trials']
-        trial_epochs = self._knobs['trial_epochs']
         stem_ch = initial_block_ch * stem_ch_mul
-
-        total_epochs = trial_epochs * total_trials
-        epochs_ratio = (epochs + 1) / total_epochs
         
         # Layers with reduction cells (otherwise, normal cells)
         reduction_layers = [L // 3, L // 3 * 2 + 1] 
@@ -384,7 +333,7 @@ class TfEnasChild(BaseModel):
             with tf.variable_scope('layer_{}'.format(l)):
                 layers_ratio = (l + 1) / (L + 2)
                 prev_layers = [layers[-2] if len(layers) > 1 else layers[-1], layers[-1]]
-                drop_path_keep_prob = self._get_drop_path_keep_prob(layers_ratio, epochs_ratio, is_train)
+                drop_path_keep_prob = self._get_drop_path_keep_prob(layers_ratio, epochs, is_train)
                 
                 # Either add a reduction cell or normal cell
                 if l in reduction_layers:
@@ -420,23 +369,33 @@ class TfEnasChild(BaseModel):
         probs = tf.nn.softmax(logits)
         preds = tf.argmax(logits, axis=1, output_type=tf.int32)
         
-        return (probs, preds, logits, aux_logits_list) 
+        return (probs, preds, logits, aux_logits_list)
 
-    def _get_drop_path_keep_prob(self, layers_ratio, epochs_ratio, is_train):
-        drop_path_keep_prob = self._knobs['drop_path_keep_prob'] # Base keep prob for drop path
+    def _optimize(self, loss, tf_vars, epoch):
+        opt_momentum = self._knobs['opt_momentum'] # Momentum optimizer momentum
+        grad_clip_norm = self._knobs['grad_clip_norm'] # L2 norm to clip gradients by
 
-        # Decrease keep prob deeper into network
-        keep_prob = 1 - layers_ratio * (1 - drop_path_keep_prob)
-        
-        # Decrease keep prob with increasing epochs 
-        keep_prob = 1 - epochs_ratio * (1 - keep_prob)
+        # Initialize steps variable
+        steps = tf.Variable(0, name='steps', dtype=tf.int32, trainable=False)
 
-        # Drop path only during training 
-        keeb_prob = tf.cond(is_train, 
-                    lambda: tf.cast(keep_prob, tf.float32), 
-                    lambda: tf.constant(1, dtype=tf.float32))
+        # Compute learning rate, gradients
+        lr = self._get_learning_rate(epoch)
+        grads = tf.gradients(loss, tf_vars)
+        self._mark_for_monitoring('lr', lr)
 
-        return keeb_prob
+        # Clip gradients
+        if grad_clip_norm > 0:
+            grads = [tf.clip_by_norm(x, grad_clip_norm) for x in grads]
+
+        # Compute global norm of gradients
+        grads_global_norm = tf.global_norm(grads)
+        self._mark_for_monitoring('grads_global_norm', grads_global_norm)
+
+        # Init optimizer
+        opt = tf.train.MomentumOptimizer(lr, opt_momentum, use_locking=True, use_nesterov=True)
+        train_op = opt.apply_gradients(zip(grads, tf_vars), global_step=steps)
+
+        return (train_op, steps)
 
     def _preprocess(self, images, classes, is_train, w, h, in_ch):
         N = self._knobs['batch_size'] 
@@ -466,32 +425,25 @@ class TfEnasChild(BaseModel):
 
         X = tf.cast(images, tf.float32)
         return (X, classes, init_op)
+    
+    def _get_drop_path_keep_prob(self, layers_ratio, epoch, is_train):
+        drop_path_keep_prob = self._knobs['drop_path_keep_prob'] # Base keep prob for drop path
+        initial_epoch = self._knobs['initial_epoch']
+        drop_path_decay_epochs = self._knobs['drop_path_decay_epochs']
+        
+        # Decrease keep prob deeper into network
+        keep_prob = 1 - layers_ratio * (1 - drop_path_keep_prob)
+        
+        # Decrease keep prob with increasing epochs 
+        epoch_ratio = tf.minimum((initial_epoch + epoch + 1) / drop_path_decay_epochs, 1)
+        keep_prob = 1 - epoch_ratio * (1 - keep_prob)
 
-    def _optimize(self, loss, tf_vars, epoch):
-        opt_momentum = self._knobs['opt_momentum'] # Momentum optimizer momentum
-        grad_clip_norm = self._knobs['grad_clip_norm'] # L2 norm to clip gradients by
+        # Drop path only during training 
+        keep_prob = tf.cond(is_train, 
+                    lambda: tf.cast(keep_prob, tf.float32), 
+                    lambda: tf.constant(1, dtype=tf.float32))
 
-        # Initialize steps variable
-        steps = tf.Variable(0, name='steps', dtype=tf.int32, trainable=False)
-
-        # Compute learning rate, gradients
-        lr = self._get_learning_rate(epoch)
-        grads = tf.gradients(loss, tf_vars)
-        self._mark_for_monitoring('lr', lr)
-
-        # Clip gradients
-        if grad_clip_norm > 0:
-            grads = [tf.clip_by_norm(x, grad_clip_norm) for x in grads]
-
-        # Compute global norm of gradients
-        grads_global_norm = tf.global_norm(grads)
-        self._mark_for_monitoring('grads_global_norm', grads_global_norm)
-
-        # Init optimizer
-        opt = tf.train.MomentumOptimizer(lr, opt_momentum, use_locking=True, use_nesterov=True)
-        train_op = opt.apply_gradients(zip(grads, tf_vars), global_step=steps)
-
-        return (train_op, steps)
+        return keep_prob
 
     def _get_learning_rate(self, epoch):
         lr = self._knobs['learning_rate'] # Learning rate
@@ -513,57 +465,37 @@ class TfEnasChild(BaseModel):
         sess.run(tf.global_variables_initializer())
         return sess
 
-    def _train_model(self, images, classes, initial_epoch, num_epochs):
+    def _train_model(self, images, classes, num_epochs):
+        initial_epoch = self._knobs['initial_epoch']
         log_every_secs = self._knobs['log_every_secs']
-        (normal_arch, reduction_arch) = self._get_arch()
         m = self._model
 
         train_summaries = [] # List of (<steps>, <summary>) collected during training
-
-        # Log available devices 
-        utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
         last_log_time = datetime.now()
         for trial_epoch in range(num_epochs):
             epoch = initial_epoch + trial_epoch
             utils.logger.log('Running epoch {} (trial epoch {})...'.format(epoch, trial_epoch))
-
-            # Initialize dataset
-            self._sess.run(m.init_op, feed_dict={
-                m.images_ph: images, 
-                m.classes_ph: classes
-            })
+            stepper = self._feed_dataset_to_model(epoch, images, [m.train_op, m.summary_op, m.acc, m.steps, *self._monitored_values], 
+                                                is_train=True, classes=classes)
 
             # To track mean batch accuracy
             accs = []
-            while True:
-                try:
-                    (_, summary, batch_acc, batch_steps, *values) = self._sess.run(
-                        [m.train_op, m.summary_op, m.acc, m.steps, *self._monitored_values],
-                        feed_dict={
-                            m.is_train_ph: True,
-                            m.epoch_ph: epoch,
-                            m.normal_arch_ph: normal_arch,
-                            m.reduction_arch_ph: reduction_arch
-                        }
-                    )
-                    train_summaries.append((batch_steps, summary))
-                    accs.append(batch_acc)
-                    
-                    # Periodically, log monitored values
-                    if (datetime.now() - last_log_time).total_seconds() >= log_every_secs:
-                        last_log_time = datetime.now()
-                        utils.logger.log(steps=batch_steps, **{ value.name: v for (value, v) in zip(self._monitored_values, values) })
-                    
-                except tf.errors.OutOfRangeError:
-                    break
+            for (_, summary, batch_acc, batch_steps, *values) in stepper:
+                train_summaries.append((batch_steps, summary))
+                accs.append(batch_acc)
+
+                # Periodically, log monitored values
+                if (datetime.now() - last_log_time).total_seconds() >= log_every_secs:
+                    last_log_time = datetime.now()
+                    utils.logger.log(steps=batch_steps, **{ value.name: v for (value, v) in zip(self._monitored_values, values) })
 
             # Log mean batch accuracy and epoch
             mean_acc = np.mean(accs)
             utils.logger.log(epoch=epoch, mean_acc=mean_acc)
 
         return train_summaries
-            
+
     def _evaluate_model(self, images, classes):
         probs = self._predict_with_model(images)
         preds = np.argmax(probs, axis=1)
@@ -571,69 +503,46 @@ class TfEnasChild(BaseModel):
         return acc
 
     def _predict_with_model(self, images):
-        (normal_arch, reduction_arch) = self._get_arch()
         m = self._model
-        
-        # Initialize dataset (mock classes)
-        self._sess.run(m.init_op, feed_dict={
-            m.images_ph: images, 
-            m.classes_ph: np.zeros((len(images),))
-        })
-
         all_probs = []
-        while True:
-            try:
-                batch_probs = self._sess.run(m.probs, {
-                    m.is_train_ph: False,
-                    m.epoch_ph: 0,
-                    m.normal_arch_ph: normal_arch,
-                    m.reduction_arch_ph: reduction_arch
-                })
-                all_probs.extend(batch_probs)
-            except tf.errors.OutOfRangeError:
-                break
+        stepper = self._feed_dataset_to_model(0, images, [m.probs])
+        for (batch_probs,) in stepper:
+            all_probs.extend(batch_probs)
 
         return np.asarray(all_probs)
 
+    def _feed_dataset_to_model(self, epoch, images, run_ops, is_train=False, classes=None):
+        m = self._model
+        
+        # Initialize dataset (mock classes if required)
+        self._sess.run(m.init_op, feed_dict={
+            m.images_ph: images, 
+            m.classes_ph: classes if classes is not None else np.zeros((len(images),))
+        })
+
+        feed_dict = {
+            m.is_train_ph: is_train,
+            m.epoch_ph: epoch
+        }
+
+        # Feed architectures if placeholders are present
+        if m.normal_arch_ph is not None and m.reduction_arch_ph is not None:
+            (normal_arch, reduction_arch) = self._get_arch()
+            feed_dict.update({
+                m.normal_arch_ph: normal_arch,
+                m.reduction_arch_ph: reduction_arch
+            })
+
+        while True:
+            try:
+                results = self._sess.run(run_ops, feed_dict=feed_dict)
+                yield results
+            except tf.errors.OutOfRangeError:
+                break
+
     def _get_arch(self):
         cell_archs = self._knobs['cell_archs']
-        use_cell_arch_type = self._knobs['use_cell_arch_type']
         num_blocks = self._knobs['cell_num_blocks']
-
-        if use_cell_arch_type:
-            if use_cell_arch_type == 'ENAS':
-                cell_archs = [
-                    # Normal
-                    0, 2, 0, 0, 
-                    0, 4, 0, 1, 
-                    0, 4, 1, 1, 
-                    1, 0, 0, 1, 
-                    0, 2, 1, 1,
-                    # Reduction
-                    1, 0, 1, 0,
-                    0, 3, 0, 2,
-                    1, 1, 3, 1,
-                    1, 0, 0, 4,
-                    0, 3, 1, 1
-                ]
-            elif use_cell_arch_type == 'NASNET-A':
-                cell_archs = [
-                     # Normal
-                    1, 0, 1, 4,
-                    0, 0, 1, 1,
-                    1, 2, 0, 4,
-                    0, 2, 0, 2,
-                    0, 1, 0, 0,
-                    # Reduction
-                    0, 5, 1, 1,
-                    1, 3, 0, 5,
-                    1, 2, 0, 1,
-                    1, 3, 2, 1,
-                    2, 2, 3, 4
-                ]
-            else:
-                raise ValueError('Invalid cell architecture type: "{}"'.format(use_cell_arch_type))
-
         normal_arch = [cell_archs[(4 * i):(4 * i + 4)] for i in range(num_blocks)]
         reduction_arch = [cell_archs[(4 * i):(4 * i + 4)] for i in range(num_blocks, num_blocks + num_blocks)]
         return (normal_arch, reduction_arch)
@@ -718,7 +627,6 @@ class TfEnasChild(BaseModel):
 
     def _add_reduction_cell(self, cell_arch, inputs, block_ch, is_train, drop_path_keep_prob):
         b = self._knobs['cell_num_blocks'] # no. of blocks
-        ni = len(inputs) # no. of inputs
         cell_inputs = []
         blocks = []
 
@@ -737,26 +645,6 @@ class TfEnasChild(BaseModel):
 
                 cell_inputs.append(inp)
 
-        # Get input to op and apply op
-        def add_op(idx, op):
-            # From cell input
-            X_ops = []
-            for i in range(ni):
-                with tf.variable_scope('from_cell_input_{}'.format(i)):
-                    X_ops.append(self._add_op(cell_inputs[i], op, w, h, block_ch, is_train, stride=2))
-
-            # From fellow block output as input
-            for i in range(len(blocks)):
-                with tf.variable_scope('from_block_{}'.format(i)):
-                    X_ops.append(self._add_op(blocks[i], op, w >> 1, h >> 1, block_ch, is_train))
-
-            X = tf.case({
-                tf.equal(idx, i): lambda: X_op
-                for (i, X_op) in enumerate(X_ops)
-            }, exclusive=True)
-
-            return X
-
         for bi in range(b):
             with tf.variable_scope('block_{}'.format(bi)):
                 idx1 = cell_arch[bi][0]
@@ -765,11 +653,11 @@ class TfEnasChild(BaseModel):
                 op2 = cell_arch[bi][3]
 
                 with tf.variable_scope('X1'):
-                    X1 = add_op(idx1, op1)
+                    X1 = self._apply_reduction_cell_op(idx1, op1, w, h, block_ch, cell_inputs, blocks, is_train)
                     X1 = self._add_drop_path(X1, drop_path_keep_prob)
 
                 with tf.variable_scope('X2'):
-                    X2 = add_op(idx2, op2)
+                    X2 = self._apply_reduction_cell_op(idx2, op2, w, h, block_ch, cell_inputs, blocks, is_train)
                     X2 = self._add_drop_path(X2, drop_path_keep_prob)
                     
                 X = tf.add_n([X1, X2])
@@ -785,9 +673,18 @@ class TfEnasChild(BaseModel):
 
         return (X, w >> 1, h >> 1, comb_ch)
 
+    def _apply_reduction_cell_op(self, idx, op, w, h, ch, cell_inputs, blocks, is_train):
+        # Just build output for select input index
+        ni = len(cell_inputs)
+        if idx < len(cell_inputs):
+            X = self._add_op(cell_inputs[idx], op, w, h, ch, is_train, stride=2)
+        else:
+            X = self._add_op(blocks[idx - ni], op, w >> 1, h >> 1, ch, is_train)
+        
+        return X
+
     def _add_normal_cell(self, cell_arch, inputs, block_ch, is_train, drop_path_keep_prob):
         b = self._knobs['cell_num_blocks'] # no. of blocks
-        ni = len(inputs) # no. of inputs
         cell_inputs = []
         blocks = [] 
 
@@ -806,26 +703,6 @@ class TfEnasChild(BaseModel):
 
                 cell_inputs.append(inp)
 
-        # Get input to op and apply op
-        def add_op(idx, op):
-            # From cell input
-            X_ops = []
-            for i in range(ni):
-                with tf.variable_scope('from_cell_input_{}'.format(i)):
-                    X_ops.append(self._add_op(cell_inputs[i], op, w, h, block_ch, is_train))
-
-            # From fellow block output as input
-            for i in range(len(blocks)):
-                with tf.variable_scope('from_block_{}'.format(i)):
-                    X_ops.append(self._add_op(blocks[i], op, w, h, block_ch, is_train))
-
-            X = tf.case({
-                tf.equal(idx, i): lambda: X_op
-                for (i, X_op) in enumerate(X_ops)
-            }, exclusive=True)
-
-            return X
-
         for bi in range(b):
             with tf.variable_scope('block_{}'.format(bi)):
                 idx1 = cell_arch[bi][0]
@@ -834,11 +711,11 @@ class TfEnasChild(BaseModel):
                 op2 = cell_arch[bi][3]
 
                 with tf.variable_scope('X1'):
-                    X1 = add_op(idx1, op1)
+                    X1 = self._apply_normal_cell_op(idx1, op1, w, h, block_ch, cell_inputs, blocks, is_train)
                     X1 = self._add_drop_path(X1, drop_path_keep_prob)
 
                 with tf.variable_scope('X2'):
-                    X2 = add_op(idx2, op2)
+                    X2 = self._apply_normal_cell_op(idx2, op2, w, h, block_ch, cell_inputs, blocks, is_train)
                     X2 = self._add_drop_path(X2, drop_path_keep_prob)
 
                 X = tf.add_n([X1, X2])
@@ -853,16 +730,30 @@ class TfEnasChild(BaseModel):
         X = tf.reshape(X, (-1, w, h, comb_ch)) # Sanity shape check
 
         return (X, w, h, comb_ch)
-    
+
+    def _apply_normal_cell_op(self, idx, op, w, h, ch, cell_inputs, blocks, is_train):
+        # Just build output for select input index
+        X = (cell_inputs + blocks)[idx]
+        X = self._add_op(X, op, w, h, ch, is_train)
+        return X
+
+    def _add_op(self, X, op, w, h, ch, is_train, stride=1):
+        ops = self._knobs['ops']
+        op_map = self._get_op_map()
+
+        # Just build output for select operation
+        op_no = ops[op]
+        op_method = op_map[op_no]
+        X = op_method(X, w, h, ch, is_train, stride) 
+        return X
+
     ####################################
     # Block Ops
     ####################################
 
-    def _add_op(self, X, op, w, h, ch, is_train, stride=1):
-        ops_to_search = self._knobs['ops_to_search']
-
+    def _get_op_map(self):
         # List of all possible operations and their associated numbers
-        ops = {
+        return {
             0: self._add_separable_conv_3x3_op,
             1: self._add_separable_conv_5x5_op,
             2: self._add_avg_pool_3x3_op,
@@ -870,19 +761,6 @@ class TfEnasChild(BaseModel):
             4: self._add_identity_op, 
             5: self._add_separable_conv_7x7_op
         }
-
-        # Build output for each available operation 
-        op_Xs = []
-        for (op_no, op_method) in ops.items():
-            if op_no in ops_to_search:
-                op_X = op_method(X, w, h, ch, is_train, stride)
-                op_Xs.append(op_X)
-
-        # Stack operation outputs and index by op
-        op_Xs = tf.stack(op_Xs)
-        X = op_Xs[op]
-
-        return X
 
     def _add_avg_pool_3x3_op(self, X, w, h, ch, is_train, stride):
         filter_size = 3
@@ -1062,7 +940,7 @@ class TfEnasChild(BaseModel):
     def _mark_for_monitoring(self, name, value):
         tf.add_to_collection(self.TF_COLLECTION_MONITORED, tf.identity(value, name))
 
-    def _make_var(self, name, shape, no_share=False, no_reg=False, initializer=None):
+    def _make_var(self, name, shape,  no_reg=False, initializer=None):
         if initializer is None:
             initializer = tf.contrib.keras.initializers.he_normal()
 
@@ -1070,10 +948,6 @@ class TfEnasChild(BaseModel):
         name += '-shape-{}'.format('x'.join([str(x) for x in shape]))
 
         var = tf.get_variable(name, shape, initializer=initializer)
-
-        # Mark var as shared
-        if not no_share:
-            tf.add_to_collection(self.TF_COLLECTION_SHARED, var)
 
         # Add L2 regularization node for var
         if not no_reg:
@@ -1086,16 +960,300 @@ class TfEnasChild(BaseModel):
         tf_vars = [var for var in tf.trainable_variables()]
         return tf_vars
 
-_Model = namedtuple('_Model', ['init_op', 'train_op', 'summary_op', 'shared_params_assign_op', 
-        'images_ph', 'classes_ph', 'is_train_ph', 'epoch_ph', 'normal_arch_ph', 'reduction_arch_ph', 
-        'shared_params_phs', 'probs', 'acc', 'steps'])
+class TfEnasSearch(TfEnasBase):
+    TF_COLLECTION_SHARED = 'SHARED'
+
+    @staticmethod
+    def validate_knobs(knobs):
+        knobs = TfEnasBase.validate_knobs(knobs)
+
+        trial_count = knobs['trial_count']
+        skip_training_trials = 300
+
+        # Every (X + 1) trials, only train 1 epoch for the first trial
+        # The other X trials is for training the advisor
+        # Number of epochs this trial should run for
+        cur_trial_epochs = 1 if (trial_count % (skip_training_trials + 1) == 0) else 0 
+
+        # How many epochs has training been done over in past trials
+        initial_epoch = (trial_count - 1) // (skip_training_trials + 1) + 1 if trial_count > 0 else 0
+
+        # Override certain fixed knobs for ENAS search
+        knobs = {
+            **knobs,
+            'trial_epochs': cur_trial_epochs,
+            'initial_block_ch': 20,
+            'reg_decay': 1e-4,
+            'num_layers': 6,
+            'drop_path_decay_epochs': 150,
+            'initial_epoch': initial_epoch
+        }
+        return knobs
+
+    @staticmethod
+    def setup():
+        # Memoise across trials to speed up training
+        TfEnasSearch.memo.update({
+            'datasets': {}, # { <dataset_uri> -> <dataset> }
+            'model': None # of class `_MemoModel`
+        })
+
+    @staticmethod
+    def teardown():
+        memo = TfEnasSearch.memo
+        if memo['model'] is not None:
+            memo['model'].sess.close()
+        TfEnasSearch.memo = {}
+
+    def train(self, dataset_uri, shared_params):
+        num_epochs = self._knobs['trial_epochs']
+        (images, classes, self._train_params) = self._prepare_dataset(dataset_uri)
+        (self._model, self._graph, self._sess, self._saver, 
+            self._monitored_values) = self._build_model()
+        
+        with self._graph.as_default():
+            if len(shared_params) > 0:
+                self._load_shared_vars(shared_params)
+
+            self._train_summaries = []
+            if num_epochs > 0:
+                self._train_summaries = self._train_model(images, classes, num_epochs)
+                utils.logger.log('Evaluating model on train dataset...')
+                acc = self._evaluate_model(images, classes)
+                utils.logger.log('Train accuracy: {}'.format(acc))
+            else:
+                utils.logger.log('Skipping training...')
+        
+    def get_shared_parameters(self):
+        return self._get_shareable_vars()
+
+    def _get_shareable_vars(self):
+        shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
+        values = self._sess.run(shareable_tf_vars)
+        shareable_vars = {
+            tf_var.name: value
+            for (tf_var, value)
+            in zip(shareable_tf_vars, values)
+        }
+        return shareable_vars
+
+    def _load_shared_vars(self, shared_vars):
+        m = self._model
+
+        # Get current values for vars
+        shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
+        values = self._sess.run(shareable_tf_vars)
+
+        # Build feed dict for op for loading shared params
+        # For each param, use current value of param in session if not in shareable vars
+        var_feeddict = {
+            m.shared_params_phs[tf_var.name]: shared_vars[tf_var.name] 
+            if tf_var.name in shared_vars else values[i]
+            for (i, tf_var) in enumerate(shareable_tf_vars)
+        }
+        
+        utils.logger.log('Restoring {} / {} shareable variables...'.format(len(shared_vars), len(shareable_tf_vars)))
+        self._sess.run(m.shared_params_assign_op, feed_dict=var_feeddict)
+
+    def _build_model(self):
+        # Use memoized graph when possible
+        if self._if_model_same(self.memo['model']):
+            utils.logger.log('Using previously built model...')
+            model_memo = self.memo['model']
+            return (model_memo.model, model_memo.graph, model_memo.sess, model_memo.saver, 
+                    model_memo.monitored_values)
+        
+        w = self._train_params['image_size']
+        h = self._train_params['image_size']
+        cell_num_blocks = self._knobs['cell_num_blocks']
+        in_ch = 3 # Num channels of input images
+
+        utils.logger.log('Building model...')
+
+        # Create graph
+        graph = tf.Graph()
+        
+        with graph.as_default():
+            # Define input placeholders to graph
+            images_ph = tf.placeholder(tf.int8, name='images_ph', shape=(None, w, h, in_ch)) # Images
+            classes_ph = tf.placeholder(tf.int32, name='classes_ph', shape=(None,)) # Classes
+            is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=()) # Are we training or predicting?
+            epoch_ph = tf.placeholder(tf.int32, name='epoch_ph', shape=()) # Current epoch
+            normal_arch_ph = tf.placeholder(tf.int32, name='normal_arch_ph', shape=(cell_num_blocks, 4))
+            reduction_arch_ph = tf.placeholder(tf.int32, name='reduction_arch_ph', shape=(cell_num_blocks, 4))
+
+            # Preprocess & do inference
+            (X, classes, init_op) = self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
+            (probs, preds, logits, aux_logits_list) = self._inference(X, epoch_ph, normal_arch_ph, reduction_arch_ph, is_train_ph)
+            
+            # Compute training loss & accuracy
+            tf_vars = self._get_all_variables()
+            total_loss = self._compute_loss(logits, aux_logits_list, tf_vars, classes)
+            acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
+
+            # Optimize training loss
+            (train_op, steps) = self._optimize(total_loss, tf_vars, epoch_ph)
+
+            # Count model parameters
+            model_params_count = self._count_model_parameters()
+            utils.logger.log('Model has {} parameters'.format(model_params_count))
+
+            # Make summaries for monitored values
+            monitored_values = tf.get_collection(self.TF_COLLECTION_MONITORED)
+            for value in monitored_values:
+                tf.summary.scalar(value.name, value)
+            summary_op = tf.summary.merge_all()
+
+            # Add saver
+            saver = tf.train.Saver(tf_vars)
+
+            # Allow loading of shared parameters
+            shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
+            shared_params_phs = {
+                tf_var.name: tf.placeholder(tf.float32, shape=tf_var.shape)
+                for tf_var in shareable_tf_vars
+            }
+            shared_params_assign_op = tf.group([
+                tf.assign(tf_var, ph) 
+                for (tf_var, ph) in zip(shareable_tf_vars, shared_params_phs.values())
+            ], name='shared_params_assign_op')
+
+            # Make session
+            sess = self._make_session()
+
+        model = _Model(init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, epoch_ph, 
+                        probs, acc, steps, normal_arch_ph, reduction_arch_ph, shared_params_phs, 
+                        shared_params_assign_op)
+
+        self.memo['model'] = _ModelMemo(
+            self._train_params, self._knobs, graph, sess,
+            saver, monitored_values, model
+        )
+
+        return (model, graph, sess, saver, monitored_values)
+
+    def _if_model_same(self, model_memo):
+        if model_memo is None:
+            return False
+
+        # Must have the same train params
+        if self._train_params != model_memo.train_params:
+            return False
+
+        # Must have the same knobs, except for certain knobs that don't affect model
+        ignored_knobs = ['cell_archs', 'trial_count', 'trial_epochs', 'initial_epoch']
+        for (name, value) in self._knobs.items():
+            if name not in ignored_knobs and value != model_memo.knobs.get(name):
+                utils.logger.log('Detected that knob "{}" is different!'.format(name))
+                return False
+        
+        return True
+
+    def _apply_reduction_cell_op(self, idx, op, w, h, ch, cell_inputs, blocks, is_train):
+        # Build output for each possible input
+        ni = len(cell_inputs)
+
+        # From cell input
+        X_ops = []
+        for i in range(ni):
+            with tf.variable_scope('from_cell_input_{}'.format(i)):
+                X_ops.append(self._add_op(cell_inputs[i], op, w, h, ch, is_train, stride=2))
+
+        # From fellow block output as input
+        for i in range(len(blocks)):
+            with tf.variable_scope('from_block_{}'.format(i)):
+                X_ops.append(self._add_op(blocks[i], op, w >> 1, h >> 1, ch, is_train))
+
+        # Condition on input index
+        X = tf.case({
+            tf.equal(idx, i): lambda: X_op
+            for (i, X_op) in enumerate(X_ops)
+        }, exclusive=True)
+
+        return X
+
+    def _apply_normal_cell_op(self, idx, op, w, h, ch, cell_inputs, blocks, is_train):
+        # Build output for each possible input
+        ni = len(cell_inputs)
+
+        # From cell input
+        X_ops = []
+        for i in range(ni):
+            with tf.variable_scope('from_cell_input_{}'.format(i)):
+                X_ops.append(self._add_op(cell_inputs[i], op, w, h, ch, is_train))
+
+        # From fellow block output as input
+        for i in range(len(blocks)):
+            with tf.variable_scope('from_block_{}'.format(i)):
+                X_ops.append(self._add_op(blocks[i], op, w, h, ch, is_train))
+
+        # Condition on input index
+        X = tf.case({
+            tf.equal(idx, i): lambda: X_op
+            for (i, X_op) in enumerate(X_ops)
+        }, exclusive=True)
+
+        return X
+
+    def _add_op(self, X, op, w, h, ch, is_train, stride=1):
+        ops = self._knobs['ops']
+        op_map = self._get_op_map()
+
+        # Build output for each available operation 
+        op_Xs = []
+        for op_no in ops:
+            op_method = op_map[op_no]
+            op_X = op_method(X, w, h, ch, is_train, stride)
+            op_Xs.append(op_X)
+
+        # Stack operation outputs and index by op
+        op_Xs = tf.stack(op_Xs)
+        X = op_Xs[op]
+
+        return X
+
+    def _make_var(self, name, shape, no_share=False, **kwargs):
+        var = super()._make_var(name, shape, **kwargs)
+
+        # Mark var as shared
+        if not no_share:
+            tf.add_to_collection(self.TF_COLLECTION_SHARED, var)
+
+        return var
+
+_Model = namedtuple('_Model', ['init_op', 'train_op', 'summary_op', 'images_ph', 'classes_ph', 'is_train_ph', 
+        'epoch_ph', 'probs', 'acc', 'steps', 'normal_arch_ph', 'reduction_arch_ph', 
+        'shared_params_phs', 'shared_params_assign_op'])
 
 _ModelMemo = namedtuple('_ModelMemo', ['train_params', 'knobs', 'graph', 'sess', 'saver', 
             'monitored_values', 'model'])
 
 if __name__ == '__main__':
+    knob_config = TfEnasBase.get_knob_config()
+    advisor = Advisor(knob_config) 
+
+    # Train ENAS controller
+    print('Training advisor...')
     tune_model(
-        TfEnasChild, 
+        TfEnasSearch, 
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-        val_dataset_uri='data/cifar_10_for_image_classification_val.zip'
+        val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
+        total_trials=(301 * 150),
+        should_save=False,
+        advisor=advisor
     )
+
+    # Train 10 architectures sampled from trained ENAS controller
+    print('Training final models...')
+    (best_knobs, _) = tune_model(
+        TfEnasBase,
+        train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
+        val_dataset_uri='data/cifar_10_for_image_classification_test.zip',
+        total_trials=10,
+        advisor=advisor
+    )
+
+    print('Best final model knobs: {}'.format(best_knobs))
+
+
+

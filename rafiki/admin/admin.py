@@ -6,7 +6,7 @@ import uuid
 import csv
 
 from rafiki.meta_store import MetaStore
-from rafiki.param_store import ParamStore, InvalidParamsError, ParamsExistsError
+from rafiki.param_store import ParamStore
 from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus, ModelAccessRight, BudgetType
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.model import LoggerUtils
@@ -147,11 +147,11 @@ class Admin(object):
         self._meta_store.commit()
 
         for (model_id, config) in model_id_to_config.items():
-            advisor_id = config.get('advisor_id', )
             self._meta_store.create_sub_train_job(
                 train_job_id=train_job.id,
                 model_id=model_id,
-                user_id=train_job.user_id
+                user_id=train_job.user_id,
+                config=config
             )
 
         train_job = self._services_manager.create_train_services(train_job.id)
@@ -290,16 +290,16 @@ class Admin(object):
             for (trial, model) in zip(trials, trials_models)
         ]
 
-    def stop_train_job_worker(self, service_id):
-        worker = self._services_manager.stop_train_job_worker(service_id)
+    def stop_sub_train_job(self, sub_train_job_id):
+        sub_train_job = self._services_manager.stop_sub_train_job(sub_train_job_id)
         return {
-            'service_id': worker.service_id,
-            'train_job_id': worker.train_job_id,
-            'sub_train_job_id': worker.sub_train_job_id
+            'id': sub_train_job.id,
+            'service_id': sub_train_job.service_id,
+            'train_job_id': sub_train_job.train_job_id,
         }
 
     def stop_all_train_jobs(self):
-        train_jobs = self._db.get_train_jobs_by_status(TrainJobStatus.RUNNING)
+        train_jobs = self._meta_store.get_train_jobs_by_status(TrainJobStatus.RUNNING)
         for train_job in train_jobs:
             self._services_manager.stop_train_services(train_job.id)
 
@@ -491,7 +491,7 @@ class Admin(object):
         ]
 
     def stop_all_inference_jobs(self):
-        inference_jobs = self._db.get_inference_jobs_by_status(InferenceJobStatus.RUNNING)
+        inference_jobs = self._meta_store.get_inference_jobs_by_status(InferenceJobStatus.RUNNING)
         for inference_job in inference_jobs:
             self._services_manager.stop_inference_services(inference_job.id)
             

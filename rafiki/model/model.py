@@ -56,6 +56,17 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @staticmethod
+    def validate_knobs(knobs: Dict[str, any]) -> Union[Dict[str, any], None]:
+        '''
+        Validates a set of knobs for the model.
+        If this returns `None`, the set of knobs would be discarded.
+
+        :returns: Possibly modified set of knobs that is valid, or `None` if this set of knobs should be discarded
+        :rtype: dict[str, any]
+        '''
+        return knobs
+
+    @staticmethod
     def setup(self):
         '''
         Runs class-wide setup logic (e.g. initialize a graph/session shared across trials).
@@ -70,14 +81,13 @@ class BaseModel(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def train(self, dataset_uri: str, shared_params: Dict[str, np.array]) -> Union[Dict[str, np.array], None]:
+    def train(self, dataset_uri: str, shared_params: Dict[str, np.array]):
         '''
         Train this model instance with given dataset and initialized knob values.
+        Additionally, a dictionary of trained shared parameters from previous trials is passed.
 
+        :param dict shared_params: { <param_name>: <param_value> }
         :param str dataset_uri: URI of the dataset in a format specified by the task
-        :param dict shared_params: Shared parameters from previous trials
-        :returns: Trained parameters to share with other trials
-        :rtype: dict
         '''
         raise NotImplementedError()
 
@@ -124,8 +134,18 @@ class BaseModel(abc.ABC):
         '''
         raise NotImplementedError()
 
-def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_dataset_uri: str, total_trials: int = 25,
-                params_root_dir: str = 'params/', to_read_args: bool = True) -> (Dict[str, any], str):
+    def get_shared_parameters(self) -> Dict[str, np.array]:
+        '''
+        Gets a dictionary of trained parameters to share with future trials.
+
+        :returns: { <param_name>: <param_value> }
+        :rtype: dict
+        '''
+        return {}
+
+def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_dataset_uri: str, 
+                total_trials: int = 25, params_root_dir: str = 'params/', should_save: bool = True, 
+                advisor: Advisor = None, to_read_args: bool = True) -> (Dict[str, any], str):
     '''
     Tunes a model on a given dataset in the current environment.
 
@@ -134,10 +154,13 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     :param str val_dataset_uri: URI of the validation dataset for testing the evaluation of model
     :param int total_trials: Total number of trials to tune the model over
     :param str params_root_dir: Root folder path to create subfolders to save each trial's model parameters
+    :param bool should_save: If model parameters should be saved
+    :param Advisor advisor: A pre-created advisor to use for tuning the model
     :param bool to_read_args: Whether should system args be read to retrieve default values for `num_trials` and knobs
     :rtype: (dict, str)
-    :returns: Knobs and params directory for the best trained model
+    :returns: (<knobs for best trained model>, <params directory for best trained model>)
     '''
+
     # Retrieve config of model
     _print_header('Checking model configuration...')
     knob_config = py_model_class.get_knob_config()
@@ -149,13 +172,13 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         parser.add_argument('--total_trials', type=int)
         (namespace_args, left_args) = parser.parse_known_args()
         total_trials = namespace_args.total_trials if namespace_args.total_trials is not None else total_trials  
-        knob_config = _maybe_read_knob_values_from_args(knob_config, left_args)
+        knobs_from_args = _maybe_read_knobs_from_args(knob_config, left_args)
 
     _info('Total trial count: {}'.format(total_trials))
 
     # Configure advisor
-    advisor = Advisor(total_trials)
-    advisor.start(knob_config)
+    if advisor is None:
+        advisor = Advisor(knob_config)
 
     # Configure shared params store
     param_store = ParamStore()
@@ -175,12 +198,24 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         trial_id = str(uuid.uuid4())
         _print_header('Trial #{} (ID: "{}")'.format(i, trial_id))
         
-        # Generate proposal from advisor
-        (knobs, params) = advisor.propose()
-        params = param_store.retrieve_params(session_id, params)
+        # Get valid proposal from advisor
+        while True:
+            (knobs, params) = advisor.propose()
+            knobs = py_model_class.validate_knobs(knobs)
+            if knobs is None:
+                # Feedback to advisor that knobs are invalid with score of 0
+                advisor.feedback(0, knobs, {})
+            else:
+                break
+        
+        # Override knobs from args
+        knobs = { **knobs, **knobs_from_args }
         print('Advisor proposed knobs:', knobs)
+
+        # Retrieve params from store
         if len(params) > 0:
             print('Advisor proposed {} params'.format(len(params)))
+        params = param_store.retrieve_params(session_id, params)
 
         # Load model
         model_inst = py_model_class(**knobs)
@@ -197,19 +232,19 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
 
         print('Score:', score)
             
-        # Update best model
-        if score > best_score:
-            _info('Best model so far! Beats previous best of score {}!'.format(best_score))
-
-             # Only save parameters of best model so far
+        if should_save:
             print('Saving model parameters...')
             params_dir = os.path.join(params_root_dir, trial_id + '/')
             if not os.path.exists(params_dir):
                 os.mkdir(params_dir)
-
             model_inst.save_parameters(params_dir)
             print('Model parameters saved in {}'.format(params_dir))
+        else:
+            params_dir = None
 
+        # Update best model
+        if score > best_score:
+            _info('Best model so far! Beats previous best of score {}!'.format(best_score))
             best_model_params_dir = params_dir
             best_knobs = knobs
             best_score = score
@@ -339,7 +374,7 @@ def parse_model_install_command(dependencies, enable_gpu=False):
 
     return '; '.join(commands)
 
-def _maybe_read_knob_values_from_args(knob_config, args):
+def _maybe_read_knobs_from_args(knob_config, args):
     parser = argparse.ArgumentParser()
 
     for (name, knob) in knob_config.items():
@@ -348,12 +383,13 @@ def _maybe_read_knob_values_from_args(knob_config, args):
             parser.add_argument('--{}'.format(name), type=knob_value_type)
         
     args_namespace = parser.parse_args(args)
+    knobs_from_args = {}
     for (name, value) in vars(args_namespace).items():
         if value is not None:
-            knob_config[name] = FixedKnob(value)
+            knobs_from_args[name] = value
             _info('Setting knob "{}" to be fixed value of "{}"...'.format(name, value))
 
-    return knob_config
+    return knobs_from_args
 
 def _check_dependencies(dependencies):
     for (dep, ver) in dependencies.items():

@@ -143,14 +143,14 @@ def get_trials_of_train_job(auth, app, app_version):
                 **params)
             )
 
-@app.route('/train_job_workers/<service_id>/stop', methods=['POST'])
+@app.route('/sub_train_jobs/<sub_train_job_id>/stop', methods=['POST'])
 @auth([])
-def stop_train_job_worker(auth, service_id):
+def stop_sub_train_job(auth, sub_train_job_id):
     admin = get_admin()
     params = get_request_params()
 
     with admin:
-        return jsonify(admin.stop_train_job_worker(service_id, **params))
+        return jsonify(admin.stop_sub_train_job(sub_train_job_id, **params))
 
 ####################################
 # Trials

@@ -260,7 +260,8 @@ class Client(object):
     # Train Jobs
     ####################################
     
-    def create_train_job(self, app, task, train_dataset_uri, val_dataset_uri, budget, models=None):
+    def create_train_job(self, app, task, train_dataset_uri, val_dataset_uri, budget, 
+                        models=None):
         '''
         Creates and starts a train job on Rafiki. 
         A train job is uniquely identified by its associated app and the app version (returned in output).
@@ -273,7 +274,7 @@ class Client(object):
         :param str train_dataset_uri: URI of the train dataset in a format specified by the task
         :param str val_dataset_uri: URI of the validation dataset in a format specified by the task
         :param str budget: Budget for each model
-        :param str[] models: list of model names to use for train job
+        :param dict[str, dict] models: Dictionary of ``{ <model name>: <configuration dictionary for each model> }``
         :returns: Created train job as dictionary
         :rtype: dict[str, any]
 
@@ -384,8 +385,8 @@ class Client(object):
         return data
 
     # - INTERNAL METHOD -
-    def stop_train_job_worker(self, service_id):
-        data = self._post('/train_job_workers/{}/stop'.format(service_id))
+    def stop_sub_train_job(self, sub_train_job_id):
+        data = self._post('/sub_train_job/{}/stop'.format(sub_train_job_id))
         return data
 
     ####################################
@@ -525,7 +526,7 @@ class Client(object):
     # Advisors
     ####################################
 
-    def create_advisor(self, knob_config_str, advisor_type=None, advisor_id=None):
+    def create_advisor(self, knob_config_str, advisor_id=None):
         '''
         Creates a Rafiki advisor. If `advisor_id` is passed, it will create an advisor
         of that ID, or do nothing if an advisor of that ID has already been created.
@@ -541,9 +542,6 @@ class Client(object):
             'knob_config_str': knob_config_str
         }
 
-        if advisor_type is not None:
-            json['advisor_type'] = advisor_type
-
         data = self._post('/advisors', target='advisor', json=json)
         return data
 
@@ -552,27 +550,29 @@ class Client(object):
         Generate a proposal of knobs from an advisor.
 
         :param str advisor_id: ID of target advisor
-        :returns: Knobs as `dict[<knob_name>, <knob_value>]`
+        :returns: Proposal of `knobs` and `params`
         :rtype: dict[str, any]
         '''
         data = self._post('/advisors/{}/propose'.format(advisor_id), target='advisor')
         return data
 
-    def feedback_to_advisor(self, advisor_id, knobs, score):
+    def feedback_to_advisor(self, advisor_id, score, knobs, params):
         '''
-        Feedbacks to the advisor on the score of a set of knobs.
-        Additionally returns another proposal of knobs after ingesting feedback.
+        Feedbacks to the advisor on the score of a set of knobs & params.
+        Additionally returns another proposal of knobs & params after ingesting feedback.
 
         :param str advisor_id: ID of target advisor
+        :param float score: Score of the knobs, the higher the number, the better the set of knobs & parmas
         :param str knobs: Knobs to give feedback on
-        :param float score: Score of the knobs, the higher the number, the better the set of knobs
-        :returns: Knobs as `dict[<knob_name>, <knob_value>]`
+        :param str params: Params to give feedback on
+        :returns: Proposal of `knobs` and `params`
         :rtype: dict[str, any]
         '''
         data = self._post('/advisors/{}/feedback'.format(advisor_id), 
                         target='advisor', json={
                             'score': score,
-                            'knobs': knobs
+                            'knobs': knobs,
+                            'params': params
                         })
         return data
 

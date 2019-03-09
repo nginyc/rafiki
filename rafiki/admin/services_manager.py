@@ -113,7 +113,7 @@ class ServicesManager(object):
         sub_train_job_to_replicas = self._compute_train_worker_replicas_for_sub_train_jobs(sub_train_jobs)
         for (sub_train_job, replicas) in sub_train_job_to_replicas.items():
             try:
-                service = self._create_train_job_worker(train_job, sub_train_job, replicas)
+                service = self._create_sub_train_job_service(train_job, sub_train_job, replicas)
                 self._wait_until_services_running([service])
                 self._meta_store.mark_sub_train_job_as_running(sub_train_job)
                 self._meta_store.commit()
@@ -129,16 +129,15 @@ class ServicesManager(object):
         # Stop all workers for train job
         sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(train_job_id)
         for sub_train_job in sub_train_jobs:
-            workers = self._meta_store.get_workers_of_sub_train_job(sub_train_job.id)
-            for worker in workers:
-                self._stop_train_job_worker(worker)
+            self._stop_sub_train_job_service(sub_train_job)
 
         return train_job
         
-    def stop_train_job_worker(self, service_id):
-        train_job_service = self._meta_store.get_train_job_worker(service_id)
-        self._stop_train_job_worker(train_job_service)
-        return train_job_service
+    def stop_sub_train_job(self, sub_train_job_id):
+        sub_train_job = self._meta_store.get_sub_train_job(sub_train_job_id)
+        self._stop_sub_train_job_service(sub_train_job)
+
+        return sub_train_job
 
     ####################################
     # Private
@@ -184,7 +183,7 @@ class ServicesManager(object):
 
         return service
 
-    def _create_train_job_worker(self, train_job, sub_train_job, replicas):
+    def _create_sub_train_job_service(self, train_job, sub_train_job, replicas):
         model = self._meta_store.get_model(sub_train_job.model_id)
         service_type = ServiceType.TRAIN
         enable_gpu = int(train_job.budget.get(BudgetType.ENABLE_GPU, 0)) > 0
@@ -206,32 +205,13 @@ class ServicesManager(object):
             requirements=requirements
         )
 
-        self._meta_store.create_train_job_worker(
-            service_id=service.id,
-            train_job_id=train_job.id,
-            sub_train_job_id=sub_train_job.id
-        )
-        self._meta_store.commit()
-
         return service
 
-    def _stop_train_job_worker(self, worker):
-        service = self._meta_store.get_service(worker.service_id)
+    def _stop_sub_train_job_service(self, sub_train_job):
+        service = self._meta_store.get_service(sub_train_job.service_id)
         self._stop_service(service)
-        sub_train_job = self._meta_store.get_sub_train_job(worker.sub_train_job_id)
-        self._update_sub_train_job_status(sub_train_job)
-
-    def _update_sub_train_job_status(self, sub_train_job):
-        workers = self._meta_store.get_workers_of_sub_train_job(sub_train_job.id)
-        services = [self._meta_store.get_service(x.service_id) for x in workers]
-        
-        # If all workers for the sub train job have stopped, stop sub train job as well
-        if next((
-            x for x in services 
-            if x.status in [ServiceStatus.RUNNING, ServiceStatus.STARTED, ServiceStatus.DEPLOYING]
-        ), None) is None:
-            self._meta_store.mark_sub_train_job_as_stopped(sub_train_job)
-            self._meta_store.commit()
+        self._meta_store.mark_sub_train_job_as_stopped(sub_train_job)
+        self._meta_store.commit()
 
     def _stop_service(self, service):
         if service.container_service_id is not None:

@@ -56,7 +56,6 @@ class CategoricalKnob(BaseKnob):
 
 class Metadata(Enum):
     TRIAL_COUNT = ('TRIAL_COUNT', int) # No. of trials that have been completed for model
-    TOTAL_TRIALS = ('TOTAL_TRIALS', int) # Total no. of trials to tune model over
 
 class MetadataKnob(BaseKnob):
     '''

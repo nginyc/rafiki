@@ -6,7 +6,6 @@ import traceback
 import pprint
 
 from .advisor import Advisor
-from rafiki.constants import AdvisorType
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +15,7 @@ class AdvisorService(object):
     def __init__(self):
         self._advisors = {}
 
-    def create_advisor(self, knob_config, advisor_type=AdvisorType.SKOPT, advisor_id=None):
+    def create_advisor(self, knob_config, advisor_id=None):
         is_created = False
         advisor = None
 
@@ -24,7 +23,7 @@ class AdvisorService(object):
             advisor = self._get_advisor(advisor_id)
             
         if advisor is None:
-            advisor = Advisor(knob_config, advisor_type)
+            advisor = Advisor(knob_config)
             advisor_id = str(uuid.uuid4()) if advisor_id is None else advisor_id
             self._advisors[advisor_id] = advisor
             is_created = True
@@ -53,24 +52,26 @@ class AdvisorService(object):
         if advisor is None:
             raise InvalidAdvisorError()
 
-        knobs = advisor.propose()
+        (knobs, params) = advisor.propose()
 
         return {
-            'knobs': knobs
+            'knobs': knobs,
+            'params': params
         }
 
     # Feedbacks to the advisor on the score of a set of knobs
     # Additionally, returns another proposal of knobs after ingesting feedback
-    def feedback(self, advisor_id, knobs, score):
+    def feedback(self, advisor_id, score, knobs, params):
         advisor = self._get_advisor(advisor_id)
         if advisor is None:
             raise InvalidAdvisorError()
 
-        advisor.feedback(knobs, score)
-        knobs = advisor.propose()
+        advisor.feedback(score, knobs, params)
+        (knobs, params) = advisor.propose()
 
         return {
-            'knobs': knobs
+            'knobs': knobs,
+            'params': params
         }
 
     def _get_advisor(self, advisor_id):
