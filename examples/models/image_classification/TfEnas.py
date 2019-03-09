@@ -1018,9 +1018,6 @@ class TfEnasSearch(TfEnasBase):
             self._train_summaries = []
             if num_epochs > 0:
                 self._train_summaries = self._train_model(images, classes, num_epochs)
-                utils.logger.log('Evaluating model on train dataset...')
-                acc = self._evaluate_model(images, classes)
-                utils.logger.log('Train accuracy: {}'.format(acc))
             else:
                 utils.logger.log('Skipping training...')
         
