@@ -10,6 +10,7 @@ from datetime import datetime
 from collections import namedtuple
 import numpy as np
 import base64
+import argparse
 
 from rafiki.advisor import Advisor, IntegerKnob, CategoricalKnob, FloatKnob, \
                             FixedKnob, ListKnob, Metadata, MetadataKnob
@@ -971,8 +972,7 @@ class TfEnasSearch(TfEnasBase):
         skip_training_trials = 300
 
         # Every (X + 1) trials, only train 1 epoch for the first trial
-        # The other X trials is for training the advisor
-        # Number of epochs this trial should run for
+        # The other X trials is for training the controller
         cur_trial_epochs = 1 if (trial_count % (skip_training_trials + 1) == 0) else 0 
 
         # How many epochs has training been done over in past trials
@@ -1231,29 +1231,39 @@ _ModelMemo = namedtuple('_ModelMemo', ['train_params', 'knobs', 'graph', 'sess',
 if __name__ == '__main__':
     knob_config = TfEnasBase.get_knob_config()
     advisor = Advisor(knob_config) 
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--mode', type=str, choices=['TRAIN', 'SEARCH'], default='SEARCH')
+    (args, _) = parser.parse_known_args()
 
-    # Train ENAS controller
-    print('Training advisor...')
-    tune_model(
-        TfEnasSearch, 
-        train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-        val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-        total_trials=(301 * 150),
-        should_save=False,
-        advisor=advisor
-    )
+    if args.mode == 'SEARCH':
 
-    # Train 10 architectures sampled from trained ENAS controller
-    print('Training final models...')
-    (best_knobs, _) = tune_model(
-        TfEnasBase,
-        train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-        val_dataset_uri='data/cifar_10_for_image_classification_test.zip',
-        total_trials=10,
-        advisor=advisor
-    )
+        print('Training advisor...')
+        tune_model(
+            TfEnasSearch, 
+            train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
+            val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
+            total_trials=301 * 150,
+            should_save=False,
+            advisor=advisor
+        )
 
-    print('Best final model knobs: {}'.format(best_knobs))
+        print('Sampling {} models from trained advisor...'.format(args.num_models))
+        for i in range(args.num_models):
+            (knobs, params) = advisor.propose()
+            print('Knobs {}:'.format(i))
+            print('---------------------------')
+            print(knobs)
 
+    elif args.mode == 'TRAIN':
 
+        print('Training models sampled from advisor...')
+        (best_knobs, _) = tune_model(
+            TfEnasBase,
+            train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
+            val_dataset_uri='data/cifar_10_for_image_classification_test.zip',
+            total_trials=1,
+            advisor=advisor
+        )
+        print('Best model knobs: {}'.format(best_knobs))
 

@@ -378,14 +378,18 @@ def _maybe_read_knobs_from_args(knob_config, args):
     parser = argparse.ArgumentParser()
 
     for (name, knob) in knob_config.items():
-        knob_value_type = knob.value_type
-        if knob_value_type in [int, float, str]:
-            parser.add_argument('--{}'.format(name), type=knob_value_type)
+        if knob.value_type in [int, float, str]:
+            parser.add_argument('--{}'.format(name), type=knob.value_type)
+        elif knob.value_type in [list]:
+            parser.add_argument('--{}'.format(name), type=str)
         
-    args_namespace = parser.parse_args(args)
+    args_namespace = vars(parser.parse_known_args(args)[0])
     knobs_from_args = {}
-    for (name, value) in vars(args_namespace).items():
-        if value is not None:
+    for (name, knob) in knob_config.items():
+        if name in args_namespace and args_namespace[name] is not None:
+            value = args_namespace[name]
+            if knob.value_type in [list]:
+                value = json.loads(value)
             knobs_from_args[name] = value
             _info('Setting knob "{}" to be fixed value of "{}"...'.format(name, value))
 
