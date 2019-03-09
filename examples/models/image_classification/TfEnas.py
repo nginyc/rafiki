@@ -1234,6 +1234,7 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', type=str, choices=['TRAIN', 'SEARCH'], default='SEARCH')
+    parser.add_argument('--num_models', type=str, default=10) # How many models to sample after training advisor
     (args, _) = parser.parse_known_args()
 
     if args.mode == 'SEARCH':
