@@ -2,11 +2,12 @@ import os
 import logging
 import traceback
 import time
+import socket
+from contextlib import closing
 
 from rafiki.meta_store import MetaStore
 from rafiki.constants import ServiceStatus, UserType, ServiceType, BudgetType
-from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, \
-    TRAIN_WORKER_REPLICAS_PER_SUB_TRAIN_JOB, INFERENCE_WORKER_REPLICAS_PER_TRIAL, \
+from rafiki.config import TRAIN_WORKER_REPLICAS_PER_SUB_TRAIN_JOB, INFERENCE_WORKER_REPLICAS_PER_TRIAL, \
     INFERENCE_MAX_BEST_TRIALS, SERVICE_STATUS_WAIT
 from rafiki.container import DockerSwarmContainerManager, ServiceRequirement, InvalidServiceRequest
 from rafiki.model import parse_model_install_command
@@ -336,19 +337,13 @@ class ServicesManager(object):
 
         return service
 
-    # Compute next available external port
     def _get_available_ext_port(self):
-        services = self._meta_store.get_services(status=ServiceStatus.RUNNING)
-        used_ports = [int(x.ext_port) for x in services if x.ext_port is not None]
-        port = MIN_SERVICE_PORT
-        while port <= MAX_SERVICE_PORT:
-            if port not in used_ports:
-                return port
-
-            port += 1
-
-        return port
-
+        # Credits to https://stackoverflow.com/questions/1365265/on-localhost-how-do-i-pick-a-free-port-number
+        with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+            s.bind(('', 0))
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            return s.getsockname()[1]
+    
     def _get_best_trials_for_inference(self, inference_job):
         best_trials = self._meta_store.get_best_trials_of_train_job(inference_job.train_job_id)
         return best_trials

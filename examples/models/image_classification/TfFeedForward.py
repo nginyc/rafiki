@@ -7,7 +7,6 @@ import tempfile
 import numpy as np
 import base64
 
-from rafiki.config import APP_MODE
 from rafiki.advisor import IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob
 from rafiki.model import BaseModel, test_model_class, utils
 from rafiki.constants import TaskType, ModelDependency
@@ -21,7 +20,7 @@ class TfFeedForward(BaseModel):
     def get_knob_config():
         return {
             'max_epochs': FixedKnob(100),
-            'hidden_layer_count': IntegerKnob(1, 8 if APP_MODE != 'DEV' else 2),
+            'hidden_layer_count': IntegerKnob(1, 2),
             'hidden_layer_units': IntegerKnob(2, 128),
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),

@@ -8,7 +8,7 @@ import csv
 from rafiki.meta_store import MetaStore
 from rafiki.param_store import ParamStore, InvalidParamsError, ParamsExistsError
 from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus, ModelAccessRight, BudgetType
-from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
+from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.model import LoggerUtils
 from rafiki.container import DockerSwarmContainerManager 
 
@@ -118,20 +118,21 @@ class Admin(object):
         # Get models available to user
         avail_models = self._meta_store.get_models_of_task(user_id, task)
         
-        # Auto populate models with all available models if not specified
         if models is None:
-            model_ids = [x.id for x in avail_models]
+            # Auto populate models with all available models if not specified
+            model_id_to_config = { db_model.id: {} for db_model in avail_models }
         else:
+            model_id_to_config = {}
             # Ensure all models are available
-            model_ids = []
-            for model in models:
-                db_model = next((x for x in avail_models if x.name == model), None)
+            for (name, config) in models.items():
+                db_model = next((x for x in avail_models if x.name == name), None)
                 if db_model is None:
-                    raise InvalidModelAccessError('You don\'t have access to model "{}"'.format(model))
-                model_ids.append(db_model.id)
+                    raise InvalidModelAccessError('You don\'t have access to model "{}"'.format(name))
+
+                model_id_to_config[db_model.id] = config
 
         # Ensure that models are specified
-        if len(model_ids) == 0:
+        if len(model_id_to_config) == 0:
             raise NoModelsForTrainJobError()
 
         train_job = self._meta_store.create_train_job(
@@ -145,7 +146,8 @@ class Admin(object):
         )
         self._meta_store.commit()
 
-        for model_id in model_ids:
+        for (model_id, config) in model_id_to_config.items():
+            advisor_id = config.get('advisor_id', )
             self._meta_store.create_sub_train_job(
                 train_job_id=train_job.id,
                 model_id=model_id,
@@ -295,6 +297,18 @@ class Admin(object):
             'train_job_id': worker.train_job_id,
             'sub_train_job_id': worker.sub_train_job_id
         }
+
+    def stop_all_train_jobs(self):
+        train_jobs = self._db.get_train_jobs_by_status(TrainJobStatus.RUNNING)
+        for train_job in train_jobs:
+            self._services_manager.stop_train_services(train_job.id)
+
+        return [
+            {
+                'id': train_job.id
+            }
+            for train_job in train_jobs
+        ]
 
     ####################################
     # Trials
@@ -474,6 +488,18 @@ class Admin(object):
                 'predictor_host': predictor_host
             }
             for (inference_job, train_job, predictor_host) in zip(inference_jobs, train_jobs, predictor_hosts)
+        ]
+
+    def stop_all_inference_jobs(self):
+        inference_jobs = self._db.get_inference_jobs_by_status(InferenceJobStatus.RUNNING)
+        for inference_job in inference_jobs:
+            self._services_manager.stop_inference_services(inference_job.id)
+            
+        return [
+            {
+                'id': inference_job.id
+            }
+            for inference_job in inference_jobs
         ]
 
     ####################################

@@ -12,7 +12,6 @@ from urllib.parse import urlparse, parse_qs
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
                         IntegerKnob, FloatKnob, CategoricalKnob, FixedKnob, utils
 from rafiki.constants import TaskType, ModelDependency
-from rafiki.config import APP_MODE
 
 class TfVgg16(BaseModel):
     '''

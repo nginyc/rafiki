@@ -16,7 +16,6 @@ from rafiki.model import BaseModel, InvalidModelParamsException, \
                         test_model_class, FixedKnob, IntegerKnob, FloatKnob, \
                         CategoricalKnob, utils
 from rafiki.constants import TaskType, ModelDependency
-from rafiki.config import APP_MODE
 
 class PyBiLstm(BaseModel):
     '''
@@ -25,7 +24,7 @@ class PyBiLstm(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': FixedKnob(100 if APP_MODE != 'DEV' else 20),
+            'epochs': FixedKnob(20),
             'word_embed_dims': IntegerKnob(16, 128),
             'word_rnn_hidden_size': IntegerKnob(16, 128),
             'word_dropout': FloatKnob(1e-3, 2e-1, is_exp=True),

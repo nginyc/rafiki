@@ -11,7 +11,6 @@ from collections import namedtuple
 import numpy as np
 import base64
 
-from rafiki.config import APP_MODE
 from rafiki.advisor import IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, ListKnob, Metadata, MetadataKnob
 from rafiki.model import utils, tune_model, BaseModel
 from rafiki.constants import TaskType, ModelDependency

@@ -4,7 +4,6 @@ export SUPERADMIN_PASSWORD=rafiki
 export APP_SECRET=rafiki
 
 # Core external configuration for Rafiki
-export APP_MODE=DEV # DEV or PROD
 export DOCKER_NETWORK=rafiki
 export DOCKER_SWARM_ADVERTISE_ADDR=127.0.0.1
 export RAFIKI_VERSION=0.0.10
@@ -15,6 +14,7 @@ export ADVISOR_EXT_PORT=3002
 export POSTGRES_EXT_PORT=5433
 export REDIS_EXT_PORT=6380
 export HOST_WORKDIR_PATH=$PWD
+export APP_MODE=DEV # DEV or PROD
 
 # Internal credentials for Rafiki's components
 export POSTGRES_USER=rafiki

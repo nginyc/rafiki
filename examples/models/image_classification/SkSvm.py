@@ -5,7 +5,6 @@ import os
 import base64
 import numpy as np
 
-from rafiki.config import APP_MODE
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
                         IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, utils
 from rafiki.constants import TaskType, ModelDependency
@@ -17,7 +16,7 @@ class SkSvm(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'max_iter': FixedKnob(40 if APP_MODE != 'DEV' else 10),
+            'max_iter': IntegerKnob(20),
             'kernel': CategoricalKnob(['rbf', 'linear', 'poly']),
             'gamma': CategoricalKnob(['scale', 'auto']),
             'C': FloatKnob(1e-4, 1e4, is_exp=True),
