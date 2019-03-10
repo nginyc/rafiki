@@ -985,6 +985,7 @@ class TfEnasSearch(TfEnasBase):
             'initial_block_ch': 20,
             'reg_decay': 1e-4,
             'num_layers': 6,
+            'dropout_keep_prob': 0.9,
             'drop_path_decay_epochs': 150,
             'initial_epoch': initial_epoch
         }
