@@ -6,7 +6,6 @@ import uuid
 import csv
 
 from rafiki.meta_store import MetaStore
-from rafiki.param_store import ParamStore
 from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus, ModelAccessRight, BudgetType
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.model import LoggerUtils
@@ -28,12 +27,9 @@ class RunningInferenceJobExistsError(Exception): pass
 class NoModelsForTrainJobError(Exception): pass
 
 class Admin(object):
-    def __init__(self, meta_store=None, param_store=None, container_manager=None):
+    def __init__(self, meta_store=None, container_manager=None):
         if meta_store is None: 
             meta_store = MetaStore()
-    
-        if param_store is None: 
-            param_store = ParamStore()
             
         if container_manager is None: 
             container_manager = DockerSwarmContainerManager()
@@ -42,7 +38,6 @@ class Admin(object):
                                                 os.environ['RAFIKI_VERSION'])
 
         self._meta_store = meta_store
-        self._param_store = param_store
         self._services_manager = ServicesManager(meta_store, container_manager)
 
     def seed(self):
@@ -352,8 +347,8 @@ class Admin(object):
         if trial is None:
             raise InvalidTrialError()
 
-        params = self._param_store.get_params(trial.param_id)
-        return params
+        # TODO: Fix
+        return None
 
     ####################################
     # Inference Job

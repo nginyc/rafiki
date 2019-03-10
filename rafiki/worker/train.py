@@ -93,7 +93,7 @@ class TrainWorker(object):
 
                 # Store shared params
                 trial_params = self._param_store.store_params(sub_train_job_id, trial_params, 
-                ]                                               prefix=self._trial_id)
+                                                               prefix=self._trial_id)
 
                 # Report results of trial to advisor and get next proposal
                 (knobs, params) = self._feedback_to_advisor(advisor_id, score, knobs, trial_params)
@@ -174,12 +174,13 @@ class TrainWorker(object):
 
     # Gets proposal of a set of knobs and params from advisor
     def _get_proposal_from_advisor(self, advisor_id):
-        logger.info('Requesting for knobs proposal from advisor...')
+        logger.info('Requesting for proposal from advisor...')
         res = self._client.generate_proposal(advisor_id)
         knobs = res['knobs']
         params = res['params']
-        logger.info('Received proposal of knobs from advisor:')
+        logger.info('Received proposal from advisor:')
         logger.info(pprint.pformat(knobs))
+        logger.info('With {} params'.format(len(params)))
         return (knobs, params)
 
     # Feedback result of knobs to advisor
