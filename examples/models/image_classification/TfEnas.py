@@ -981,7 +981,7 @@ class TfEnasSearch(TfEnasBase):
         # Override certain fixed knobs for ENAS search
         knobs = {
             **knobs,
-            'batch_size': FixedKnob(128),
+            'batch_size': 128,
             'trial_epochs': cur_trial_epochs,
             'initial_block_ch': 20,
             'reg_decay': 1e-4,
