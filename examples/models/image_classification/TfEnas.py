@@ -941,7 +941,7 @@ class TfEnasBase(BaseModel):
     def _mark_for_monitoring(self, name, value):
         tf.add_to_collection(self.TF_COLLECTION_MONITORED, tf.identity(value, name))
 
-    def _make_var(self, name, shape,  no_reg=False, initializer=None):
+    def _make_var(self, name, shape, no_reg=False, initializer=None):
         if initializer is None:
             initializer = tf.contrib.keras.initializers.he_normal()
 
@@ -969,7 +969,7 @@ class TfEnasSearch(TfEnasBase):
         knobs = TfEnasBase.validate_knobs(knobs)
 
         trial_count = knobs['trial_count']
-        skip_training_trials = 300
+        skip_training_trials = 30
 
         # Every (X + 1) trials, only train 1 epoch for the first trial
         # The other X trials is for training the controller
@@ -1242,7 +1242,7 @@ if __name__ == '__main__':
             TfEnasSearch, 
             train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
             val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-            total_trials=301 * 150,
+            total_trials=31 * 150,
             should_save=False,
             advisor=advisor
         )
