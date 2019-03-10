@@ -77,7 +77,7 @@ class TfEnasBase(BaseModel):
             'drop_path_keep_prob': FixedKnob(0.6),
             'drop_path_decay_epochs': FixedKnob(630),
             'cutout_size': FixedKnob(0),
-            'grad_clip_norm': FixedKnob(0),
+            'grad_clip_norm': FixedKnob(5.0),
             'log_every_secs': FixedKnob(60),
             'cell_archs': ListKnob(2 * cell_num_blocks * 4, lambda i: cell_arch_item(i)),
             'use_cell_arch_type': FixedKnob('') # '' | 'ENAS' | 'NASNET-A'
@@ -981,10 +981,12 @@ class TfEnasSearch(TfEnasBase):
         # Override certain fixed knobs for ENAS search
         knobs = {
             **knobs,
+            'batch_size': FixedKnob(128),
             'trial_epochs': cur_trial_epochs,
             'initial_block_ch': 20,
             'reg_decay': 1e-4,
             'num_layers': 6,
+            'sgdr_alpha': 0.01,
             'dropout_keep_prob': 0.9,
             'drop_path_decay_epochs': 150,
             'initial_epoch': initial_epoch
