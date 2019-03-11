@@ -1,3 +1,6 @@
+# PIP
+.cache/pip/
+
 # Python virtualenv environments
 env/
 envs/
@@ -35,5 +38,6 @@ params/*
 .ipynb_checkpoints/*
 *.ipynb
 
-# Pytest files
+# Pytest
 .coverage*
+.pytest_cache/
