@@ -79,7 +79,7 @@ class DatasetUtils():
 
             :param images: (N x width x height x channels) array-like of images to resize
             :param float[3] mean: Mean for normalization, by channel
-            :param float[3] std: Mean for normalization, by channel
+            :param float[3] std: Standard deviation for normalization, by channel
             :returns: (images, mean, std)
         '''
         if len(images) == 0:

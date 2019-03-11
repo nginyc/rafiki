@@ -82,7 +82,7 @@ class TfEnasBase(BaseModel):
             'drop_path_keep_prob': FixedKnob(0.6),
             'drop_path_decay_epochs': FixedKnob(630),
             'cutout_size': FixedKnob(0),
-            'grad_clip_norm': FixedKnob(0),
+            'grad_clip_norm': FixedKnob(5.0),
             'log_every_secs': FixedKnob(60),
             'cell_archs': ListKnob(2 * cell_num_blocks * 4, lambda i: cell_arch_item(i)),
             'use_cell_arch_type': FixedKnob('') # '' | 'ENAS' | 'NASNET-A'
@@ -951,7 +951,7 @@ class TfEnasBase(BaseModel):
         summary_op = tf.summary.merge_all()
         return summary_op
 
-    def _make_var(self, name, shape,  no_reg=False, initializer=None):
+    def _make_var(self, name, shape, no_reg=False, initializer=None):
         if initializer is None:
             initializer = tf.contrib.keras.initializers.he_normal()
 
@@ -979,7 +979,7 @@ class TfEnasSearch(TfEnasBase):
         knobs = TfEnasBase.validate_knobs(knobs)
 
         trial_count = knobs['trial_count']
-        skip_training_trials = 300
+        skip_training_trials = 30
 
         # Every (X + 1) trials, only train 1 epoch for the first trial
         # The other X trials is for training the controller
@@ -991,10 +991,13 @@ class TfEnasSearch(TfEnasBase):
         # Override certain fixed knobs for ENAS search
         knobs = {
             **knobs,
+            'batch_size': 128,
             'trial_epochs': cur_trial_epochs,
             'initial_block_ch': 20,
             'reg_decay': 1e-4,
             'num_layers': 6,
+            'sgdr_alpha': 0.01,
+            'dropout_keep_prob': 0.9,
             'drop_path_decay_epochs': 150,
             'initial_epoch': initial_epoch
         }
@@ -1242,7 +1245,7 @@ if __name__ == '__main__':
             TfEnasSearch, 
             train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
             val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-            total_trials=301 * 150,
+            total_trials=31 * 150,
             should_save=False,
             advisor=advisor
         )
