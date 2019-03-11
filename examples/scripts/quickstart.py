@@ -1,35 +1,15 @@
-import pprint
 import time
+import pprint
 import requests
 import traceback
 import os
-import string
-import random
 
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
-from rafiki.constants import TaskType, UserType, BudgetType, TrainJobStatus, \
+from rafiki.constants import TaskType, UserType, BudgetType, \
                                 InferenceJobStatus, ModelDependency, ModelAccessRight
 
-# Generates a random ID
-def gen_id(length=16):
-    return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
-
-def wait_until_train_job_has_stopped(client, app, timeout=60*20, tick=10):
-    length = 0
-    while True:
-        train_job = client.get_train_job(app)
-        status = train_job['status']
-        if status not in [TrainJobStatus.STARTED, TrainJobStatus.RUNNING]:
-            # Train job has stopped
-            return
-            
-        # Still running...
-        if length >= timeout:
-            raise TimeoutError('Train job is running for too long')
-
-        length += tick
-        time.sleep(tick)
+from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
 
 # Returns `predictor_host` of inference job
 def get_predictor_host(client, app):
@@ -150,6 +130,7 @@ if __name__ == '__main__':
     admin_web_port = int(os.environ.get('ADMIN_WEB_EXT_PORT', 3001))
     user_email = os.environ.get('USER_EMAIL', SUPERADMIN_EMAIL)
     user_password = os.environ.get('USER_PASSWORD', SUPERADMIN_PASSWORD)
+    enable_gpu = int(os.environ.get('ENABLE_GPU', 0))
 
     # Initialize client
     client = Client(admin_host=rafiki_host, admin_port=admin_port)
@@ -158,7 +139,5 @@ if __name__ == '__main__':
     print('During training, you can view the status of the train job at {}'.format(admin_web_url))
     print('Login with email "{}" and password "{}"'.format(user_email, user_password)) 
     
-    enable_gpu = int(os.environ.get('ENABLE_GPU', 0))
-
     # Run quickstart
     quickstart(client, enable_gpu)

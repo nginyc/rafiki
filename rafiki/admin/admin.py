@@ -319,11 +319,8 @@ class Admin(object):
         }
 
         for service in services:
-            # `None` service means error in deployment
             if service is None:
-                count[ServiceStatus.ERRORED] += 1
                 continue
-
             count[service.status] += 1
 
         # Determine status of train job based on sub-jobs
@@ -556,11 +553,8 @@ class Admin(object):
         }
 
         for service in services:
-            # `None` service means error in deployment
             if service is None:
-                count[ServiceStatus.ERRORED] += 1
                 continue
-
             count[service.status] += 1
 
         # If predictor is errored or any sub inference jobs is errored, errored

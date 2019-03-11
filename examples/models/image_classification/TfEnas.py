@@ -23,7 +23,7 @@ _Model = namedtuple('_Model', ['init_op', 'train_op', 'summary_op', 'images_ph',
 _ModelMemo = namedtuple('_ModelMemo', ['train_params', 'knobs', 'graph', 'sess', 'saver', 
             'monitored_values', 'model'])
 
-class TfEnasBase(BaseModel):
+class TfEnasTrain(BaseModel):
     '''
     Implements the child model of "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
     
@@ -37,8 +37,8 @@ class TfEnasBase(BaseModel):
 
     @staticmethod
     def get_knob_config():
-        cell_num_blocks = TfEnasBase.CELL_NUM_BLOCKS
-        ops = TfEnasBase.OPS
+        cell_num_blocks = TfEnasTrain.CELL_NUM_BLOCKS
+        ops = TfEnasTrain.OPS
 
         def cell_arch_item(i):
             b = i // 4 # block no
@@ -139,7 +139,7 @@ class TfEnasBase(BaseModel):
     @staticmethod
     def setup():
         # Memoise across trials to speed up training
-        TfEnasBase.memo = {
+        TfEnasTrain.memo = {
             'datasets': {}, # { <dataset_uri> -> <dataset> }
         }
 
@@ -148,7 +148,7 @@ class TfEnasBase(BaseModel):
 
     @staticmethod
     def teardown():
-        TfEnasBase.memo = {}
+        TfEnasTrain.memo = {}
 
     def __init__(self, **knobs):
         super().__init__(**knobs)
@@ -971,12 +971,12 @@ class TfEnasBase(BaseModel):
         tf_vars = [var for var in tf.trainable_variables()]
         return tf_vars
 
-class TfEnasSearch(TfEnasBase):
+class TfEnasSearch(TfEnasTrain):
     TF_COLLECTION_SHARED = 'SHARED'
 
     @staticmethod
     def validate_knobs(knobs):
-        knobs = TfEnasBase.validate_knobs(knobs)
+        knobs = TfEnasTrain.validate_knobs(knobs)
 
         trial_count = knobs['trial_count']
         skip_training_trials = 30
@@ -1230,7 +1230,7 @@ class TfEnasSearch(TfEnasBase):
         return var
 
 if __name__ == '__main__':
-    knob_config = TfEnasBase.get_knob_config()
+    knob_config = TfEnasTrain.get_knob_config()
     advisor = Advisor(knob_config) 
     
     parser = argparse.ArgumentParser()
@@ -1261,7 +1261,7 @@ if __name__ == '__main__':
 
         print('Training models sampled from advisor...')
         (best_knobs, _) = tune_model(
-            TfEnasBase,
+            TfEnasTrain,
             train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
             val_dataset_uri='data/cifar_10_for_image_classification_test.zip',
             total_trials=1,
