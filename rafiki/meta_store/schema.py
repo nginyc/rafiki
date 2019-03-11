@@ -64,7 +64,7 @@ class Service(Base):
     hostname = Column(String)
     port = Column(Integer)
     container_service_name = Column(String)
-    container_service_id = Column(String)
+    container_service_id = Column(String) # Corresponding service ID for container manager
     requirements = Column(ARRAY(String))
 
 class TrainJob(Base):

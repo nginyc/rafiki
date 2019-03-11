@@ -121,7 +121,7 @@ class Admin(object):
             for (name, config) in models.items():
                 db_model = next((x for x in avail_models if x.name == name), None)
                 if db_model is None:
-                    raise InvalidModelAccessError('You don\'t have access to model "{}"'.format(name))
+                    raise InvalidModelAccessError('Model "{}" does not exist, or is not accessible to you!'.format(name))
 
                 model_id_to_config[db_model.id] = config
 
@@ -389,7 +389,7 @@ class Admin(object):
             raise InvalidTrainJobError('Train job must be of status "STOPPED".')
 
         # Ensure only 1 running inference job for 1 train job
-        inference_job = self._meta_store.get_running_inference_job_by_train_job(train_job.id)
+        inference_job = self._meta_store.get_deployed_inference_job_by_train_job(train_job.id)
         if inference_job is not None:
             raise RunningInferenceJobExistsError()
 
@@ -399,17 +399,18 @@ class Admin(object):
             raise InvalidTrainJobError('Train job has no trials with saved models!')
 
         # Create inference & sub inference jobs in DB
-        train_job = self._meta_store.create_inference_job(
+        inference_job = self._meta_store.create_inference_job(
             user_id=user_id,
             train_job_id=train_job.id
         )
         self._meta_store.commit()
+
         for trial in best_trials:
             self._meta_store.create_sub_inference_job(
                 inference_job_id=inference_job.id,
                 trial_id=trial.id,
             )
-        self._meta_store.commit()
+            self._meta_store.commit()
 
         (inference_job, predictor_service) = \
             self._services_manager.create_inference_services(inference_job.id)
@@ -427,7 +428,7 @@ class Admin(object):
         if train_job is None:
             raise InvalidRunningInferenceJobError()
 
-        inference_job = self._meta_store.get_running_inference_job_by_train_job(train_job.id)
+        inference_job = self._meta_store.get_deployed_inference_job_by_train_job(train_job.id)
         if inference_job is None:
             raise InvalidRunningInferenceJobError()
 
@@ -446,7 +447,7 @@ class Admin(object):
         if train_job is None:
             raise InvalidRunningInferenceJobError()
 
-        inference_job = self._meta_store.get_running_inference_job_by_train_job(train_job.id)
+        inference_job = self._meta_store.get_deployed_inference_job_by_train_job(train_job.id)
         if inference_job is None:
             raise InvalidRunningInferenceJobError()
         
@@ -582,7 +583,7 @@ class Admin(object):
             'sub_train_job_worker_stopped': self._on_sub_train_job_worker_stopped,
             'sub_inference_job_worker_started': self._on_sub_inference_job_worker_started,
             'sub_inference_job_worker_stopped': self._on_sub_inference_job_worker_stopped,
-            'inference_job_predictor_started': self._on_sub_inference_job_worker_stopped
+            'inference_job_predictor_started': self._on_inference_job_predictor_started
         }
 
         if name in event_to_method:
@@ -602,11 +603,11 @@ class Admin(object):
         self.refresh_train_job_status(sub_train_job.train_job_id)
     
     def _on_sub_inference_job_worker_started(self, sub_inference_job_id):
-        sub_inference_job = self._meta_store.get_sub_train_job(sub_inference_job_id)
+        sub_inference_job = self._meta_store.get_sub_inference_job(sub_inference_job_id)
         self.refresh_inference_job_status(sub_inference_job.inference_job_id)
 
     def _on_sub_inference_job_worker_stopped(self, sub_inference_job_id):
-        sub_inference_job = self._meta_store.get_sub_train_job(sub_inference_job_id)
+        sub_inference_job = self._meta_store.get_sub_inference_job(sub_inference_job_id)
         self.refresh_inference_job_status(sub_inference_job.inference_job_id)
 
     def _on_inference_job_predictor_started(self, inference_job_id):

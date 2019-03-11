@@ -95,7 +95,7 @@ class DockerSwarmContainerManager(ContainerManager):
     def destroy_service(self, service_id):
         service = self._client.services.get(service_id)
         service.remove()
-
+        
         logger.info('Deleted service of ID {}'.format(service_id))
                 
     def _if_any_node_has_gpu(self):

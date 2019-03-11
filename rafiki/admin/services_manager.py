@@ -186,11 +186,18 @@ class ServicesManager(object):
         return service
 
     def _stop_service(self, service):
-        if service.container_service_id is not None:
-            self._container_manager.destroy_service(service.container_service_id)
+        if service.status == ServiceStatus.STOPPED:
+            logger.info('Service of ID "{}" already stopped!'.format(service.id))
+            return
 
-        self._meta_store.mark_service_as_stopped(service)
-        self._meta_store.commit()
+        try:
+            self._container_manager.destroy_service(service.container_service_id)
+            self._meta_store.mark_service_as_stopped(service)
+            self._meta_store.commit()
+        except Exception:
+            # Allow exception to be thrown if deleting service fails (maybe concurrent service deletion)
+            logger.info('Error while deleting service with ID {} - maybe already deleted'.format(service.id))
+            logger.info(traceback.format_exc())
 
     # Returns when all services have status of `RUNNING`
     # Throws an exception if any of the services have a status of `ERRORED` or `STOPPED`

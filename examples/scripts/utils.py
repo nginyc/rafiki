@@ -14,10 +14,13 @@ def wait_until_train_job_has_stopped(client, app, timeout=60*20, tick=10):
     while True:
         train_job = client.get_train_job(app)
         status = train_job['status']
-        if status not in [TrainJobStatus.STARTED, TrainJobStatus.RUNNING]:
-            # Train job has stopped
+
+        if status == TrainJobStatus.ERRORED:
+            raise Exception('Train job has errored.')
+        elif status == TrainJobStatus.STOPPED:
+            # Unblock
             return
-            
+
         # Still running...
         if length >= timeout:
             raise TimeoutError('Train job is running for too long')

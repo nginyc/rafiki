@@ -173,10 +173,13 @@ class MetaStore(object):
             .filter(InferenceJob.predictor_service_id == predictor_service_id).first()
         return inference_job
 
-    def get_running_inference_job_by_train_job(self, train_job_id):
+    def get_deployed_inference_job_by_train_job(self, train_job_id):
         inference_job = self._session.query(InferenceJob) \
             .filter(InferenceJob.train_job_id == train_job_id) \
-            .filter(InferenceJob.status == InferenceJobStatus.RUNNING).first()
+            .filter(InferenceJob.status.in_([
+                InferenceJobStatus.ERRORED, InferenceJobStatus.RUNNING, InferenceJobStatus.STARTED
+            ])).first()
+
         return inference_job
 
     def get_inference_jobs_by_user(self, user_id):

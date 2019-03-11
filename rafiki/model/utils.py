@@ -12,7 +12,7 @@ from .log import LoggerUtils
 
 def load_model_class(model_file_bytes, model_class, temp_mod_name=None) -> Type[BaseModel]:
     if temp_mod_name is None:
-        temp_mod_name = str(uuid.uuid4())
+        temp_mod_name = '{}-{}'.format(model_class, str(uuid.uuid4()))
 
     temp_model_file_name ='{}.py'.format(temp_mod_name)
 

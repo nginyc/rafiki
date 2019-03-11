@@ -495,7 +495,7 @@ class TfEnasTrain(BaseModel):
                 # Periodically, log monitored values
                 if (datetime.now() - last_log_time).total_seconds() >= log_every_secs:
                     last_log_time = datetime.now()
-                    utils.logger.log(steps=batch_steps, **{ value.name: v for (value, v) in zip(self._monitored_values.keys(), values) })
+                    utils.logger.log(steps=batch_steps, **{ name: v for (name, v) in zip(self._monitored_values.keys(), values) })
 
             # Log mean batch accuracy and epoch
             mean_acc = np.mean(accs)

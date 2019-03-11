@@ -76,23 +76,26 @@ class TrainWorker(object):
             try:
                 logger.info('Starting trial...')
 
+                logger_info = self._start_logging_to_trial()
+
                 # Generate knobs for trial
                 (knobs, params) = self._get_proposal(advisor_id, clazz, 
                                                     sub_train_job, knobs, params)
 
                 # Train & evaluate model for trial
                 self._mark_trial_as_running(knobs, params)
-                (model_inst, score, trial_params) = \
-                    self._train_and_evaluate_model(train_job, clazz, knobs, params)
-                
-                # Save model
-                # Mark trial as completed
-                params_dir = self._maybe_save_model(model_inst, sub_train_job)
-                self._mark_trial_as_completed(score, params_dir)
+                (score, trial_params, params_dir) = \
+                    self._train_and_evaluate_model(train_job, sub_train_job, clazz, knobs, params)
 
                 # Give feedback based on result of trial
                 (knobs, params) = self._feedback(advisor_id, sub_train_job, score, 
                                                 knobs, trial_params)
+
+                # Mark trial as completed
+                self._mark_trial_as_completed(score, params_dir)
+                
+                self._stop_logging_to_trial(logger_info)
+
             except Exception as e:
                 self._mark_trial_as_errored()
                 raise e
@@ -115,8 +118,7 @@ class TrainWorker(object):
 
         self._client.send_event('sub_train_job_worker_stopped', sub_train_job_id=self._sub_train_job_id)
 
-    def _train_and_evaluate_model(self, train_job, clazz: Type[BaseModel], knobs, params):
-        logger.info('Training & evaluating model...')
+    def _start_logging_to_trial(self):
         # Add log handlers for trial, including adding handler to root logger 
         # to capture any logs emitted with level above INFO during model training & evaluation
         def handle_log(log_line, log_lvl):
@@ -134,32 +136,38 @@ class TrainWorker(object):
         root_logger = logging.getLogger()
         root_logger.addHandler(log_handler)
 
-        # Initialize & train model
-        model_inst = clazz(**knobs)
-        model_inst.train(train_job.train_dataset_uri, params)
+        return (root_logger, py_model_logger, log_handler)
 
-        # Evaluate model
-        score = model_inst.evaluate(train_job.val_dataset_uri)
+    def _stop_logging_to_trial(self, logger_info):
+        (root_logger, py_model_logger, log_handler) = logger_info
 
         # Remove log handlers from loggers for this trial
         root_logger.removeHandler(log_handler)
         py_model_logger.removeHandler(log_handler)
 
+    def _train_and_evaluate_model(self, train_job: _TrainJob, sub_train_job: _SubTrainJob, 
+                                clazz: Type[BaseModel], knobs, params):
+        # Initialize & train model
+        logger.info('Training model...')
+        model_inst = clazz(**knobs)
+        model_inst.train(train_job.train_dataset_uri, params)
+
+        # Evaluate model
+        logger.info('Evaluating model...')
+        score = model_inst.evaluate(train_job.val_dataset_uri)
+        print('Trial score: {}'.format(score))
+
         # Get shared params
         params = model_inst.get_shared_parameters()
 
-        logger.info('Trial score: {}'.format(score))
-
-        return (model_inst, score, params)
-
-    # Save model parameters
-    def _maybe_save_model(self, model_inst, sub_train_job):
+        # Maybe save model
         params_dir = None
         if sub_train_job.config.get('should_save', True):
+            logger.info('Saving model...')
             params_dir = os.path.join(self._params_root_dir, self._trial_id)
             model_inst.save_parameters(params_dir)
 
-        return params_dir
+        return (score, params, params_dir)
 
     # Gets valid proposal of a set of knobs and params from advisor
     def _get_proposal(self, advisor_id, clazz: Type[BaseModel], sub_train_job, 
@@ -323,6 +331,6 @@ class LoggerUtilsHandler(logging.Handler):
         self._handle_log = handle_log
 
     def emit(self, record):
-        log_line = record.msg
+        log_line = str(record.msg)
         log_lvl = record.levelname
         self._handle_log(log_line, log_lvl)

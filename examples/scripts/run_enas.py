@@ -78,7 +78,7 @@ def run_enas(client, enable_gpu, full=True):
         models={
             train_model: {
                 'advisor_id': advisor_id,
-                'knobs': { 'num_layers': 4, 'trial_epochs': 10, 'initial_block_ch': 4 } if not full else {}
+                'knobs': { 'num_layers': 8, 'trial_epochs': 10, 'initial_block_ch': 4 } if not full else {}
             }
         }
     )

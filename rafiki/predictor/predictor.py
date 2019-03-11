@@ -27,7 +27,7 @@ class Predictor(object):
 
     def start(self):
         (self._inference_job_id, self._task) = self._read_predictor_info()
-        self._client.send_event('inference_job_predictor_started', inference_job_id=self._inference_job_id })
+        self._client.send_event('inference_job_predictor_started', inference_job_id=self._inference_job_id)
 
     def predict(self, query):
         logger.info('Received query:')
