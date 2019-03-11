@@ -3,7 +3,7 @@ import numpy as np
 import random
 from typing import Union, Dict
 
-from .knob import BaseKnob, IntegerKnob, CategoricalKnob, FloatKnob, \
+from rafiki.model import BaseKnob, IntegerKnob, CategoricalKnob, FloatKnob, \
                 FixedKnob, ListKnob, DynamicListKnob, MetadataKnob, Metadata
 
 class UnsupportedKnobTypeError(Exception): pass

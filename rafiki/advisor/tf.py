@@ -2,8 +2,9 @@ import tensorflow as tf
 import numpy as np
 import bisect
 
+from rafiki.model import ListKnob, CategoricalKnob
+
 from .advisor import BaseKnobAdvisor, UnsupportedKnobTypeError
-from .knob import ListKnob, CategoricalKnob
 
 class EnasKnobAdvisor(BaseKnobAdvisor):
     '''

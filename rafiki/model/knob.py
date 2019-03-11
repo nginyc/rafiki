@@ -1,7 +1,5 @@
 import abc
 import json
-import pickle
-import argparse
 from enum import Enum
 
 class BaseKnob(abc.ABC):
@@ -280,11 +278,3 @@ class DynamicListKnob(BaseKnob):
                 raise ValueError('Item {} should be of type `BaseKnob`'.format(i))
 
         return (len_min, len_max, items)
-
-def deserialize_knob_config(knob_config_bytes):
-    knob_config = pickle.loads(knob_config_bytes)
-    return knob_config
-
-def serialize_knob_config(knob_config):
-    knob_config_bytes = pickle.dumps(knob_config)
-    return knob_config_bytes

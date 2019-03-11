@@ -19,9 +19,9 @@ class InferenceJob(Base):
     __tablename__ = 'inference_job'
 
     id = Column(String, primary_key=True, default=generate_uuid)
+    status = Column(String, nullable=False, default=InferenceJobStatus.STARTED)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     train_job_id = Column(String, ForeignKey('train_job.id'))
-    status = Column(String, nullable=False, default=InferenceJobStatus.STARTED)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
     predictor_service_id = Column(String, ForeignKey('service.id'))
     datetime_stopped = Column(DateTime, default=None)
@@ -30,9 +30,9 @@ class SubInferenceJob(Base):
     __tablename__ = 'sub_inference_job'
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    service_id = Column(String, ForeignKey('service.id'))
     inference_job_id = Column(String, ForeignKey('inference_job.id'))
     trial_id = Column(String, ForeignKey('trial.id'), nullable=False)
+    service_id = Column(String, ForeignKey('service.id'), default=None)
 
 class Model(Base):
     __tablename__ = 'model'
@@ -71,26 +71,24 @@ class TrainJob(Base):
     __tablename__ = 'train_job'
 
     id = Column(String, primary_key=True, default=generate_uuid)
+    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     app = Column(String, nullable=False)
     app_version = Column(Integer, nullable=False)
     task = Column(String, nullable=False)
     budget = Column(JSON, nullable=False)
+    status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     train_dataset_uri = Column(String, nullable=False)
     val_dataset_uri = Column(String, nullable=False)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
-    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
+    datetime_stopped = Column(DateTime, default=None)
 
 class SubTrainJob(Base):
     __tablename__ = 'sub_train_job'
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    service_id = Column(String, ForeignKey('service.id'))
     train_job_id = Column(String, ForeignKey('train_job.id'))
     model_id = Column(String, ForeignKey('model.id'))
-    user_id = Column(String, ForeignKey('user.id'), nullable=False)
-    status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
-    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
-    datetime_stopped = Column(DateTime, default=None)
+    service_id = Column(String, ForeignKey('service.id'), default=None)
     config = Column(JSON, nullable=False)
 
 class Trial(Base):
@@ -101,10 +99,10 @@ class Trial(Base):
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     status = Column(String, nullable=False, default=TrialStatus.STARTED)
-    shared_params_count = Column(Integer, nullable=False)
     params_dir = Column(String, default=None)
     knobs = Column(JSON, default=None)
     score = Column(Float, default=0)
+    shared_params_count = Column(Integer, default=None)
     datetime_stopped = Column(DateTime, default=None)
 
 class TrialLog(Base):

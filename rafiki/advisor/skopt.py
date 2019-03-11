@@ -2,8 +2,9 @@ from skopt.space import Real, Integer, Categorical
 from skopt.optimizer import Optimizer
 from collections import OrderedDict
 
+from rafiki.model import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob
+
 from .advisor import BaseKnobAdvisor, UnsupportedKnobTypeError
-from .knob import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob
 
 class SkoptKnobAdvisor(BaseKnobAdvisor):
     '''

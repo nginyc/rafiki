@@ -6,8 +6,8 @@ from sqlalchemy.orm import sessionmaker
 from rafiki.constants import TrainJobStatus, \
     TrialStatus, ServiceStatus, InferenceJobStatus, ModelAccessRight
 
-from .schema import Base, TrainJob, SubTrainJob, TrainJobWorker, \
-    InferenceJob, Trial, Model, User, Service, InferenceJobWorker, \
+from .schema import Base, TrainJob, SubTrainJob, \
+    InferenceJob, SubInferenceJob, Trial, Model, User, Service, \
     TrialLog
 
 class MetaStore(object):
@@ -87,11 +87,10 @@ class MetaStore(object):
         train_job = self._session.query(TrainJob).get(id)
         return train_job
 
-    def get_train_jobs_by_status(self, status):
-        job_ids = self._session.query(distinct(SubTrainJob.train_job_id)) \
-            .filter(SubTrainJob.status == status).all()
-        return self._session.query(TrainJob) \
-            .filter(TrainJob.id.in_(job_ids)).all()
+    def get_train_jobs_by_statuses(self, statuses):
+        train_jobs = self._session.query(TrainJob) \
+            .filter(TrainJob.status.in_(statuses)).all()
+        return train_jobs
 
     # Returns for the latest app version unless specified
     def get_train_job_by_app_version(self, app, app_version=-1):
@@ -105,16 +104,28 @@ class MetaStore(object):
             query = query.filter(TrainJob.app_version == app_version)
 
         return query.first()
+    
+    def mark_train_job_as_running(self, train_job):
+        train_job.status = TrainJobStatus.RUNNING
+        self._session.add(train_job)
+
+    def mark_train_job_as_errored(self, train_job):
+        train_job.status = TrainJobStatus.ERRORED
+        self._session.add(train_job)
+
+    def mark_train_job_as_stopped(self, train_job):
+        train_job.status = TrainJobStatus.STOPPED
+        train_job.datetime_stopped = datetime.datetime.utcnow()
+        self._session.add(train_job)
 
     ####################################
     # Sub Train Jobs
     ####################################  
 
-    def create_sub_train_job(self, train_job_id, model_id, user_id, config):
+    def create_sub_train_job(self, train_job_id, model_id, config):
         sub_train_job = SubTrainJob(
             train_job_id=train_job_id,
             model_id=model_id,
-            user_id=user_id,
             config=config
         )
         self._session.add(sub_train_job)
@@ -131,31 +142,15 @@ class MetaStore(object):
         sub_train_job = self._session.query(SubTrainJob).get(id)
         return sub_train_job
 
-    def mark_sub_train_job_as_running(self, sub_train_job, service_id):
-        sub_train_job.status = TrainJobStatus.RUNNING
-        sub_train_job.datetime_stopped = None
+    def get_sub_train_job_by_service(self, service_id):
+        sub_train_job = self._session.query(SubTrainJob) \
+            .filter(SubTrainJob.service_id == service_id).first()
+        return sub_train_job
+
+    def update_sub_train_job(self, sub_train_job, service_id):
         sub_train_job.service_id = service_id
         self._session.add(sub_train_job)
         return sub_train_job
-
-    def mark_sub_train_job_as_stopped(self, sub_train_job):
-        sub_train_job.status = TrainJobStatus.STOPPED
-        sub_train_job.datetime_stopped = datetime.datetime.utcnow()
-        self._session.add(sub_train_job)
-        return sub_train_job
-
-    ####################################
-    # Train Job Workers
-    ####################################
-
-    def get_train_job_worker(self, service_id):
-        train_job_worker = self._session.query(TrainJobWorker).get(service_id)
-        return train_job_worker
-
-    def get_workers_of_sub_train_job(self, sub_train_job_id):
-        workers = self._session.query(TrainJobWorker) \
-            .filter(TrainJobWorker.sub_train_job_id == sub_train_job_id).all()
-        return workers
 
     ####################################
     # Inference Jobs
@@ -187,7 +182,6 @@ class MetaStore(object):
     def get_inference_jobs_by_user(self, user_id):
         inference_jobs = self._session.query(InferenceJob) \
             .filter(InferenceJob.user_id == user_id).all()
-
         return inference_jobs
 
     def update_inference_job(self, inference_job, predictor_service_id):
@@ -195,58 +189,61 @@ class MetaStore(object):
         self._session.add(inference_job)
         return inference_job
     
-    def mark_inference_job_as_running(self, inference_job):
-        inference_job.status = InferenceJobStatus.RUNNING
-        inference_job.datetime_stopped = None
-        return inference_job
-
-    def mark_inference_job_as_stopped(self, inference_job):
-        inference_job.status = InferenceJobStatus.STOPPED
-        inference_job.datetime_stopped = datetime.datetime.utcnow()
-        self._session.add(inference_job)
-        return inference_job
-
-    def mark_inference_job_as_errored(self, inference_job):
-        inference_job.status = InferenceJobStatus.ERRORED
-        inference_job.datetime_stopped = datetime.datetime.utcnow()
-        self._session.add(inference_job)
-        return inference_job
-
     def get_inference_jobs_of_app(self, app):
         inference_jobs = self._session.query(InferenceJob) \
             .join(TrainJob, InferenceJob.train_job_id == TrainJob.id) \
             .filter(TrainJob.app == app) \
             .order_by(InferenceJob.datetime_started.desc()).all()
-
         return inference_jobs
     
-    def get_inference_jobs_by_status(self, status):
-        jobs = self._session.query(InferenceJob) \
-            .filter(InferenceJob.status == status).all()
+    def get_inference_jobs_by_statuses(self, statuses):
+        inference_jobs = self._session.query(InferenceJob) \
+            .filter(InferenceJob.status.in_(statuses)).all()
+        return inference_jobs
 
-        return jobs
+    def mark_inference_job_as_running(self, inference_job):
+        inference_job.status = InferenceJobStatus.RUNNING
+        self._session.add(inference_job)
+
+    def mark_inference_job_as_errored(self, inference_job):
+        inference_job.status = InferenceJobStatus.ERRORED
+        self._session.add(inference_job)
+
+    def mark_inference_job_as_stopped(self, inference_job):
+        inference_job.status = InferenceJobStatus.STOPPED
+        inference_job.datetime_stopped = datetime.datetime.utcnow()
+        self._session.add(inference_job)
 
     ####################################
-    # Inference Job Workers
+    # Sub Inference Jobs
     ####################################
 
-    def create_inference_job_worker(self, service_id, inference_job_id, trial_id):
-        inference_job_worker = InferenceJobWorker(
+    def create_sub_inference_job(self, inference_job_id, trial_id):
+        sub_inference_job = SubInferenceJob(
             inference_job_id=inference_job_id,
-            trial_id=trial_id,
-            service_id=service_id
+            trial_id=trial_id
         )
-        self._session.add(inference_job_worker)
-        return inference_job_worker
+        self._session.add(sub_inference_job)
+        return sub_inference_job
 
-    def get_inference_job_worker(self, service_id):
-        inference_job_worker = self._session.query(InferenceJobWorker).get(service_id)
-        return inference_job_worker
+    def get_sub_inference_job(self, id):
+        sub_inference_job = self._session.query(SubInferenceJob).get(id)
+        return sub_inference_job
 
-    def get_workers_of_inference_job(self, inference_job_id):
-        workers = self._session.query(InferenceJobWorker) \
-            .filter(InferenceJobWorker.inference_job_id == inference_job_id).all()
-        return workers
+    def get_sub_inference_job_by_service(self, service_id):
+        sub_inference_job = self._session.query(SubInferenceJob) \
+            .filter(SubInferenceJob.service_id == service_id).first()
+        return sub_inference_job
+
+    def get_sub_inference_jobs_of_inference_job(self, inference_job_id):
+        sub_inference_jobs = self._session.query(SubInferenceJob) \
+            .filter(SubInferenceJob.inference_job_id == inference_job_id).all()
+        return sub_inference_jobs
+
+    def update_sub_inference_job(self, sub_inference_job, service_id):
+        sub_inference_job.service_id = service_id
+        self._session.add(sub_inference_job)
+        return sub_inference_job
 
     ####################################
     # Services
@@ -380,11 +377,14 @@ class MetaStore(object):
             
         return trial_logs
     
+    # Return a list of trials associated with a train job that have the best scores
+    # Trials' models must be saved
     def get_best_trials_of_train_job(self, train_job_id, max_count=2):
         trials = self._session.query(Trial) \
             .join(SubTrainJob, Trial.sub_train_job_id == SubTrainJob.id) \
             .filter(SubTrainJob.train_job_id == train_job_id) \
             .filter(Trial.status == TrialStatus.COMPLETED) \
+            .filter(Trial.params_dir != None) \
             .order_by(Trial.score.desc()) \
             .limit(max_count).all()
 
@@ -418,9 +418,10 @@ class MetaStore(object):
         self._session.add(trial)
         return trial
 
-    def mark_trial_as_complete(self, trial, score):
+    def mark_trial_as_complete(self, trial, score, params_dir):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
+        trial.params_dir = params_dir
         trial.datetime_stopped = datetime.datetime.utcnow()
         self._session.add(trial)
         return trial

@@ -12,11 +12,16 @@ import numpy as np
 import base64
 import argparse
 
-from rafiki.advisor import Advisor, IntegerKnob, CategoricalKnob, FloatKnob, \
+from rafiki.advisor import Advisor, tune_model
+from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
                             FixedKnob, ListKnob, Metadata, MetadataKnob
-from rafiki.model import utils, tune_model, BaseModel
-from rafiki.constants import TaskType, ModelDependency
 
+_Model = namedtuple('_Model', ['init_op', 'train_op', 'summary_op', 'images_ph', 'classes_ph', 'is_train_ph', 
+        'epoch_ph', 'probs', 'acc', 'steps', 'normal_arch_ph', 'reduction_arch_ph', 
+        'shared_params_phs', 'shared_params_assign_op'])
+
+_ModelMemo = namedtuple('_ModelMemo', ['train_params', 'knobs', 'graph', 'sess', 'saver', 
+            'monitored_values', 'model'])
 
 class TfEnasBase(BaseModel):
     '''
@@ -283,9 +288,7 @@ class TfEnasBase(BaseModel):
 
             # Make summaries for monitored values
             monitored_values = tf.get_collection(self.TF_COLLECTION_MONITORED)
-            for value in monitored_values:
-                tf.summary.scalar(value.name, value)
-            summary_op = tf.summary.merge_all()
+            summary_op = self._add_summaries_for_values(monitored_values)
 
             # Add saver
             saver = tf.train.Saver(tf_vars)
@@ -941,6 +944,13 @@ class TfEnasBase(BaseModel):
     def _mark_for_monitoring(self, name, value):
         tf.add_to_collection(self.TF_COLLECTION_MONITORED, tf.identity(value, name))
 
+    def _add_summaries_for_values(self, values):
+        for value in values:
+            summary_name = value.name.split(':')[0] # Get rid of ':0'
+            tf.summary.scalar(summary_name, value)
+        summary_op = tf.summary.merge_all()
+        return summary_op
+
     def _make_var(self, name, shape,  no_reg=False, initializer=None):
         if initializer is None:
             initializer = tf.contrib.keras.initializers.he_normal()
@@ -1097,9 +1107,7 @@ class TfEnasSearch(TfEnasBase):
 
             # Make summaries for monitored values
             monitored_values = tf.get_collection(self.TF_COLLECTION_MONITORED)
-            for value in monitored_values:
-                tf.summary.scalar(value.name, value)
-            summary_op = tf.summary.merge_all()
+            summary_op = self._add_summaries_for_values(monitored_values)
 
             # Add saver
             saver = tf.train.Saver(tf_vars)
@@ -1217,13 +1225,6 @@ class TfEnasSearch(TfEnasBase):
             tf.add_to_collection(self.TF_COLLECTION_SHARED, var)
 
         return var
-
-_Model = namedtuple('_Model', ['init_op', 'train_op', 'summary_op', 'images_ph', 'classes_ph', 'is_train_ph', 
-        'epoch_ph', 'probs', 'acc', 'steps', 'normal_arch_ph', 'reduction_arch_ph', 
-        'shared_params_phs', 'shared_params_assign_op'])
-
-_ModelMemo = namedtuple('_ModelMemo', ['train_params', 'knobs', 'graph', 'sess', 'saver', 
-            'monitored_values', 'model'])
 
 if __name__ == '__main__':
     knob_config = TfEnasBase.get_knob_config()

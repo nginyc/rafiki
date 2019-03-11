@@ -6,7 +6,8 @@ import uuid
 import csv
 
 from rafiki.meta_store import MetaStore
-from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus, ModelAccessRight, BudgetType
+from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus, \
+                            ModelAccessRight, BudgetType, InferenceJobStatus
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.model import LoggerUtils
 from rafiki.container import DockerSwarmContainerManager 
@@ -102,9 +103,7 @@ class Admin(object):
         train_jobs = self._meta_store.get_train_jobs_of_app(app)
 
         # Ensure there is no existing train job for app
-        train_job_statuses = [self._get_train_job_status(x) for x in train_jobs]
-        train_job_statuses = [status for (status, _, _) in train_job_statuses]
-        if any([x != TrainJobStatus.STOPPED for x in train_job_statuses]):
+        if any([x.status in [TrainJobStatus.RUNNING, TrainJobStatus.STARTED] for x in train_jobs]):
             raise InvalidTrainJobError('Another train job for app "{}" is still running!'.format(app))
         
         # Compute auto-incremented app version
@@ -130,6 +129,7 @@ class Admin(object):
         if len(model_id_to_config) == 0:
             raise NoModelsForTrainJobError()
 
+        # Create train & sub train jobs in DB
         train_job = self._meta_store.create_train_job(
             user_id=user_id,
             app=app,
@@ -145,9 +145,9 @@ class Admin(object):
             self._meta_store.create_sub_train_job(
                 train_job_id=train_job.id,
                 model_id=model_id,
-                user_id=train_job.user_id,
                 config=config
             )
+        self._meta_store.commit()
 
         train_job = self._services_manager.create_train_services(train_job.id)
 
@@ -163,6 +163,7 @@ class Admin(object):
             raise InvalidTrainJobError()
 
         self._services_manager.stop_train_services(train_job.id)
+        self.refresh_train_job_status(train_job.id)
 
         return {
             'id': train_job.id,
@@ -175,23 +176,21 @@ class Admin(object):
         if train_job is None:
             raise InvalidTrainJobError()
 
-        (status, datetime_started, datetime_stopped) = self._get_train_job_status(train_job)
-        workers = self._get_workers_of_train_job(train_job)
-        services = [self._meta_store.get_service(x.service_id) for x in workers]
-        worker_models = [self._meta_store.get_model(self._meta_store.get_sub_train_job(x.sub_train_job_id).model_id) \
-                         for x in workers]
+        sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(train_job.id)
+        services = [self._meta_store.get_service(x.service_id) for x in sub_train_jobs]
+        models = [self._meta_store.get_model(x.model_id) for x in sub_train_jobs]
 
         return {
             'id': train_job.id,
-            'status': status,
+            'status': train_job.status,
             'app': train_job.app,
             'app_version': train_job.app_version,
             'task': train_job.task,
             'train_dataset_uri': train_job.train_dataset_uri,
             'val_dataset_uri': train_job.val_dataset_uri,
-            'datetime_started': datetime_started,
-            'datetime_stopped': datetime_stopped,
-            'workers': [
+            'datetime_started': train_job.datetime_started,
+            'datetime_stopped': train_job.datetime_stopped,
+            'services': [
                 {
                     'service_id': service.id,
                     'status': service.status,
@@ -200,28 +199,27 @@ class Admin(object):
                     'datetime_stopped': service.datetime_stopped,
                     'model_name': model.name
                 }
-                for (worker, service, model) 
-                in zip(workers, services, worker_models)
+                for (sub_train_job, service, model) 
+                in zip(sub_train_jobs, services, models)
             ]
         }
 
     def get_train_jobs_of_app(self, app):
         train_jobs = self._meta_store.get_train_jobs_of_app(app)
-        statuses = [self._get_train_job_status(x) for x in train_jobs]
         return [
             {
                 'id': x.id,
-                'status': status,
+                'status': x.status,
                 'app': x.app,
                 'app_version': x.app_version,
                 'task': x.task,
                 'train_dataset_uri': x.train_dataset_uri,
                 'val_dataset_uri': x.val_dataset_uri,
-                'datetime_started': datetime_started,
-                'datetime_stopped': datetime_stopped,
+                'datetime_started': x.datetime_started,
+                'datetime_stopped': x.datetime_stopped,
                 'budget': x.budget
             }
-            for (x, (status, datetime_started, datetime_stopped)) in zip(train_jobs, statuses)
+            for x in train_jobs
         ]
 
     def get_best_trials_of_train_job(self, app, app_version=-1, max_count=2):
@@ -246,22 +244,21 @@ class Admin(object):
 
     def get_train_jobs_by_user(self, user_id):
         train_jobs = self._meta_store.get_train_jobs_by_user(user_id)
-        statuses = [self._get_train_job_status(x) for x in train_jobs]
 
         return [
             {
                 'id': x.id,
-                'status': status,
+                'status': x.status,
                 'app': x.app,
                 'app_version': x.app_version,
                 'task': x.task,
                 'train_dataset_uri': x.train_dataset_uri,
                 'val_dataset_uri': x.val_dataset_uri,
-                'datetime_started': datetime_started,
-                'datetime_stopped': datetime_stopped,
+                'datetime_started': x.datetime_started,
+                'datetime_stopped': x.datetime_stopped,
                 'budget': x.budget
             }
-            for (x, (status, datetime_started, datetime_stopped)) in zip(train_jobs, statuses)
+            for x in train_jobs
         ]
 
     def get_trials_of_train_job(self, app, app_version=-1):
@@ -286,7 +283,7 @@ class Admin(object):
         ]
 
     def stop_sub_train_job(self, sub_train_job_id):
-        sub_train_job = self._services_manager.stop_sub_train_job(sub_train_job_id)
+        sub_train_job = self._services_manager.stop_sub_train_job_services(sub_train_job_id)
         return {
             'id': sub_train_job.id,
             'service_id': sub_train_job.service_id,
@@ -294,9 +291,12 @@ class Admin(object):
         }
 
     def stop_all_train_jobs(self):
-        train_jobs = self._meta_store.get_train_jobs_by_status(TrainJobStatus.RUNNING)
+        train_jobs = self._meta_store.get_train_jobs_by_statuses(
+            [TrainJobStatus.STARTED, TrainJobStatus.RUNNING, TrainJobStatus.ERRORED]
+        )
         for train_job in train_jobs:
             self._services_manager.stop_train_services(train_job.id)
+            self.refresh_train_job_status(train_job.id)
 
         return [
             {
@@ -304,6 +304,35 @@ class Admin(object):
             }
             for train_job in train_jobs
         ]
+
+    def refresh_train_job_status(self, train_job_id):
+        train_job = self._meta_store.get_train_job(train_job_id)
+        sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(train_job.id)
+        services = [self._meta_store.get_service(x.service_id) for x in sub_train_jobs]
+
+        count = {
+            ServiceStatus.STARTED: 0,
+            ServiceStatus.DEPLOYING: 0,
+            ServiceStatus.RUNNING: 0,
+            ServiceStatus.ERRORED: 0,
+            ServiceStatus.STOPPED: 0
+        }
+
+        for service in services:
+            # `None` service means error in deployment
+            if service is None:
+                count[ServiceStatus.ERRORED] += 1
+                continue
+
+            count[service.status] += 1
+
+        # Determine status of train job based on sub-jobs
+        if count[ServiceStatus.ERRORED] > 0:
+            self._meta_store.mark_train_job_as_errored(train_job)
+        elif count[ServiceStatus.STOPPED] == len(sub_train_jobs):
+            self._meta_store.mark_train_job_as_stopped(train_job)
+        elif count[ServiceStatus.RUNNING] > 0:
+            self._meta_store.mark_train_job_as_running(train_job)
 
     ####################################
     # Trials
@@ -359,20 +388,30 @@ class Admin(object):
         if train_job is None:
             raise InvalidTrainJobError('Have you started a train job for this app?')
 
-        (status, _, _) = self._get_train_job_status(train_job)
-
-        if status != TrainJobStatus.STOPPED:
-            raise InvalidTrainJobError('Train job has not stopped.')
+        if train_job.status != TrainJobStatus.STOPPED:
+            raise InvalidTrainJobError('Train job must be of status "STOPPED".')
 
         # Ensure only 1 running inference job for 1 train job
         inference_job = self._meta_store.get_running_inference_job_by_train_job(train_job.id)
         if inference_job is not None:
             raise RunningInferenceJobExistsError()
 
-        inference_job = self._meta_store.create_inference_job(
+        # Get trials to load for inference job
+        best_trials = self._meta_store.get_best_trials_of_train_job(train_job.id, max_count=2)
+        if len(best_trials) == 0:
+            raise InvalidTrainJobError('Train job has no trials with saved models!')
+
+        # Create inference & sub inference jobs in DB
+        train_job = self._meta_store.create_inference_job(
             user_id=user_id,
             train_job_id=train_job.id
         )
+        self._meta_store.commit()
+        for trial in best_trials:
+            self._meta_store.create_sub_inference_job(
+                inference_job_id=inference_job.id,
+                trial_id=trial.id,
+            )
         self._meta_store.commit()
 
         (inference_job, predictor_service) = \
@@ -396,6 +435,8 @@ class Admin(object):
             raise InvalidRunningInferenceJobError()
 
         inference_job = self._services_manager.stop_inference_services(inference_job.id)
+        self.refresh_inference_job_status(inference_job.id)
+
         return {
             'id': inference_job.id,
             'train_job_id': train_job.id,
@@ -411,13 +452,13 @@ class Admin(object):
         inference_job = self._meta_store.get_running_inference_job_by_train_job(train_job.id)
         if inference_job is None:
             raise InvalidRunningInferenceJobError()
-            
-        workers = self._meta_store.get_workers_of_inference_job(inference_job.id)
-        services = [self._meta_store.get_service(x.service_id) for x in workers]
+        
+        sub_inference_jobs = self._meta_store.get_sub_inference_jobs_of_inference_job(inference_job.id)
+        services = [self._meta_store.get_service(x.service_id) for x in sub_inference_jobs]
+        trials = [self._meta_store.get_trial(x.trial_id) for x in sub_inference_jobs]
+        models = [self._meta_store.get_model(x.model_id) for x in trials]
         predictor_service = self._meta_store.get_service(inference_job.predictor_service_id)
         predictor_host = self._get_service_host(predictor_service)
-        worker_trials = [self._meta_store.get_trial(x.trial_id) for x in workers]
-        worker_trial_models = [self._meta_store.get_model(x.model_id) for x in worker_trials]
 
         return {
             'id': inference_job.id,
@@ -442,8 +483,8 @@ class Admin(object):
                         'model_name': model.name
                     }
                 }
-                for (worker, service, trial, model) 
-                in zip(workers, services, worker_trials, worker_trial_models)
+                for (sub_inference_job, service, trial, model) 
+                in zip(sub_inference_jobs, services, trials, models)
             ]
         }
 
@@ -486,9 +527,12 @@ class Admin(object):
         ]
 
     def stop_all_inference_jobs(self):
-        inference_jobs = self._meta_store.get_inference_jobs_by_status(InferenceJobStatus.RUNNING)
+        inference_jobs = self._meta_store.get_inference_jobs_by_statuses(
+            [InferenceJobStatus.STARTED, InferenceJobStatus.RUNNING, InferenceJobStatus.ERRORED]
+        )
         for inference_job in inference_jobs:
             self._services_manager.stop_inference_services(inference_job.id)
+            self.refresh_inference_job_status(inference_job.id)
             
         return [
             {
@@ -496,6 +540,83 @@ class Admin(object):
             }
             for inference_job in inference_jobs
         ]
+
+    def refresh_inference_job_status(self, inference_job_id):
+        inference_job = self._meta_store.get_inference_job(inference_job_id)
+        sub_inference_jobs = self._meta_store.get_sub_inference_jobs_of_inference_job(inference_job.id)
+        services = [self._meta_store.get_service(x.service_id) for x in sub_inference_jobs]
+        predictor_service = self._meta_store.get_service(inference_job.predictor_service_id)
+
+        count = {
+            ServiceStatus.STARTED: 0,
+            ServiceStatus.DEPLOYING: 0,
+            ServiceStatus.RUNNING: 0,
+            ServiceStatus.ERRORED: 0,
+            ServiceStatus.STOPPED: 0
+        }
+
+        for service in services:
+            # `None` service means error in deployment
+            if service is None:
+                count[ServiceStatus.ERRORED] += 1
+                continue
+
+            count[service.status] += 1
+
+        # If predictor is errored or any sub inference jobs is errored, errored
+        if predictor_service is None or predictor_service.status == ServiceStatus.ERRORED or \
+           count[ServiceStatus.ERRORED] > 0:
+           self._meta_store.mark_inference_job_as_errored(inference_job)
+
+        # If all inference jobs are either stopped, stopped
+        elif count[ServiceStatus.STOPPED] == len(sub_inference_jobs):
+            self._meta_store.mark_inference_job_as_stopped(inference_job)
+        
+        # If predictor is running and at least 1 sub inference job is running, running
+        if predictor_service.status == ServiceStatus.RUNNING or \
+            count[ServiceStatus.RUNNING] > 0:
+            self._meta_store.mark_inference_job_as_running(inference_job)
+
+    ####################################
+    # Events
+    ####################################
+
+    def handle_event(self, name, **params):
+        event_to_method = {
+            'sub_train_job_budget_reached': self._on_sub_train_job_budget_reached,
+            'sub_train_job_worker_started': self._on_sub_train_job_worker_started,
+            'sub_train_job_worker_stopped': self._on_sub_train_job_worker_stopped,
+            'sub_inference_job_worker_started': self._on_sub_inference_job_worker_started,
+            'sub_inference_job_worker_stopped': self._on_sub_inference_job_worker_stopped,
+            'inference_job_predictor_started': self._on_sub_inference_job_worker_stopped
+        }
+
+        if name in event_to_method:
+            event_to_method[name](**params)
+        else:
+            logger.log('Unknown event: "{}"'.format(name))
+
+    def _on_sub_train_job_budget_reached(self, sub_train_job_id):
+        self.stop_sub_train_job(sub_train_job_id)
+
+    def _on_sub_train_job_worker_started(self, sub_train_job_id):
+        sub_train_job = self._meta_store.get_sub_train_job(sub_train_job_id)
+        self.refresh_train_job_status(sub_train_job.train_job_id)
+
+    def _on_sub_train_job_worker_stopped(self, sub_train_job_id):
+        sub_train_job = self._meta_store.get_sub_train_job(sub_train_job_id)
+        self.refresh_train_job_status(sub_train_job.train_job_id)
+    
+    def _on_sub_inference_job_worker_started(self, sub_inference_job_id):
+        sub_inference_job = self._meta_store.get_sub_train_job(sub_inference_job_id)
+        self.refresh_inference_job_status(sub_inference_job.inference_job_id)
+
+    def _on_sub_inference_job_worker_stopped(self, sub_inference_job_id):
+        sub_inference_job = self._meta_store.get_sub_train_job(sub_inference_job_id)
+        self.refresh_inference_job_status(sub_inference_job.inference_job_id)
+
+    def _on_inference_job_predictor_started(self, inference_job_id):
+        self.refresh_inference_job_status(inference_job_id)
 
     ####################################
     # Models
@@ -615,47 +736,6 @@ class Admin(object):
         user = self._meta_store.create_user(email, password_hash, user_type)
         self._meta_store.commit()
         return user
-
-    ####################################
-    # Private / Train Job
-    ####################################
-
-    # Returns (status, datetime_started, datetime_stopped)
-    def _get_train_job_status(self, train_job):
-        sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(train_job.id)
-
-        count = {
-            TrainJobStatus.STARTED: 0,
-            TrainJobStatus.RUNNING: 0,
-            TrainJobStatus.STOPPED: 0
-        }
-
-        datetime_started = None
-        datetime_stopped = None
-        for sub_train_job in sub_train_jobs:
-            count[sub_train_job.status] += 1
-            if sub_train_job.datetime_started is not None and \
-                (datetime_started is None or datetime_started < sub_train_job.datetime_started):
-                datetime_started = sub_train_job.datetime_started
-
-            if sub_train_job.datetime_stopped is not None and \
-                (datetime_stopped is None or datetime_stopped > sub_train_job.datetime_stopped):
-                datetime_stopped = sub_train_job.datetime_stopped
-
-        # Determine status of train job based on sub-jobs
-        if count[TrainJobStatus.STOPPED] == len(sub_train_jobs):
-            return (TrainJobStatus.STOPPED, datetime_started, datetime_stopped)
-        elif count[TrainJobStatus.STARTED] == len(sub_train_jobs):
-            return (TrainJobStatus.STARTED, datetime_started, None)
-        else:
-            return (TrainJobStatus.RUNNING, datetime_started, None)
-
-    def _get_workers_of_train_job(self, train_job):
-        workers = []
-        sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(train_job.id)
-        for sub_train_job in sub_train_jobs:
-            workers += self._meta_store.get_workers_of_sub_train_job(sub_train_job.id)
-        return workers
 
     ####################################
     # Private / Services

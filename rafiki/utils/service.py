@@ -15,12 +15,6 @@ def run_service(meta_store, start_service, end_service):
 
     def _sigterm_handler(_signo, _stack_frame):
         logger.warn("Terminal signal received: %s, %s" % (_signo, _stack_frame))
-
-        # Mark service as stopped in DB
-        with meta_store:
-            service = meta_store.get_service(service_id)
-            meta_store.mark_service_as_stopped(service)
-
         end_service(service_id, service_type)
         exit(0)
 
@@ -33,21 +27,16 @@ def run_service(meta_store, start_service, end_service):
         meta_store.mark_service_as_running(service)
 
     try:
-        logger.info('Starting service {}...'.format(service_id))
+        logger.info('Starting worker {}...'.format(service_id))
 
         start_service(service_id, service_type)
 
-        logger.info('Ending service {}...'.format(service_id))
-
-        # Mark service as stopped in DB
-        with meta_store:
-            service = meta_store.get_service(service_id)
-            meta_store.mark_service_as_stopped(service)
+        logger.info('Ending worker {}...'.format(service_id))
 
         end_service(service_id, service_type)
 
     except Exception as e:
-        logger.error('Error while running service:')
+        logger.error('Error while running worker:')
         logger.error(traceback.format_exc())
 
         # Mark service as errored in DB

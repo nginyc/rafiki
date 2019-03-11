@@ -6,16 +6,25 @@ import pickle
 import logging
 import traceback
 import json
+from collections import namedtuple
 
+from rafiki.utils.auth import make_superadmin_client
 from rafiki.model import load_model_class
 from rafiki.meta_store import MetaStore
-from rafiki.param_store import ParamStore
 from rafiki.cache import Cache
 from rafiki.config import INFERENCE_WORKER_SLEEP, INFERENCE_WORKER_PREDICT_BATCH_SIZE
 
 logger = logging.getLogger(__name__)
 
-class InvalidWorkerException(Exception): pass
+class InvalidInferenceJobError(Exception): pass
+class InvalidSubInferenceJobError(Exception): pass
+class InvalidTrialError(Exception): pass
+class InvalidModelError(Exception): pass
+
+_SubInferenceJob = namedtuple('_SubInferenceJob', ['id'])
+_InferenceJob = namedtuple('_InferenceJob', ['id'])
+_Trial = namedtuple('_Trial', ['knobs', 'params_dir']) 
+_Model = namedtuple('_Model', ['id', 'model_file_bytes', 'model_class']) 
 
 class InferenceWorker(object):
     def __init__(self, service_id, cache=None, meta_store=None, param_store=None):
@@ -25,26 +34,23 @@ class InferenceWorker(object):
         if meta_store is None: 
             meta_store = MetaStore()
 
-        if param_store is None: 
-            param_store = ParamStore()
-
         self._cache = cache
         self._meta_store = meta_store
         self._param_store = param_store
         self._service_id = service_id
         self._model = None
+        self._client = make_superadmin_client()
         
     def start(self):
-        logger.info('Starting inference worker for service of id {}...' \
-            .format(self._service_id))
-        
-        with self._meta_store:
-            (inference_job_id, trial_id) = self._read_worker_info()
+        (sub_inference_job, inference_job, trial, model) = self._read_worker_info()
+        self._sub_inference_job_id = sub_inference_job.id
+        self._inference_job_id = inference_job.id
+        logger.info('Worker is for sub inference job of ID "{}"'.format(sub_inference_job.id))
+        self._client.send_event('sub_inference_job_worker_started', sub_inference_job_id=self._sub_inference_job_id)
 
-            # Add to inference job's set of running workers
-            self._cache.add_worker_of_inference_job(self._service_id, inference_job_id)
-
-            self._model = self._load_model(trial_id)
+        # Add to inference job's set of running workers
+        self._cache.add_worker_of_inference_job(self._service_id, self._inference_job_id)
+        self._model = self._load_model(trial, model)
 
         while True:
             (query_ids, queries) = \
@@ -71,40 +77,45 @@ class InferenceWorker(object):
             time.sleep(INFERENCE_WORKER_SLEEP)
 
     def stop(self):
-        with self._meta_store:
-            (inference_job_id, _) = self._read_worker_info()
-
         # Remove from inference job's set of running workers
-        self._cache.delete_worker_of_inference_job(self._service_id, inference_job_id)
+        self._cache.delete_worker_of_inference_job(self._service_id, self._inference_job_id)
+        self._client.send_event('sub_inference_job_worker_stopped', sub_inference_job_id=self._sub_inference_job_id)
 
-        if self._model is not None:
-            self._model.destroy()
-            self._model = None
-
-    def _load_model(self, trial_id):
-        trial = self._meta_store.get_trial(trial_id)
-        sub_train_job = self._meta_store.get_sub_train_job(trial.sub_train_job_id)
-        model = self._meta_store.get_model(sub_train_job.model_id)
-
-        # Load model based on trial
+    def _load_model(self, trial: _Trial, model: _Model):
+        logger.info('Loading model class...')
         clazz = load_model_class(model.model_file_bytes, model.model_class)
-        model_inst = clazz(**trial.knobs)
 
-        # Load parameters from store, unpickle and load it in model
-        parameters = self._param_store.get_params(trial.param_id)
-        parameters = pickle.loads(parameters)
-        model_inst.load_parameters(parameters)
+        logger.info('Running model class setup...')
+        clazz.setup()
+
+        logger.info('Loading trained model...')
+        model_inst = clazz(**trial.knobs)
+        model_inst.load_parameters(trial.params_dir)
 
         return model_inst
 
     def _read_worker_info(self):
-        worker = self._meta_store.get_inference_job_worker(self._service_id)
-        inference_job = self._meta_store.get_inference_job(worker.inference_job_id)
+        logger.info('Reading info for worker...')
+        with self._meta_store:
+            sub_inference_job = self._meta_store.get_sub_inference_job_by_service(self._service_id)
+            if sub_inference_job is None:
+                raise InvalidSubInferenceJobError()
 
-        if worker is None:
-            raise InvalidWorkerException()
+            inference_job = self._meta_store.get_inference_job(sub_inference_job.inference_job_id)
+            if inference_job is None:
+                raise InvalidInferenceJobError()
 
-        return (
-            inference_job.id,
-            worker.trial_id
-        )
+            trial = self._meta_store.get_trial(sub_inference_job.trial_id)
+            if trial is None or trial.params_dir is None: # Must have model saved
+                raise InvalidTrialError()
+            
+            model = self._meta_store.get_model(trial.model_id)
+            if model is None:
+                raise InvalidModelError()
+
+            return (
+                _SubInferenceJob(sub_inference_job.id),
+                _InferenceJob(inference_job.id),
+                _Trial(trial.knobs, trial.params_dir),
+                _Model(model.id, model.model_file_bytes, model.model_class)
+            )

@@ -3,6 +3,7 @@ import json
 import logging
 import pickle
 
+from rafiki.utils.auth import make_superadmin_client
 from rafiki.cache import Cache
 from rafiki.meta_store import MetaStore
 from rafiki.config import PREDICTOR_PREDICT_SLEEP
@@ -22,11 +23,11 @@ class Predictor(object):
         self._service_id = service_id
         self._meta_store = meta_store
         self._cache = cache
+        self._client = make_superadmin_client()
 
     def start(self):
-        with self._meta_store:
-            (self._inference_job_id, self._task) \
-                = self._read_predictor_info()
+        (self._inference_job_id, self._task) = self._read_predictor_info()
+        self._client.send_event('inference_job_predictor_started', inference_job_id=self._inference_job_id })
 
     def predict(self, query):
         logger.info('Received query:')
@@ -74,13 +75,14 @@ class Predictor(object):
         }
 
     def _read_predictor_info(self):
-        inference_job = self._meta_store.get_inference_job_by_predictor(self._service_id)
-        train_job = self._meta_store.get_train_job(inference_job.train_job_id)
+        with self._meta_store:
+            inference_job = self._meta_store.get_inference_job_by_predictor(self._service_id)
+            train_job = self._meta_store.get_train_job(inference_job.train_job_id)
 
-        return (
-            inference_job.id,
-            train_job.task
-        )
+            return (
+                inference_job.id,
+                train_job.task
+            )
 
     def predict_batch(self, queries):
         #TODO: implement method

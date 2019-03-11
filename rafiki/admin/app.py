@@ -143,15 +143,6 @@ def get_trials_of_train_job(auth, app, app_version):
                 **params)
             )
 
-@app.route('/sub_train_jobs/<sub_train_job_id>/stop', methods=['POST'])
-@auth([])
-def stop_sub_train_job(auth, sub_train_job_id):
-    admin = get_admin()
-    params = get_request_params()
-
-    with admin:
-        return jsonify(admin.stop_sub_train_job(sub_train_job_id, **params))
-
 ####################################
 # Trials
 ####################################
@@ -303,7 +294,7 @@ def get_models(auth):
 ####################################
 
 @app.route('/actions/stop_all_jobs', methods=['POST'])
-@auth([UserType.ADMIN])
+@auth([UserType.SUPERADMIN])
 def stop_all_jobs(auth):
     admin = get_admin()
 
@@ -314,7 +305,19 @@ def stop_all_jobs(auth):
             'train_jobs': train_jobs,
             'inference_jobs': inference_jobs
         })
-    
+
+####################################
+# Internal Events
+####################################
+
+@app.route('/event/<name>', methods=['POST'])
+@auth([])
+def handle_event(auth, name):
+    admin = get_admin()
+    params = get_request_params()
+    with admin:
+        return jsonify(admin.handle_event(name, **params))
+
 # Handle uncaught exceptions with a server error & the error's stack trace (for development)
 @app.errorhandler(Exception)
 def handle_error(error):

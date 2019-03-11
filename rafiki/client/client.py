@@ -21,7 +21,7 @@ class Client(object):
     :param int advisor_port: Port of Rafiki Advisor
     '''
     def __init__(self, admin_host='localhost', admin_port=3000,
-                advisor_host='localhost', advisor_port=3002):
+                    advisor_host='localhost', advisor_port=3002):
         self._admin_host = admin_host
         self._admin_port = admin_port
         self._advisor_host = advisor_host
@@ -384,11 +384,6 @@ class Client(object):
         data = self._post('/train_jobs/{}/{}/stop'.format(app, app_version))
         return data
 
-    # - INTERNAL METHOD -
-    def stop_sub_train_job(self, sub_train_job_id):
-        data = self._post('/sub_train_job/{}/stop'.format(sub_train_job_id))
-        return data
-
     ####################################
     # Trials
     ####################################
@@ -588,16 +583,24 @@ class Client(object):
         return data
 
     ####################################
-    # Administrative Actions
+    # Administrative
     ####################################
 
     def stop_all_jobs(self):
         '''
         Stops all train and inference jobs on Rafiki. 
 
-        Only admins can call this.
+        Only the superadmin can call this.
         '''
         data = self._post('/actions/stop_all_jobs')
+        return data
+
+    ####################################
+    # Internal
+    ####################################
+    
+    def send_event(self, name, **params):
+        data = self._post('/event/{}'.format(name), json=params)
         return data
 
     ####################################

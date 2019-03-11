@@ -30,6 +30,7 @@ docker run --rm --name $ADMIN_HOST \
   -e DATA_DIR_PATH=$DATA_DIR_PATH \
   -e PARAMS_DIR_PATH=$PARAMS_DIR_PATH \
   -e LOGS_DIR_PATH=$LOGS_DIR_PATH \
+  -e APP_MODE=$APP_MODE \
   -v /var/run/docker.sock:/var/run/docker.sock \
   $VOLUME_MOUNTS \
   -p $ADMIN_EXT_PORT:$ADMIN_PORT \

@@ -1,4 +1,2 @@
 from .advisor import Advisor, UnsupportedKnobTypeError
-from .knob import BaseKnob, CategoricalKnob, IntegerKnob, FloatKnob, FixedKnob, ListKnob, \
-                    DynamicListKnob, Metadata, MetadataKnob, \
-                    serialize_knob_config, deserialize_knob_config
+from .utils import test_model_class, tune_model, InvalidModelClassException

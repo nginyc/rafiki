@@ -15,11 +15,11 @@ def start_service(service_id, service_type):
     global worker
 
     if service_type == ServiceType.TRAIN:
-        from rafiki.worker import TrainWorker
+        from rafiki.worker.train import TrainWorker
         worker = TrainWorker(service_id)
         worker.start()
     elif service_type == ServiceType.INFERENCE:
-        from rafiki.worker import InferenceWorker
+        from rafiki.worker.inference import InferenceWorker
         worker = InferenceWorker(service_id)
         worker.start()
     else:

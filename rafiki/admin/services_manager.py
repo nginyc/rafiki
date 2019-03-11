@@ -46,6 +46,7 @@ class ServicesManager(object):
         self._predictor_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_PREDICTOR'],
                                                 os.environ['RAFIKI_VERSION'])
         self._predictor_port = os.environ['PREDICTOR_PORT']
+        self._app_mode = os.environ['APP_MODE']
         self._rafiki_addr = os.environ['RAFIKI_ADDR']
 
         self._meta_store = meta_store
@@ -53,40 +54,29 @@ class ServicesManager(object):
 
     def create_inference_services(self, inference_job_id):
         inference_job = self._meta_store.get_inference_job(inference_job_id)
+        sub_train_jobs = self._meta_store.get_sub_inference_jobs_of_inference_job(inference_job_id)
 
-        # Prepare all inputs for inference job deployment
-        # Throws error early to make service deployment more atomic
-        best_trials = self._get_best_trials_for_inference(inference_job)
-        trial_to_replicas = self._compute_inference_worker_replicas_for_trials(best_trials)
+        services_to_wait = []
 
-        try:
-            # Create predictor
-            predictor_service = self._create_predictor_service(inference_job)
-            self._meta_store.update_inference_job(inference_job, predictor_service_id=predictor_service.id)
+        # Create a worker service for each sub inference job, wait for them to be running, and associate service to job
+        job_to_replicas = self._compute_inference_worker_replicas_for_sub_inference_jobs(sub_train_jobs)
+        for (sub_inference_job, replicas) in job_to_replicas.items():
+            service = self._create_sub_inference_job_service(inference_job, sub_inference_job, replicas)
+            self._meta_store.update_sub_inference_job(sub_inference_job, service_id=service.id)
             self._meta_store.commit()
+            services_to_wait.append(service)
 
-            # Create a worker service for each best trial of associated train job
-            worker_services = []
-            for (trial, replicas) in trial_to_replicas.items():
-                service = self._create_inference_job_worker(inference_job, trial, replicas)
-                worker_services.append(service)
-                self._meta_store.commit()
+        # Create predictor for inference job
+        predictor_service = self._create_predictor_service(inference_job)
+        self._meta_store.update_inference_job(inference_job, predictor_service_id=predictor_service.id)
+        self._meta_store.commit()
+        services_to_wait.append(predictor_service)
 
-            # Ensure that all services are running
-            self._wait_until_services_running([predictor_service, *worker_services])
+        # Wait for services to return 
+        self._wait_until_services_running(services_to_wait)
 
-            # Mark inference job as running
-            self._meta_store.mark_inference_job_as_running(inference_job)
-            self._meta_store.commit()
+        return (inference_job, predictor_service)
 
-            return (inference_job, predictor_service)
-
-        except Exception as e:
-            # Mark inference job as errored
-            self._meta_store.mark_inference_job_as_errored(inference_job)
-            self._meta_store.commit()
-            raise e
-        
     def stop_inference_services(self, inference_job_id):
         inference_job = self._meta_store.get_inference_job(inference_job_id)
         
@@ -95,13 +85,10 @@ class ServicesManager(object):
         self._stop_service(service)
 
         # Stop all workers for inference job
-        workers = self._meta_store.get_workers_of_inference_job(inference_job_id)
-        for worker in workers:
-            service = self._meta_store.get_service(worker.service_id)
+        sub_inference_jobs = self._meta_store.get_sub_inference_jobs_of_inference_job(inference_job_id)
+        for sub_inference_job in sub_inference_jobs:
+            service = self._meta_store.get_service(sub_inference_job.service_id)
             self._stop_service(service)
-
-        self._meta_store.mark_inference_job_as_stopped(inference_job)
-        self._meta_store.commit()
 
         return inference_job
 
@@ -109,17 +96,13 @@ class ServicesManager(object):
         train_job = self._meta_store.get_train_job(train_job_id)
         sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(train_job_id)
         
-        # Create a worker service for each sub train job, wait for them to be running, then mark them as running
+        # Create a worker service for each sub train job, wait for them to be running, and associate service to job
         sub_train_job_to_replicas = self._compute_train_worker_replicas_for_sub_train_jobs(sub_train_jobs)
         for (sub_train_job, replicas) in sub_train_job_to_replicas.items():
-            try:
-                service = self._create_sub_train_job_service(train_job, sub_train_job, replicas)
-                self._wait_until_services_running([service])
-                self._meta_store.mark_sub_train_job_as_running(sub_train_job)
-                self._meta_store.commit()
-            except InvalidServiceRequest:
-                self._meta_store.mark_sub_train_job_as_stopped(sub_train_job)
-                self._meta_store.commit()
+            service = self._create_sub_train_job_service(train_job, sub_train_job, replicas)
+            self._meta_store.update_sub_train_job(sub_train_job, service_id=service.id)
+            self._meta_store.commit()
+            self._wait_until_services_running([service])
 
         return train_job
 
@@ -129,23 +112,24 @@ class ServicesManager(object):
         # Stop all workers for train job
         sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(train_job_id)
         for sub_train_job in sub_train_jobs:
-            self._stop_sub_train_job_service(sub_train_job)
+            self.stop_sub_train_job_services(sub_train_job.id)
 
         return train_job
         
-    def stop_sub_train_job(self, sub_train_job_id):
+    def stop_sub_train_job_services(self, sub_train_job_id):
         sub_train_job = self._meta_store.get_sub_train_job(sub_train_job_id)
-        self._stop_sub_train_job_service(sub_train_job)
-
+        service = self._meta_store.get_service(sub_train_job.service_id)
+        self._stop_service(service)
         return sub_train_job
 
     ####################################
     # Private
     ####################################
 
-    def _create_inference_job_worker(self, inference_job, trial, replicas):
-        sub_train_job = self._meta_store.get_sub_train_job(trial.sub_train_job_id)
-        model = self._meta_store.get_model(sub_train_job.model_id)
+    def _create_sub_inference_job_service(self, inference_job, sub_inference_job, replicas):
+        trial = self._meta_store.get_trial(sub_inference_job.trial_id)
+        model = self._meta_store.get_model(trial.model_id)
+
         service_type = ServiceType.INFERENCE
         install_command = parse_model_install_command(model.dependencies, enable_gpu=False)
         environment_vars = {
@@ -159,13 +143,6 @@ class ServicesManager(object):
             replicas=replicas,
             environment_vars=environment_vars
         )
-
-        self._meta_store.create_inference_job_worker(
-            service_id=service.id,
-            inference_job_id=inference_job.id,
-            trial_id=trial.id
-        )
-        self._meta_store.commit()
 
         return service
 
@@ -185,6 +162,7 @@ class ServicesManager(object):
 
     def _create_sub_train_job_service(self, train_job, sub_train_job, replicas):
         model = self._meta_store.get_model(sub_train_job.model_id)
+
         service_type = ServiceType.TRAIN
         enable_gpu = int(train_job.budget.get(BudgetType.ENABLE_GPU, 0)) > 0
         install_command = parse_model_install_command(model.dependencies, enable_gpu=enable_gpu)
@@ -206,12 +184,6 @@ class ServicesManager(object):
         )
 
         return service
-
-    def _stop_sub_train_job_service(self, sub_train_job):
-        service = self._meta_store.get_service(sub_train_job.service_id)
-        self._stop_service(service)
-        self._meta_store.mark_sub_train_job_as_stopped(sub_train_job)
-        self._meta_store.commit()
 
     def _stop_service(self, service):
         if service.container_service_id is not None:
@@ -260,15 +232,21 @@ class ServicesManager(object):
             'WORKDIR_PATH': self._docker_workdir_path
         }
 
-        # Mount data and logs folders to containers' work directories
-        mounts = {
-            os.path.join(self._host_workdir_path, self._data_dir_path): 
-                os.path.join(self._docker_workdir_path, self._data_dir_path),
-            os.path.join(self._host_workdir_path, self._logs_dir_path): 
-                os.path.join(self._docker_workdir_path, self._logs_dir_path),
-            os.path.join(self._host_workdir_path, self._params_dir_path): 
-                os.path.join(self._docker_workdir_path, self._params_dir_path)
-        }
+        if self._app_mode == 'DEV':
+            # Mount whole root directory
+            mounts = {
+                self._host_workdir_path: self._docker_workdir_path
+            }
+        else:
+            # Mount only data, logs and params folders to containers' work directories
+            mounts = {
+                os.path.join(self._host_workdir_path, self._data_dir_path): 
+                    os.path.join(self._docker_workdir_path, self._data_dir_path),
+                os.path.join(self._host_workdir_path, self._logs_dir_path): 
+                    os.path.join(self._docker_workdir_path, self._logs_dir_path),
+                os.path.join(self._host_workdir_path, self._params_dir_path): 
+                    os.path.join(self._docker_workdir_path, self._params_dir_path)
+            }
 
         # Expose container port if it exists
         publish_port = None
@@ -323,10 +301,6 @@ class ServicesManager(object):
             s.bind(('', 0))
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             return s.getsockname()[1]
-    
-    def _get_best_trials_for_inference(self, inference_job):
-        best_trials = self._meta_store.get_best_trials_of_train_job(inference_job.train_job_id)
-        return best_trials
 
     def _compute_train_worker_replicas_for_sub_train_jobs(self, sub_train_jobs):
         # TODO: Improve provisioning algorithm
@@ -335,11 +309,11 @@ class ServicesManager(object):
             for sub_train_job in sub_train_jobs
         }
 
-    def _compute_inference_worker_replicas_for_trials(self, trials):
+    def _compute_inference_worker_replicas_for_sub_inference_jobs(self, sub_inference_jobs):
         # TODO: Improve provisioning algorithm
         return {
-            trial : INFERENCE_WORKER_REPLICAS_PER_TRIAL
-            for trial in trials
+            sub_inference_job : INFERENCE_WORKER_REPLICAS_PER_TRIAL
+            for sub_inference_job in sub_inference_jobs
         }
 
     

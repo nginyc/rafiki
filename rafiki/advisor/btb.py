@@ -1,7 +1,8 @@
 import btb
 
+from rafiki.model import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob
+
 from .advisor import BaseKnobAdvisor, UnsupportedKnobTypeError
-from .knob import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob
 
 class BtbGpKnobAdvisor(BaseKnobAdvisor):
     '''
