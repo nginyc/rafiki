@@ -286,9 +286,8 @@ class TfEnasTrain(BaseModel):
             model_params_count = self._count_model_parameters()
             utils.logger.log('Model has {} parameters'.format(model_params_count))
 
-            # Make summaries for monitored values
-            monitored_values = tf.get_collection(self.TF_COLLECTION_MONITORED)
-            summary_op = self._add_summaries_for_values(monitored_values)
+            # Monitor values
+            (summary_op, monitored_values) = self._add_monitoring_of_values()
 
             # Add saver
             saver = tf.train.Saver(tf_vars)
@@ -474,13 +473,17 @@ class TfEnasTrain(BaseModel):
         log_every_secs = self._knobs['log_every_secs']
         m = self._model
 
+        # Define plots for monitored values
+        for (name, _) in self._monitored_values.items():
+            utils.logger.define_plot('"{}" Over Time'.format(name), [name])
+
         train_summaries = [] # List of (<steps>, <summary>) collected during training
 
         last_log_time = datetime.now()
         for trial_epoch in range(num_epochs):
             epoch = initial_epoch + trial_epoch
             utils.logger.log('Running epoch {} (trial epoch {})...'.format(epoch, trial_epoch))
-            stepper = self._feed_dataset_to_model(epoch, images, [m.train_op, m.summary_op, m.acc, m.steps, *self._monitored_values], 
+            stepper = self._feed_dataset_to_model(epoch, images, [m.train_op, m.summary_op, m.acc, m.steps, *self._monitored_values.values()], 
                                                 is_train=True, classes=classes)
 
             # To track mean batch accuracy
@@ -492,7 +495,7 @@ class TfEnasTrain(BaseModel):
                 # Periodically, log monitored values
                 if (datetime.now() - last_log_time).total_seconds() >= log_every_secs:
                     last_log_time = datetime.now()
-                    utils.logger.log(steps=batch_steps, **{ value.name: v for (value, v) in zip(self._monitored_values, values) })
+                    utils.logger.log(steps=batch_steps, **{ value.name: v for (value, v) in zip(self._monitored_values.keys(), values) })
 
             # Log mean batch accuracy and epoch
             mean_acc = np.mean(accs)
@@ -944,12 +947,19 @@ class TfEnasTrain(BaseModel):
     def _mark_for_monitoring(self, name, value):
         tf.add_to_collection(self.TF_COLLECTION_MONITORED, tf.identity(value, name))
 
-    def _add_summaries_for_values(self, values):
-        for value in values:
-            summary_name = value.name.split(':')[0] # Get rid of ':0'
-            tf.summary.scalar(summary_name, value)
+    def _add_monitoring_of_values(self):
+        monitored_values = tf.get_collection(self.TF_COLLECTION_MONITORED)
+        monitored_values = { 
+            value.name.split(':')[0]: value # Get rid of ':0' from name
+            for value in monitored_values
+        }
+
+        for (name, value) in monitored_values.items():
+            tf.summary.scalar(name, value)
+            
         summary_op = tf.summary.merge_all()
-        return summary_op
+
+        return (summary_op, monitored_values)
 
     def _make_var(self, name, shape, no_reg=False, initializer=None):
         if initializer is None:
@@ -1108,9 +1118,8 @@ class TfEnasSearch(TfEnasTrain):
             model_params_count = self._count_model_parameters()
             utils.logger.log('Model has {} parameters'.format(model_params_count))
 
-            # Make summaries for monitored values
-            monitored_values = tf.get_collection(self.TF_COLLECTION_MONITORED)
-            summary_op = self._add_summaries_for_values(monitored_values)
+            # Monitor values
+            (summary_op, monitored_values) = self._add_monitoring_of_values()
 
             # Add saver
             saver = tf.train.Saver(tf_vars)
