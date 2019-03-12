@@ -158,7 +158,9 @@ class TrainWorker(object):
         print('Trial score: {}'.format(score))
 
         # Get shared params
-        params = model_inst.get_shared_parameters()
+        params = model_inst.get_shared_parameters() or {}
+        if len(params) > 0:
+            logger.info('Trial produced {} shared parameters'.format(len(params)))
 
         # Maybe save model
         params_dir = None
