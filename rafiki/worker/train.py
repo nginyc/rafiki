@@ -182,6 +182,12 @@ class TrainWorker(object):
                 logger.info('Received proposal from advisor:')
                 logger.info(knobs)
                 logger.info('With {} params'.format(len(params)))
+
+            # Override knobs from sub train job config
+            if 'knobs' in sub_train_job.config:
+                config_knobs = sub_train_job.config['knobs']
+                logger.info('Overriding knobs with {} from sub train job\'s config...'.format(config_knobs))
+                knobs = { **knobs, **config_knobs }
             
             # Validate knobs 
             validated_knobs = clazz.validate_knobs(knobs)
@@ -192,12 +198,6 @@ class TrainWorker(object):
             
             knobs = validated_knobs
             break
-
-        # Override knobs from sub train job config
-        if 'knobs' in sub_train_job.config:
-            config_knobs = sub_train_job.config['knobs']
-            logger.info('Overriding knobs with {} from sub train job\'s config...'.format(config_knobs))
-            knobs = { **knobs, **config_knobs }
 
         # Load actual params from store
         logger.info('Retrieving shared params from store...')
