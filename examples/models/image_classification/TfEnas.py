@@ -929,19 +929,22 @@ class TfEnasTrain(BaseModel):
             moving_variance = tf.get_variable('moving_variance', (in_ch,), trainable=False, 
                                             initializer=tf.constant_initializer(1.0, dtype=tf.float32))
 
-            # For training, use moving average of mean & variance
+            # For training, do batch norm with batch mean & variance
+            # For prediction, do batch norm with computed moving mean & variance from training
+            (X_pred, _, _) =  tf.nn.fused_batch_norm(X, scale, offset, mean=moving_mean, variance=moving_variance,
+                                                    epsilon=epsilon, is_training=False)
             (X_train, mean, variance) = tf.nn.fused_batch_norm(X, scale, offset, epsilon=epsilon, is_training=True)
+
+            # Update moving averages if training
+            # Don't update moving averages if predicting
+            mean = tf.cond(is_train, lambda: mean, lambda: moving_mean)
+            variance = tf.cond(is_train, lambda: variance, lambda: moving_variance)
             update_mean = moving_averages.assign_moving_average(moving_mean, mean, decay)
             update_variance = moving_averages.assign_moving_average(moving_variance, variance, decay)
             with tf.control_dependencies([update_mean, update_variance]):
                 X_train = tf.identity(X_train)
-            
-            # For prediction, fix mean & variance as those from training
-            (X_pred, _, _) =  tf.nn.fused_batch_norm(X, scale, offset, 
-                                                mean=moving_mean, variance=moving_variance,
-                                                epsilon=epsilon, is_training=False)
-            
-            X = tf.cond(is_train, lambda: X_train, lambda: X_pred)
+
+            X = tf.cond(is_train, lambda: X_train, lambda: X_pred) 
             return X
     
     def _mark_for_monitoring(self, name, value):
