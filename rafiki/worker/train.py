@@ -185,18 +185,18 @@ class TrainWorker(object):
                 logger.info(knobs)
                 logger.info('With {} params'.format(len(params)))
 
-            # Override knobs from sub train job config
-            if 'knobs' in sub_train_job.config:
-                config_knobs = sub_train_job.config['knobs']
-                logger.info('Overriding knobs with {} from sub train job\'s config...'.format(config_knobs))
-                knobs = { **knobs, **config_knobs }
-            
             # Validate knobs 
             validated_knobs = clazz.validate_knobs(knobs)
             if validated_knobs is None:
                 logger.info('Knobs failed validation')
                 (knobs, params) = self._feedback(advisor_id, sub_train_job, 0, knobs, {})
                 continue
+            
+            # Override knobs from sub train job config
+            if 'knobs' in sub_train_job.config:
+                config_knobs = sub_train_job.config['knobs']
+                logger.info('Overriding knobs with {} from sub train job\'s config...'.format(config_knobs))
+                knobs = { **knobs, **config_knobs }
             
             knobs = validated_knobs
             break

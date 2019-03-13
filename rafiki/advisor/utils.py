@@ -76,7 +76,6 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         # Get valid proposal from advisor
         while True:
             (knobs, params) = advisor.propose()
-            knobs = { **knobs, **knobs_from_args } # Override knobs from args
             validated_knobs = py_model_class.validate_knobs(knobs)
             if validated_knobs is None:
                 # Feedback to advisor that knobs are invalid with score of 0
@@ -85,6 +84,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
                 
             knobs = validated_knobs
             break
+        knobs = { **knobs, **knobs_from_args } # Override knobs from args
         print('Advisor proposed knobs:', knobs)
 
         # Retrieve params from store
