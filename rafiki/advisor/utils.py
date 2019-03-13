@@ -101,7 +101,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
 
         trial_params = model_inst.get_shared_parameters() or {}
         if len(trial_params) > 0:
-            print('Trial produced {} shared parameters'.format(len(trial_params)))
+            print('Model produced {} shared parameters'.format(len(trial_params)))
 
         # Evaluate model
         print('Evaluating model...')

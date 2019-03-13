@@ -1047,17 +1047,18 @@ class TfEnasSearch(TfEnasTrain):
                 utils.logger.log('Skipping training...')
         
     def get_shared_parameters(self):
-        return self._get_shareable_vars()
+        with self._graph.as_default():
+            return self._get_shared_vars()
 
-    def _get_shareable_vars(self):
+    def _get_shared_vars(self):
         shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
         values = self._sess.run(shareable_tf_vars)
-        shareable_vars = {
+        shared_vars = {
             tf_var.name: value
             for (tf_var, value)
             in zip(shareable_tf_vars, values)
         }
-        return shareable_vars
+        return shared_vars
 
     def _load_shared_vars(self, shared_vars):
         m = self._model
