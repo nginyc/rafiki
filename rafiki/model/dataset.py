@@ -85,6 +85,9 @@ class DatasetUtils():
         if len(images) == 0:
             return images
 
+        # Convert to [0, 1]
+        images = np.asarray(images) / 255
+
         if mean is None:
             mean = np.mean(images, axis=(0, 1, 2)).tolist() # shape = (channels,)
         if std is None:

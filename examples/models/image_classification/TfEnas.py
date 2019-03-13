@@ -402,6 +402,10 @@ class TfEnasTrain(BaseModel):
                     lambda: tf.cast(keep_prob, tf.float32), 
                     lambda: tf.constant(1, dtype=tf.float32))
 
+        # Monitor last layer's keep prob
+        if layers_ratio == 1:
+            self._mark_for_monitoring('drop_path_keep_prob', keep_prob)
+
         return keep_prob
 
     def _get_learning_rate(self, step):
