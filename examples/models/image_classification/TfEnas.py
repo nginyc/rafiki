@@ -5,6 +5,7 @@ from tensorflow.python.client import device_lib
 from tensorflow.python.training import moving_averages
 import json
 import os
+import math
 import tempfile
 from datetime import datetime
 from collections import namedtuple
@@ -17,7 +18,7 @@ from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKn
                             FixedKnob, ListKnob, Metadata, MetadataKnob
 
 _Model = namedtuple('_Model', ['init_op', 'train_op', 'summary_op', 'images_ph', 'classes_ph', 'is_train_ph', 
-        'epoch_ph', 'probs', 'acc', 'steps', 'normal_arch_ph', 'reduction_arch_ph', 
+        'probs', 'acc', 'step', 'normal_arch_ph', 'reduction_arch_ph', 
         'shared_params_phs', 'shared_params_assign_op'])
 
 _ModelMemo = namedtuple('_ModelMemo', ['train_params', 'knobs', 'graph', 'sess', 'saver', 
@@ -87,54 +88,6 @@ class TfEnasTrain(BaseModel):
             'cell_archs': ListKnob(2 * cell_num_blocks * 4, lambda i: cell_arch_item(i)),
             'use_cell_arch_type': FixedKnob('') # '' | 'ENAS' | 'NASNET-A'
         }
-
-    @staticmethod
-    def validate_knobs(knobs):
-        use_cell_arch_type = knobs['use_cell_arch_type']
-        cell_archs = knobs['cell_archs']
-        
-        # Use fixed architectures if specified
-        if use_cell_arch_type:
-            if use_cell_arch_type == 'ENAS':
-                cell_archs = [
-                    # Normal
-                    0, 2, 0, 0, 
-                    0, 4, 0, 1, 
-                    0, 4, 1, 1, 
-                    1, 0, 0, 1, 
-                    0, 2, 1, 1,
-                    # Reduction
-                    1, 0, 1, 0,
-                    0, 3, 0, 2,
-                    1, 1, 3, 1,
-                    1, 0, 0, 4,
-                    0, 3, 1, 1
-                ]
-            elif use_cell_arch_type == 'NASNET-A':
-                cell_archs = [
-                     # Normal
-                    1, 0, 1, 4,
-                    0, 0, 1, 1,
-                    1, 2, 0, 4,
-                    0, 2, 0, 2,
-                    0, 1, 0, 0,
-                    # Reduction
-                    0, 5, 1, 1,
-                    1, 3, 0, 5,
-                    1, 2, 0, 1,
-                    1, 3, 2, 1,
-                    2, 2, 3, 4
-                ]
-            else:
-                # Invalid cell architecture type
-                return None
-
-        knobs = {
-            **knobs,
-            'cell_archs': cell_archs
-        }
-        
-        return knobs
 
     @staticmethod
     def setup():
@@ -240,6 +193,7 @@ class TfEnasTrain(BaseModel):
         if train_params is None:
             (images, norm_mean, norm_std) = utils.dataset.normalize_images(images)
             train_params = {
+                'N': dataset.size,
                 'image_size': dataset.image_size,
                 'K': dataset.classes,
                 'norm_mean': norm_mean,
@@ -268,11 +222,13 @@ class TfEnasTrain(BaseModel):
             images_ph = tf.placeholder(tf.int8, name='images_ph', shape=(None, w, h, in_ch)) # Images
             classes_ph = tf.placeholder(tf.int32, name='classes_ph', shape=(None,)) # Classes
             is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=()) # Are we training or predicting?
-            epoch_ph = tf.placeholder(tf.int32, name='epoch_ph', shape=()) # Current epoch
+
+            # Initialize steps variable
+            step = tf.Variable(0, name='step', dtype=tf.int32, trainable=False)
 
             # Preprocess & do inference
             (X, classes, init_op) = self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
-            (probs, preds, logits, aux_logits_list) = self._inference(X, epoch_ph, normal_arch, reduction_arch, is_train_ph)
+            (probs, preds, logits, aux_logits_list) = self._inference(X, step, normal_arch, reduction_arch, is_train_ph)
             
             # Compute training loss & accuracy
             tf_vars = self._get_all_variables()
@@ -280,7 +236,7 @@ class TfEnasTrain(BaseModel):
             acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
             # Optimize training loss
-            (train_op, steps) = self._optimize(total_loss, tf_vars, epoch_ph)
+            train_op = self._optimize(total_loss, tf_vars, step)
 
             # Count model parameters
             model_params_count = self._count_model_parameters()
@@ -295,12 +251,12 @@ class TfEnasTrain(BaseModel):
             # Make session
             sess = self._make_session()
 
-        model = _Model(init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, epoch_ph, 
-                    probs, acc, steps, None, None, None, None)
+        model = _Model(init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, 
+                    probs, acc, step, None, None, None, None)
 
         return (model, graph, sess, saver, monitored_values)
 
-    def _inference(self, X, epochs, normal_arch, reduction_arch, is_train):
+    def _inference(self, X, step, normal_arch, reduction_arch, is_train):
         K = self._train_params['K'] # No. of classes
         in_ch = 3 # Num channels of input images
         w = self._train_params['image_size'] # Initial input width
@@ -336,7 +292,7 @@ class TfEnasTrain(BaseModel):
             with tf.variable_scope('layer_{}'.format(l)):
                 layers_ratio = (l + 1) / (L + 2)
                 prev_layers = [layers[-2] if len(layers) > 1 else layers[-1], layers[-1]]
-                drop_path_keep_prob = self._get_drop_path_keep_prob(layers_ratio, epochs, is_train)
+                drop_path_keep_prob = self._get_drop_path_keep_prob(layers_ratio, step, is_train)
                 
                 # Either add a reduction cell or normal cell
                 if l in reduction_layers:
@@ -374,15 +330,12 @@ class TfEnasTrain(BaseModel):
         
         return (probs, preds, logits, aux_logits_list)
 
-    def _optimize(self, loss, tf_vars, epoch):
+    def _optimize(self, loss, tf_vars, step):
         opt_momentum = self._knobs['opt_momentum'] # Momentum optimizer momentum
         grad_clip_norm = self._knobs['grad_clip_norm'] # L2 norm to clip gradients by
 
-        # Initialize steps variable
-        steps = tf.Variable(0, name='steps', dtype=tf.int32, trainable=False)
-
         # Compute learning rate, gradients
-        lr = self._get_learning_rate(epoch)
+        lr = self._get_learning_rate(step)
         grads = tf.gradients(loss, tf_vars)
         self._mark_for_monitoring('lr', lr)
 
@@ -396,16 +349,16 @@ class TfEnasTrain(BaseModel):
 
         # Init optimizer
         opt = tf.train.MomentumOptimizer(lr, opt_momentum, use_locking=True, use_nesterov=True)
-        train_op = opt.apply_gradients(zip(grads, tf_vars), global_step=steps)
+        train_op = opt.apply_gradients(zip(grads, tf_vars), global_step=step)
 
-        return (train_op, steps)
+        return train_op
 
     def _preprocess(self, images, classes, is_train, w, h, in_ch):
-        N = self._knobs['batch_size'] 
+        batch_size = self._knobs['batch_size']
         cutout_size = self._knobs['cutout_size']
 
         # Create TF dataset
-        dataset = tf.data.Dataset.from_tensor_slices((images, classes)).batch(N)
+        dataset = tf.data.Dataset.from_tensor_slices((images, classes)).batch(batch_size)
         dataset_itr = dataset.make_initializable_iterator()
         (images, classes) = dataset_itr.get_next()
         init_op = dataset_itr.initializer
@@ -429,7 +382,9 @@ class TfEnasTrain(BaseModel):
         X = tf.cast(images, tf.float32)
         return (X, classes, init_op)
     
-    def _get_drop_path_keep_prob(self, layers_ratio, epoch, is_train):
+    def _get_drop_path_keep_prob(self, layers_ratio, step, is_train):
+        batch_size = self._knobs['batch_size'] 
+        N = self._train_params['N']
         drop_path_keep_prob = self._knobs['drop_path_keep_prob'] # Base keep prob for drop path
         initial_epoch = self._knobs['initial_epoch']
         drop_path_decay_epochs = self._knobs['drop_path_decay_epochs']
@@ -437,9 +392,10 @@ class TfEnasTrain(BaseModel):
         # Decrease keep prob deeper into network
         keep_prob = 1 - layers_ratio * (1 - drop_path_keep_prob)
         
-        # Decrease keep prob with increasing epochs 
-        epoch_ratio = tf.minimum((initial_epoch + epoch + 1) / drop_path_decay_epochs, 1)
-        keep_prob = 1 - epoch_ratio * (1 - keep_prob)
+        # Decrease keep prob with increasing steps
+        steps_per_epoch = math.ceil(N / batch_size)
+        steps_ratio = tf.minimum((initial_epoch + (step + 1) / steps_per_epoch) / drop_path_decay_epochs, 1)
+        keep_prob = 1 - steps_ratio * (1 - keep_prob)
 
         # Drop path only during training 
         keep_prob = tf.cond(is_train, 
@@ -448,12 +404,19 @@ class TfEnasTrain(BaseModel):
 
         return keep_prob
 
-    def _get_learning_rate(self, epoch):
+    def _get_learning_rate(self, step):
+        batch_size = self._knobs['batch_size'] 
+        N = self._train_params['N']
         lr = self._knobs['learning_rate'] # Learning rate
         use_sgdr = self._knobs['use_sgdr']
+        initial_epoch = self._knobs['initial_epoch']
         sgdr_decay_epochs = self._knobs['sgdr_decay_epochs']
         sgdr_alpha = self._knobs['sgdr_alpha'] 
         sgdr_t_mul = self._knobs['sgdr_t_mul']
+
+        # Compute epoch from step
+        steps_per_epoch = math.ceil(N / batch_size)
+        epoch = initial_epoch + step // steps_per_epoch
 
         if use_sgdr is True:
             # Apply Stoachastic Gradient Descent with Warm Restarts (SGDR)
@@ -483,7 +446,7 @@ class TfEnasTrain(BaseModel):
         for trial_epoch in range(num_epochs):
             epoch = initial_epoch + trial_epoch
             utils.logger.log('Running epoch {} (trial epoch {})...'.format(epoch, trial_epoch))
-            stepper = self._feed_dataset_to_model(epoch, images, [m.train_op, m.summary_op, m.acc, m.steps, *self._monitored_values.values()], 
+            stepper = self._feed_dataset_to_model(images, [m.train_op, m.summary_op, m.acc, m.step, *self._monitored_values.values()], 
                                                 is_train=True, classes=classes)
 
             # To track mean batch accuracy
@@ -512,13 +475,13 @@ class TfEnasTrain(BaseModel):
     def _predict_with_model(self, images):
         m = self._model
         all_probs = []
-        stepper = self._feed_dataset_to_model(0, images, [m.probs])
+        stepper = self._feed_dataset_to_model(images, [m.probs])
         for (batch_probs,) in stepper:
             all_probs.extend(batch_probs)
 
         return np.asarray(all_probs)
 
-    def _feed_dataset_to_model(self, epoch, images, run_ops, is_train=False, classes=None):
+    def _feed_dataset_to_model(self, images, run_ops, is_train=False, classes=None):
         m = self._model
         
         # Initialize dataset (mock classes if required)
@@ -528,8 +491,7 @@ class TfEnasTrain(BaseModel):
         })
 
         feed_dict = {
-            m.is_train_ph: is_train,
-            m.epoch_ph: epoch
+            m.is_train_ph: is_train
         }
 
         # Feed architectures if placeholders are present
@@ -548,8 +510,45 @@ class TfEnasTrain(BaseModel):
                 break
 
     def _get_arch(self):
+        use_cell_arch_type = self._knobs['use_cell_arch_type']
         cell_archs = self._knobs['cell_archs']
         num_blocks = self._knobs['cell_num_blocks']
+        
+        # Use fixed architectures if specified
+        if use_cell_arch_type:
+            if use_cell_arch_type == 'ENAS':
+                cell_archs = [
+                    # Normal
+                    0, 2, 0, 0, 
+                    0, 4, 0, 1, 
+                    0, 4, 1, 1, 
+                    1, 0, 0, 1, 
+                    0, 2, 1, 1,
+                    # Reduction
+                    1, 0, 1, 0,
+                    0, 3, 0, 2,
+                    1, 1, 3, 1,
+                    1, 0, 0, 4,
+                    0, 3, 1, 1
+                ]
+            elif use_cell_arch_type == 'NASNET-A':
+                cell_archs = [
+                     # Normal
+                    1, 0, 1, 4,
+                    0, 0, 1, 1,
+                    1, 2, 0, 4,
+                    0, 2, 0, 2,
+                    0, 1, 0, 0,
+                    # Reduction
+                    0, 5, 1, 1,
+                    1, 3, 0, 5,
+                    1, 2, 0, 1,
+                    1, 3, 2, 1,
+                    2, 2, 3, 4
+                ]
+            else:
+                raise Exception('Invalid `use_cell_arch_type`: "{}"'.format(use_cell_arch_type))
+
         normal_arch = [cell_archs[(4 * i):(4 * i + 4)] for i in range(num_blocks)]
         reduction_arch = [cell_archs[(4 * i):(4 * i + 4)] for i in range(num_blocks, num_blocks + num_blocks)]
         return (normal_arch, reduction_arch)
@@ -1101,13 +1100,15 @@ class TfEnasSearch(TfEnasTrain):
             images_ph = tf.placeholder(tf.int8, name='images_ph', shape=(None, w, h, in_ch)) # Images
             classes_ph = tf.placeholder(tf.int32, name='classes_ph', shape=(None,)) # Classes
             is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=()) # Are we training or predicting?
-            epoch_ph = tf.placeholder(tf.int32, name='epoch_ph', shape=()) # Current epoch
             normal_arch_ph = tf.placeholder(tf.int32, name='normal_arch_ph', shape=(cell_num_blocks, 4))
             reduction_arch_ph = tf.placeholder(tf.int32, name='reduction_arch_ph', shape=(cell_num_blocks, 4))
 
+            # Initialize steps variable
+            step = tf.Variable(0, name='step', dtype=tf.int32, trainable=False)
+
             # Preprocess & do inference
             (X, classes, init_op) = self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
-            (probs, preds, logits, aux_logits_list) = self._inference(X, epoch_ph, normal_arch_ph, reduction_arch_ph, is_train_ph)
+            (probs, preds, logits, aux_logits_list) = self._inference(X, step, normal_arch_ph, reduction_arch_ph, is_train_ph)
             
             # Compute training loss & accuracy
             tf_vars = self._get_all_variables()
@@ -1115,7 +1116,7 @@ class TfEnasSearch(TfEnasTrain):
             acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
             # Optimize training loss
-            (train_op, steps) = self._optimize(total_loss, tf_vars, epoch_ph)
+            train_op = self._optimize(total_loss, tf_vars, step)
 
             # Count model parameters
             model_params_count = self._count_model_parameters()
@@ -1141,8 +1142,8 @@ class TfEnasSearch(TfEnasTrain):
             # Make session
             sess = self._make_session()
 
-        model = _Model(init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, epoch_ph, 
-                        probs, acc, steps, normal_arch_ph, reduction_arch_ph, shared_params_phs, 
+        model = _Model(init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, 
+                        probs, acc, step, normal_arch_ph, reduction_arch_ph, shared_params_phs, 
                         shared_params_assign_op)
 
         self.memo['model'] = _ModelMemo(
