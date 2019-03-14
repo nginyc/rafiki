@@ -152,13 +152,9 @@ class PyDenseNet(BaseModel):
         final_trial_epochs = self._knobs['final_trial_epochs']
         trial_count = self._knobs['trial_count']
         total_trials = self._knobs['total_trials']
-        final_trial_count = 3
 
-        # Trial epoch schedule: 1 epoch for first (N - k) trials, then T epochs for final k trials 
-        if trial_count < total_trials - final_trial_count:
-            return 1
-        else:
-            return final_trial_epochs
+        # Trial epoch schedule: linear increase over trials
+        return min(round(final_trial_epochs * (trial_count + 1) / total_trials), 1)
 
 class ImageDataset(Dataset):
     def __init__(self, dataset_uri, max_image_size, train_params=None, is_train=True):
