@@ -181,9 +181,7 @@ class ImageDataset(Dataset):
 
     @property
     def train_params(self):
-        return {
-            
-        }
+        return self._train_params
 
     def __len__(self):
         return len(self._images)
