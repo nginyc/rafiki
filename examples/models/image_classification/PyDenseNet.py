@@ -12,7 +12,7 @@ import torchvision.transforms as transforms
 from collections import OrderedDict
 import abc
 
-from rafiki.model import BaseModel, utils, FixedKnob
+from rafiki.model import BaseModel, utils, FixedKnob, MetadataKnob, Metadata, FloatKnob, CategoricalKnob
 from rafiki.advisor import tune_model
 
 class PyDenseNet(BaseModel):
@@ -22,11 +22,14 @@ class PyDenseNet(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'trial_epochs': FixedKnob(300),
-            'batch_size': FixedKnob(64),
+            'trial_count': MetadataKnob(Metadata.TRIAL_COUNT),
+            'max_trial_epochs': FixedKnob(80),
+            'lr': FloatKnob(1e-4, 1, is_exp=True),
+            'lr_decay': FloatKnob(1e-3, 1e-1, is_exp=True),
+            'opt_weight_decay': FloatKnob(1e-5, 1e-3, is_exp=True),
+            'batch_size': CategoricalKnob([32, 64, 128]),
+            'drop_rate': FloatKnob(0, 0.4),
             'max_image_size': FixedKnob(28),
-            'lr': FixedKnob(0.1),
-            'lr_decay': FixedKnob(0.1)
         }
 
     def train(self, dataset_uri, shared_params):
@@ -87,19 +90,19 @@ class PyDenseNet(BaseModel):
             return corrects / N
 
     def _train(self, dataset):
-        trial_epochs = self._knobs['trial_epochs']
+        trial_epochs = self._get_trial_epochs()
         batch_size = self._knobs['batch_size']
         lr = self._knobs['lr']
         lr_decay = self._knobs['lr_decay']
+        drop_rate = self._knobs['drop_rate']
         K = self._train_params['K']
-
+        opt_weight_decay = self._knobs['opt_weight_decay']
         N = len(dataset)
         momentum = 0.9
-        weight_decay = 1e-4 
         log_every_secs = 60
 
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-        net = DenseNet(num_classes=K)
+        net = DenseNet(num_classes=K, drop_rate=drop_rate)
         net.train()
         if torch.cuda.is_available():
             utils.logger.log('Using CUDA...')
@@ -109,7 +112,7 @@ class PyDenseNet(BaseModel):
         utils.logger.log('Model has {} parameters'.format(params_count))
 
         optimizer = optim.SGD(net.parameters(), lr=lr, nesterov=True, 
-                            momentum=momentum, weight_decay=weight_decay)   
+                            momentum=momentum, weight_decay=opt_weight_decay)   
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[0.5 * trial_epochs, 0.75 * trial_epochs],
                             gamma=lr_decay)
 
@@ -143,6 +146,11 @@ class PyDenseNet(BaseModel):
             utils.logger.log(epoch=epoch, acc=acc)
 
         return net
+
+    def _get_trial_epochs(self):
+        max_trial_epochs = self._knobs['max_trial_epochs']
+        trial_count = self._knobs['trial_count']
+        return min(trial_count, max_trial_epochs)
 
 class ImageDataset(Dataset):
     def __init__(self, dataset_uri, max_image_size, train_params=None, is_train=True):
@@ -357,7 +365,7 @@ if __name__ == '__main__':
         train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
         val_dataset_uri='data/fashion_mnist_for_image_classification_val.zip',
         test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
-        total_trials=1,
+        total_trials=10,
         should_save=False
     )
 
