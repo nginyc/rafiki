@@ -24,16 +24,17 @@ class PyDenseNet(BaseModel):
         return {
             'trial_epochs': FixedKnob(300),
             'batch_size': FixedKnob(64),
+            'max_image_size': FixedKnob(28),
             'lr': FixedKnob(0.1),
             'lr_decay': FixedKnob(0.1)
         }
 
     def train(self, dataset_uri, shared_params):
-        max_image_size = 28
+        max_image_size = self._knobs['max_image_size']
 
         utils.logger.log('Loading dataset...')
         dataset = ImageDataset(dataset_uri, max_image_size, is_train=True)
-        self._dataset_params = dataset.params    
+        self._train_params = dataset.train_params    
         
         utils.logger.log('Training model...')
         self._net = self._train(dataset)
@@ -43,10 +44,10 @@ class PyDenseNet(BaseModel):
         utils.logger.log('Train accuracy: {}'.format(acc))
 
     def evaluate(self, dataset_uri):
-        max_image_size = 28
+        max_image_size = self._knobs['max_image_size']
 
         utils.logger.log('Loading dataset...')
-        dataset = ImageDataset(dataset_uri, max_image_size, dataset_params=self._dataset_params, is_train=False)
+        dataset = ImageDataset(dataset_uri, max_image_size, train_params=self._train_params, is_train=False)
 
         utils.logger.log('Computing val accuracy...')
         acc = self._evaluate(dataset, self._net)
@@ -90,6 +91,7 @@ class PyDenseNet(BaseModel):
         batch_size = self._knobs['batch_size']
         lr = self._knobs['lr']
         lr_decay = self._knobs['lr_decay']
+        K = self._train_params['K']
 
         N = len(dataset)
         momentum = 0.9
@@ -97,7 +99,7 @@ class PyDenseNet(BaseModel):
         log_every_secs = 60
 
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-        net = DenseNet(num_classes=10)
+        net = DenseNet(num_classes=K)
         net.train()
         if torch.cuda.is_available():
             utils.logger.log('Using CUDA...')
@@ -143,36 +145,44 @@ class PyDenseNet(BaseModel):
         return net
 
 class ImageDataset(Dataset):
-    def __init__(self, dataset_uri, max_image_size, dataset_params=None, is_train=True):
-        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
+    def __init__(self, dataset_uri, max_image_size, train_params=None, is_train=True):
+        if train_params is not None:
+            dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=train_params['image_size'], 
                                                             mode='RGB')
-        (self._images, self._classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-
-        if dataset_params:
-            self._norm_mean = dataset_params['norm_mean']
-            self._norm_std = dataset_params['norm_std']
+            (self._images, self._classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+            norm_mean = train_params['norm_mean']
+            norm_std = train_params['norm_std']
+            self._train_params = train_params
         else:
-            self._norm_mean = np.mean(np.array(self._images) / 255, axis=(0, 1, 2)).tolist() 
-            self._norm_std = np.std(np.array(self._images) / 255, axis=(0, 1, 2)).tolist() 
+            dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
+                                                                mode='RGB')
+            (self._images, self._classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+            norm_mean = np.mean(np.array(self._images) / 255, axis=(0, 1, 2)).tolist() 
+            norm_std = np.std(np.array(self._images) / 255, axis=(0, 1, 2)).tolist() 
+            self._train_params = {
+                'norm_mean': norm_mean,
+                'norm_std': norm_std,
+                'image_size': dataset.image_size,
+                'K': dataset.classes
+            }
 
         if is_train:
             self._transform = transforms.Compose([
                 transforms.RandomCrop(32, padding=4),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize(self._norm_mean, self._norm_std)
+                transforms.Normalize(norm_mean, norm_std)
             ])
         else:
             self._transform = transforms.Compose([
                 transforms.ToTensor(),
-                transforms.Normalize(self._norm_mean, self._norm_std)
+                transforms.Normalize(norm_mean, norm_std)
             ])
 
     @property
-    def params(self):
+    def train_params(self):
         return {
-            'norm_mean': self._norm_mean,
-            'norm_std': self._norm_std
+            
         }
 
     def __len__(self):
