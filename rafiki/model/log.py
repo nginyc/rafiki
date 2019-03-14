@@ -190,7 +190,7 @@ class LoggerUtilsDebugHandler(logging.Handler):
             metrics = log_dict.get('metrics')
             x_axis = log_dict.get('x_axis')
 
-            self._print('Plot `{}` of {} against {} will be registered when this model is being trained on Rafiki' \
+            self._print('Plot `{}` will be registered when this model is being trained on Rafiki' \
                 .format(title, ', '.join(metrics), x_axis or 'time'))
 
         elif log_type == LogType.METRICS:

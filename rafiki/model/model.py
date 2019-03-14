@@ -54,14 +54,14 @@ class BaseModel(abc.ABC):
         return knobs
 
     @staticmethod
-    def setup(self):
+    def setup():
         '''
         Runs class-wide setup logic (e.g. initialize a graph/session shared across trials).
         '''
         pass
 
     @staticmethod
-    def teardown(self):
+    def teardown():
         '''
         Runs class-wide teardown logic (e.g. closes a session shared across trials).
         '''
