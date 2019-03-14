@@ -154,7 +154,7 @@ class PyDenseNet(BaseModel):
         total_trials = self._knobs['total_trials']
 
         # Trial epoch schedule: linear increase over trials
-        return min(round(final_trial_epochs * (trial_count + 1) / total_trials), 1)
+        return max(round(final_trial_epochs * (trial_count + 1) / total_trials), 1)
 
 class ImageDataset(Dataset):
     def __init__(self, dataset_uri, max_image_size, train_params=None, is_train=True):
