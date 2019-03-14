@@ -150,7 +150,7 @@ class PyDenseNet(BaseModel):
     def _get_trial_epochs(self):
         max_trial_epochs = self._knobs['max_trial_epochs']
         trial_count = self._knobs['trial_count']
-        return min(trial_count, max_trial_epochs)
+        return min(trial_count + 1, max_trial_epochs)
 
 class ImageDataset(Dataset):
     def __init__(self, dataset_uri, max_image_size, train_params=None, is_train=True):
