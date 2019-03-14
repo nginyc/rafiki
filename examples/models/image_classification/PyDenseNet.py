@@ -1,5 +1,3 @@
-# Credits to https://github.com/gpleiss/efficient_densenet_pytorch
-
 import math
 import torch
 import torch.optim as optim
@@ -196,6 +194,10 @@ class ImageDataset(Dataset):
 
         return (image, image_class)
 
+#####################################################################################
+# Below code is with credits to https://github.com/gpleiss/efficient_densenet_pytorch
+#####################################################################################
+
 def _bn_function_factory(norm, relu, conv):
     def bn_function(*inputs):
         concated_features = torch.cat(inputs, 1)
@@ -346,6 +348,7 @@ if __name__ == '__main__':
         PyDenseNet, 
         train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
         val_dataset_uri='data/fashion_mnist_for_image_classification_val.zip',
+        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
         total_trials=1,
         should_save=False
     )

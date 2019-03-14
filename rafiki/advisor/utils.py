@@ -19,14 +19,15 @@ from .advisor import Advisor
 class InvalidModelClassException(Exception): pass
 
 def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_dataset_uri: str, 
-                total_trials: int = 25, params_root_dir: str = 'params/', should_save: bool = True, 
-                advisor: Advisor = None, to_read_args: bool = True) -> (Dict[str, any], str):
+                test_dataset_uri: str = None, total_trials: int = 25, params_root_dir: str = 'params/', 
+                should_save: bool = True, advisor: Advisor = None, to_read_args: bool = True) -> (Dict[str, any], str):
     '''
     Tunes a model on a given dataset in the current environment.
 
     :param BaseModel py_model_class: The Python class for the model
     :param str train_dataset_uri: URI of the train dataset for testing the training of model
-    :param str val_dataset_uri: URI of the validation dataset for testing the evaluation of model
+    :param str val_dataset_uri: URI of the validation dataset for evaluating a trained model
+    :param str test_dataset_uri: URI of the validation dataset for testing the final best trained model, if provided
     :param int total_trials: Total number of trials to tune the model over
     :param str params_root_dir: Root folder path to create subfolders to save each trial's model parameters
     :param bool should_save: If model parameters should be saved
@@ -61,6 +62,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     # Variables to track over trials
     best_score = 0
     best_knobs = None
+    best_model_inst = None
     best_model_params_dir = None
     session_id = str(uuid.uuid4()) # Session ID for params store
 
@@ -109,7 +111,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         if not isinstance(score, float):
             raise InvalidModelClassException('`evaluate()` should return a float!')
 
-        print('Score:', score)
+        print('Score on validation dataset:', score)
             
         if should_save:
             print('Saving model parameters...')
@@ -127,15 +129,27 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
             best_model_params_dir = params_dir
             best_knobs = knobs
             best_score = score
+            best_model_inst = model_inst 
 
         # Feedback to advisor
         trial_params = param_store.store_params(session_id, trial_params, prefix=trial_id)
         advisor.feedback(score, knobs, trial_params)
     
+    # Declare best model
+    print('Best model has knobs {} with score of {}'.format(best_knobs, best_score))
+    if best_model_params_dir is not None:
+        print('Saved at {}'.format(best_model_params_dir)) 
+        
+    # Test final best model, if test dataset provided
+    if test_dataset_uri is not None:
+        print('Evaluting best model...')
+        score = best_model_inst.evaluate(test_dataset_uri)
+        print('Score on test dataset:', score)
+ 
     # Teardown model class
     print('Running model class teardown...')
     py_model_class.teardown()
-    
+
     return (best_knobs, best_model_params_dir)
 
 def test_model_class(model_file_path: str, model_class: str, task: str, dependencies: Dict[str, str],
