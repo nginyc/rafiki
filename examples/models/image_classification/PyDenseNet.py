@@ -23,7 +23,8 @@ class PyDenseNet(BaseModel):
     def get_knob_config():
         return {
             'trial_count': MetadataKnob(Metadata.TRIAL_COUNT),
-            'max_trial_epochs': FixedKnob(80),
+            'total_trials': MetadataKnob(Metadata.TOTAL_TRIALS),
+            'final_trial_epochs': FixedKnob(50),
             'lr': FloatKnob(1e-4, 1, is_exp=True),
             'lr_decay': FloatKnob(1e-3, 1e-1, is_exp=True),
             'opt_weight_decay': FloatKnob(1e-5, 1e-3, is_exp=True),
@@ -148,9 +149,16 @@ class PyDenseNet(BaseModel):
         return net
 
     def _get_trial_epochs(self):
-        max_trial_epochs = self._knobs['max_trial_epochs']
+        final_trial_epochs = self._knobs['final_trial_epochs']
         trial_count = self._knobs['trial_count']
-        return min(trial_count + 1, max_trial_epochs)
+        total_trials = self._knobs['total_trials']
+        final_trial_count = 3
+
+        # Trial epoch schedule: 1 epoch for first (N - k) trials, then T epochs for final k trials 
+        if trial_count < total_trials - final_trial_count:
+            return 1
+        else:
+            return final_trial_epochs
 
 class ImageDataset(Dataset):
     def __init__(self, dataset_uri, max_image_size, train_params=None, is_train=True):

@@ -10,10 +10,15 @@ class SkoptKnobAdvisor(BaseKnobAdvisor):
     '''
     Uses `skopt`'s `Optimizer`
     '''   
-    def start(self, knob_config):
+    def start(self, total_trials, knob_config):
         self._knob_config = knob_config
         self._dimensions = self._get_dimensions(knob_config)
-        self._optimizer = Optimizer(list(self._dimensions.values()))
+        n_random_starts = min(10, total_trials // 2) # Initially, no, of random starts
+        self._optimizer = Optimizer(
+            list(self._dimensions.values()),
+            n_random_starts=n_random_starts,
+            base_estimator='gp'
+        )
 
     def propose(self):
         # Ask skopt

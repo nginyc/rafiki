@@ -1248,22 +1248,23 @@ class TfEnasSearch(TfEnasTrain):
         return var
 
 if __name__ == '__main__':
-    knob_config = TfEnasTrain.get_knob_config()
-    advisor = Advisor(knob_config) 
-    
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', type=str, choices=['TRAIN', 'SEARCH'], default='SEARCH')
+    parser.add_argument('--total_trials', type=int, default=0) # No. of trials
     parser.add_argument('--num_models', type=str, default=10) # How many models to sample after training advisor
     (args, _) = parser.parse_known_args()
 
     if args.mode == 'SEARCH':
 
         print('Training advisor...')
+        knob_config = TfEnasTrain.get_knob_config()
+        total_trials = args.total_trials if args.total_trials > 0 else 31 * 150
+        advisor = Advisor(total_trials, knob_config) 
         tune_model(
             TfEnasSearch, 
             train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
             val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-            total_trials=31 * 150,
+            total_trials=total_trials,
             should_save=False,
             advisor=advisor
         )
@@ -1277,13 +1278,13 @@ if __name__ == '__main__':
 
     elif args.mode == 'TRAIN':
 
-        print('Training models sampled from advisor...')
+        print('Training models...')
+        total_trials = args.total_trials if args.total_trials > 0 else 1
         (best_knobs, _) = tune_model(
             TfEnasTrain,
             train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
             val_dataset_uri='data/cifar_10_for_image_classification_test.zip',
-            total_trials=1,
-            advisor=advisor
+            total_trials=total_trials
         )
         print('Best model knobs: {}'.format(best_knobs))
 

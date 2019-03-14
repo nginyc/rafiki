@@ -40,8 +40,9 @@ from .skopt import SkoptKnobAdvisor
 from .tf import EnasKnobAdvisor
 
 class Advisor():
-    def __init__(self, knob_config: Dict[str, BaseKnob]):
+    def __init__(self, total_trials: int, knob_config: Dict[str, BaseKnob]):
         self._trial_count = 0
+        self._total_trials = total_trials
         self._knob_config = knob_config
 
         # Let skopt propose for these basic knobs
@@ -50,7 +51,7 @@ class Advisor():
 
         if len(self._skopt_knob_config) > 0:
             self._skopt_knob_adv = SkoptKnobAdvisor()
-            self._skopt_knob_adv.start(self._skopt_knob_config)
+            self._skopt_knob_adv.start(total_trials, self._skopt_knob_config)
 
         # Let ENAS propose for list knobs
         self._enas_knob_config = { name: knob for (name, knob) in knob_config.items() 
@@ -134,6 +135,8 @@ class Advisor():
     def _get_metadata_value(self, metadata):
         if metadata == Metadata.TRIAL_COUNT:
             return self._trial_count
+        elif metadata == Metadata.TOTAL_TRIALS:
+            return self._total_trials
         else:
             raise ValueError('No such metadata: {}'.format(metadata))
 

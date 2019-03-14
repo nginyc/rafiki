@@ -54,7 +54,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
 
     # Configure advisor
     if advisor is None:
-        advisor = Advisor(knob_config)
+        advisor = Advisor(total_trials, knob_config)
 
     # Configure shared params store
     param_store = ParamStore()
