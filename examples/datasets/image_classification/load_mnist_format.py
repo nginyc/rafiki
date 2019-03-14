@@ -146,7 +146,7 @@ if __name__ == '__main__':
         },
         out_train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
         out_val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
-        out_test_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
+        out_test_dataset_path='data/fashion_mnist_for_image_classification_test.zip',
         out_meta_csv_path='data/fashion_mnist_for_image_classification_meta.csv',
         validation_split=args.validation_split,
         limit=args.limit
