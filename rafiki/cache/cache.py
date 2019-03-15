@@ -9,16 +9,9 @@ PREDICTIONS_QUEUE = 'PREDICTIONS'
 
 class Cache(object):
     def __init__(self,
-        host=os.environ.get('REDIS_HOST', 'localhost'),
-        port=os.environ.get('REDIS_PORT', 6379)):
-
-        cache_connection_url = self._make_connection_url(
-            host=host,
-            port=port
-        )
-
-        self._connection_pool = redis.ConnectionPool.from_url(cache_connection_url)
-        self._redis = redis.StrictRedis(connection_pool=self._connection_pool, decode_responses=True)
+        redis_host=os.environ.get('REDIS_HOST', 'localhost'),
+        redis_port=os.environ.get('REDIS_PORT', 6379)):
+        self._redis = self._make_redis_client(redis_host, redis_port)
         
     def add_worker_of_inference_job(self, worker_id, inference_job_id):
         inference_workers_key = '{}_{}'.format(RUNNING_INFERENCE_WORKERS, inference_job_id)
@@ -77,5 +70,9 @@ class Cache(object):
         # Return None if prediction is not found
         return None
 
-    def _make_connection_url(self, host, port):
-        return 'redis://{}:{}'.format(host, port)
+    def _make_redis_client(self, host, port):
+        cache_connection_url = 'redis://{}:{}'.format(host, port)
+        connection_pool = redis.ConnectionPool.from_url(cache_connection_url)
+        client = redis.StrictRedis(connection_pool=connection_pool, decode_responses=True)
+        return client
+
