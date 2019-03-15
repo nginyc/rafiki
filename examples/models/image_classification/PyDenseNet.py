@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import torch.utils.checkpoint as cp
 from PIL import Image
 from datetime import datetime
-from torch.utils.data import Dataset, DataLoader 
+from torch.utils.data import Dataset, DataLoader, random_split
 import torchvision.transforms as transforms
 from collections import OrderedDict
 import abc
@@ -24,38 +24,29 @@ class PyDenseNet(BaseModel):
         return {
             'trial_count': MetadataKnob(Metadata.TRIAL_COUNT),
             'total_trials': MetadataKnob(Metadata.TOTAL_TRIALS),
-            'final_trial_epochs': FixedKnob(50),
+            'max_trial_epochs': FixedKnob(50),
             'lr': FloatKnob(1e-4, 1, is_exp=True),
             'lr_decay': FloatKnob(1e-3, 1e-1, is_exp=True),
+            'opt_momentum': FloatKnob(0.7, 1, is_exp=True),
             'opt_weight_decay': FloatKnob(1e-5, 1e-3, is_exp=True),
             'batch_size': CategoricalKnob([32, 64, 128]),
             'drop_rate': FloatKnob(0, 0.4),
-            'max_image_size': FixedKnob(28),
+            'max_image_size': FixedKnob(32),
+            'max_train_val_samples': FixedKnob(1024)
         }
 
     def train(self, dataset_uri, shared_params):
-        max_image_size = self._knobs['max_image_size']
-
         utils.logger.log('Loading dataset...')
-        dataset = ImageDataset(dataset_uri, max_image_size, is_train=True)
-        self._train_params = dataset.train_params    
-        
+        (train_dataset, train_val_dataset, self._train_params) = self._load_train_dataset(dataset_uri)
+        utils.logger.log('Train dataset has {} samples'.format(len(train_dataset)))
+        utils.logger.log('Train-val dataset has {} samples'.format(len(train_val_dataset)))
         utils.logger.log('Training model...')
-        self._net = self._train(dataset)
-
-        utils.logger.log('Computing train accuracy...')
-        acc = self._evaluate(dataset, self._net)
-        utils.logger.log('Train accuracy: {}'.format(acc))
+        self._net = self._train(train_dataset, train_val_dataset)
 
     def evaluate(self, dataset_uri):
-        max_image_size = self._knobs['max_image_size']
-
         utils.logger.log('Loading dataset...')
-        dataset = ImageDataset(dataset_uri, max_image_size, train_params=self._train_params, is_train=False)
-
-        utils.logger.log('Computing val accuracy...')
+        dataset = self._load_val_dataset(dataset_uri, self._train_params)
         acc = self._evaluate(dataset, self._net)
-        utils.logger.log('Val accuracy: {}'.format(acc))
         return acc
 
     def predict(self, queries):
@@ -90,131 +81,136 @@ class PyDenseNet(BaseModel):
         
             return corrects / N
 
-    def _train(self, dataset):
+    def _train(self, train_dataset, train_val_dataset):
         trial_epochs = self._get_trial_epochs()
         batch_size = self._knobs['batch_size']
-        lr = self._knobs['lr']
-        lr_decay = self._knobs['lr_decay']
         drop_rate = self._knobs['drop_rate']
         K = self._train_params['K']
-        opt_weight_decay = self._knobs['opt_weight_decay']
-        N = len(dataset)
-        momentum = 0.9
-        log_every_secs = 60
 
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        train_val_dataloader = DataLoader(train_val_dataset, batch_size=batch_size)
+        
         net = DenseNet(num_classes=K, drop_rate=drop_rate)
         net.train()
         if torch.cuda.is_available():
             utils.logger.log('Using CUDA...')
             net = net.cuda()
 
-        params_count = sum([p.data.nelement() for p in net.parameters()])
+        params_count = self._count_model_parameters(net)
         utils.logger.log('Model has {} parameters'.format(params_count))
 
-        optimizer = optim.SGD(net.parameters(), lr=lr, nesterov=True, 
-                            momentum=momentum, weight_decay=opt_weight_decay)   
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[0.5 * trial_epochs, 0.75 * trial_epochs],
-                            gamma=lr_decay)
+        (optimizer, scheduler) = self._get_optimizer(net, trial_epochs)
 
-        last_log_time = datetime.now()
+        log_condition = TimedRepeatCondition()
+        early_stop_condition = EarlyStopCondition()
         step = 0
         for epoch in range(trial_epochs):
-            utils.logger.log('Running epoch {}'.format(epoch))
+            utils.logger.log('Running epoch {}...'.format(epoch))
 
             scheduler.step()
             
-            # Train for epoch
-            corrects = 0
-            for (batch_images, batch_classes) in dataloader: 
+            # Run through train dataset
+            for (batch_images, batch_classes) in train_dataloader:
                 probs = net(batch_images)
                 loss = F.cross_entropy(probs, batch_classes)
-
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-
-                preds = probs.max(1)[1]
                 step += 1
-                corrects += sum(preds.eq(batch_classes).cpu().numpy())
 
-                # Periodically, log loss
-                if (datetime.now() - last_log_time).total_seconds() >= log_every_secs:
-                    last_log_time = datetime.now()
-                    utils.logger.log(step=step, loss=loss.item())
+                # Periodically, log train loss
+                if log_condition.check():
+                    utils.logger.log(step=step, train_loss=loss.item())
             
-            acc = corrects / N
-            utils.logger.log(epoch=epoch, acc=acc)
+            # Run through train-val dataset
+            corrects = 0
+            val_losses = []
+            for (batch_images, batch_classes) in train_val_dataloader:
+                probs = net(batch_images)
+                loss = F.cross_entropy(probs, batch_classes)
+                preds = probs.max(1)[1]
+                corrects += sum(preds.eq(batch_classes).cpu().numpy())
+                val_losses.append(loss.item())
+
+            val_acc = corrects / len(train_val_dataset)
+            val_avg_loss = np.mean(val_losses)
+
+            utils.logger.log(epoch=epoch, val_acc=val_acc, val_avg_loss=val_avg_loss)
+
+            # Early stop on train-val batch loss
+            if early_stop_condition.check(val_avg_loss):
+                utils.logger.log('Average train-val batch loss has not improved for {} epochs'.format(early_stop_condition.patience))
+                utils.logger.log('Early stopping...')
+                break
 
         return net
 
+    def _load_train_dataset(self, dataset_uri):
+        max_train_val_samples = self._knobs['max_train_val_samples']
+        max_image_size = self._knobs['max_image_size']
+
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
+                                                        mode='RGB')
+        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+        train_val_samples = min(dataset.size // 5, max_train_val_samples) # up to 1/5 of samples for train-val
+        (train_images, train_classes) = (images[:train_val_samples], classes[:train_val_samples])
+        (train_val_images, train_val_classes) = (images[train_val_samples:], classes[train_val_samples:])
+
+        # Compute normalization params from train data
+        norm_mean = np.mean(np.array(train_images) / 255, axis=(0, 1, 2)).tolist() 
+        norm_std = np.std(np.array(train_images) / 255, axis=(0, 1, 2)).tolist() 
+
+        train_dataset = ImageDataset(train_images, train_classes, dataset.image_size, 
+                                    norm_mean, norm_std, is_train=True)
+        train_val_dataset = ImageDataset(train_val_images, train_val_classes, dataset.image_size, 
+                                        norm_mean, norm_std, is_train=False)
+        train_params = {
+            'norm_mean': norm_mean,
+            'norm_std': norm_std,
+            'image_size': dataset.image_size,
+            'N': dataset.size,
+            'K': dataset.classes
+        }
+        return (train_dataset, train_val_dataset, train_params)
+
+    def _load_val_dataset(self, dataset_uri, train_params):
+        image_size = train_params['image_size']
+        norm_mean = train_params['norm_mean']
+        norm_std = train_params['norm_std']
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=image_size, 
+                                                        mode='RGB')
+        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+        val_dataset = ImageDataset(images, classes, dataset.image_size, 
+                                    norm_mean, norm_std, is_train=False)
+        return val_dataset
+
+    def _get_optimizer(self, net, trial_epochs):
+        lr = self._knobs['lr']
+        lr_decay = self._knobs['lr_decay']
+        opt_weight_decay = self._knobs['opt_weight_decay']
+        opt_momentum = self._knobs['opt_momentum']
+
+        optimizer = optim.SGD(net.parameters(), lr=lr, nesterov=True, 
+                            momentum=opt_momentum, weight_decay=opt_weight_decay)   
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[0.5 * trial_epochs, 0.75 * trial_epochs],
+                            gamma=lr_decay)
+
+        return (optimizer, scheduler)
+
+    def _count_model_parameters(self, net):
+        return sum([p.data.nelement() for p in net.parameters()])
+
     def _get_trial_epochs(self):
-        final_trial_epochs = self._knobs['final_trial_epochs']
-        trial_count = self._knobs['trial_count']
-        total_trials = self._knobs['total_trials']
+        max_trial_epochs = self._knobs['max_trial_epochs']
+        # trial_count = self._knobs['trial_count']
+        # total_trials = self._knobs['total_trials']
 
         # Trial epoch schedule: linear increase over trials
-        return max(round(final_trial_epochs * (trial_count + 1) / total_trials), 1)
-
-class ImageDataset(Dataset):
-    def __init__(self, dataset_uri, max_image_size, train_params=None, is_train=True):
-        if train_params is not None:
-            dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=train_params['image_size'], 
-                                                            mode='RGB')
-            (self._images, self._classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-            norm_mean = train_params['norm_mean']
-            norm_std = train_params['norm_std']
-            self._train_params = train_params
-        else:
-            dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
-                                                                mode='RGB')
-            (self._images, self._classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-            norm_mean = np.mean(np.array(self._images) / 255, axis=(0, 1, 2)).tolist() 
-            norm_std = np.std(np.array(self._images) / 255, axis=(0, 1, 2)).tolist() 
-            self._train_params = {
-                'norm_mean': norm_mean,
-                'norm_std': norm_std,
-                'image_size': dataset.image_size,
-                'K': dataset.classes
-            }
-
-        if is_train:
-            self._transform = transforms.Compose([
-                transforms.RandomCrop(32, padding=4),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.Normalize(norm_mean, norm_std)
-            ])
-        else:
-            self._transform = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize(norm_mean, norm_std)
-            ])
-
-    @property
-    def train_params(self):
-        return self._train_params
-
-    def __len__(self):
-        return len(self._images)
-
-    def __getitem__(self, idx):
-        image = self._images[idx]
-        image_class =  self._classes[idx]
-
-        image_class = torch.tensor(image_class)
-        if self._transform:
-            image = self._transform(Image.fromarray(image))
-        else:
-            image = torch.tensor(image)
-
-        if torch.cuda.is_available():
-            image = image.cuda()
-            image_class = image_class.cuda()
-
-        return (image, image_class)
+        # return max(round(final_trial_epochs * (trial_count + 1) / total_trials), 1)
+        return max_trial_epochs
 
 #####################################################################################
+# Implementation of DenseNet
 # Below code is with credits to https://github.com/gpleiss/efficient_densenet_pytorch
 #####################################################################################
 
@@ -363,12 +359,92 @@ class DenseNet(nn.Module):
         out = self.classifier(out)
         return out
 
+#####################################################################################
+# Utils
+#####################################################################################
+
+class ImageDataset(Dataset):
+    def __init__(self, images, classes, image_size, norm_mean, norm_std, is_train=False):
+        self._images = images
+        self._classes = classes
+        if is_train:
+            self._transform = transforms.Compose([
+                transforms.RandomCrop(image_size, padding=4),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(norm_mean, norm_std)
+            ])
+        else:
+            self._transform = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize(norm_mean, norm_std)
+            ])
+
+    def __len__(self):
+        return len(self._images)
+
+    def __getitem__(self, idx):
+        image = self._images[idx]
+        image_class =  self._classes[idx]
+
+        image_class = torch.tensor(image_class)
+        if self._transform:
+            image = self._transform(Image.fromarray(image))
+        else:
+            image = torch.tensor(image)
+
+        if torch.cuda.is_available():
+            image = image.cuda()
+            image_class = image_class.cuda()
+
+        return (image, image_class)
+
+class TimedRepeatCondition():
+    def __init__(self, every_secs=60):
+        self._every_secs = every_secs
+        self._last_trigger_time = datetime.now()
+            
+    def check(self) -> bool:
+        if (datetime.now() - self._last_trigger_time).total_seconds() >= self._every_secs:
+            self._last_trigger_time = datetime.now()
+            return True
+        else:
+            return False
+
+class EarlyStopCondition():
+    def __init__(self, patience=5, if_max=False):
+        self._patience = patience
+        self._if_max = if_max
+        self._last_best = float('inf') if not if_max else float('-inf')
+        self._wait_count = 0
+
+    @property
+    def patience(self):
+        return self._patience
+    
+    # Returns whether should early stop
+    def check(self, value) -> bool:
+        if (not self._if_max and value < self._last_best) or \
+            (self._if_max and value > self._last_best):
+            self._wait_count = 0
+            self._last_best = value
+        else:
+            self._wait_count += 1
+
+        if self._wait_count >= self._patience:
+            return True
+        else:
+            return False
+
 if __name__ == '__main__':
     tune_model(
         PyDenseNet, 
-        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-        val_dataset_uri='data/fashion_mnist_for_image_classification_val.zip',
-        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
+        # train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
+        # val_dataset_uri='data/fashion_mnist_for_image_classification_val.zip',
+        # test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
+        train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
+        val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
+        test_dataset_uri='data/cifar_10_for_image_classification_test.zip',
         total_trials=10,
         should_save=False
     )
