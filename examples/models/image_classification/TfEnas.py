@@ -358,7 +358,9 @@ class TfEnasTrain(BaseModel):
         cutout_size = self._knobs['cutout_size']
 
         # Create TF dataset
-        dataset = tf.data.Dataset.from_tensor_slices((images, classes)).batch(batch_size)
+        dataset = tf.data.Dataset.from_tensor_slices((images, classes)) \
+                    .batch(batch_size) \
+                    .shuffle(buffer_size=16384)
         dataset_itr = dataset.make_initializable_iterator()
         (images, classes) = dataset_itr.get_next()
         init_op = dataset_itr.initializer
@@ -446,7 +448,7 @@ class TfEnasTrain(BaseModel):
 
         train_summaries = [] # List of (<steps>, <summary>) collected during training
 
-        last_log_time = datetime.now()
+        log_condition = TimedRepeatCondition()
         for trial_epoch in range(num_epochs):
             epoch = initial_epoch + trial_epoch
             utils.logger.log('Running epoch {} (trial epoch {})...'.format(epoch, trial_epoch))
@@ -460,8 +462,7 @@ class TfEnasTrain(BaseModel):
                 accs.append(batch_acc)
 
                 # Periodically, log monitored values
-                if (datetime.now() - last_log_time).total_seconds() >= log_every_secs:
-                    last_log_time = datetime.now()
+                if log_condition.check():
                     utils.logger.log(steps=batch_steps, **{ name: v for (name, v) in zip(self._monitored_values.keys(), values) })
 
             # Log mean batch accuracy and epoch
@@ -1246,6 +1247,18 @@ class TfEnasSearch(TfEnasTrain):
             tf.add_to_collection(self.TF_COLLECTION_SHARED, var)
 
         return var
+
+class TimedRepeatCondition():
+    def __init__(self, every_secs=60):
+        self._every_secs = every_secs
+        self._last_trigger_time = datetime.now()
+            
+    def check(self) -> bool:
+        if (datetime.now() - self._last_trigger_time).total_seconds() >= self._every_secs:
+            self._last_trigger_time = datetime.now()
+            return True
+        else:
+            return False
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
