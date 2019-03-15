@@ -153,8 +153,8 @@ class PyDenseNet(BaseModel):
                                                         mode='RGB')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         train_val_samples = min(dataset.size // 5, max_train_val_samples) # up to 1/5 of samples for train-val
-        (train_images, train_classes) = (images[:train_val_samples], classes[:train_val_samples])
-        (train_val_images, train_val_classes) = (images[train_val_samples:], classes[train_val_samples:])
+        (train_images, train_classes) = (images[train_val_samples:], classes[train_val_samples:])
+        (train_val_images, train_val_classes) = (images[:train_val_samples], classes[:train_val_samples])
 
         # Compute normalization params from train data
         norm_mean = np.mean(np.array(train_images) / 255, axis=(0, 1, 2)).tolist() 
