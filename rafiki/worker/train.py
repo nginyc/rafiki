@@ -32,7 +32,8 @@ class TrainWorker(object):
             meta_store = MetaStore()
         
         if param_store is None: 
-            param_store = ParamStore()
+            param_store = ParamStore(redis_host=os.environ['REDIS_HOST'],
+                                    redis_port=os.environ['REDIS_PORT'])
             
         self._params_root_dir = os.path.join(os.environ['WORKDIR_PATH'], os.environ['PARAMS_DIR_PATH'])
         self._service_id = service_id
