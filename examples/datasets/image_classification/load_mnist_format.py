@@ -30,7 +30,7 @@ def load(train_images_url, train_labels_url, test_images_url, test_labels_url, l
         :param str out_test_dataset_path: Path to save the output test dataset file
         :param str out_meta_csv_path: Path to save the output dataset metadata .CSV file
         :param float validation_split: Proportion (0-1) to carve out validation dataset from the originl train dataset
-        :param int limit: Maximum number of train & validation samples (for purposes of testing)
+        :param int limit: Maximum number of samples for each dataset (for purposes of development)
     '''
 
     print('Downloading files...')
@@ -42,38 +42,30 @@ def load(train_images_url, train_labels_url, test_images_url, test_labels_url, l
     print('Loading datasets into memory...')
     (train_images, train_labels) = _load_dataset_from_files(train_images_file_path, train_labels_file_path)
     (test_images, test_labels) = _load_dataset_from_files(test_images_file_path, test_labels_file_path)
-    (train_images, train_labels, val_images, val_labels) = _split_train_dataset(train_images, train_labels, validation_split, limit)
+    (train_images, train_labels, val_images, val_labels) = _split_train_dataset(train_images, train_labels, validation_split)
 
     print('Converting and writing datasets...')
 
     (label_to_index) = _write_meta_csv(chain(train_labels, test_labels), label_to_name, out_meta_csv_path)
     print('Dataset metadata file is saved at {}'.format(out_meta_csv_path))
 
-    _write_dataset(train_images, train_labels, label_to_index, out_train_dataset_path)
+    _write_dataset(train_images, train_labels, label_to_index, out_train_dataset_path, limit)
     print('Train dataset file is saved at {}. This should be submitted as `train_dataset` of a train job.'
             .format(out_train_dataset_path))
 
-    _write_dataset(val_images, val_labels, label_to_index, out_val_dataset_path)
+    _write_dataset(val_images, val_labels, label_to_index, out_val_dataset_path, limit)
     print('Validation dataset file is saved at {}. This should be submitted as `val_dataset` of a train job.'
             .format(out_val_dataset_path))
 
-    _write_dataset(test_images, test_labels, label_to_index, out_test_dataset_path)
+    _write_dataset(test_images, test_labels, label_to_index, out_test_dataset_path, limit)
     print('Test dataset file is saved at {}'.format(out_test_dataset_path))
 
-def _split_train_dataset(train_images, train_labels, validation_split, limit):
+def _split_train_dataset(train_images, train_labels, validation_split):
     val_start_idx = int(len(train_images) * (1 - validation_split))
     val_images = train_images[val_start_idx:]
     val_labels = train_labels[val_start_idx:]
     train_images = train_images[:val_start_idx]
     train_labels = train_labels[:val_start_idx]
-
-    if limit is not None:
-        print('Limiting train & validation examples to {}...'.format(limit))
-        val_images = val_images[:limit]
-        val_labels = val_labels[:limit]
-        train_images = train_images[:limit]
-        train_labels = train_labels[:limit]
-
     return (train_images, train_labels, val_images, val_labels)
 
 def _write_meta_csv(labels, label_to_name, out_meta_csv_path):
@@ -88,7 +80,12 @@ def _write_meta_csv(labels, label_to_name, out_meta_csv_path):
 
     return (label_to_index)
 
-def _write_dataset(images, labels, label_to_index, out_dataset_path):
+def _write_dataset(images, labels, label_to_index, out_dataset_path, limit):
+    if limit is not None:
+        print('Limiting dataset to {} samples...'.format(limit))
+        images = images[:limit]
+        labels = labels[:limit]
+
     with tempfile.TemporaryDirectory() as d:
         # Create images.csv in temp dir for dataset
         # For each (image, label), save image as .png and add row to images.csv
