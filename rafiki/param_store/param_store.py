@@ -1,4 +1,3 @@
-import redis
 import os
 import json
 import numpy as np
@@ -104,6 +103,7 @@ class ParamStore(object):
             self._redis.delete(*params_keys)
 
     def _make_redis_client(self, host, port):
+        import redis
         cache_connection_url = 'redis://{}:{}'.format(host, port)
         connection_pool = redis.ConnectionPool.from_url(cache_connection_url)
         client = redis.StrictRedis(connection_pool=connection_pool, decode_responses=True)
