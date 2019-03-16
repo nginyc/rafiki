@@ -540,18 +540,22 @@ class Client(object):
         data = self._post('/advisors', target='advisor', json=json)
         return data
 
-    def generate_proposal(self, advisor_id):
+    def generate_proposal(self, advisor_id, worker_id=None):
         '''
         Generate a proposal of knobs from an advisor.
 
         :param str advisor_id: ID of target advisor
+        :param str worker_id: ID of worker requesting the proposal
         :returns: Proposal of `knobs` and `params`
         :rtype: dict[str, any]
         '''
-        data = self._post('/advisors/{}/propose'.format(advisor_id), target='advisor')
+        json = {
+            'worker_id': worker_id
+        }
+        data = self._post('/advisors/{}/propose'.format(advisor_id), json=json, target='advisor')
         return data
 
-    def feedback_to_advisor(self, advisor_id, score, knobs, params):
+    def feedback_to_advisor(self, advisor_id, score, knobs, params, worker_id=None):
         '''
         Feedbacks to the advisor on the score of a set of knobs & params.
         Additionally returns another proposal of knobs & params after ingesting feedback.
@@ -560,6 +564,7 @@ class Client(object):
         :param float score: Score of the knobs, the higher the number, the better the set of knobs & parmas
         :param str knobs: Knobs to give feedback on
         :param str params: Params to give feedback on
+        :param str worker_id: ID of worker requesting the proposal
         :returns: Proposal of `knobs` and `params`
         :rtype: dict[str, any]
         '''
@@ -567,7 +572,8 @@ class Client(object):
                         target='advisor', json={
                             'score': score,
                             'knobs': knobs,
-                            'params': params
+                            'params': params,
+                            'worker_id': worker_id
                         })
         return data
 

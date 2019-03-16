@@ -75,7 +75,7 @@ class EnasKnobAdvisorListModel():
 
             tf_vars = self._get_all_variables()
             model_params_count = self._count_model_parameters(tf_vars)
-            print('Model has {} parameters'.format(model_params_count))
+            # print('Model has {} parameters'.format(model_params_count))
 
     def propose(self):
         item_knobs = self._knob.items
@@ -91,7 +91,6 @@ class EnasKnobAdvisorListModel():
         item_knobs = self._knob.items
         item_idxs = [item_knob.values.index(item) for (item_knob, item) in zip(item_knobs, items)]
 
-        print('Training from feedback ({}, {})...'.format(items, score))
         with self._graph.as_default():
             (reward_base, loss, reward, _) = self._sess.run(
                 [self._reward_base, self._loss, self._reward, self._train_op],
@@ -101,9 +100,9 @@ class EnasKnobAdvisorListModel():
                 }
             )
 
-            print('Reward: {}'.format(reward))
-            print('Reward baseline: {}'.format(reward_base))
-            print('Loss: {}'.format(loss))
+            # print('Reward: {}'.format(reward))
+            # print('Reward baseline: {}'.format(reward_base))
+            # print('Loss: {}'.format(loss))
             # print('Logits: {}'.format(list(item_logits)))
 
     def _start_session(self):

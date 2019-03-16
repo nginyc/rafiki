@@ -1,10 +1,13 @@
 import abc
 import numpy as np
 import random
+import logging
 from typing import Union, Dict
 
 from rafiki.model import BaseKnob, IntegerKnob, CategoricalKnob, FloatKnob, \
                 FixedKnob, ListKnob, DynamicListKnob, MetadataKnob, Metadata
+
+logger = logging.getLogger(__name__)
 
 class UnsupportedKnobTypeError(Exception): pass
 
@@ -40,9 +43,8 @@ from .skopt import SkoptKnobAdvisor
 from .tf import EnasKnobAdvisor
 
 class Advisor():
-    def __init__(self, total_trials: int, knob_config: Dict[str, BaseKnob]):
+    def __init__(self, knob_config: Dict[str, BaseKnob]):
         self._trial_count = 0
-        self._total_trials = total_trials
         self._knob_config = knob_config
 
         # Let skopt propose for these basic knobs
@@ -51,7 +53,7 @@ class Advisor():
 
         if len(self._skopt_knob_config) > 0:
             self._skopt_knob_adv = SkoptKnobAdvisor()
-            self._skopt_knob_adv.start(total_trials, self._skopt_knob_config)
+            self._skopt_knob_adv.start(self._skopt_knob_config)
 
         # Let ENAS propose for list knobs
         self._enas_knob_config = { name: knob for (name, knob) in knob_config.items() 
@@ -76,7 +78,7 @@ class Advisor():
     def knob_config(self) -> Dict[str, BaseKnob]:
         return self._knob_config
 
-    def propose(self) -> (Dict[str, any], Dict[str, any]):
+    def propose(self, worker_id=None) -> (Dict[str, any], Dict[str, any]):
         knobs = {}
 
         # Merge knobs from advisors
@@ -93,7 +95,7 @@ class Advisor():
 
         # Merge metadata knobs in
         for (name, metadata) in self._metadata_knobs.items():
-            value = self._get_metadata_value(metadata)
+            value = self._get_metadata_value(metadata, worker_id)
             knobs[name] = value
 
         # Simplify knobs to use JSON serializable values
@@ -106,9 +108,13 @@ class Advisor():
         # Propose params
         params = self._params_adv.propose()
 
+        logger.info('Proposing to worker of ID "{}" knobs {} with {} shared params...'.format(worker_id, knobs, len(params)))
         return (knobs, params)
 
     def feedback(self, score: float, knobs: Dict[str, any], params: Dict[str, any]):
+        logger.info('Received feedback of score {} for knobs {} with {} shared params'
+                    .format(score, knobs, len(params)))
+
         self._trial_count += 1
 
         # Feedback to skopt
@@ -132,11 +138,11 @@ class Advisor():
 
         return value
 
-    def _get_metadata_value(self, metadata):
+    def _get_metadata_value(self, metadata, worker_id):
         if metadata == Metadata.TRIAL_COUNT:
             return self._trial_count
-        elif metadata == Metadata.TOTAL_TRIALS:
-            return self._total_trials
+        elif metadata == Metadata.WORKER_ID:
+            return worker_id
         else:
             raise ValueError('No such metadata: {}'.format(metadata))
 

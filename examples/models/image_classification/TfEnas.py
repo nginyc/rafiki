@@ -84,7 +84,6 @@ class TfEnasTrain(BaseModel):
             'drop_path_decay_epochs': FixedKnob(630),
             'cutout_size': FixedKnob(0),
             'grad_clip_norm': FixedKnob(5.0),
-            'log_every_secs': FixedKnob(60),
             'cell_archs': ListKnob(2 * cell_num_blocks * 4, lambda i: cell_arch_item(i)),
             'use_cell_arch_type': FixedKnob('') # '' | 'ENAS' | 'NASNET-A'
         }
@@ -439,7 +438,6 @@ class TfEnasTrain(BaseModel):
 
     def _train_model(self, images, classes, num_epochs):
         initial_epoch = self._knobs['initial_epoch']
-        log_every_secs = self._knobs['log_every_secs']
         m = self._model
 
         # Define plots for monitored values
@@ -463,7 +461,7 @@ class TfEnasTrain(BaseModel):
 
                 # Periodically, log monitored values
                 if log_condition.check():
-                    utils.logger.log(steps=batch_steps, **{ name: v for (name, v) in zip(self._monitored_values.keys(), values) })
+                    utils.logger.log(step=batch_steps, **{ name: v for (name, v) in zip(self._monitored_values.keys(), values) })
 
             # Log mean batch accuracy and epoch
             mean_acc = np.mean(accs)
@@ -1048,12 +1046,10 @@ class TfEnasSearch(TfEnasTrain):
             self._train_summaries = []
             if num_epochs > 0:
                 self._train_summaries = self._train_model(images, classes, num_epochs)
+                return self._get_shared_vars()
             else:
                 utils.logger.log('Skipping training...')
-        
-    def get_shared_parameters(self):
-        with self._graph.as_default():
-            return self._get_shared_vars()
+                return {} # No new trained parameters to share
 
     def _get_shared_vars(self):
         shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
@@ -1271,8 +1267,8 @@ if __name__ == '__main__':
 
         print('Training advisor...')
         knob_config = TfEnasTrain.get_knob_config()
-        total_trials = args.total_trials if args.total_trials > 0 else 31 * 150
-        advisor = Advisor(total_trials, knob_config) 
+        total_trials = args.total_trials if args.total_trials > 0 else 30 * 150
+        advisor = Advisor(knob_config) 
         tune_model(
             TfEnasSearch, 
             train_dataset_uri='data/cifar_10_for_image_classification_train.zip',

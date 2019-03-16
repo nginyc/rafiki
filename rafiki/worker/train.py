@@ -27,7 +27,7 @@ _TrainJob = namedtuple('_TrainJob', ['id', 'budget', 'train_dataset_uri', 'val_d
 _Model = namedtuple('_Model', ['id', 'model_file_bytes', 'model_class'])
 
 class TrainWorker(object):
-    def __init__(self, service_id, meta_store=None, param_store=None, **kwargs):
+    def __init__(self, service_id, container_id, meta_store=None, param_store=None, **kwargs):
         if meta_store is None: 
             meta_store = MetaStore()
         
@@ -37,6 +37,7 @@ class TrainWorker(object):
             
         self._params_root_dir = os.path.join(os.environ['WORKDIR_PATH'], os.environ['PARAMS_DIR_PATH'])
         self._service_id = service_id
+        self._container_id = container_id
         self._meta_store = meta_store
         self._param_store = param_store
         self._trial_id = None
@@ -66,7 +67,6 @@ class TrainWorker(object):
             # If budget reached, stop worker
             if self._if_budget_reached(train_job, sub_train_job):
                 logger.info('Budget for sub train job has reached')
-                self._maybe_delete_advisor(advisor_id, sub_train_job)
                 self._client.send_event('sub_train_job_budget_reached', sub_train_job_id=self._sub_train_job_id)
                 break
 
@@ -107,6 +107,10 @@ class TrainWorker(object):
         # Run model teardown
         logger.info('Running model class teardown...')
         clazz.teardown()
+
+        # Train job must have finished, delete advisor & shared params
+        self._maybe_delete_advisor(advisor_id, sub_train_job)
+        self._clear_params(sub_train_job)
             
     def stop(self):
         # If worker is currently running a trial, mark it has terminated
@@ -151,17 +155,14 @@ class TrainWorker(object):
         # Initialize & train model
         logger.info('Training model...')
         model_inst = clazz(**knobs)
-        model_inst.train(train_job.train_dataset_uri, params)
+        params = model_inst.train(train_job.train_dataset_uri, params) or {}
+        if len(params) > 0:
+            logger.info('Trial produced {} shared parameters'.format(len(params)))
 
         # Evaluate model
         logger.info('Evaluating model...')
         score = model_inst.evaluate(train_job.val_dataset_uri)
-        print('Trial score: {}'.format(score))
-
-        # Get shared params
-        params = model_inst.get_shared_parameters() or {}
-        if len(params) > 0:
-            logger.info('Trial produced {} shared parameters'.format(len(params)))
+        logger.info('Trial score: {}'.format(score))
 
         # Maybe save model
         params_dir = None
@@ -179,12 +180,9 @@ class TrainWorker(object):
         while True:
             if knobs is None or params is None:
                 logger.info('Requesting for proposal from advisor...')
-                res = self._client.generate_proposal(advisor_id)
+                res = self._client.generate_proposal(advisor_id, worker_id=self._container_id)
                 knobs = res['knobs']
                 params = res['params']
-                logger.info('Received proposal from advisor:')
-                logger.info(knobs)
-                logger.info('With {} params'.format(len(params)))
 
             # Validate knobs 
             validated_knobs = clazz.validate_knobs(knobs)
@@ -193,19 +191,25 @@ class TrainWorker(object):
                 (knobs, params) = self._feedback(advisor_id, sub_train_job, 0, knobs, {})
                 continue
             
-            # Override knobs from sub train job config
-            if 'knobs' in sub_train_job.config:
-                config_knobs = sub_train_job.config['knobs']
-                logger.info('Overriding knobs with {} from sub train job\'s config...'.format(config_knobs))
-                knobs = { **knobs, **config_knobs }
-            
             knobs = validated_knobs
             break
 
-        # Load actual params from store
-        logger.info('Retrieving shared params from store...')
-        params = self._param_store.retrieve_params(sub_train_job.id, params)
+        # Override knobs from sub train job config
+        if 'knobs' in sub_train_job.config:
+            config_knobs = sub_train_job.config['knobs']
+            logger.info('Overriding knobs with {} from sub train job\'s config...'.format(config_knobs))
+            knobs = { **knobs, **config_knobs }
 
+        # Load actual params from store
+        if len(params) > 0:
+            logger.info('Retrieving shared params from store...')
+            params = self._param_store.retrieve_params(sub_train_job.id, params)
+        
+        logger.info('Using proposal from advisor:')
+        logger.info(knobs)
+        if len(params) > 0:
+            logger.info('With {} shared params'.format(len(params)))
+            
         return (knobs, params)
 
     # Feedback result of trial to advisor
@@ -218,7 +222,8 @@ class TrainWorker(object):
 
         # Report results of trial to advisor and get next proposal
         logger.info('Sending result of trials\' knobs & params to advisor...')
-        data = self._client.feedback_to_advisor(advisor_id, score, knobs, trial_params)
+        data = self._client.feedback_to_advisor(advisor_id, score, knobs, 
+                                                trial_params, worker_id=self._container_id)
         next_knobs = data['knobs']
         next_params = data['params']
         return (next_knobs, next_params) 
@@ -247,7 +252,8 @@ class TrainWorker(object):
             logger.info('Creating new trial in DB...')
             trial = self._meta_store.create_trial(
                 sub_train_job_id=sub_train_job.id,
-                model_id=model.id
+                model_id=model.id,
+                worker_id=self._container_id
             )
             self._meta_store.commit()
             logger.info('Created trial of ID "{}" in DB'.format(trial.id))
@@ -268,6 +274,9 @@ class TrainWorker(object):
             # Throw just a warning - maybe another worker deleted it
             logger.warning('Error while deleting advisor:')
             logger.warning(traceback.format_exc())
+
+    def _clear_params(self, sub_train_job: _SubTrainJob):
+        self._param_store.clear_params(sub_train_job.id)
 
     # Returns whether the worker reached its budget (only consider COMPLETED or ERRORED trials)
     def _if_budget_reached(self, train_job: _TrainJob, sub_train_job: _SubTrainJob):

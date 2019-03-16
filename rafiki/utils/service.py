@@ -7,7 +7,7 @@ from rafiki.utils.log import configure_logging
 
 logger = logging.getLogger(__name__)
 
-def run_service(meta_store, start_service, end_service):
+def run_worker(meta_store, start_worker, stop_worker):
     service_id = os.environ['RAFIKI_SERVICE_ID']
     service_type = os.environ['RAFIKI_SERVICE_TYPE']
     container_id = os.environ.get('HOSTNAME', 'localhost')
@@ -15,7 +15,7 @@ def run_service(meta_store, start_service, end_service):
 
     def _sigterm_handler(_signo, _stack_frame):
         logger.warn("Terminal signal received: %s, %s" % (_signo, _stack_frame))
-        end_service(service_id, service_type)
+        stop_worker()
         exit(0)
 
     signal.signal(signal.SIGINT, _sigterm_handler)
@@ -29,11 +29,11 @@ def run_service(meta_store, start_service, end_service):
     try:
         logger.info('Starting worker {}...'.format(service_id))
 
-        start_service(service_id, service_type)
+        start_worker(service_id, service_type, container_id)
 
-        logger.info('Ending worker {}...'.format(service_id))
+        logger.info('Stopping worker {}...'.format(service_id))
 
-        end_service(service_id, service_type)
+        stop_worker()
 
     except Exception as e:
         logger.error('Error while running worker:')
@@ -44,7 +44,7 @@ def run_service(meta_store, start_service, end_service):
             service = meta_store.get_service(service_id)
             meta_store.mark_service_as_errored(service)
 
-        end_service(service_id, service_type)
+        stop_worker()
 
         raise e
 

@@ -350,7 +350,8 @@ class Admin(object):
             'datetime_stopped': trial.datetime_stopped,
             'model_name': model.name,
             'score': trial.score,
-            'knobs': trial.knobs
+            'knobs': trial.knobs,
+            'worker_id': trial.worker_id
         }
 
     def get_trial_logs(self, trial_id):

@@ -357,10 +357,11 @@ class MetaStore(object):
     # Trials
     ####################################
 
-    def create_trial(self, sub_train_job_id, model_id):
+    def create_trial(self, sub_train_job_id, model_id, worker_id):
         trial = Trial(
             sub_train_job_id=sub_train_job_id,
-            model_id=model_id
+            model_id=model_id,
+            worker_id=worker_id
         )
         self._session.add(trial)
         return trial
