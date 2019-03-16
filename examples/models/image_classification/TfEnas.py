@@ -1,16 +1,11 @@
 import tensorflow as tf
-from tensorflow.python.keras import layers
-from tensorflow import keras
 from tensorflow.python.client import device_lib
 from tensorflow.python.training import moving_averages
-import json
 import os
 import math
-import tempfile
 from datetime import datetime
 from collections import namedtuple
 import numpy as np
-import base64
 import argparse
 
 from rafiki.advisor import Advisor, tune_model
@@ -111,10 +106,10 @@ class TfEnasTrain(BaseModel):
         num_epochs = self._knobs['trial_epochs']
         (images, classes, self._train_params) = self._prepare_dataset(dataset_uri)
         (self._model, self._graph, self._sess, self._saver, 
-            self._monitored_values) = self._build_model()
+            monitored_values) = self._build_model()
         
         with self._graph.as_default():
-            self._train_summaries = self._train_model(images, classes, num_epochs)
+            self._train_summaries = self._train_model(images, classes, num_epochs, monitored_values)
             utils.logger.log('Evaluating model on train dataset...')
             acc = self._evaluate_model(images, classes)
             utils.logger.log('Train accuracy: {}'.format(acc))
@@ -228,7 +223,7 @@ class TfEnasTrain(BaseModel):
 
             # Preprocess & do inference
             (X, classes, init_op) = self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
-            (probs, preds, logits, aux_logits_list) = self._inference(X, step, normal_arch, reduction_arch, is_train_ph)
+            (probs, preds, logits, aux_logits_list) = self._forward(X, step, normal_arch, reduction_arch, is_train_ph)
             
             # Compute training loss & accuracy
             tf_vars = self._get_all_variables()
@@ -256,7 +251,7 @@ class TfEnasTrain(BaseModel):
 
         return (model, graph, sess, saver, monitored_values)
 
-    def _inference(self, X, step, normal_arch, reduction_arch, is_train):
+    def _forward(self, X, step, normal_arch, reduction_arch, is_train):
         K = self._train_params['K'] # No. of classes
         in_ch = 3 # Num channels of input images
         w = self._train_params['image_size'] # Initial input width
@@ -437,13 +432,12 @@ class TfEnasTrain(BaseModel):
         sess.run(tf.global_variables_initializer())
         return sess
 
-    def _train_model(self, images, classes, num_epochs):
+    def _train_model(self, images, classes, num_epochs, monitored_values):
         initial_epoch = self._knobs['initial_epoch']
-        log_every_secs = self._knobs['log_every_secs']
         m = self._model
 
         # Define plots for monitored values
-        for (name, _) in self._monitored_values.items():
+        for (name, _) in monitored_values.items():
             utils.logger.define_plot('"{}" Over Time'.format(name), [name])
 
         train_summaries = [] # List of (<steps>, <summary>) collected during training
@@ -452,7 +446,7 @@ class TfEnasTrain(BaseModel):
         for trial_epoch in range(num_epochs):
             epoch = initial_epoch + trial_epoch
             utils.logger.log('Running epoch {} (trial epoch {})...'.format(epoch, trial_epoch))
-            stepper = self._feed_dataset_to_model(images, [m.train_op, m.summary_op, m.acc, m.step, *self._monitored_values.values()], 
+            stepper = self._feed_dataset_to_model(images, [m.train_op, m.summary_op, m.acc, m.step, *monitored_values.values()], 
                                                 is_train=True, classes=classes)
 
             # To track mean batch accuracy
@@ -463,7 +457,8 @@ class TfEnasTrain(BaseModel):
 
                 # Periodically, log monitored values
                 if log_condition.check():
-                    utils.logger.log(steps=batch_steps, **{ name: v for (name, v) in zip(self._monitored_values.keys(), values) })
+                    utils.logger.log(steps=batch_steps, 
+                        **{ name: v for (name, v) in zip(monitored_values.keys(), values) })
 
             # Log mean batch accuracy and epoch
             mean_acc = np.mean(accs)
@@ -1039,7 +1034,7 @@ class TfEnasSearch(TfEnasTrain):
         num_epochs = self._knobs['trial_epochs']
         (images, classes, self._train_params) = self._prepare_dataset(dataset_uri)
         (self._model, self._graph, self._sess, self._saver, 
-            self._monitored_values) = self._build_model()
+            monitored_values) = self._build_model()
         
         with self._graph.as_default():
             if len(shared_params) > 0:
@@ -1047,7 +1042,7 @@ class TfEnasSearch(TfEnasTrain):
 
             self._train_summaries = []
             if num_epochs > 0:
-                self._train_summaries = self._train_model(images, classes, num_epochs)
+                self._train_summaries = self._train_model(images, classes, num_epochs, monitored_values)
             else:
                 utils.logger.log('Skipping training...')
         
@@ -1114,7 +1109,7 @@ class TfEnasSearch(TfEnasTrain):
 
             # Preprocess & do inference
             (X, classes, init_op) = self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
-            (probs, preds, logits, aux_logits_list) = self._inference(X, step, normal_arch_ph, reduction_arch_ph, is_train_ph)
+            (probs, preds, logits, aux_logits_list) = self._forward(X, step, normal_arch_ph, reduction_arch_ph, is_train_ph)
             
             # Compute training loss & accuracy
             tf_vars = self._get_all_variables()
