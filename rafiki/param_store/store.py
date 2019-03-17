@@ -4,7 +4,8 @@ import numpy as np
 from typing import Dict
 import uuid
 import logging
-from functools import lru_cache
+
+from .cache import Cache
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class ParamStore(object):
     '''
     def __init__(self, cache_size=16384, redis_host=None, redis_port=6379):
         self._redis = self._make_redis_client(redis_host, redis_port) if redis_host is not None else None
-        self._cache = _ParamCache(cache_size)
+        self._cache = Cache(cache_size)
     
     '''
     Retrieves parameters for a session from underlying storage.
@@ -31,31 +32,32 @@ class ParamStore(object):
 
         # For each param
         for (name, param_id) in params.items():
-
             # Check in cache first
-            params = self._cache.get(param_id)
-            if params is not None:
-                out_params[name] = params
+            value = self._cache.get(param_id)
+            if value is not None:
+                out_params[name] = value
                 continue
             
             # Check in redis next, fetching the whole params dict associated with the param
             params_key = ':'.join(param_id.split(':')[0:3]) # <namespace>:<session_id>:<prefix>
-            logger.info('Fetching key "{}" for session "{}" from Redis...'.format(params_key, session_id))
-            params_str = self._redis.get(params_key)
-            if params_str is None:
+            logger.info('Fetching key "{}" from Redis...'.format(params_key))
+            fetched_params_str = self._redis.get(params_key)
+            if fetched_params_str is None:
                 logger.info('Key doesn\'t exist in Redis')
                 continue
 
             # Store the whole params dict in cache
-            params = self._deserialize_params(params_str)
-            for (name, value) in params.items():
+            fetched_params = self._deserialize_params(fetched_params_str)
+            for (name, value) in fetched_params.items():
                 fetched_param_id = '{}:{}'.format(params_key, name)
                 self._cache.put(fetched_param_id, value)
 
+            print(self._cache)
+
             # Check cache again
-            params = self._cache.get(param_id)
-            if params is not None:
-                out_params[name] = params
+            value = self._cache.get(param_id)
+            if value is not None:
+                out_params[name] = value
                 
         return out_params
 
@@ -76,7 +78,8 @@ class ParamStore(object):
         if self._redis is not None:
             # Store whole params dict in redis
             params_str = self._serialize_params(params)
-            logger.info('Storing key "{}" for session "{}" into Redis...'.format(params_key, session_id))
+            logger.info('Storing key "{}" into Redis...'.format(params_key))
+            print(self._cache)
             self._redis.set(params_key, params_str)
 
         # Store param one by one in cache
@@ -112,7 +115,7 @@ class ParamStore(object):
     def _serialize_params(self, params):
         # Convert numpy arrays to lists
         for (name, value) in params.items():
-            params[name] = list(value)
+            params[name] = value.tolist()
 
         # Convert to JSON
         params_str = json.dumps(params)
@@ -127,19 +130,4 @@ class ParamStore(object):
             params[name] = np.array(value)
         
         return params
-
-class _ParamCache():
-    def __init__(self, size: int):
-        self._temp_result = None # For temporarily piping result into cache
-        def get_from_cache(key):
-            return self._temp_result
-        self._get_from_cache = lru_cache(maxsize=size)(get_from_cache)
-
-    def put(self, key: str, value):
-        self._temp_result = value
-        self._get_from_cache(key)
-        self._temp_result = None
-
-    def get(self, key: str):
-        return self._get_from_cache(key)
 

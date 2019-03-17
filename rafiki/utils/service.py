@@ -27,12 +27,9 @@ def run_worker(meta_store, start_worker, stop_worker):
         meta_store.mark_service_as_running(service)
 
     try:
-        logger.info('Starting worker {}...'.format(service_id))
-
+        logger.info('Starting worker "{}" for service of ID "{}"...'.format(container_id, service_id))
         start_worker(service_id, service_type, container_id)
-
-        logger.info('Stopping worker {}...'.format(service_id))
-
+        logger.info('Stopping worker...')
         stop_worker()
 
     except Exception as e:
