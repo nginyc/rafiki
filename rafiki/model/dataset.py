@@ -78,8 +78,8 @@ class DatasetUtils():
             If mean `mean` and standard deviation `std` are `None`, they will be computed on the images.
 
             :param images: (N x width x height x channels) array-like of images to resize
-            :param float[3] mean: Mean for normalization, by channel
-            :param float[3] std: Standard deviation for normalization, by channel
+            :param float[] mean: Mean for normalization, by channel
+            :param float[] std: Standard deviation for normalization, by channel
             :returns: (images, mean, std)
         '''
         if len(images) == 0:
@@ -94,7 +94,7 @@ class DatasetUtils():
             std = np.std(images, axis=(0, 1, 2)).tolist() # shape = (channels,)
 
         # Normalize all images
-        images = np.transpose((np.transpose(images, (1, 0, 2, 3)) - mean) / std, (1, 0, 2, 3))
+        images = (images - mean) / std
 
         return (images, mean, std)
 
