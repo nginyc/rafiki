@@ -52,8 +52,6 @@ class ParamStore(object):
                 fetched_param_id = '{}:{}'.format(params_key, name)
                 self._cache.put(fetched_param_id, value)
 
-            print(self._cache)
-
             # Check cache again
             value = self._cache.get(param_id)
             if value is not None:
@@ -102,8 +100,9 @@ class ParamStore(object):
         # Clear params from redis
         if self._redis is not None:
             params_keys = self._redis.keys('{}:*'.format(session_key))
-            logger.info('Clearing {} keys for session "{}" from Redis...'.format(len(params_keys), session_id))
-            self._redis.delete(*params_keys)
+            if len(params_keys) > 0:
+                logger.info('Clearing {} keys for session "{}" from Redis...'.format(len(params_keys), session_id))
+                self._redis.delete(*params_keys)
 
     def _make_redis_client(self, host, port):
         import redis
