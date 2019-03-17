@@ -165,7 +165,14 @@ export default class RafikiClient {
   }
   
    _toDate(dateString: string) {
-    return new Date(Date.parse(dateString));
+    const timestamp = Date.parse(dateString);
+
+    // Check invalid date
+    if (isNaN(timestamp)) {
+      return null;
+    }
+
+    return new Date(timestamp);
   }
 
   _initializeStorage(storage?: Storage) {
@@ -295,6 +302,7 @@ export interface Trial {
   datetime_stopped?: Date;
   score: number;
   model_name: string;
+  worker_id: string;
   knobs: { [name: string]: any }
 }
 
