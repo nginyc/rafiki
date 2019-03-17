@@ -3,6 +3,7 @@ from tensorflow.python.client import device_lib
 from tensorflow.python.training import moving_averages
 import os
 import math
+import random
 from datetime import datetime
 from collections import namedtuple
 import numpy as np
@@ -12,7 +13,8 @@ from rafiki.advisor import Advisor, tune_model
 from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
                             FixedKnob, ListKnob, Metadata, MetadataKnob
 
-_Model = namedtuple('_Model', ['init_op', 'train_op', 'summary_op', 'images_ph', 'classes_ph', 'is_train_ph', 
+_Model = namedtuple('_Model', ['dataset_init_op',
+        'train_op', 'summary_op', 'images_ph', 'classes_ph', 'is_train_ph', 
         'probs', 'acc', 'step', 'normal_arch_ph', 'reduction_arch_ph', 
         'shared_params_phs', 'shared_params_assign_op'])
 
@@ -221,7 +223,8 @@ class TfEnasTrain(BaseModel):
             step = tf.Variable(0, name='step', dtype=tf.int32, trainable=False)
 
             # Preprocess & do inference
-            (X, classes, init_op) = self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
+            (X, classes, dataset_init_op) = \
+                self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
             (probs, preds, logits, aux_logits_list) = self._forward(X, step, normal_arch, reduction_arch, is_train_ph)
             
             # Compute training loss & accuracy
@@ -245,8 +248,8 @@ class TfEnasTrain(BaseModel):
             # Make session
             sess = self._make_session()
 
-        model = _Model(init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, 
-                    probs, acc, step, None, None, None, None)
+        model = _Model(dataset_init_op, train_op, summary_op, 
+                    images_ph, classes_ph, is_train_ph, probs, acc, step, None, None, None, None)
 
         return (model, graph, sess, saver, monitored_values)
 
@@ -353,30 +356,29 @@ class TfEnasTrain(BaseModel):
 
         # Create TF dataset
         dataset = tf.data.Dataset.from_tensor_slices((images, classes)) \
-                    .batch(batch_size) \
-                    .shuffle(buffer_size=16384)
+                    .batch(batch_size)
         dataset_itr = dataset.make_initializable_iterator()
         (images, classes) = dataset_itr.get_next()
-        init_op = dataset_itr.initializer
+        dataset_init_op = dataset_itr.initializer
 
+        # Do random crop + horizontal flip for each image
         def preprocess(image):
-            # Do random crop + horizontal flip
             image = tf.pad(image, [[4, 4], [4, 4], [0, 0]])
             image = tf.image.random_crop(image, [w, h, in_ch])
             image = tf.image.random_flip_left_right(image)
 
             if cutout_size > 0:
                 image = self._do_cutout(image, w, h, cutout_size)
-
+            
             return image
 
         # Only preprocess images during train
-        images = tf.cond(is_train, 
+        X = tf.cond(is_train, 
                         lambda: tf.map_fn(preprocess, images, back_prop=False),
                         lambda: images)
+        X = tf.cast(X, tf.float32)
 
-        X = tf.cast(images, tf.float32)
-        return (X, classes, init_op)
+        return (X, classes, dataset_init_op)
     
     def _get_drop_path_keep_prob(self, layers_ratio, step, is_train):
         batch_size = self._knobs['batch_size'] 
@@ -483,8 +485,14 @@ class TfEnasTrain(BaseModel):
     def _feed_dataset_to_model(self, images, run_ops, is_train=False, classes=None):
         m = self._model
         
+        # Shuffle dataset if training
+        if is_train:
+            zipped = list(zip(images, classes))
+            random.shuffle(zipped)
+            (images, classes) = zip(*zipped)
+
         # Initialize dataset (mock classes if required)
-        self._sess.run(m.init_op, feed_dict={
+        self._sess.run(m.dataset_init_op, feed_dict={
             m.images_ph: images, 
             m.classes_ph: classes if classes is not None else np.zeros((len(images),))
         })
@@ -1105,7 +1113,8 @@ class TfEnasSearch(TfEnasTrain):
             step = tf.Variable(0, name='step', dtype=tf.int32, trainable=False)
 
             # Preprocess & do inference
-            (X, classes, init_op) = self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
+            (X, classes, dataset_init_op) = \
+                self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
             (probs, preds, logits, aux_logits_list) = self._forward(X, step, normal_arch_ph, reduction_arch_ph, is_train_ph)
             
             # Compute training loss & accuracy
@@ -1140,9 +1149,9 @@ class TfEnasSearch(TfEnasTrain):
             # Make session
             sess = self._make_session()
 
-        model = _Model(init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, 
-                        probs, acc, step, normal_arch_ph, reduction_arch_ph, shared_params_phs, 
-                        shared_params_assign_op)
+        model = _Model(dataset_init_op, train_op, summary_op, 
+                        images_ph, classes_ph, is_train_ph, probs, acc, step, normal_arch_ph, 
+                        reduction_arch_ph, shared_params_phs, shared_params_assign_op)
 
         self.memo['model'] = _ModelMemo(
             self._train_params, self._knobs, graph, sess,
