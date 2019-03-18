@@ -221,7 +221,7 @@ class TfEnasTrain(BaseModel):
             is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=()) # Are we training or predicting?
 
             # Initialize steps variable
-            step = self._make_var('step', dtype=tf.int32, trainable=False, initializer=tf.constant(0))
+            step = self._make_var('step', (), dtype=tf.int32, trainable=False, initializer=tf.initializers.constant(0))
 
             # Preprocess & do inference
             (X, classes, dataset_init_op) = \
@@ -983,13 +983,12 @@ class TfEnasTrain(BaseModel):
 
         return (summary_op, monitored_values)
 
-    def _make_var(self, name, shape=None, dtype=None, no_reg=False, initializer=None, trainable=True):
+    def _make_var(self, name, shape, dtype=None, no_reg=False, initializer=None, trainable=True):
         if initializer is None:
             initializer = tf.contrib.keras.initializers.he_normal()
 
         # Ensure that name is unique by shape too
-        if shape is not None:
-            name += '-shape-{}'.format('x'.join([str(x) for x in shape]))
+        name += '-shape-{}'.format('x'.join([str(x) for x in shape]))
 
         var = tf.get_variable(name, shape=shape, dtype=dtype, initializer=initializer, trainable=trainable)
 
@@ -1124,7 +1123,7 @@ class TfEnasSearch(TfEnasTrain):
             reduction_arch_ph = tf.placeholder(tf.int32, name='reduction_arch_ph', shape=(cell_num_blocks, 4))
 
             # Initialize steps variable
-            step = self._make_var('step', dtype=tf.int32, trainable=False, initializer=tf.constant(0), no_share=True)
+            step = self._make_var('step', (), dtype=tf.int32, trainable=False, initializer=tf.initializers.constant(0), no_share=True)
 
             # Preprocess & do inference
             (X, classes, dataset_init_op) = \
@@ -1262,8 +1261,8 @@ class TfEnasSearch(TfEnasTrain):
 
         return X
 
-    def _make_var(self, name, no_share=False, **kwargs):
-        var = super()._make_var(name, **kwargs)
+    def _make_var(self, name, shape, no_share=False, **kwargs):
+        var = super()._make_var(name, shape, **kwargs)
 
         # Mark var as shared
         if not no_share:
