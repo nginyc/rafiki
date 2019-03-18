@@ -15,7 +15,7 @@ class ParamStore(object):
     '''
     Store API that retrieves and stores parameters, backed an in-memory cache and Redis (optional).
     '''
-    def __init__(self, cache_size=16384, redis_host=None, redis_port=6379):
+    def __init__(self, cache_size=32768, redis_host=None, redis_port=6379):
         self._redis = self._make_redis_client(redis_host, redis_port) if redis_host is not None else None
         self._cache = Cache(cache_size)
     
@@ -36,6 +36,9 @@ class ParamStore(object):
             value = self._cache.get(param_id)
             if value is not None:
                 out_params[name] = value
+                continue
+
+            if self._redis is None:
                 continue
             
             # Check in redis next, fetching the whole params dict associated with the param

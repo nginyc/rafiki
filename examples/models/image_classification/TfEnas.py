@@ -1143,7 +1143,7 @@ class TfEnasSearch(TfEnasTrain):
             # Allow loading of shared parameters
             shareable_tf_vars = self._get_shareable_tf_vars()
             shared_params_phs = {
-                tf_var.name: tf.placeholder(tf.float32, shape=tf_var.shape)
+                tf_var.name: tf.placeholder(dtype=tf_var.dtype, shape=tf_var.shape)
                 for tf_var in shareable_tf_vars
             }
             shared_params_assign_op = tf.group([
