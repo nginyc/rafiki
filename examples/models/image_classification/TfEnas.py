@@ -229,12 +229,11 @@ class TfEnasTrain(BaseModel):
             (probs, preds, logits, aux_logits_list) = self._forward(X, step, normal_arch, reduction_arch, is_train_ph)
             
             # Compute training loss & accuracy
-            tf_vars = self._get_all_variables()
             total_loss = self._compute_loss(logits, aux_logits_list, classes)
             acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
             # Optimize training loss
-            train_op = self._optimize(total_loss, tf_vars, step)
+            train_op = self._optimize(total_loss, step)
 
             # Count model parameters
             model_params_count = self._count_model_parameters()
@@ -244,6 +243,7 @@ class TfEnasTrain(BaseModel):
             (summary_op, monitored_values) = self._add_monitoring_of_values()
 
             # Add saver
+            tf_vars = tf.global_variables()
             saver = tf.train.Saver(tf_vars)
 
             # Make session
@@ -328,14 +328,12 @@ class TfEnasTrain(BaseModel):
         
         return (probs, preds, logits, aux_logits_list)
 
-    def _optimize(self, loss, tf_vars, step):
+    def _optimize(self, loss, step):
         opt_momentum = self._knobs['opt_momentum'] # Momentum optimizer momentum
         grad_clip_norm = self._knobs['grad_clip_norm'] # L2 norm to clip gradients by
 
-        # Filter untrainable vars
-        tf_trainable_vars = [var for var in tf_vars if var.trainable]
-
         # Compute learning rate, gradients
+        tf_trainable_vars = tf.trainable_variables()
         lr = self._get_learning_rate(step)
         grads = tf.gradients(loss, tf_trainable_vars)
         self._mark_for_monitoring('lr', lr)
@@ -633,8 +631,7 @@ class TfEnasTrain(BaseModel):
         return X
 
     def _count_model_parameters(self):
-        tf_vars = self._get_all_variables()
-        tf_trainable_vars = [var for var in tf_vars if var.trainable]
+        tf_trainable_vars = tf.trainable_variables()
         num_params = 0
         # utils.logger.log('Model parameters:')
         for var in tf_trainable_vars:
@@ -797,9 +794,10 @@ class TfEnasTrain(BaseModel):
         return X
     
     def _add_identity_op(self, X, w, h, ch, is_train, stride):
-        filter_size = 1
+        # If stride > 1, calibrate, else, just return itself
         with tf.variable_scope('identity_op'):
-            X = tf.nn.max_pool(X, ksize=(1, filter_size, filter_size, 1), strides=[1, stride, stride, 1], padding='SAME')
+            if stride > 1:
+                X = self._calibrate(X, w, h, ch, w // stride, h // stride, ch, is_train)
         X = tf.reshape(X, (-1, w // stride, h // stride, ch)) # Sanity shape check
         return X
     
@@ -998,14 +996,8 @@ class TfEnasTrain(BaseModel):
             tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, l2_loss)
         
         return var
-    
-    def _get_all_variables(self):
-        tf_vars = [var for var in tf.global_variables()]
-        return tf_vars
 
 class TfEnasSearch(TfEnasTrain):
-    TF_COLLECTION_SHARED = 'SHARED'
-
     @staticmethod
     def validate_knobs(knobs):
         knobs = TfEnasTrain.validate_knobs(knobs)
@@ -1069,7 +1061,7 @@ class TfEnasSearch(TfEnasTrain):
                 return {} # No new trained parameters to share
 
     def _get_shared_vars(self):
-        shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
+        shareable_tf_vars = self._get_shareable_tf_vars()
         values = self._sess.run(shareable_tf_vars)
         shared_vars = {
             tf_var.name: value
@@ -1082,7 +1074,7 @@ class TfEnasSearch(TfEnasTrain):
         m = self._model
 
         # Get current values for vars
-        shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
+        shareable_tf_vars = self._get_shareable_tf_vars()
         values = self._sess.run(shareable_tf_vars)
 
         # Build feed dict for op for loading shared params
@@ -1123,7 +1115,7 @@ class TfEnasSearch(TfEnasTrain):
             reduction_arch_ph = tf.placeholder(tf.int32, name='reduction_arch_ph', shape=(cell_num_blocks, 4))
 
             # Initialize steps variable
-            step = self._make_var('step', (), dtype=tf.int32, trainable=False, initializer=tf.initializers.constant(0), no_share=True)
+            step = self._make_var('step', (), dtype=tf.int32, trainable=False, initializer=tf.initializers.constant(0))
 
             # Preprocess & do inference
             (X, classes, dataset_init_op) = \
@@ -1131,12 +1123,11 @@ class TfEnasSearch(TfEnasTrain):
             (probs, preds, logits, aux_logits_list) = self._forward(X, step, normal_arch_ph, reduction_arch_ph, is_train_ph)
             
             # Compute training loss & accuracy
-            tf_vars = self._get_all_variables()
             total_loss = self._compute_loss(logits, aux_logits_list, classes)
             acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
             # Optimize training loss
-            train_op = self._optimize(total_loss, tf_vars, step)
+            train_op = self._optimize(total_loss, step)
 
             # Count model parameters
             model_params_count = self._count_model_parameters()
@@ -1146,10 +1137,11 @@ class TfEnasSearch(TfEnasTrain):
             (summary_op, monitored_values) = self._add_monitoring_of_values()
 
             # Add saver
+            tf_vars = tf.global_variables()
             saver = tf.train.Saver(tf_vars)
 
             # Allow loading of shared parameters
-            shareable_tf_vars = tf.get_collection(self.TF_COLLECTION_SHARED)
+            shareable_tf_vars = self._get_shareable_tf_vars()
             shared_params_phs = {
                 tf_var.name: tf.placeholder(tf.float32, shape=tf_var.shape)
                 for tf_var in shareable_tf_vars
@@ -1261,14 +1253,8 @@ class TfEnasSearch(TfEnasTrain):
 
         return X
 
-    def _make_var(self, name, shape, no_share=False, **kwargs):
-        var = super()._make_var(name, shape, **kwargs)
-
-        # Mark var as shared
-        if not no_share:
-            tf.add_to_collection(self.TF_COLLECTION_SHARED, var)
-
-        return var
+    def _get_shareable_tf_vars(self):
+        return tf.global_variables()
 
 class TimedRepeatCondition():
     def __init__(self, every_secs=60):
