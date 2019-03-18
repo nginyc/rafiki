@@ -3,6 +3,7 @@ from tensorflow.python.client import device_lib
 from tensorflow.python.training import moving_averages
 import os
 import math
+import json
 import random
 from datetime import datetime
 from collections import namedtuple
@@ -470,6 +471,8 @@ class TfEnasTrain(BaseModel):
     def _evaluate_model(self, images, classes):
         probs = self._predict_with_model(images)
         preds = np.argmax(probs, axis=1)
+        print(preds)
+        print(classes)
         acc = np.mean(preds == np.asarray(classes))
         return acc
 
