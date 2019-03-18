@@ -221,7 +221,7 @@ class TfEnasTrain(BaseModel):
             is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=()) # Are we training or predicting?
 
             # Initialize steps variable
-            step = tf.Variable(0, name='step', dtype=tf.int32, trainable=False)
+            step = self._make_var('step', dtype=tf.int32, trainable=False, initializer=tf.constant(0))
 
             # Preprocess & do inference
             (X, classes, dataset_init_op) = \
@@ -230,7 +230,7 @@ class TfEnasTrain(BaseModel):
             
             # Compute training loss & accuracy
             tf_vars = self._get_all_variables()
-            total_loss = self._compute_loss(logits, aux_logits_list, tf_vars, classes)
+            total_loss = self._compute_loss(logits, aux_logits_list, classes)
             acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
             # Optimize training loss
@@ -332,9 +332,12 @@ class TfEnasTrain(BaseModel):
         opt_momentum = self._knobs['opt_momentum'] # Momentum optimizer momentum
         grad_clip_norm = self._knobs['grad_clip_norm'] # L2 norm to clip gradients by
 
+        # Filter untrainable vars
+        tf_trainable_vars = [var for var in tf_vars if var.trainable]
+
         # Compute learning rate, gradients
         lr = self._get_learning_rate(step)
-        grads = tf.gradients(loss, tf_vars)
+        grads = tf.gradients(loss, tf_trainable_vars)
         self._mark_for_monitoring('lr', lr)
 
         # Clip gradients
@@ -347,7 +350,7 @@ class TfEnasTrain(BaseModel):
 
         # Init optimizer
         opt = tf.train.MomentumOptimizer(lr, opt_momentum, use_locking=True, use_nesterov=True)
-        train_op = opt.apply_gradients(zip(grads, tf_vars), global_step=step)
+        train_op = opt.apply_gradients(zip(grads, tf_trainable_vars), global_step=step)
 
         return train_op
 
@@ -365,7 +368,7 @@ class TfEnasTrain(BaseModel):
         # Do random crop + horizontal flip for each image
         def preprocess(image):
             image = tf.pad(image, [[4, 4], [4, 4], [0, 0]])
-            image = tf.image.random_crop(image, [w, h, in_ch])
+            image = tf.image.random_crop(image, (w, h, in_ch))
             image = tf.image.random_flip_left_right(image)
 
             if cutout_size > 0:
@@ -471,8 +474,6 @@ class TfEnasTrain(BaseModel):
     def _evaluate_model(self, images, classes):
         probs = self._predict_with_model(images)
         preds = np.argmax(probs, axis=1)
-        print(preds)
-        print(classes)
         acc = np.mean(preds == np.asarray(classes))
         return acc
 
@@ -600,7 +601,7 @@ class TfEnasTrain(BaseModel):
 
         return aux_logits
 
-    def _compute_loss(self, logits, aux_logits_list, tf_vars, classes):
+    def _compute_loss(self, logits, aux_logits_list, classes):
         reg_decay = self._knobs['reg_decay']
         aux_loss_mul = self._knobs['aux_loss_mul'] # Multiplier for auxiliary loss
 
@@ -633,9 +634,10 @@ class TfEnasTrain(BaseModel):
 
     def _count_model_parameters(self):
         tf_vars = self._get_all_variables()
+        tf_trainable_vars = [var for var in tf_vars if var.trainable]
         num_params = 0
         # utils.logger.log('Model parameters:')
-        for var in tf_vars:
+        for var in tf_trainable_vars:
             # utils.logger.log(str(var))
             num_params += np.prod([dim.value for dim in var.get_shape()])
 
@@ -680,10 +682,7 @@ class TfEnasTrain(BaseModel):
 
             blocks.append(X)
 
-        # Concat all blocks
-        comb_ch = b * block_ch
-        with tf.variable_scope('combine'):
-            X = tf.concat(blocks, axis=3)
+        (X, comb_ch) = self._combine_cell_blocks(cell_inputs, blocks, cell_arch, block_ch)
 
         X = tf.reshape(X, (-1, w >> 1, h >> 1, comb_ch)) # Sanity shape check
 
@@ -738,10 +737,7 @@ class TfEnasTrain(BaseModel):
 
             blocks.append(X)
 
-        # Concat all blocks
-        comb_ch = b * block_ch
-        with tf.variable_scope('combine'):
-            X = tf.concat(blocks, axis=3)
+        (X, comb_ch) = self._combine_cell_blocks(cell_inputs, blocks, cell_arch, block_ch)
 
         X = tf.reshape(X, (-1, w, h, comb_ch)) # Sanity shape check
 
@@ -752,6 +748,21 @@ class TfEnasTrain(BaseModel):
         X = (cell_inputs + blocks)[idx]
         X = self._add_op(X, op, w, h, ch, is_train)
         return X
+
+    def _combine_cell_blocks(self, cell_inputs, blocks, cell_arch, block_ch):
+        input_use_counts = [0] * len(cell_inputs + blocks)
+        for (idx1, op1, idx2, op2) in cell_arch:
+            input_use_counts[idx1] += 1
+            input_use_counts[idx2] += 1
+
+        # Concats only unused blocks
+        block_use_counts = input_use_counts[len(cell_inputs):]
+        out_blocks = [block for (block, use_count) in zip(blocks, block_use_counts) if use_count == 0]
+        comb_ch = len(out_blocks) * block_ch
+        with tf.variable_scope('combine'):
+            X = tf.concat(out_blocks, axis=3)
+
+        return (X, comb_ch)
 
     def _add_op(self, X, op, w, h, ch, is_train, stride=1):
         ops = self._knobs['ops']
@@ -835,7 +846,6 @@ class TfEnasTrain(BaseModel):
 
     def _add_drop_path(self, X, keep_prob):
         with tf.variable_scope('drop_path'):
-            keep_prob = tf.cast(keep_prob, tf.float32)
             batch_size = tf.shape(X)[0]
             noise_shape = (batch_size, 1, 1, 1)
             random_tensor = keep_prob + tf.random_uniform(noise_shape, dtype=tf.float32)
@@ -933,9 +943,9 @@ class TfEnasTrain(BaseModel):
                                     initializer=tf.constant_initializer(0.0, dtype=tf.float32))
             scale = self._make_var('scale', (in_ch,), 
                                     initializer=tf.constant_initializer(1.0, dtype=tf.float32))
-            moving_mean = tf.get_variable('moving_mean', (in_ch,), trainable=False, 
+            moving_mean = self._make_var('moving_mean', (in_ch,), trainable=False, 
                                         initializer=tf.constant_initializer(0.0, dtype=tf.float32))
-            moving_variance = tf.get_variable('moving_variance', (in_ch,), trainable=False, 
+            moving_variance = self._make_var('moving_variance', (in_ch,), trainable=False, 
                                             initializer=tf.constant_initializer(1.0, dtype=tf.float32))
 
             # For training, do batch norm with batch mean & variance
@@ -973,24 +983,25 @@ class TfEnasTrain(BaseModel):
 
         return (summary_op, monitored_values)
 
-    def _make_var(self, name, shape, no_reg=False, initializer=None):
+    def _make_var(self, name, shape=None, dtype=None, no_reg=False, initializer=None, trainable=True):
         if initializer is None:
             initializer = tf.contrib.keras.initializers.he_normal()
 
         # Ensure that name is unique by shape too
-        name += '-shape-{}'.format('x'.join([str(x) for x in shape]))
+        if shape is not None:
+            name += '-shape-{}'.format('x'.join([str(x) for x in shape]))
 
-        var = tf.get_variable(name, shape, initializer=initializer)
+        var = tf.get_variable(name, shape=shape, dtype=dtype, initializer=initializer, trainable=trainable)
 
-        # Add L2 regularization node for var
-        if not no_reg:
+        # Add L2 regularization node for trainable var
+        if trainable and not no_reg:
             l2_loss = tf.nn.l2_loss(var)
             tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, l2_loss)
         
         return var
     
     def _get_all_variables(self):
-        tf_vars = [var for var in tf.trainable_variables()]
+        tf_vars = [var for var in tf.global_variables()]
         return tf_vars
 
 class TfEnasSearch(TfEnasTrain):
@@ -1016,7 +1027,7 @@ class TfEnasSearch(TfEnasTrain):
             'batch_size': 64,
             'trial_epochs': cur_trial_epochs,
             'initial_block_ch': 20,
-            'reg_decay': 1e-4,
+            'reg_decay': 2e-4,
             'num_layers': 6,
             'sgdr_alpha': 0.01,
             'dropout_keep_prob': 0.9,
@@ -1113,7 +1124,7 @@ class TfEnasSearch(TfEnasTrain):
             reduction_arch_ph = tf.placeholder(tf.int32, name='reduction_arch_ph', shape=(cell_num_blocks, 4))
 
             # Initialize steps variable
-            step = tf.Variable(0, name='step', dtype=tf.int32, trainable=False)
+            step = self._make_var('step', dtype=tf.int32, trainable=False, initializer=tf.constant(0), no_share=True)
 
             # Preprocess & do inference
             (X, classes, dataset_init_op) = \
@@ -1122,7 +1133,7 @@ class TfEnasSearch(TfEnasTrain):
             
             # Compute training loss & accuracy
             tf_vars = self._get_all_variables()
-            total_loss = self._compute_loss(logits, aux_logits_list, tf_vars, classes)
+            total_loss = self._compute_loss(logits, aux_logits_list, classes)
             acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
             # Optimize training loss
@@ -1226,6 +1237,14 @@ class TfEnasSearch(TfEnasTrain):
 
         return X
 
+    def _combine_cell_blocks(self, cell_inputs, blocks, cell_arch, block_ch):
+        # Concats all blocks
+        comb_ch = len(blocks) * block_ch
+        with tf.variable_scope('combine'):
+            X = tf.concat(blocks, axis=3)
+
+        return (X, comb_ch)
+
     def _add_op(self, X, op, w, h, ch, is_train, stride=1):
         ops = self._knobs['ops']
         op_map = self._get_op_map()
@@ -1243,8 +1262,8 @@ class TfEnasSearch(TfEnasTrain):
 
         return X
 
-    def _make_var(self, name, shape, no_share=False, **kwargs):
-        var = super()._make_var(name, shape, **kwargs)
+    def _make_var(self, name, no_share=False, **kwargs):
+        var = super()._make_var(name, **kwargs)
 
         # Mark var as shared
         if not no_share:
