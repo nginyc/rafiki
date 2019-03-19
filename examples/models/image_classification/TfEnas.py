@@ -82,6 +82,7 @@ class TfEnasTrain(BaseModel):
             'drop_path_decay_epochs': FixedKnob(630),
             'cutout_size': FixedKnob(0),
             'grad_clip_norm': FixedKnob(5.0),
+            'use_aux_head': FixedKnob(False),
             'cell_archs': ListKnob(2 * cell_num_blocks * 4, lambda i: cell_arch_item(i)),
             'use_cell_arch_type': FixedKnob('') # '' | 'ENAS' | 'NASNET-A'
         }
@@ -226,11 +227,15 @@ class TfEnasTrain(BaseModel):
             # Preprocess & do inference
             (X, classes, dataset_init_op) = \
                 self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
-            (probs, preds, logits, aux_logits_list) = self._forward(X, step, normal_arch, reduction_arch, is_train_ph)
+            (logits, aux_logits_list) = self._forward(X, step, normal_arch, reduction_arch, is_train_ph)
             
-            # Compute training loss & accuracy
-            total_loss = self._compute_loss(logits, aux_logits_list, classes)
+            # Compute probabilities, predictions, accuracy
+            probs = tf.nn.softmax(logits)
+            preds = tf.argmax(logits, axis=1, output_type=tf.int32)
             acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
+
+            # Compute training loss
+            total_loss = self._compute_loss(logits, aux_logits_list, classes)
 
             # Optimize training loss
             train_op = self._optimize(total_loss, step)
@@ -263,6 +268,7 @@ class TfEnasTrain(BaseModel):
         L = self._knobs['num_layers'] # Total number of layers
         initial_block_ch = self._knobs['initial_block_ch'] # Initial no. of channels for operations in block
         stem_ch_mul = self._knobs['stem_ch_mul'] # No. of channels for stem convolution as multiple of initial block channels
+        use_aux_head = self._knobs['use_aux_head'] # Whether to use auxiliary head
         stem_ch = initial_block_ch * stem_ch_mul
         
         # Layers with reduction cells (otherwise, normal cells)
@@ -270,8 +276,10 @@ class TfEnasTrain(BaseModel):
 
         # Layers with auxiliary heads
         # Aux heads speed up training of good feature repsentations early in the network
-        # Add aux heads only if downsampling width can happen 3 times
-        aux_head_layers = [reduction_layers[-1] + 1] if w % (2 << 3) == 0 else []
+        # Add aux heads only if enabled and downsampling width can happen 3 times
+        aux_head_layers = []
+        if use_aux_head and w % (2 << 3) == 0:
+            aux_head_layers.append(reduction_layers[-1] + 1)
 
         # Stores previous layers. layers[i] = (<previous layer (i - 1) as input to layer i>, <width>, <height>, <channels (tensor)>)
         layers = []
@@ -321,19 +329,15 @@ class TfEnasTrain(BaseModel):
         # Compute logits from X
         with tf.variable_scope('fully_connected'):
             logits = self._add_fully_connected(X, (ch,), K)
-
-        # Compute probabilities and predictions
-        probs = tf.nn.softmax(logits)
-        preds = tf.argmax(logits, axis=1, output_type=tf.int32)
         
-        return (probs, preds, logits, aux_logits_list)
+        return (logits, aux_logits_list)
 
     def _optimize(self, loss, step):
         opt_momentum = self._knobs['opt_momentum'] # Momentum optimizer momentum
         grad_clip_norm = self._knobs['grad_clip_norm'] # L2 norm to clip gradients by
 
         # Compute learning rate, gradients
-        tf_trainable_vars = tf.trainable_variables()
+        tf_trainable_vars = [x for x in tf.trainable_variables() if 'aux' not in x.name] 
         lr = self._get_learning_rate(step)
         grads = tf.gradients(loss, tf_trainable_vars)
         self._mark_for_monitoring('lr', lr)
@@ -445,7 +449,7 @@ class TfEnasTrain(BaseModel):
 
         train_summaries = [] # List of (<steps>, <summary>) collected during training
 
-        log_condition = TimedRepeatCondition()
+        log_condition = TimedRepeatCondition(5)
         for trial_epoch in range(num_epochs):
             epoch = initial_epoch + trial_epoch
             utils.logger.log('Running epoch {} (trial epoch {})...'.format(epoch, trial_epoch))
@@ -1120,11 +1124,15 @@ class TfEnasSearch(TfEnasTrain):
             # Preprocess & do inference
             (X, classes, dataset_init_op) = \
                 self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
-            (probs, preds, logits, aux_logits_list) = self._forward(X, step, normal_arch_ph, reduction_arch_ph, is_train_ph)
+            (logits, aux_logits_list) = self._forward(X, step, normal_arch_ph, reduction_arch_ph, is_train_ph)
             
-            # Compute training loss & accuracy
-            total_loss = self._compute_loss(logits, aux_logits_list, classes)
+            # Compute probabilities, predictions, accuracy
+            probs = tf.nn.softmax(logits)
+            preds = tf.argmax(logits, axis=1, output_type=tf.int32)
             acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
+
+            # Compute training loss
+            total_loss = self._compute_loss(logits, aux_logits_list, classes)
 
             # Optimize training loss
             train_op = self._optimize(total_loss, step)
