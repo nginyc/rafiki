@@ -256,8 +256,7 @@ class TfAllCnnModelC(BaseModel):
         return logits
     
     def _add_conv(self, X, in_w, in_h, in_ch, out_ch, filter_size=1, no_reg=False, padding='SAME', is_input=False):
-        initializer = tf.initializers.glorot_normal()   
-        W = self._make_var('W', (filter_size, filter_size, in_ch, out_ch), no_reg=no_reg, initializer=initializer)
+        W = self._make_var('W', (filter_size, filter_size, in_ch, out_ch), no_reg=no_reg, initializer=tf.initializers.he_normal())
         X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding=padding)
         X = tf.nn.relu(X)
         out_w = in_w - filter_size + 1 if padding == 'VALID' else in_w
@@ -377,11 +376,6 @@ class TfAllCnnModelC(BaseModel):
 
     def _get_trial_epochs(self):
         max_trial_epochs = self._knobs['max_trial_epochs']
-        # trial_count = self._knobs['trial_count']
-        # total_trials = self._knobs['total_trials']
-
-        # Trial epoch schedule: linear increase over trials
-        # return max(round(final_trial_epochs * (trial_count + 1) / total_trials), 1)
         return max_trial_epochs
 
     ####################################
