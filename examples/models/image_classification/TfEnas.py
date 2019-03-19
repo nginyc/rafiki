@@ -337,7 +337,7 @@ class TfEnasTrain(BaseModel):
         grad_clip_norm = self._knobs['grad_clip_norm'] # L2 norm to clip gradients by
 
         # Compute learning rate, gradients
-        tf_trainable_vars = [x for x in tf.trainable_variables() if 'aux' not in x.name] 
+        tf_trainable_vars = tf.trainable_variables()
         lr = self._get_learning_rate(step)
         grads = tf.gradients(loss, tf_trainable_vars)
         self._mark_for_monitoring('lr', lr)
@@ -449,7 +449,7 @@ class TfEnasTrain(BaseModel):
 
         train_summaries = [] # List of (<steps>, <summary>) collected during training
 
-        log_condition = TimedRepeatCondition(5)
+        log_condition = TimedRepeatCondition()
         for trial_epoch in range(num_epochs):
             epoch = initial_epoch + trial_epoch
             utils.logger.log('Running epoch {} (trial epoch {})...'.format(epoch, trial_epoch))
