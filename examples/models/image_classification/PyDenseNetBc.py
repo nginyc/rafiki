@@ -15,7 +15,13 @@ import abc
 from rafiki.model import BaseModel, utils, FixedKnob, MetadataKnob, Metadata, FloatKnob, CategoricalKnob
 from rafiki.advisor import tune_model
 
-class PyDenseNet(BaseModel):
+class PyDenseNetBc(BaseModel):
+    '''
+    Implements DenseNet-BC of "Densely Connected Convolutional Networks" (https://arxiv.org/abs/1608.06993)
+
+    Credits to https://github.com/gpleiss/efficient_densenet_pytorch
+    '''
+
     def __init__(self, **knobs):
         self._knobs = knobs
 
@@ -23,8 +29,7 @@ class PyDenseNet(BaseModel):
     def get_knob_config():
         return {
             'trial_count': MetadataKnob(Metadata.TRIAL_COUNT),
-            'total_trials': MetadataKnob(Metadata.TOTAL_TRIALS),
-            'max_trial_epochs': FixedKnob(50),
+            'max_trial_epochs': FixedKnob(200),
             'lr': FloatKnob(1e-4, 1, is_exp=True),
             'lr_decay': FloatKnob(1e-3, 1e-1, is_exp=True),
             'opt_momentum': FloatKnob(0.7, 1, is_exp=True),
@@ -32,14 +37,13 @@ class PyDenseNet(BaseModel):
             'batch_size': CategoricalKnob([32, 64, 128]),
             'drop_rate': FloatKnob(0, 0.4),
             'max_image_size': FixedKnob(32),
-            'max_train_val_samples': FixedKnob(1024)
+            'max_train_val_samples': FixedKnob(1024),
+            'early_stop_patience_epochs': FixedKnob(5)
         }
 
     def train(self, dataset_uri, shared_params):
         utils.logger.log('Loading dataset...')
         (train_dataset, train_val_dataset, self._train_params) = self._load_train_dataset(dataset_uri)
-        utils.logger.log('Train dataset has {} samples'.format(len(train_dataset)))
-        utils.logger.log('Train-val dataset has {} samples'.format(len(train_val_dataset)))
         utils.logger.log('Training model...')
         self._net = self._train(train_dataset, train_val_dataset)
 
@@ -86,6 +90,7 @@ class PyDenseNet(BaseModel):
         batch_size = self._knobs['batch_size']
         drop_rate = self._knobs['drop_rate']
         K = self._train_params['K']
+        early_stop_patience = self._knobs['early_stop_patience_epochs']
 
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         train_val_dataloader = DataLoader(train_val_dataset, batch_size=batch_size)
@@ -102,7 +107,7 @@ class PyDenseNet(BaseModel):
         (optimizer, scheduler) = self._get_optimizer(net, trial_epochs)
 
         log_condition = TimedRepeatCondition()
-        early_stop_condition = EarlyStopCondition()
+        early_stop_condition = EarlyStopCondition(patience=early_stop_patience)
         step = 0
         for epoch in range(trial_epochs):
             utils.logger.log('Running epoch {}...'.format(epoch))
@@ -171,6 +176,10 @@ class PyDenseNet(BaseModel):
             'N': dataset.size,
             'K': dataset.classes
         }
+
+        utils.logger.log('Train dataset has {} samples'.format(len(train_dataset)))
+        utils.logger.log('Train-val dataset has {} samples'.format(len(train_val_dataset)))
+        
         return (train_dataset, train_val_dataset, train_params)
 
     def _load_val_dataset(self, dataset_uri, train_params):
@@ -198,20 +207,14 @@ class PyDenseNet(BaseModel):
         return (optimizer, scheduler)
 
     def _count_model_parameters(self, net):
-        return sum([p.data.nelement() for p in net.parameters()])
+        return sum(p.numel() for p in net.parameters() if p.requires_grad)
 
     def _get_trial_epochs(self):
         max_trial_epochs = self._knobs['max_trial_epochs']
-        # trial_count = self._knobs['trial_count']
-        # total_trials = self._knobs['total_trials']
-
-        # Trial epoch schedule: linear increase over trials
-        # return max(round(final_trial_epochs * (trial_count + 1) / total_trials), 1)
         return max_trial_epochs
 
 #####################################################################################
 # Implementation of DenseNet
-# Below code is with credits to https://github.com/gpleiss/efficient_densenet_pytorch
 #####################################################################################
 
 def _bn_function_factory(norm, relu, conv):
@@ -412,6 +415,9 @@ class TimedRepeatCondition():
             return False
 
 class EarlyStopCondition():
+    '''
+    :param int patience: How many steps should the condition tolerate before calling early stop (-1 for no stop)
+    '''
     def __init__(self, patience=5, if_max=False):
         self._patience = patience
         self._if_max = if_max
@@ -423,7 +429,10 @@ class EarlyStopCondition():
         return self._patience
     
     # Returns whether should early stop
-    def check(self, value) -> bool:
+    def check(self, value) -> bool:        
+        if self._patience < 0: # No stop
+            return False
+
         if (not self._if_max and value < self._last_best) or \
             (self._if_max and value > self._last_best):
             self._wait_count = 0
@@ -438,7 +447,7 @@ class EarlyStopCondition():
 
 if __name__ == '__main__':
     tune_model(
-        PyDenseNet, 
+        PyDenseNetBc, 
         # train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
         # val_dataset_uri='data/fashion_mnist_for_image_classification_val.zip',
         # test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',

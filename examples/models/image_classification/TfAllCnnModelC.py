@@ -3,13 +3,14 @@ from tensorflow.python.client import device_lib
 import os
 import numpy as np
 import math
+import random
 from datetime import datetime
 from collections import namedtuple
 
 from rafiki.model import BaseModel, utils, IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob
 from rafiki.advisor import tune_model
 
-_Model = namedtuple('_Model', ['images_ph', 'classes_ph', 'is_train_ph', 'step', 'probs', 'loss',
+_Model = namedtuple('_Model', ['images_ph', 'classes_ph', 'is_train_ph', 'step', 'probs', 'acc', 'loss',
                                 'train_op', 'init_op', 'summary_op'])
 
 class TfAllCnnModelC(BaseModel):
@@ -23,15 +24,16 @@ class TfAllCnnModelC(BaseModel):
         return {
             'max_image_size': FixedKnob(32),
             'batch_size': FixedKnob(128),
-            'max_trial_epochs': FixedKnob(350),
+            'max_trial_epochs': FixedKnob(200),
             'max_train_val_samples': FixedKnob(1024),
-            'opt_momentum': FixedKnob(0.9),
+            'opt_momentum': FloatKnob(0.7, 1, is_exp=True),
             'lr': FloatKnob(1e-4, 1, is_exp=True),
-            'lr_decay': FloatKnob(1e-3, 1e-1, is_exp=True),
+            'lr_decay': FixedKnob(0.1),
             'weight_decay': FloatKnob(1e-5, 1e-2, is_exp=True),
             'input_dropout_rate': FloatKnob(0, 0.3),
             'pool_dropout_rate_1': FloatKnob(0, 0.7),
-            'pool_dropout_rate_2': FloatKnob(0, 0.7)
+            'pool_dropout_rate_2': FloatKnob(0, 0.7),
+            'early_stop_patience_epochs': FixedKnob(5),
         }
 
     def __init__(self, **knobs):
@@ -40,8 +42,6 @@ class TfAllCnnModelC(BaseModel):
     def train(self, dataset_uri, *args):
         (train_images, train_classes, train_val_images, 
             train_val_classes, self._train_params) = self._load_train_dataset(dataset_uri)
-        utils.logger.log('Train dataset has {} samples'.format(len(train_images)))
-        utils.logger.log('Train-val dataset has {} samples'.format(len(train_val_images)))
         (self._graph, self._sess, self._model, monitored_values) = self._build_model()
         with self._graph.as_default():
             self._train_summaries = self._train_model(train_images, train_classes, 
@@ -71,6 +71,7 @@ class TfAllCnnModelC(BaseModel):
     def _train_model(self, train_images, train_classes, 
                     train_val_images, train_val_classes, monitored_values):
         trial_epochs = self._get_trial_epochs()
+        early_stop_patience = self._knobs['early_stop_patience_epochs']
         m = self._model
 
         # Define plots for monitored values
@@ -79,31 +80,35 @@ class TfAllCnnModelC(BaseModel):
 
         train_summaries = [] # List of (<steps>, <summary>) collected during training
         log_condition = TimedRepeatCondition()
-        early_stop_condition = EarlyStopCondition()
+        early_stop_condition = EarlyStopCondition(patience=early_stop_patience)
+        
         for epoch in range(trial_epochs):
             utils.logger.log('Running epoch {}...'.format(epoch))
 
             # Run through train dataset
-            stepper = self._feed_dataset_to_model(train_images, [m.train_op, m.summary_op, m.step, 
+            stepper = self._feed_dataset_to_model(train_images, 
+                                                    [m.train_op, m.summary_op, 
+                                                    m.step, m.acc, m.loss,
                                                     *monitored_values.values()], 
                                                     is_train=True, classes=train_classes)
-            for (_, summary, batch_step, *values) in stepper:
+            for (_, summary, batch_step, batch_acc, batch_loss, *values) in stepper:
                 train_summaries.append((batch_step, summary))
 
                 # Periodically, log monitored values
                 if log_condition.check():
-                    utils.logger.log(step=batch_step, 
+                    utils.logger.log(step=batch_step, train_acc=batch_acc, train_loss=batch_loss, 
                         **{ name: v for (name, v) in zip(monitored_values.keys(), values) })
 
             # Run through train-val dataset
-            corrects = 0
+            preds = []
             val_losses = []
             stepper = self._feed_dataset_to_model(train_val_images, [m.loss, m.probs], classes=train_val_classes)
             for (batch_loss, batch_probs) in stepper:
                 batch_preds = np.argmax(batch_probs, axis=1)
                 val_losses.append(batch_loss)
-                corrects += np.sum(batch_preds == np.asarray(train_val_classes))
-
+                preds.extend(batch_preds)
+            
+            corrects = np.sum(preds == np.asarray(train_val_classes))
             val_acc = corrects / len(train_val_images)
             val_avg_loss = np.mean(val_losses)
 
@@ -143,24 +148,27 @@ class TfAllCnnModelC(BaseModel):
             images_ph = tf.placeholder(tf.float32, name='images_ph', shape=(None, w, h, in_ch)) # Images
             classes_ph = tf.placeholder(tf.int32, name='classes_ph', shape=(None,)) # Classes
             is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=()) # Are we training or predicting?
-            step = tf.Variable(0, name='step', dtype=tf.int32, trainable=False)
+            step = self._make_var('step', (), dtype=tf.int32, trainable=False, initializer=tf.initializers.constant(0))
 
             # Preprocess
             (images, classes, init_op) = self._preprocess(images_ph, classes_ph)
             
             # Forward
             logits = self._forward(images, is_train_ph)
+
+            # Compute probabilities, predictions, accuracy
             probs = tf.nn.softmax(logits)
+            preds = tf.argmax(logits, axis=1, output_type=tf.int32)
+            acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
 
             # Compute loss
-            tf_vars = [var for var in tf.trainable_variables()]
-            loss = self._compute_loss(logits, tf_vars, classes)
+            loss = self._compute_loss(logits, classes)
 
             # Optimize
-            train_op = self._optimize(loss, tf_vars, step)
+            train_op = self._optimize(loss, step)
 
             # Count model parameters 
-            count = self._get_params_count(tf_vars)
+            count = self._count_model_parameters()
             utils.logger.log('Model has {} parameters'.format(count))
 
             # Monitor values
@@ -169,12 +177,18 @@ class TfAllCnnModelC(BaseModel):
             # Session
             sess = self._make_session()
 
-            model = _Model(images_ph, classes_ph, is_train_ph, step, probs, loss, train_op, init_op, summary_op)
+            model = _Model(images_ph, classes_ph, is_train_ph, step, probs, acc, loss, train_op, init_op, summary_op)
 
         return (graph, sess, model, monitored_values)
 
     def _feed_dataset_to_model(self, images, run_ops, is_train=False, classes=None):
         m = self._model
+
+        # Shuffle dataset if training
+        if is_train:
+            zipped = list(zip(images, classes))
+            random.shuffle(zipped)
+            (images, classes) = zip(*zipped)
         
         # Initialize dataset (mock classes if required)
         self._sess.run(m.init_op, feed_dict={
@@ -195,8 +209,7 @@ class TfAllCnnModelC(BaseModel):
         batch_size = self._knobs['batch_size']
 
         dataset = tf.data.Dataset.from_tensor_slices((images, classes)) \
-                    .batch(batch_size) \
-                    .shuffle(buffer_size=16384)
+                    .batch(batch_size)
         dataset_itr = dataset.make_initializable_iterator()
         (images, classes) = dataset_itr.get_next()
         init_op = dataset_itr.initializer
@@ -217,30 +230,40 @@ class TfAllCnnModelC(BaseModel):
 
         # Layers
         with tf.variable_scope('layer_1'):
-            X = self._do_conv(X, w, h, in_ch=in_ch, out_ch=chs[0], filter_size=3, padding='SAME')
+            X = self._add_conv(X, w, h, in_ch=in_ch, out_ch=chs[0], filter_size=3, padding='SAME', is_input=True)
         with tf.variable_scope('layer_2'):
-            X = self._do_conv(X, w, h, in_ch=chs[0], out_ch=chs[0], filter_size=3, padding='SAME')
+            X = self._add_conv(X, w, h, in_ch=chs[0], out_ch=chs[0], filter_size=3, padding='SAME')
         with tf.variable_scope('layer_3_pool'):
             X = self._do_pool(X, w, h, in_ch=chs[0], filter_size=3)
             X = tf.cond(is_train, lambda: tf.nn.dropout(X, 1 - pool_dropout_rate_1), lambda: X)
         with tf.variable_scope('layer_4'):
-            X = self._do_conv(X, w >> 1, h >> 1, in_ch=chs[0], out_ch=chs[1], filter_size=3, padding='SAME')
+            X = self._add_conv(X, w >> 1, h >> 1, in_ch=chs[0], out_ch=chs[1], filter_size=3, padding='SAME')
         with tf.variable_scope('layer_5'):
-            X = self._do_conv(X, w >> 1, h >> 1, in_ch=chs[1], out_ch=chs[1], filter_size=3, padding='SAME')
+            X = self._add_conv(X, w >> 1, h >> 1, in_ch=chs[1], out_ch=chs[1], filter_size=3, padding='SAME')
         with tf.variable_scope('layer_6'):
-            X = self._do_conv(X, w >> 1, h >> 1, in_ch=chs[1], out_ch=chs[1], filter_size=3, padding='SAME')
+            X = self._add_conv(X, w >> 1, h >> 1, in_ch=chs[1], out_ch=chs[1], filter_size=3, padding='SAME')
         with tf.variable_scope('layer_7_pool'):
             X = self._do_pool(X, w >> 1, h >> 1, in_ch=chs[1], filter_size=3)
             X = tf.cond(is_train, lambda: tf.nn.dropout(X, 1 - pool_dropout_rate_2), lambda: X)
         with tf.variable_scope('layer_8'):
-            X = self._do_conv(X, w >> 2, h >> 2, in_ch=chs[1], out_ch=chs[1], filter_size=3, padding='VALID')
+            X = self._add_conv(X, w >> 2, h >> 2, in_ch=chs[1], out_ch=chs[1], filter_size=3, padding='VALID')
         with tf.variable_scope('layer_9'):
-            X = self._do_conv(X, (w >> 2) - 2, (h >> 2) - 2, in_ch=chs[1], out_ch=chs[1], filter_size=1)
+            X = self._add_conv(X, (w >> 2) - 2, (h >> 2) - 2, in_ch=chs[1], out_ch=chs[1], filter_size=1)
         with tf.variable_scope('layer_10'):
-            X = self._do_conv(X, (w >> 2) - 2, (h >> 2) - 2, in_ch=chs[1], out_ch=K, filter_size=1)
+            X = self._add_conv(X, (w >> 2) - 2, (h >> 2) - 2, in_ch=chs[1], out_ch=K, filter_size=1)
             
         logits = self._do_global_avg_pool(X, (w >> 2) - 2, (h >> 2) - 2, in_ch=K)
         return logits
+    
+    def _add_conv(self, X, in_w, in_h, in_ch, out_ch, filter_size=1, no_reg=False, padding='SAME', is_input=False):
+        initializer = tf.initializers.glorot_normal()   
+        W = self._make_var('W', (filter_size, filter_size, in_ch, out_ch), no_reg=no_reg, initializer=initializer)
+        X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding=padding)
+        X = tf.nn.relu(X)
+        out_w = in_w - filter_size + 1 if padding == 'VALID' else in_w
+        out_h = in_h - filter_size + 1 if padding == 'VALID' else in_h
+        X = tf.reshape(X, (-1, out_w, out_h, out_ch)) # Sanity shape check
+        return X
 
     def _get_learning_rate(self, step):
         N = self._train_params['N']
@@ -260,17 +283,18 @@ class TfAllCnnModelC(BaseModel):
         
         return lr
 
-    def _optimize(self, loss, tf_vars, step):
+    def _optimize(self, loss, step):
         opt_momentum = self._knobs['opt_momentum'] # Momentum optimizer momentum
         lr = self._get_learning_rate(step)
 
-        grads = tf.gradients(loss, tf_vars)
+        tf_trainable_vars = tf.trainable_variables()
+        grads = tf.gradients(loss, tf_trainable_vars)
         opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=opt_momentum)
-        train_op = opt.apply_gradients(zip(grads, tf_vars), global_step=step)
+        train_op = opt.apply_gradients(zip(grads, tf_trainable_vars), global_step=step)
 
         return train_op
 
-    def _compute_loss(self, logits, tf_vars, classes):
+    def _compute_loss(self, logits, classes):
         weight_decay = self._knobs['weight_decay']
 
         log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=classes)
@@ -307,6 +331,10 @@ class TfAllCnnModelC(BaseModel):
             'N': dataset.size,
             'K': dataset.classes
         }
+
+        utils.logger.log('Train dataset has {} samples'.format(len(train_images)))
+        utils.logger.log('Train-val dataset has {} samples'.format(len(train_val_images)))
+
         return (train_images, train_classes, train_val_images, train_val_classes, train_params)
 
     def _load_val_dataset(self, dataset_uri, train_params):
@@ -360,16 +388,6 @@ class TfAllCnnModelC(BaseModel):
     # Utils
     ####################################
 
-    def _do_conv(self, X, in_w, in_h, in_ch, out_ch, filter_size=1, no_relu=False, 
-                no_reg=False, padding='SAME'):
-        W = self._make_var('W', (filter_size, filter_size, in_ch, out_ch), no_reg=no_reg)
-        X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding=padding)
-        if not no_relu:
-            X = tf.nn.relu(X)
-        out_w = in_w - filter_size + 1 if padding == 'VALID' else in_w
-        out_h = in_h - filter_size + 1 if padding == 'VALID' else in_h
-        X = tf.reshape(X, (-1, out_w, out_h, out_ch)) # Sanity shape check
-        return X
 
     def _do_global_avg_pool(self, X, in_w, in_h, in_ch):
         X = tf.reduce_mean(X, (1, 2))
@@ -385,26 +403,24 @@ class TfAllCnnModelC(BaseModel):
         X = tf.reshape(X, (-1, out_w, out_h, in_ch)) # Sanity shape check
         return X
 
-    def _get_params_count(self, tf_vars):
+    def _count_model_parameters(self):
+        tf_trainable_vars = tf.trainable_variables()
         num_params = 0
         # utils.logger.log('Model parameters:')
-        for var in tf_vars:
+        for var in tf_trainable_vars:
             # utils.logger.log(str(var))
             num_params += np.prod([dim.value for dim in var.get_shape()])
 
         return num_params
 
-    def _make_var(self, name, shape, no_reg=False, initializer=None):
-        if initializer is None:
-            initializer = tf.contrib.keras.initializers.he_normal()
-
+    def _make_var(self, name, shape, dtype=None, no_reg=False, initializer=None, trainable=True):
         # Ensure that name is unique by shape too
         name += '-shape-{}'.format('x'.join([str(x) for x in shape]))
 
-        var = tf.get_variable(name, shape, initializer=initializer)
+        var = tf.get_variable(name, shape=shape, dtype=dtype, initializer=initializer, trainable=trainable)
 
         # Add L2 regularization node for var
-        if not no_reg:
+        if trainable and not no_reg:
             l2_loss = tf.nn.l2_loss(var)
             tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, l2_loss)
         
@@ -423,6 +439,9 @@ class TimedRepeatCondition():
             return False
 
 class EarlyStopCondition():
+    '''
+    :param int patience: How many steps should the condition tolerate before calling early stop (-1 for no stop)
+    '''
     def __init__(self, patience=5, if_max=False):
         self._patience = patience
         self._if_max = if_max
@@ -435,6 +454,9 @@ class EarlyStopCondition():
     
     # Returns whether should early stop
     def check(self, value) -> bool:
+        if self._patience < 0: # No stop
+            return False
+
         if (not self._if_max and value < self._last_best) or \
             (self._if_max and value > self._last_best):
             self._wait_count = 0
