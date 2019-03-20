@@ -118,35 +118,40 @@ class PyDenseNetBc(BaseModel):
             for (batch_images, batch_classes) in train_dataloader:
                 probs = net(batch_images)
                 loss = F.cross_entropy(probs, batch_classes)
+                preds = probs.max(1)[1]
+
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
+                
+                acc = np.mean(preds.eq(batch_classes).cpu().numpy()) 
                 step += 1
 
                 # Periodically, log train loss
                 if log_condition.check():
-                    utils.logger.log(step=step, train_loss=loss.item())
+                    utils.logger.log(step=step, train_loss=loss.item(), train_acc=acc)
             
-            # Run through train-val dataset
-            corrects = 0
-            val_losses = []
-            for (batch_images, batch_classes) in train_val_dataloader:
-                probs = net(batch_images)
-                loss = F.cross_entropy(probs, batch_classes)
-                preds = probs.max(1)[1]
-                corrects += sum(preds.eq(batch_classes).cpu().numpy())
-                val_losses.append(loss.item())
+            # Run through train-val dataset, if exists
+            if len(train_val_dataset) > 0:
+                corrects = 0
+                val_losses = []
+                for (batch_images, batch_classes) in train_val_dataloader:
+                    probs = net(batch_images)
+                    loss = F.cross_entropy(probs, batch_classes)
+                    preds = probs.max(1)[1]
+                    corrects += sum(preds.eq(batch_classes).cpu().numpy())
+                    val_losses.append(loss.item())
 
-            val_acc = corrects / len(train_val_dataset)
-            val_avg_loss = np.mean(val_losses)
+                val_acc = corrects / len(train_val_dataset)
+                val_avg_loss = np.mean(val_losses)
 
-            utils.logger.log(epoch=epoch, val_acc=val_acc, val_avg_loss=val_avg_loss)
+                utils.logger.log(epoch=epoch, val_acc=val_acc, val_avg_loss=val_avg_loss)
 
-            # Early stop on train-val batch loss
-            if early_stop_condition.check(val_avg_loss):
-                utils.logger.log('Average train-val batch loss has not improved for {} epochs'.format(early_stop_condition.patience))
-                utils.logger.log('Early stopping...')
-                break
+                # Early stop on train-val batch loss
+                if early_stop_condition.check(val_avg_loss):
+                    utils.logger.log('Average train-val batch loss has not improved for {} epochs'.format(early_stop_condition.patience))
+                    utils.logger.log('Early stopping...')
+                    break
 
         return net
 

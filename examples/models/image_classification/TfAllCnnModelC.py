@@ -99,26 +99,27 @@ class TfAllCnnModelC(BaseModel):
                     utils.logger.log(step=batch_step, train_acc=batch_acc, train_loss=batch_loss, 
                         **{ name: v for (name, v) in zip(monitored_values.keys(), values) })
 
-            # Run through train-val dataset
-            preds = []
-            val_losses = []
-            stepper = self._feed_dataset_to_model(train_val_images, [m.loss, m.probs], classes=train_val_classes)
-            for (batch_loss, batch_probs) in stepper:
-                batch_preds = np.argmax(batch_probs, axis=1)
-                val_losses.append(batch_loss)
-                preds.extend(batch_preds)
-            
-            corrects = np.sum(preds == np.asarray(train_val_classes))
-            val_acc = corrects / len(train_val_images)
-            val_avg_loss = np.mean(val_losses)
+            # Run through train-val dataset, if exists
+            if len(train_val_images) > 0:
+                preds = []
+                val_losses = []
+                stepper = self._feed_dataset_to_model(train_val_images, [m.loss, m.probs], classes=train_val_classes)
+                for (batch_loss, batch_probs) in stepper:
+                    batch_preds = np.argmax(batch_probs, axis=1)
+                    val_losses.append(batch_loss)
+                    preds.extend(batch_preds)
+                
+                corrects = np.sum(preds == np.asarray(train_val_classes))
+                val_acc = corrects / len(train_val_images)
+                val_avg_loss = np.mean(val_losses)
 
-            utils.logger.log(epoch=epoch, val_acc=val_acc, val_avg_loss=val_avg_loss)
+                utils.logger.log(epoch=epoch, val_acc=val_acc, val_avg_loss=val_avg_loss)
 
-            # Early stop on train-val batch loss
-            if early_stop_condition.check(val_avg_loss):
-                utils.logger.log('Average train-val batch loss has not improved for {} epochs'.format(early_stop_condition.patience))
-                utils.logger.log('Early stopping...')
-                break
+                # Early stop on train-val batch loss
+                if early_stop_condition.check(val_avg_loss):
+                    utils.logger.log('Average train-val batch loss has not improved for {} epochs'.format(early_stop_condition.patience))
+                    utils.logger.log('Early stopping...')
+                    break
 
         return train_summaries
 
