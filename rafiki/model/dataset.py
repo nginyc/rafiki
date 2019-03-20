@@ -83,7 +83,7 @@ class DatasetUtils():
             :returns: (images, mean, std)
         '''
         if len(images) == 0:
-            return images
+            return (images, mean, std)
 
         # Convert to [0, 1]
         images = np.asarray(images) / 255
