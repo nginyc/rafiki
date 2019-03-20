@@ -66,7 +66,7 @@ class AdvisorService(object):
         if advisor is None:
             raise InvalidAdvisorError()
 
-        advisor.feedback(score, knobs, params)
+        advisor.feedback(score, knobs, params, worker_id)
         (knobs, params) = advisor.propose(worker_id)
 
         return {

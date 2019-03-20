@@ -90,9 +90,9 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         print('Advisor proposed knobs:', knobs)
 
         # Retrieve params from store
+        params = param_store.retrieve_params(session_id, params)
         if len(params) > 0:
             print('Advisor proposed {} params'.format(len(params)))
-        params = param_store.retrieve_params(session_id, params)
 
         # Load model
         model_inst = py_model_class(**knobs)
