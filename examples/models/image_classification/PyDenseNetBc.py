@@ -101,12 +101,8 @@ class PyDenseNetBc(BaseModel):
             utils.logger.log('Using CUDA...')
             net = net.cuda()
 
-        params_count = self._count_model_parameters(net)
-        utils.logger.log('Model has {} parameters'.format(params_count))
-
+        self._count_model_parameters(net)
         (optimizer, scheduler) = self._get_optimizer(net, trial_epochs)
-
-        log_condition = TimedRepeatCondition()
         early_stop_condition = EarlyStopCondition(patience=early_stop_patience)
         step = 0
         for epoch in range(trial_epochs):
@@ -115,40 +111,42 @@ class PyDenseNetBc(BaseModel):
             scheduler.step()
             
             # Run through train dataset
+            train_loss = RunningAverage()
+            train_acc = RunningAverage()
             for (batch_images, batch_classes) in train_dataloader:
                 probs = net(batch_images)
                 loss = F.cross_entropy(probs, batch_classes)
                 preds = probs.max(1)[1]
+                acc = np.mean(preds.eq(batch_classes).cpu().numpy()) 
+                step += 1
 
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 
-                acc = np.mean(preds.eq(batch_classes).cpu().numpy()) 
-                step += 1
+                train_loss.add(loss.item())
+                train_acc.add(acc)
 
-                # Periodically, log train loss
-                if log_condition.check():
-                    utils.logger.log(step=step, train_loss=loss.item(), train_acc=acc)
+            utils.logger.log(epoch=epoch, step=step, 
+                            train_loss=train_loss.get(), train_acc=train_acc.get())
             
             # Run through train-val dataset, if exists
             if len(train_val_dataset) > 0:
-                corrects = 0
-                val_losses = []
+                train_val_loss = RunningAverage()
+                train_val_acc = RunningAverage()
                 for (batch_images, batch_classes) in train_val_dataloader:
                     probs = net(batch_images)
                     loss = F.cross_entropy(probs, batch_classes)
                     preds = probs.max(1)[1]
-                    corrects += sum(preds.eq(batch_classes).cpu().numpy())
-                    val_losses.append(loss.item())
+                    acc = np.mean(preds.eq(batch_classes).cpu().numpy()) 
+                    train_val_loss.add(loss.item())
+                    train_val_acc.add(acc)
 
-                val_acc = corrects / len(train_val_dataset)
-                val_avg_loss = np.mean(val_losses)
-
-                utils.logger.log(epoch=epoch, val_acc=val_acc, val_avg_loss=val_avg_loss)
+                utils.logger.log(epoch=epoch, train_val_loss=train_val_loss.get(), 
+                                train_val_acc=train_val_acc.get())
 
                 # Early stop on train-val batch loss
-                if early_stop_condition.check(val_avg_loss):
+                if early_stop_condition.check(train_val_acc.get()):
                     utils.logger.log('Average train-val batch loss has not improved for {} epochs'.format(early_stop_condition.patience))
                     utils.logger.log('Early stopping...')
                     break
@@ -212,7 +210,9 @@ class PyDenseNetBc(BaseModel):
         return (optimizer, scheduler)
 
     def _count_model_parameters(self, net):
-        return sum(p.numel() for p in net.parameters() if p.requires_grad)
+        params_count = sum(p.numel() for p in net.parameters() if p.requires_grad)
+        utils.logger.log('Model has {} parameters'.format(params_count))
+        return params_count
 
     def _get_trial_epochs(self):
         max_trial_epochs = self._knobs['max_trial_epochs']
@@ -407,6 +407,18 @@ class ImageDataset(Dataset):
 
         return (image, image_class)
 
+class RunningAverage():
+    def __init__(self):
+        self._avg = 0
+        self._count = 0
+            
+    def add(self, val):
+        self._avg = self._avg * self._count / (self._count + 1) + val / (self._count + 1)
+        self._count += 1
+        
+    def get(self) -> float:
+        return self._avg
+
 class TimedRepeatCondition():
     def __init__(self, every_secs=60):
         self._every_secs = every_secs
@@ -459,7 +471,7 @@ if __name__ == '__main__':
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
         val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
         test_dataset_uri='data/cifar_10_for_image_classification_test.zip',
-        total_trials=10,
+        total_trials=100,
         should_save=False
     )
 

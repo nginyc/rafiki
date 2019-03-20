@@ -79,44 +79,39 @@ class TfAllCnnModelC(BaseModel):
             utils.logger.define_plot('"{}" Over Time'.format(name), [name])
 
         train_summaries = [] # List of (<steps>, <summary>) collected during training
-        log_condition = TimedRepeatCondition()
         early_stop_condition = EarlyStopCondition(patience=early_stop_patience)
         
         for epoch in range(trial_epochs):
             utils.logger.log('Running epoch {}...'.format(epoch))
 
             # Run through train dataset
-            stepper = self._feed_dataset_to_model(train_images, 
-                                                    [m.train_op, m.summary_op, 
-                                                    m.step, m.acc, m.loss,
-                                                    *monitored_values.values()], 
+            train_loss = RunningAverage()
+            train_acc = RunningAverage()
+            stepper = self._feed_dataset_to_model(train_images, [m.train_op, m.summary_op, 
+                                                    m.step, m.acc, m.loss, *monitored_values.values()], 
                                                     is_train=True, classes=train_classes)
             for (_, summary, batch_step, batch_acc, batch_loss, *values) in stepper:
                 train_summaries.append((batch_step, summary))
+                train_loss.add(batch_loss)
+                train_acc.add(batch_acc)
 
-                # Periodically, log monitored values
-                if log_condition.check():
-                    utils.logger.log(step=batch_step, train_acc=batch_acc, train_loss=batch_loss, 
-                        **{ name: v for (name, v) in zip(monitored_values.keys(), values) })
+            utils.logger.log(epoch=epoch, train_loss=train_loss.get(), train_acc=train_acc.get(),
+                            **{ name: v for (name, v) in zip(monitored_values.keys(), values) })
 
             # Run through train-val dataset, if exists
             if len(train_val_images) > 0:
-                preds = []
-                val_losses = []
-                stepper = self._feed_dataset_to_model(train_val_images, [m.loss, m.probs], classes=train_val_classes)
-                for (batch_loss, batch_probs) in stepper:
-                    batch_preds = np.argmax(batch_probs, axis=1)
-                    val_losses.append(batch_loss)
-                    preds.extend(batch_preds)
+                train_val_loss = RunningAverage()
+                train_val_acc = RunningAverage()
+                stepper = self._feed_dataset_to_model(train_val_images, [m.loss, m.acc], classes=train_val_classes)
+                for (batch_loss, batch_acc) in stepper:
+                    train_val_loss.add(batch_loss)
+                    train_val_acc.add(batch_acc)
                 
-                corrects = np.sum(preds == np.asarray(train_val_classes))
-                val_acc = corrects / len(train_val_images)
-                val_avg_loss = np.mean(val_losses)
-
-                utils.logger.log(epoch=epoch, val_acc=val_acc, val_avg_loss=val_avg_loss)
+                utils.logger.log(epoch=epoch, train_val_acc=train_val_acc.get(), 
+                                train_val_loss=train_val_loss.get())
 
                 # Early stop on train-val batch loss
-                if early_stop_condition.check(val_avg_loss):
+                if early_stop_condition.check(train_val_loss.get()):
                     utils.logger.log('Average train-val batch loss has not improved for {} epochs'.format(early_stop_condition.patience))
                     utils.logger.log('Early stopping...')
                     break
@@ -169,8 +164,7 @@ class TfAllCnnModelC(BaseModel):
             train_op = self._optimize(loss, step)
 
             # Count model parameters 
-            count = self._count_model_parameters()
-            utils.logger.log('Model has {} parameters'.format(count))
+            self._count_model_parameters()
 
             # Monitor values
             (summary_op, monitored_values) = self._add_monitoring_of_values()
@@ -405,7 +399,8 @@ class TfAllCnnModelC(BaseModel):
         for var in tf_trainable_vars:
             # utils.logger.log(str(var))
             num_params += np.prod([dim.value for dim in var.get_shape()])
-
+        
+        utils.logger.log('Model has {} parameters'.format(num_params))
         return num_params
 
     def _make_var(self, name, shape, dtype=None, no_reg=False, initializer=None, trainable=True):
@@ -420,6 +415,18 @@ class TfAllCnnModelC(BaseModel):
             tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, l2_loss)
         
         return var
+
+class RunningAverage():
+    def __init__(self):
+        self._avg = 0
+        self._count = 0
+            
+    def add(self, val):
+        self._avg = self._avg * self._count / (self._count + 1) + val / (self._count + 1)
+        self._count += 1
+        
+    def get(self) -> float:
+        return self._avg
 
 class TimedRepeatCondition():
     def __init__(self, every_secs=60):
@@ -473,6 +480,6 @@ if __name__ == '__main__':
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
         val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
         test_dataset_uri='data/cifar_10_for_image_classification_test.zip',
-        total_trials=10,
+        total_trials=100,
         should_save=False
     )
