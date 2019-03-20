@@ -80,7 +80,8 @@ class TfEnasTrain(BaseModel):
             'grad_clip_norm': FixedKnob(5.0),
             'use_aux_head': FixedKnob(False),
             'cell_archs': ListKnob(2 * cell_num_blocks * 4, lambda i: cell_arch_item(i)),
-            'use_cell_arch_type': FixedKnob('') # '' | 'ENAS' | 'NASNET-A'
+            'use_cell_arch_type': FixedKnob(''), # '' | 'ENAS' | 'NASNET-A',
+            'init_params_dir': FixedKnob('') # Params directory to resume training from
         }
 
     @staticmethod
@@ -94,12 +95,19 @@ class TfEnasTrain(BaseModel):
 
     def train(self, dataset_uri, shared_params):
         num_epochs = self._knobs['trial_epochs']
+        init_params_dir = self._knobs['init_params_dir']
+
         (images, classes, self._train_params) = self._prepare_dataset(dataset_uri)
-        (self._model, self._graph, self._sess, self._saver, 
-            monitored_values) = self._build_model()
+        
+        if not init_params_dir:
+            (self._model, self._graph, self._sess, self._saver, 
+                self._monitored_values) = self._build_model()
+        else:
+            utils.logger.log('Loading parameters from "{}"...'.format(init_params_dir))
+            self.load_parameters(init_params_dir)
         
         with self._graph.as_default():
-            self._train_summaries = self._train_model(images, classes, num_epochs, monitored_values)
+            self._train_summaries = self._train_model(images, classes, num_epochs)
             utils.logger.log('Evaluating model on train dataset...')
             acc = self._evaluate_model(images, classes)
             utils.logger.log('Train accuracy: {}'.format(acc))
@@ -149,7 +157,8 @@ class TfEnasTrain(BaseModel):
             self._train_params = json.loads(json_str)
 
         # Build model
-        (self._model, self._graph, self._sess, self._saver, _) = self._build_model()
+        (self._model, self._graph, self._sess, 
+            self._saver, self._monitored_values) = self._build_model()
 
         with self._graph.as_default():
             # Load model parameters
@@ -422,12 +431,12 @@ class TfEnasTrain(BaseModel):
         sess.run(tf.global_variables_initializer())
         return sess
 
-    def _train_model(self, images, classes, num_epochs, monitored_values):
+    def _train_model(self, images, classes, num_epochs):
         initial_epoch = self._knobs['initial_epoch']
         m = self._model
 
         # Define plots for monitored values
-        for (name, _) in monitored_values.items():
+        for (name, _) in self._monitored_values.items():
             utils.logger.define_plot('"{}" Over Time'.format(name), [name])
 
         train_summaries = [] # List of (<steps>, <summary>) collected during training
@@ -436,7 +445,7 @@ class TfEnasTrain(BaseModel):
         for trial_epoch in range(num_epochs):
             epoch = initial_epoch + trial_epoch
             utils.logger.log('Running epoch {} (trial epoch {})...'.format(epoch, trial_epoch))
-            stepper = self._feed_dataset_to_model(images, [m.train_op, m.summary_op, m.acc, m.step, *monitored_values.values()], 
+            stepper = self._feed_dataset_to_model(images, [m.train_op, m.summary_op, m.acc, m.step, *self._monitored_values.values()], 
                                                 is_train=True, classes=classes)
 
             # To track mean batch accuracy
@@ -448,7 +457,7 @@ class TfEnasTrain(BaseModel):
                 # Periodically, log monitored values
                 if log_condition.check():
                     utils.logger.log(step=batch_steps, 
-                        **{ name: v for (name, v) in zip(monitored_values.keys(), values) })
+                        **{ name: v for (name, v) in zip(self._monitored_values.keys(), values) })
 
             # Log mean batch accuracy and epoch
             mean_acc = np.mean(accs)
@@ -989,7 +998,10 @@ _ModelMemo = namedtuple('_ModelMemo', ['train_params', 'knobs', 'graph', 'sess',
             'monitored_values', 'model'])
 
 class TfEnasSearch(TfEnasTrain):
-    memo = {}
+    # Memoise across trials to speed up training
+    _datasets_memo = {} # { <dataset_uri> -> <dataset> }
+    _model_memo = None # of class `_MemoModel`
+    _loaded_vars_hash_memo = None # Hash of vars loaded, if no training has happened
 
     @staticmethod
     def validate_knobs(knobs):
@@ -1022,46 +1034,50 @@ class TfEnasSearch(TfEnasTrain):
 
     @staticmethod
     def setup():
-        # Memoise across trials to speed up training
-        TfEnasSearch.memo = {
-            'datasets': {}, # { <dataset_uri> -> <dataset> }
-            'model': None, # of class `_MemoModel`
-            'loaded_vars_hash': None # Hash of vars loaded, if no training has happened
-        }
+        TfEnasSearch._datasets_memo = {}
+        TfEnasSearch._model_memo = None
+        TfEnasSearch._loaded_vars_hash_memo = None
 
     @staticmethod
     def teardown():
-        memo = TfEnasSearch.memo
-        if memo['model'] is not None:
-            memo['model'].sess.close()
-        TfEnasSearch.memo = {}
+        if TfEnasSearch._model_memo is not None:
+            TfEnasSearch._model_memo.sess.close()
+
+        TfEnasSearch._datasets_memo = {}
+        TfEnasSearch._model_memo = None
+        TfEnasSearch._loaded_vars_hash_memo = None
 
     def train(self, dataset_uri, shared_params):
         num_epochs = self._knobs['trial_epochs']
         (images, classes, self._train_params) = self._prepare_dataset(dataset_uri)
         (self._model, self._graph, self._sess, self._saver, 
-            monitored_values) = self._build_model()
+            self._monitored_values) = self._build_model()
         
         with self._graph.as_default():
             self._maybe_load_shared_vars(shared_params, num_epochs)
             self._train_summaries = []
-            if num_epochs > 0:
-                self._train_summaries = self._train_model(images, classes, num_epochs, monitored_values)
-                shared_vars = self._retrieve_shared_vars()
-                return shared_vars
-            else:
+            if num_epochs == 0:
                 utils.logger.log('Skipping training...')
-                return {} # No new trained parameters to share
+                return
+
+            self._train_summaries = self._train_model(images, classes, num_epochs)
+
+    def get_shared_parameters(self):
+        num_epochs = self._knobs['trial_epochs']
+        if num_epochs > 0:
+            return self._retrieve_shared_vars()
+        else:
+            return {} # No new trained parameters to share
 
     def _load_dataset(self, dataset_uri, train_params=None):
         # Try to use memoized dataset
-        if dataset_uri in self.memo['datasets']:
+        if dataset_uri in self._datasets_memo:
             utils.logger.log('Using memoized dataset...')
-            dataset = self.memo['datasets'][dataset_uri]
+            dataset = self._datasets_memo[dataset_uri]
             return dataset
 
         dataset = super()._load_dataset(dataset_uri, train_params)
-        self.memo['datasets'][dataset_uri] = dataset
+        self._datasets_memo[dataset_uri] = dataset
         return dataset
 
     def _retrieve_shared_vars(self):
@@ -1074,13 +1090,13 @@ class TfEnasSearch(TfEnasTrain):
         }
 
         # Update loaded vars hash
-        self.memo['loaded_vars_hash'] = self._get_shared_vars_hash(shared_vars)
+        self._loaded_vars_hash_memo = self._get_shared_vars_hash(shared_vars)
         return shared_vars
 
     def _maybe_load_shared_vars(self, shared_vars, num_epochs):
         # If shared vars has been loaded in previous trial, don't bother loading again
         shared_vars_hash = self._get_shared_vars_hash(shared_vars)
-        if self.memo['loaded_vars_hash'] == shared_vars_hash:
+        if self._loaded_vars_hash_memo == shared_vars_hash:
             utils.logger.log('Skipping loading of shared variables...')
         else:
             self._load_shared_vars(shared_vars)
@@ -1108,9 +1124,9 @@ class TfEnasSearch(TfEnasTrain):
 
     def _build_model(self):
         # Use memoized graph when possible
-        if self._if_model_same(self.memo['model']):
+        if self._if_model_same(self._model_memo):
             utils.logger.log('Using previously built model...')
-            model_memo = self.memo['model']
+            model_memo = self._model_memo
             return (model_memo.model, model_memo.graph, model_memo.sess, model_memo.saver, 
                     model_memo.monitored_values)
         
@@ -1179,7 +1195,7 @@ class TfEnasSearch(TfEnasTrain):
                         images_ph, classes_ph, is_train_ph, probs, acc, step, normal_arch_ph, 
                         reduction_arch_ph, shared_params_phs, shared_params_assign_op)
 
-        self.memo['model'] = _ModelMemo(
+        self._model_memo = _ModelMemo(
             self._train_params, self._knobs, graph, sess,
             saver, monitored_values, model
         )
@@ -1332,5 +1348,4 @@ if __name__ == '__main__':
             val_dataset_uri='data/cifar_10_for_image_classification_test.zip',
             total_trials=total_trials
         )
-        print('Best model knobs: {}'.format(best_knobs))
 

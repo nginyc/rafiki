@@ -68,16 +68,13 @@ class BaseModel(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def train(self, dataset_uri: str, shared_params: Dict[str, np.array]) -> Union[None, Dict[str, np.array]]:
+    def train(self, dataset_uri: str, shared_params: Dict[str, np.array]):
         '''
         Train this model instance with given dataset and initialized knob values.
         Additionally, a dictionary of trained shared parameters from previous trials is passed.
-        Optionally, this should return a dictionary of trained parameters to share with future trials.
 
-        :param dict shared_params: { <param_name>: <param_value> }
         :param str dataset_uri: URI of the dataset in a format specified by the task
-        :returns: { <param_name>: <param_value> }
-        :rtype: dict
+        :param dict shared_params: { <param_name>: <param_value> }
         '''
         raise NotImplementedError()
 
@@ -123,3 +120,12 @@ class BaseModel(abc.ABC):
         The model will be considered *trained* subsequently.
         '''
         raise NotImplementedError()
+
+    def get_shared_parameters(self) -> Union[None, Dict[str, np.array]]:
+        '''
+        Returns a dictionary of trained parameters to share with future trials, after the model has been *trained*.
+
+        :returns: { <param_name>: <param_value> }
+        :rtype: dict
+        '''
+        return None

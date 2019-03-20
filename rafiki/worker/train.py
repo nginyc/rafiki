@@ -155,7 +155,8 @@ class TrainWorker(object):
         # Initialize & train model
         logger.info('Training model...')
         model_inst = clazz(**knobs)
-        params = model_inst.train(train_job.train_dataset_uri, params) or {}
+        model_inst.train(train_job.train_dataset_uri, params)
+        params = model_inst.get_shared_parameters() or {}
         if len(params) > 0:
             logger.info('Trial produced {} shared parameters'.format(len(params)))
 
