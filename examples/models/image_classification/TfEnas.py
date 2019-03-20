@@ -19,9 +19,6 @@ _Model = namedtuple('_Model', ['dataset_init_op',
         'probs', 'acc', 'step', 'normal_arch_ph', 'reduction_arch_ph', 
         'shared_params_phs', 'shared_params_assign_op'])
 
-_ModelMemo = namedtuple('_ModelMemo', ['train_params', 'knobs', 'graph', 'sess', 'saver', 
-            'monitored_values', 'model'])
-
 class TfEnasTrain(BaseModel):
     '''
     Implements the child model of "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
@@ -32,7 +29,6 @@ class TfEnasTrain(BaseModel):
     TF_COLLECTION_MONITORED = 'MONITORED'
     CELL_NUM_BLOCKS = 5
     OPS = [0, 1, 2, 3, 4]
-    memo = {}
 
     @staticmethod
     def get_knob_config():
@@ -89,17 +85,8 @@ class TfEnasTrain(BaseModel):
 
     @staticmethod
     def setup():
-        # Memoise across trials to speed up training
-        TfEnasTrain.memo = {
-            'datasets': {}, # { <dataset_uri> -> <dataset> }
-        }
-
         # Log available devices 
         utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
-
-    @staticmethod
-    def teardown():
-        TfEnasTrain.memo = {}
 
     def __init__(self, **knobs):
         super().__init__(**knobs)
@@ -174,26 +161,13 @@ class TfEnasTrain(BaseModel):
     ####################################
 
     def _prepare_dataset(self, dataset_uri, train_params=None):
-        max_image_size = self._knobs['max_image_size']
-
-        # Try to use memoized dataset
-        if dataset_uri not in self.memo['datasets']:
-            utils.logger.log('Loading dataset...')
-            dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
-                                                                mode='RGB')
-            self.memo['datasets'][dataset_uri] = dataset
-        else:
-            utils.logger.log('Using memoized dataset...')
-
-        dataset = self.memo['datasets'][dataset_uri]
-        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-
+        (images, classes, image_size, num_classes) = self._load_dataset(dataset_uri, train_params)
         if train_params is None:
             (images, norm_mean, norm_std) = utils.dataset.normalize_images(images)
             train_params = {
-                'N': dataset.size,
-                'image_size': dataset.image_size,
-                'K': dataset.classes,
+                'N': len(images),
+                'image_size': image_size,
+                'K': num_classes,
                 'norm_mean': norm_mean,
                 'norm_std': norm_std
             }
@@ -203,6 +177,16 @@ class TfEnasTrain(BaseModel):
             norm_std = train_params['norm_std']
             (images, _, _) = utils.dataset.normalize_images(images, mean=norm_mean, std=norm_std)
             return (images, classes, train_params)
+
+    def _load_dataset(self, dataset_uri, train_params=None):
+        max_image_size = self._knobs['max_image_size']
+        image_size = train_params['image_size'] if train_params is not None else max_image_size
+
+        utils.logger.log('Loading dataset...')    
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=image_size, 
+                                                            mode='RGB')
+        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+        return (images, classes, dataset.image_size, dataset.classes)
 
     def _build_model(self):
         w = self._train_params['image_size']
@@ -242,7 +226,6 @@ class TfEnasTrain(BaseModel):
 
             # Count model parameters
             model_params_count = self._count_model_parameters()
-            utils.logger.log('Model has {} parameters'.format(model_params_count))
 
             # Monitor values
             (summary_op, monitored_values) = self._add_monitoring_of_values()
@@ -642,6 +625,7 @@ class TfEnasTrain(BaseModel):
             # utils.logger.log(str(var))
             num_params += np.prod([dim.value for dim in var.get_shape()])
 
+        utils.logger.log('Model has {} parameters'.format(num_params))
         return num_params
 
     def _add_reduction_cell(self, cell_arch, inputs, block_ch, is_train, drop_path_keep_prob):
@@ -1001,7 +985,12 @@ class TfEnasTrain(BaseModel):
         
         return var
 
+_ModelMemo = namedtuple('_ModelMemo', ['train_params', 'knobs', 'graph', 'sess', 'saver', 
+            'monitored_values', 'model'])
+
 class TfEnasSearch(TfEnasTrain):
+    memo = {}
+
     @staticmethod
     def validate_knobs(knobs):
         knobs = TfEnasTrain.validate_knobs(knobs)
@@ -1034,10 +1023,11 @@ class TfEnasSearch(TfEnasTrain):
     @staticmethod
     def setup():
         # Memoise across trials to speed up training
-        TfEnasSearch.memo.update({
+        TfEnasSearch.memo = {
             'datasets': {}, # { <dataset_uri> -> <dataset> }
-            'model': None # of class `_MemoModel`
-        })
+            'model': None, # of class `_MemoModel`
+            'loaded_vars_hash': None # Hash of vars loaded, if no training has happened
+        }
 
     @staticmethod
     def teardown():
@@ -1053,43 +1043,67 @@ class TfEnasSearch(TfEnasTrain):
             monitored_values) = self._build_model()
         
         with self._graph.as_default():
-            if len(shared_params) > 0:
-                self._load_shared_vars(shared_params)
-
+            self._maybe_load_shared_vars(shared_params, num_epochs)
             self._train_summaries = []
             if num_epochs > 0:
                 self._train_summaries = self._train_model(images, classes, num_epochs, monitored_values)
-                return self._get_shared_vars()
+                shared_vars = self._retrieve_shared_vars()
+                return shared_vars
             else:
                 utils.logger.log('Skipping training...')
                 return {} # No new trained parameters to share
 
-    def _get_shared_vars(self):
-        shareable_tf_vars = self._get_shareable_tf_vars()
-        values = self._sess.run(shareable_tf_vars)
+    def _load_dataset(self, dataset_uri, train_params=None):
+        # Try to use memoized dataset
+        if dataset_uri in self.memo['datasets']:
+            utils.logger.log('Using memoized dataset...')
+            dataset = self.memo['datasets'][dataset_uri]
+            return dataset
+
+        dataset = super()._load_dataset(dataset_uri, train_params)
+        self.memo['datasets'][dataset_uri] = dataset
+        return dataset
+
+    def _retrieve_shared_vars(self):
+        shared_tf_vars = self._get_shared_tf_vars()
+        values = self._sess.run(shared_tf_vars)
         shared_vars = {
             tf_var.name: value
             for (tf_var, value)
-            in zip(shareable_tf_vars, values)
+            in zip(shared_tf_vars, values)
         }
+
+        # Update loaded vars hash
+        self.memo['loaded_vars_hash'] = self._get_shared_vars_hash(shared_vars)
         return shared_vars
 
+    def _maybe_load_shared_vars(self, shared_vars, num_epochs):
+        # If shared vars has been loaded in previous trial, don't bother loading again
+        shared_vars_hash = self._get_shared_vars_hash(shared_vars)
+        if self.memo['loaded_vars_hash'] == shared_vars_hash:
+            utils.logger.log('Skipping loading of shared variables...')
+        else:
+            self._load_shared_vars(shared_vars)
+
     def _load_shared_vars(self, shared_vars):
+        if len(shared_vars) == 0:
+            return
+
         m = self._model
 
         # Get current values for vars
-        shareable_tf_vars = self._get_shareable_tf_vars()
-        values = self._sess.run(shareable_tf_vars)
+        shared_tf_vars = self._get_shared_tf_vars()
+        values = self._sess.run(shared_tf_vars)
+        utils.logger.log('Loading {} / {} shared variables...'.format(len(shared_vars), len(shared_tf_vars)))
 
         # Build feed dict for op for loading shared params
-        # For each param, use current value of param in session if not in shareable vars
+        # For each param, use current value of param in session if not in shared vars
         var_feeddict = {
             m.shared_params_phs[tf_var.name]: shared_vars[tf_var.name] 
             if tf_var.name in shared_vars else values[i]
-            for (i, tf_var) in enumerate(shareable_tf_vars)
+            for (i, tf_var) in enumerate(shared_tf_vars)
         }
         
-        utils.logger.log('Restoring {} / {} shareable variables...'.format(len(shared_vars), len(shareable_tf_vars)))
         self._sess.run(m.shared_params_assign_op, feed_dict=var_feeddict)
 
     def _build_model(self):
@@ -1139,7 +1153,6 @@ class TfEnasSearch(TfEnasTrain):
 
             # Count model parameters
             model_params_count = self._count_model_parameters()
-            utils.logger.log('Model has {} parameters'.format(model_params_count))
 
             # Monitor values
             (summary_op, monitored_values) = self._add_monitoring_of_values()
@@ -1149,14 +1162,14 @@ class TfEnasSearch(TfEnasTrain):
             saver = tf.train.Saver(tf_vars)
 
             # Allow loading of shared parameters
-            shareable_tf_vars = self._get_shareable_tf_vars()
+            shared_tf_vars = self._get_shared_tf_vars()
             shared_params_phs = {
                 tf_var.name: tf.placeholder(dtype=tf_var.dtype, shape=tf_var.shape)
-                for tf_var in shareable_tf_vars
+                for tf_var in shared_tf_vars
             }
             shared_params_assign_op = tf.group([
                 tf.assign(tf_var, ph) 
-                for (tf_var, ph) in zip(shareable_tf_vars, shared_params_phs.values())
+                for (tf_var, ph) in zip(shared_tf_vars, shared_params_phs.values())
             ], name='shared_params_assign_op')
 
             # Make session
@@ -1261,8 +1274,12 @@ class TfEnasSearch(TfEnasTrain):
 
         return X
 
-    def _get_shareable_tf_vars(self):
+    def _get_shared_tf_vars(self):
         return tf.global_variables()
+
+    def _get_shared_vars_hash(self, shared_vars):
+        shared_vars_plain = { name: value.tolist() for (name, value) in shared_vars.items() }
+        return hash(frozenset(shared_vars_plain))
 
 class TimedRepeatCondition():
     def __init__(self, every_secs=60):
