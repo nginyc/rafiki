@@ -161,7 +161,6 @@ class PyDenseNetBc(BaseModel):
             net = net.cuda()
 
         early_stop_condition = EarlyStopCondition(patience=early_stop_patience)
-        step = 0
         for epoch in range(trial_epochs):
             utils.logger.log('Running epoch {}...'.format(epoch))
 
