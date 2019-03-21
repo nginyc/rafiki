@@ -149,6 +149,10 @@ class PyDenseNetBc(BaseModel):
         early_stop_patience = self._knobs['early_stop_patience_epochs']
         (net, step) = self._model
 
+        # Define plots
+        utils.logger.define_plot('Losses over Epoch', ['train_loss', 'train_val_loss'], x_axis='epoch')
+        utils.logger.define_plot('Accuracies over Epoch', ['train_acc', 'train_val_acc'], x_axis='epoch')
+
         utils.logger.log('Training model...')
 
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
