@@ -5,6 +5,7 @@ import traceback
 import uuid
 import inspect
 import argparse
+import time
 import numpy as np
 from typing import Union, Dict, Type
 
@@ -36,6 +37,8 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     :rtype: (dict, str)
     :returns: (<knobs for best trained model>, <params directory for best trained model>)
     '''
+    # Note start time
+    start_time = time.time()
 
     # Retrieve config of model
     _print_header('Checking model configuration...')
@@ -147,6 +150,10 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     # Teardown model class
     print('Running model class teardown...')
     py_model_class.teardown()
+
+    # Print duration
+    duration = time.time() - start_time
+    print('Tuning took a total of {}s'.format(duration))
 
     return (best_knobs, best_model_params_dir)
 
