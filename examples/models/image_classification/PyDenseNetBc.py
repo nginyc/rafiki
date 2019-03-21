@@ -1,4 +1,5 @@
 import math
+import os
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -7,6 +8,7 @@ import torch.nn.functional as F
 import torch.utils.checkpoint as cp
 from PIL import Image
 from datetime import datetime
+from collections import namedtuple
 from torch.utils.data import Dataset, DataLoader, random_split
 import torchvision.transforms as transforms
 from collections import OrderedDict
@@ -14,6 +16,8 @@ import abc
 
 from rafiki.model import BaseModel, utils, FixedKnob, MetadataKnob, Metadata, FloatKnob, CategoricalKnob
 from rafiki.advisor import tune_model
+
+_Model = namedtuple('_Model', ['net', 'step'])
 
 class PyDenseNetBc(BaseModel):
     '''
@@ -38,19 +42,19 @@ class PyDenseNetBc(BaseModel):
             'drop_rate': FloatKnob(0, 0.4),
             'max_image_size': FixedKnob(32),
             'max_train_val_samples': FixedKnob(1024),
-            'early_stop_patience_epochs': FixedKnob(5)
+            'early_stop_patience_epochs': FixedKnob(5),
+            'if_share_params': FixedKnob(True)
         }
 
     def train(self, dataset_uri, shared_params):
-        utils.logger.log('Loading dataset...')
         (train_dataset, train_val_dataset, self._train_params) = self._load_train_dataset(dataset_uri)
-        utils.logger.log('Training model...')
-        self._net = self._train(train_dataset, train_val_dataset)
+        self._model = self._build_model()
+        self._load_shared_parameters(shared_params)
+        self._train_model(train_dataset, train_val_dataset)
 
     def evaluate(self, dataset_uri):
-        utils.logger.log('Loading dataset...')
         dataset = self._load_val_dataset(dataset_uri, self._train_params)
-        acc = self._evaluate(dataset, self._net)
+        acc = self._evaluate(dataset)
         return acc
 
     def predict(self, queries):
@@ -58,16 +62,59 @@ class PyDenseNetBc(BaseModel):
         pass
 
     def save_parameters(self, params_dir):
-        # TODO
-        pass
+        # Save state dict of net
+        model_file_path = os.path.join(params_dir, 'model.pt')
+        torch.save(self._model.net.state_dict(), model_file_path)
 
     def load_parameters(self, params_dir):
-        # TODO
-        pass
+        # Load state dict of net
+        model_file_path = os.path.join(params_dir, 'model.pt')
+        net_state_dict = torch.load(model_file_path)
 
-    def _evaluate(self, dataset, net):
+        # Build model & load its state dict
+        self._model = self._build_model()
+        self._model.net.load_state_dict(net_state_dict)
+
+    def get_shared_parameters(self):
+        (net, step) = self._model
+        if_share_params = self._knobs['if_share_params']
+
+        if not if_share_params:
+            return None
+
+        # Merge state of net and step into 1 dictionary
+        params = {}
+        def merge_params(prefix, state_dict):
+            for (name, value) in state_dict.items():
+                params['{}:{}'.format(prefix, name)] = value.cpu().numpy()
+
+        merge_params('net', net.state_dict())
+        params['step'] = step
+
+        return params
+
+    def _load_shared_parameters(self, params):
+        (net, step) = self._model
+        
+        if len(params) == 0:
+            return
+
+        utils.logger.log('Loading shared parameters...')
+
+        def extract_params(prefix):
+            return { ':'.join(name.split(':')[1:]): torch.from_numpy(value) 
+                    for (name, value) in params.items() if name.startswith(prefix + ':') }    
+
+        net_state_dict = extract_params('net')
+        net.load_state_dict(net_state_dict, strict=False)
+        step = params['step']
+
+        self._model = _Model(net, step)
+
+    def _evaluate(self, dataset):
         batch_size = self._knobs['batch_size']
         N = len(dataset)
+        net = self._model.net
 
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
         net.eval()
@@ -84,25 +131,35 @@ class PyDenseNetBc(BaseModel):
                 corrects += sum(preds.eq(batch_classes).cpu().numpy())
         
             return corrects / N
-
-    def _train(self, train_dataset, train_val_dataset):
-        trial_epochs = self._get_trial_epochs()
-        batch_size = self._knobs['batch_size']
+    
+    def _build_model(self):
         drop_rate = self._knobs['drop_rate']
         K = self._train_params['K']
+
+        utils.logger.log('Building model...')
+
+        net = DenseNet(num_classes=K, drop_rate=drop_rate)
+        self._count_model_parameters(net)
+
+        return _Model(net, 0)
+
+    def _train_model(self, train_dataset, train_val_dataset):
+        trial_epochs = self._get_trial_epochs()
+        batch_size = self._knobs['batch_size']
         early_stop_patience = self._knobs['early_stop_patience_epochs']
+        (net, step) = self._model
+
+        utils.logger.log('Training model...')
 
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         train_val_dataloader = DataLoader(train_val_dataset, batch_size=batch_size)
-        
-        net = DenseNet(num_classes=K, drop_rate=drop_rate)
+        (optimizer, scheduler) = self._get_optimizer(net, trial_epochs)
+
         net.train()
         if torch.cuda.is_available():
             utils.logger.log('Using CUDA...')
             net = net.cuda()
 
-        self._count_model_parameters(net)
-        (optimizer, scheduler) = self._get_optimizer(net, trial_epochs)
         early_stop_condition = EarlyStopCondition(patience=early_stop_patience)
         step = 0
         for epoch in range(trial_epochs):
@@ -151,11 +208,13 @@ class PyDenseNetBc(BaseModel):
                     utils.logger.log('Early stopping...')
                     break
 
-        return net
+        self._model = _Model(net, step)
 
     def _load_train_dataset(self, dataset_uri):
         max_train_val_samples = self._knobs['max_train_val_samples']
         max_image_size = self._knobs['max_image_size']
+
+        utils.logger.log('Loading train dataset...')
 
         dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
                                                         mode='RGB')
@@ -189,6 +248,9 @@ class PyDenseNetBc(BaseModel):
         image_size = train_params['image_size']
         norm_mean = train_params['norm_mean']
         norm_std = train_params['norm_std']
+
+        utils.logger.log('Loading val dataset...')
+
         dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=image_size, 
                                                         mode='RGB')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
