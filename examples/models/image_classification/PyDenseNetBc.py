@@ -146,7 +146,7 @@ class PyDenseNetBc(BaseModel):
                                 train_val_acc=train_val_acc.get())
 
                 # Early stop on train-val batch loss
-                if early_stop_condition.check(train_val_acc.get()):
+                if early_stop_condition.check(train_val_loss.get()):
                     utils.logger.log('Average train-val batch loss has not improved for {} epochs'.format(early_stop_condition.patience))
                     utils.logger.log('Early stopping...')
                     break
