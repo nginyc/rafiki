@@ -279,7 +279,7 @@ if __name__ == '__main__':
         model_class='PyBiLstm',
         task=TaskType.POS_TAGGING,
         dependencies={
-            ModelDependency.PYTORCH: '0.4.1'
+            ModelDependency.TORCH: '0.4.1'
         },
         train_dataset_uri='data/ptb_for_pos_tagging_train.zip',
         val_dataset_uri='data/ptb_for_pos_tagging_val.zip',

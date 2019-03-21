@@ -1,6 +1,7 @@
 import time
 import pprint
 import requests
+import argparse
 import traceback
 import os
 
@@ -63,7 +64,7 @@ def quickstart(client, enable_gpu):
     print('Creating train job for app "{}" on Rafiki...'.format(app)) 
     budget = {
         BudgetType.MODEL_TRIAL_COUNT: 2,
-        BudgetType.ENABLE_GPU: enable_gpu
+        BudgetType.ENABLE_GPU: 1 if enable_gpu else 0
     }
     train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true'
     val_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_val.zip?raw=true'
@@ -125,19 +126,21 @@ def quickstart(client, enable_gpu):
     pprint.pprint(client.stop_inference_job(app))
 
 if __name__ == '__main__':
-    rafiki_host = os.environ.get('RAFIKI_HOST', 'localhost')
-    admin_port = int(os.environ.get('ADMIN_EXT_PORT', 3000))
-    admin_web_port = int(os.environ.get('ADMIN_WEB_EXT_PORT', 3001))
-    user_email = os.environ.get('USER_EMAIL', SUPERADMIN_EMAIL)
-    user_password = os.environ.get('USER_PASSWORD', SUPERADMIN_PASSWORD)
-    enable_gpu = int(os.environ.get('ENABLE_GPU', 0))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--enable_gpu', action='store_true', help='Whether to use GPU')
+    parser.add_argument('--host', type=str, default='localhost', help='Host of Rafiki instance')
+    parser.add_argument('--admin_port', type=int, default=3000, help='Port for Rafiki Admin on host')
+    parser.add_argument('--admin_web_port', type=int, default=3001, help='Port for Rafiki Admin Web on host')
+    parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
+    parser.add_argument('--password', type=str, default=SUPERADMIN_PASSWORD, help='Password of user')
+    (args, _) = parser.parse_known_args()
 
     # Initialize client
-    client = Client(admin_host=rafiki_host, admin_port=admin_port)
-    client.login(email=user_email, password=user_password)
-    admin_web_url = 'http://{}:{}'.format(rafiki_host, admin_web_port)
+    client = Client(admin_host=args.host, admin_port=args.admin_port)
+    client.login(email=args.email, password=args.password)
+    admin_web_url = 'http://{}:{}'.format(args.host, args.admin_web_port)
     print('During training, you can view the status of the train job at {}'.format(admin_web_url))
-    print('Login with email "{}" and password "{}"'.format(user_email, user_password)) 
+    print('Login with email "{}" and password "{}"'.format(args.email, args.password)) 
     
     # Run quickstart
-    quickstart(client, enable_gpu)
+    quickstart(client, args.enable_gpu)

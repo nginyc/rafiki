@@ -41,8 +41,10 @@ def parse_model_install_command(dependencies, enable_gpu=False):
     for (dep, ver) in dependencies.items():
         if dep == ModelDependency.KERAS:
             commands.append('pip install Keras=={}'.format(ver))
-        elif dep == ModelDependency.PYTORCH:
+        elif dep == ModelDependency.TORCH:
             commands.append('pip install torch=={}'.format(ver))
+        elif dep == ModelDependency.TORCHVISION:
+            commands.append('pip install torchvision=={}'.format(ver))
         elif dep == ModelDependency.SCIKIT_LEARN:
             commands.append('pip install scikit-learn=={}'.format(ver))
         elif dep == ModelDependency.TENSORFLOW:

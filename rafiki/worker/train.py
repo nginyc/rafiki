@@ -170,6 +170,7 @@ class TrainWorker(object):
         if sub_train_job.config.get('should_save', True):
             logger.info('Saving model...')
             params_dir = os.path.join(self._params_root_dir, self._trial_id)
+            os.mkdir(params_dir)
             model_inst.save_parameters(params_dir)
 
         return (score, params, params_dir)

@@ -245,7 +245,7 @@ def _check_dependencies(dependencies):
         # Warn that Keras models should additionally depend on TF for GPU usage
         if dep == ModelDependency.KERAS:
             _warn('Keras models can enable GPU usage with by adding a `tensorflow` dependency.')
-        elif dep == ModelDependency.PYTORCH:
+        elif dep in [ModelDependency.TORCH, ModelDependency.TORCHVISION]:
             _info('PIP package `{}=={}` will be installed'.format(dep, ver))
         elif dep == ModelDependency.SCIKIT_LEARN:
             _info('PIP package `{}=={}` will be installed'.format(dep, ver))

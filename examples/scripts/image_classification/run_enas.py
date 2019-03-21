@@ -5,7 +5,7 @@ import pprint
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.model import serialize_knob_config
-from rafiki.constants import BudgetType, TaskType
+from rafiki.constants import BudgetType, TaskType, ModelDependency
 from examples.models.image_classification.TfEnas import TfEnasTrain
 
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
@@ -33,7 +33,7 @@ def run_enas(client, enable_gpu, full=True):
             task=TaskType.IMAGE_CLASSIFICATION,
             model_file_path='examples/models/image_classification/TfEnas.py',
             model_class='TfEnasSearch',
-            dependencies={ 'tensorflow': '1.12.0' }
+            dependencies={ ModelDependency.TENSORFLOW: '1.12.0' }
         )
         pprint.pprint(model)
         
@@ -64,7 +64,7 @@ def run_enas(client, enable_gpu, full=True):
             task=TaskType.IMAGE_CLASSIFICATION,
             model_file_path='examples/models/image_classification/TfEnas.py',
             model_class='TfEnasTrain',
-            dependencies={ 'tensorflow': '1.12.0' }
+            dependencies={ ModelDependency.TENSORFLOW: '1.12.0' }
         )
         pprint.pprint(model)
 

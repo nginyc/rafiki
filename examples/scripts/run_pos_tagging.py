@@ -1,5 +1,6 @@
 import pprint
 import time
+import argparse
 import requests
 import os
 
@@ -22,12 +23,12 @@ def run_pos_tagging(client, enable_gpu):
     client.create_model(bihmm_model_name, task, 'examples/models/pos_tagging/BigramHmm.py', \
                         'BigramHmm', dependencies={}) 
     client.create_model(py_model_name, task, 'examples/models/pos_tagging/PyBiLstm.py', \
-                        'PyBiLstm', dependencies={ ModelDependency.PYTORCH: '0.4.1' })
+                        'PyBiLstm', dependencies={ ModelDependency.TORCH: '0.4.1' })
 
     print('Creating train job for app "{}" on Rafiki...'.format(app))
     budget = {
         BudgetType.MODEL_TRIAL_COUNT: 2,
-        BudgetType.ENABLE_GPU: enable_gpu
+        BudgetType.ENABLE_GPU: 1 if enable_gpu else 0
     }
     train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_train.zip?raw=true'
     val_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_val.zip?raw=true'
@@ -63,16 +64,18 @@ def run_pos_tagging(client, enable_gpu):
     pprint.pprint(client.stop_inference_job(app))
 
 if __name__ == '__main__':
-    rafiki_host = os.environ.get('RAFIKI_HOST', 'localhost')
-    admin_port = int(os.environ.get('ADMIN_EXT_PORT', 3000))
-    user_email = os.environ.get('USER_EMAIL', SUPERADMIN_EMAIL)
-    user_password = os.environ.get('USER_PASSWORD', SUPERADMIN_PASSWORD)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--enable_gpu', action='store_true', help='Whether to use GPU')
+    parser.add_argument('--host', type=str, default='localhost', help='Host of Rafiki instance')
+    parser.add_argument('--admin_port', type=int, default=3000, help='Port for Rafiki Admin on host')
+    parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
+    parser.add_argument('--password', type=str, default=SUPERADMIN_PASSWORD, help='Password of user')
+    (args, _) = parser.parse_known_args()
 
     # Initialize client
-    client = Client(admin_host=rafiki_host, admin_port=admin_port)
-    client.login(email=user_email, password=user_password)
-    enable_gpu = int(os.environ.get('ENABLE_GPU', 0))
+    client = Client(admin_host=args.host, admin_port=args.admin_port)
+    client.login(email=args.email, password=args.password)
 
     # Run training & inference
-    run_pos_tagging(client, enable_gpu)
+    run_pos_tagging(client, args.enable_gpu)
             

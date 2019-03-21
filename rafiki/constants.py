@@ -6,7 +6,8 @@ class ModelDependency():
     TENSORFLOW = 'tensorflow'
     KERAS = 'Keras'
     SCIKIT_LEARN = 'scikit-learn'
-    PYTORCH = 'torch'
+    TORCH = 'torch'
+    TORCHVISION = 'torchvision'
     SINGA = 'singa'
 
 class ModelAccessRight():
