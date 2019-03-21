@@ -264,7 +264,8 @@ class TfAllCnnModelC(BaseModel):
         batch_size = self._knobs['batch_size']
         lr = self._knobs['lr']
         lr_decay = self._knobs['lr_decay']
-        lr_decay_epochs = [130, 190]
+        trial_epochs = self._get_trial_epochs()
+        lr_decay_epochs = [int(0.5 * trial_epochs), int(0.75 * trial_epochs)]
 
         steps_per_epoch = math.ceil(N / batch_size)
         epoch = step // steps_per_epoch
