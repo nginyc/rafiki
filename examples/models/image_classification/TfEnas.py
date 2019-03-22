@@ -1056,15 +1056,16 @@ class TfEnasSearch(TfEnasTrain):
     def get_shared_parameters(self):
         num_epochs = self._knobs['trial_epochs']
         if num_epochs > 0:
-            return self._retrieve_shared_vars()
+            with self._graph.as_default():
+                return self._retrieve_shared_vars()
         else:
-            return {} # No new trained parameters to share
+            return None # No new trained parameters to share
 
     def _load_dataset(self, dataset_uri, train_params=None):
         # Try to use memoized dataset
-        if dataset_uri in self._datasets_memo:
+        if dataset_uri in TfEnasSearch._datasets_memo:
             utils.logger.log('Using memoized dataset...')
-            dataset = self._datasets_memo[dataset_uri]
+            dataset = TfEnasSearch._datasets_memo[dataset_uri]
             return dataset
 
         dataset = super()._load_dataset(dataset_uri, train_params)
@@ -1081,13 +1082,13 @@ class TfEnasSearch(TfEnasTrain):
         }
 
         # Update loaded vars hash
-        self._loaded_vars_hash_memo = self._get_shared_vars_hash(shared_vars)
+        TfEnasSearch._loaded_vars_hash_memo = self._get_shared_vars_hash(shared_vars)
         return shared_vars
 
     def _maybe_load_shared_vars(self, shared_vars, num_epochs):
         # If shared vars has been loaded in previous trial, don't bother loading again
         shared_vars_hash = self._get_shared_vars_hash(shared_vars)
-        if self._loaded_vars_hash_memo == shared_vars_hash:
+        if TfEnasSearch._loaded_vars_hash_memo == shared_vars_hash:
             utils.logger.log('Skipping loading of shared variables...')
         else:
             self._load_shared_vars(shared_vars)
@@ -1115,9 +1116,9 @@ class TfEnasSearch(TfEnasTrain):
 
     def _build_model(self):
         # Use memoized graph when possible
-        if self._if_model_same(self._model_memo):
+        if self._if_model_same(TfEnasSearch._model_memo):
             utils.logger.log('Using previously built model...')
-            model_memo = self._model_memo
+            model_memo = TfEnasSearch._model_memo
             return (model_memo.model, model_memo.graph, model_memo.sess, model_memo.saver, 
                     model_memo.monitored_values)
         
@@ -1186,7 +1187,7 @@ class TfEnasSearch(TfEnasTrain):
                         images_ph, classes_ph, is_train_ph, probs, acc, step, normal_arch_ph, 
                         reduction_arch_ph, shared_params_phs, shared_params_assign_op)
 
-        self._model_memo = _ModelMemo(
+        TfEnasSearch._model_memo = _ModelMemo(
             self._train_params, self._knobs, graph, sess,
             saver, monitored_values, model
         )
