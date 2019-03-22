@@ -58,7 +58,6 @@ class TfEnasTrain(BaseModel):
             'trial_count': MetadataKnob(Metadata.TRIAL_COUNT),
             'max_image_size': FixedKnob(32),
             'trial_epochs': FixedKnob(630), # No. of epochs to run trial over
-            'initial_epoch': FixedKnob(0), # Initial epoch no.
             'ops': FixedKnob(ops),
             'batch_size': FixedKnob(64),
             'learning_rate': FixedKnob(0.05), 
@@ -210,7 +209,7 @@ class TfEnasTrain(BaseModel):
         
         with graph.as_default():
             # Define input placeholders to graph
-            images_ph = tf.placeholder(tf.int8, name='images_ph', shape=(None, w, h, in_ch)) # Images
+            images_ph = tf.placeholder(tf.float32, name='images_ph', shape=(None, w, h, in_ch)) # Images
             classes_ph = tf.placeholder(tf.int32, name='classes_ph', shape=(None,)) # Classes
             is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=()) # Are we training or predicting?
 
@@ -382,7 +381,6 @@ class TfEnasTrain(BaseModel):
         batch_size = self._knobs['batch_size'] 
         N = self._train_params['N']
         drop_path_keep_prob = self._knobs['drop_path_keep_prob'] # Base keep prob for drop path
-        initial_epoch = self._knobs['initial_epoch']
         drop_path_decay_epochs = self._knobs['drop_path_decay_epochs']
         
         # Decrease keep prob deeper into network
@@ -390,7 +388,7 @@ class TfEnasTrain(BaseModel):
         
         # Decrease keep prob with increasing steps
         steps_per_epoch = math.ceil(N / batch_size)
-        steps_ratio = tf.minimum((initial_epoch + (step + 1) / steps_per_epoch) / drop_path_decay_epochs, 1)
+        steps_ratio = tf.minimum(((step + 1) / steps_per_epoch) / drop_path_decay_epochs, 1)
         keep_prob = 1 - steps_ratio * (1 - keep_prob)
 
         # Drop path only during training 
@@ -409,14 +407,13 @@ class TfEnasTrain(BaseModel):
         N = self._train_params['N']
         lr = self._knobs['learning_rate'] # Learning rate
         use_sgdr = self._knobs['use_sgdr']
-        initial_epoch = self._knobs['initial_epoch']
         sgdr_decay_epochs = self._knobs['sgdr_decay_epochs']
         sgdr_alpha = self._knobs['sgdr_alpha'] 
         sgdr_t_mul = self._knobs['sgdr_t_mul']
 
         # Compute epoch from step
         steps_per_epoch = math.ceil(N / batch_size)
-        epoch = initial_epoch + step // steps_per_epoch
+        epoch = step // steps_per_epoch
 
         if use_sgdr is True:
             # Apply Stoachastic Gradient Descent with Warm Restarts (SGDR)
@@ -432,7 +429,6 @@ class TfEnasTrain(BaseModel):
         return sess
 
     def _train_model(self, images, classes, num_epochs):
-        initial_epoch = self._knobs['initial_epoch']
         m = self._model
 
         # Define plots for monitored values
@@ -442,9 +438,8 @@ class TfEnasTrain(BaseModel):
         train_summaries = [] # List of (<steps>, <summary>) collected during training
 
         log_condition = TimedRepeatCondition()
-        for trial_epoch in range(num_epochs):
-            epoch = initial_epoch + trial_epoch
-            utils.logger.log('Running epoch {} (trial epoch {})...'.format(epoch, trial_epoch))
+        for epoch in range(num_epochs):
+            utils.logger.log('Running epoch {}...'.format(epoch))
             stepper = self._feed_dataset_to_model(images, [m.train_op, m.summary_op, m.acc, m.step, *self._monitored_values.values()], 
                                                 is_train=True, classes=classes)
 
@@ -918,9 +913,9 @@ class TfEnasTrain(BaseModel):
 
             # Apply 1 x 1 convolution to each half separately
             W_half_1 = self._make_var('W_half_1', (1, 1, in_ch, out_ch >> 1))
-            X_half_1 = tf.nn.conv2d(half_1, W_half_1, (1, 1, 1, 1), padding='SAME')
+            X_half_1 = tf.nn.conv2d(half_1, W_half_1, (1, 1, 1, 1), padding='VALID')
             W_half_2 = self._make_var('W_half_2', (1, 1, in_ch, out_ch >> 1))
-            X_half_2 = tf.nn.conv2d(half_2, W_half_2, (1, 1, 1, 1), padding='SAME')
+            X_half_2 = tf.nn.conv2d(half_2, W_half_2, (1, 1, 1, 1), padding='VALID')
             
             # Concat both halves across channels
             X = tf.concat([X_half_1, X_half_2], axis=3)
@@ -1014,9 +1009,6 @@ class TfEnasSearch(TfEnasTrain):
         # The other X trials is for training the controller
         cur_trial_epochs = 1 if (trial_count % (skip_training_trials + 1) == 0) else 0 
 
-        # How many epochs has training been done over in past trials
-        initial_epoch = (trial_count - 1) // (skip_training_trials + 1) + 1 if trial_count > 0 else 0
-
         # Override certain fixed knobs for ENAS search
         knobs = {
             **knobs,
@@ -1027,8 +1019,7 @@ class TfEnasSearch(TfEnasTrain):
             'num_layers': 6,
             'sgdr_alpha': 0.01,
             'dropout_keep_prob': 0.9,
-            'drop_path_decay_epochs': 150,
-            'initial_epoch': initial_epoch
+            'drop_path_decay_epochs': 150
         }
         return knobs
 
@@ -1211,7 +1202,7 @@ class TfEnasSearch(TfEnasTrain):
             return False
 
         # Must have the same knobs, except for certain knobs that don't affect model
-        ignored_knobs = ['cell_archs', 'trial_count', 'trial_epochs', 'initial_epoch']
+        ignored_knobs = ['cell_archs', 'trial_count', 'trial_epochs']
         for (name, value) in self._knobs.items():
             if name not in ignored_knobs and value != model_memo.knobs.get(name):
                 utils.logger.log('Detected that knob "{}" is different!'.format(name))
