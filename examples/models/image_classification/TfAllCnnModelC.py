@@ -33,6 +33,7 @@ class TfAllCnnModelC(BaseModel):
             'input_dropout_rate': FloatKnob(0, 0.3),
             'pool_dropout_rate_1': FloatKnob(0, 0.7),
             'pool_dropout_rate_2': FloatKnob(0, 0.7),
+            'initializer_type': CategoricalKnob(['he_normal', 'glorot_normal']),
             'early_stop_patience_epochs': FixedKnob(5),
         }
 
@@ -251,13 +252,22 @@ class TfAllCnnModelC(BaseModel):
         return logits
     
     def _add_conv(self, X, in_w, in_h, in_ch, out_ch, filter_size=1, no_reg=False, padding='SAME', is_input=False):
-        W = self._make_var('W', (filter_size, filter_size, in_ch, out_ch), no_reg=no_reg, initializer=tf.initializers.he_normal())
+        W = self._make_var('W', (filter_size, filter_size, in_ch, out_ch), no_reg=no_reg, initializer=self._get_initializer())
         X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding=padding)
         X = tf.nn.relu(X)
         out_w = in_w - filter_size + 1 if padding == 'VALID' else in_w
         out_h = in_h - filter_size + 1 if padding == 'VALID' else in_h
         X = tf.reshape(X, (-1, out_w, out_h, out_ch)) # Sanity shape check
         return X
+
+    def _get_initializer(self):
+        initializer_type = self._knobs['initializer_type']
+        if initializer_type == 'he_normal':
+            return tf.initializers.he_normal()
+        elif initializer_type == 'glorot_normal':
+            return tf.initializers.glorot_normal()
+        else:
+            raise ValueError('Invalid initializer type: "{}"'.format(initializer_type))
 
     def _get_learning_rate(self, step):
         N = self._train_params['N']
