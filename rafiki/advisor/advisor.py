@@ -162,7 +162,7 @@ class MostRecentParamAdvisor(BaseParamAdvisor):
 _Param = namedtuple('_Param', ('value', 'score'))
 
 class EpsilonGreedyParamAdvisor(BaseParamAdvisor):
-    def __init__(self, base_epsilon=0.5, trial_div=100):
+    def __init__(self, base_epsilon=0.5, trial_div=25):
         self._base_epsilon = base_epsilon
         self._trial_div = trial_div
         self._trial_count = 0
