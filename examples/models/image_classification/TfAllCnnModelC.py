@@ -25,7 +25,7 @@ class TfAllCnnModelC(BaseModel):
             'max_image_size': FixedKnob(32),
             'batch_size': FixedKnob(128),
             'max_trial_epochs': FixedKnob(200),
-            'max_train_val_samples': FixedKnob(1024),
+            'max_train_val_samples': FixedKnob(2048),
             'opt_momentum': FloatKnob(0.7, 1, is_exp=True),
             'lr': FloatKnob(1e-4, 1, is_exp=True),
             'lr_decay': FixedKnob(0.1),
@@ -180,12 +180,6 @@ class TfAllCnnModelC(BaseModel):
     def _feed_dataset_to_model(self, images, run_ops, is_train=False, classes=None):
         m = self._model
 
-        # Shuffle dataset if training
-        if is_train:
-            zipped = list(zip(images, classes))
-            random.shuffle(zipped)
-            (images, classes) = zip(*zipped)
-        
         # Initialize dataset (mock classes if required)
         self._sess.run(m.init_op, feed_dict={
             m.images_ph: images, 
@@ -319,7 +313,7 @@ class TfAllCnnModelC(BaseModel):
         max_image_size = self._knobs['max_image_size']
 
         dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
-                                                        mode='RGB')
+                                                        mode='RGB', if_shuffle=True)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         train_val_samples = min(dataset.size // 5, max_train_val_samples) # up to 1/5 of samples for train-val
         (train_images, train_classes) = (images[train_val_samples:], classes[train_val_samples:])

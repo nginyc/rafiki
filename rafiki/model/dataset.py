@@ -57,7 +57,7 @@ class DatasetUtils():
         return CorpusDataset(dataset_path, tags, split_by)
 
     def load_dataset_of_image_files(self, dataset_uri, min_image_size=None, 
-                                    max_image_size=None, mode='RGB'):
+                                    max_image_size=None, mode='RGB', if_shuffle=False):
         '''
             Loads dataset with type `IMAGE_FILES`.
 
@@ -65,11 +65,12 @@ class DatasetUtils():
             :param int min_image_size: minimum width *and* height to resize all images to 
             :param int max_image_size: maximum width *and* height to resize all images to 
             :param str mode: Pillow image mode. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes
+            :param bool if_shuffle: Whether to shuffle the dataset
             :returns: An instance of ``ImageFilesDataset``
         '''
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         return ImageFilesDataset(dataset_path, min_image_size=min_image_size, max_image_size=max_image_size, 
-                                mode=mode)
+                                mode=mode, if_shuffle=if_shuffle)
 
     def normalize_images(self, images, mean=None, std=None):
         '''
@@ -260,11 +261,12 @@ class ImageFilesDataset(ModelDataset):
         - Each class is an integer from 0 to (k - 1)
     '''   
 
-    def __init__(self, dataset_path, min_image_size=None, max_image_size=None, mode='RGB'):
+    def __init__(self, dataset_path, min_image_size=None, max_image_size=None, mode='RGB', if_shuffle=False):
         super().__init__(dataset_path)
         (pil_images, self._image_classes, self.size, self.classes) = self._load(self.path, mode)
-        (self._images, self.image_size) = \
-            self._preprocess(pil_images, min_image_size, max_image_size)
+        (self._images, self.image_size) = self._preprocess(pil_images, min_image_size, max_image_size)
+        if if_shuffle:
+            (self._images, self._image_classes) = self._shuffle(self._images, self._image_classes)
 
     def __getitem__(self, index):
         image = self._images[index]
@@ -319,3 +321,9 @@ class ImageFilesDataset(ModelDataset):
         num_samples = len(image_paths)
 
         return (pil_images, image_classes, num_samples, num_classes)
+
+    def _shuffle(self, images, classes):
+        zipped = list(zip(images, classes))
+        np.random.shuffle(zipped)
+        (images, classes) = list(zip(*zipped))
+        return (images, classes)
