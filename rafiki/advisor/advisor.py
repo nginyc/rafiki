@@ -38,10 +38,7 @@ class BaseParamAdvisor(abc.ABC):
 
     @abc.abstractmethod
     def feedback(self, score: float, params: dict, worker_id: str):
-        raise NotImplementedError() 
-
-from .skopt import SkoptKnobAdvisor
-from .tf import EnasKnobAdvisor
+        raise NotImplementedError()
 
 class Advisor():
     def __init__(self, knob_config: Dict[str, BaseKnob]):
@@ -53,6 +50,7 @@ class Advisor():
                             if type(knob) in [IntegerKnob, CategoricalKnob, FloatKnob] }
 
         if len(self._skopt_knob_config) > 0:
+            from .skopt import SkoptKnobAdvisor
             self._skopt_knob_adv = SkoptKnobAdvisor()
             self._skopt_knob_adv.start(self._skopt_knob_config)
 
@@ -61,6 +59,7 @@ class Advisor():
                             if type(knob) in [ListKnob] }
 
         if len(self._enas_knob_config) > 0:
+            from .tf import EnasKnobAdvisor
             self._enas_knob_adv = EnasKnobAdvisor()
             self._enas_knob_adv.start(self._enas_knob_config)
 
@@ -72,8 +71,7 @@ class Advisor():
         self._metadata_knobs = { name: knob.metadata for (name, knob) in knob_config.items() 
                             if type(knob) in [MetadataKnob] }
 
-        # Use epsilon greedy params advisor
-        self._params_adv = EpsilonGreedyParamAdvisor()
+        self._params_adv = self._get_param_advisor()
 
     @property
     def knob_config(self) -> Dict[str, BaseKnob]:
@@ -130,6 +128,9 @@ class Advisor():
 
         # Feedback to params
         self._params_adv.feedback(score, params, worker_id)
+    
+    def _get_param_advisor(self):
+        return RecentParamAdvisor()
 
     def _simplify_value(self, value):
         if isinstance(value, np.int64) or isinstance(value, np.int32):
@@ -147,7 +148,7 @@ class Advisor():
         else:
             raise ValueError('No such metadata: {}'.format(metadata))
 
-class MostRecentParamAdvisor(BaseParamAdvisor):
+class RecentParamAdvisor(BaseParamAdvisor):
     def __init__(self):
         self._params = {}
 
