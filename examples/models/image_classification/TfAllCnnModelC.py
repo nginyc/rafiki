@@ -25,7 +25,7 @@ class TfAllCnnModelC(BaseModel):
             'max_image_size': FixedKnob(32),
             'batch_size': FixedKnob(128),
             'max_trial_epochs': FixedKnob(200),
-            'max_train_val_samples': FixedKnob(2048),
+            'max_train_val_samples': FixedKnob(1024),
             'opt_momentum': FloatKnob(0.7, 1, is_exp=True),
             'lr': FloatKnob(1e-4, 1, is_exp=True),
             'lr_decay': FixedKnob(0.1),
@@ -485,6 +485,6 @@ if __name__ == '__main__':
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
         val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
         test_dataset_uri='data/cifar_10_for_image_classification_test.zip',
-        total_trials=100,
+        total_trials=200,
         should_save=False
     )
