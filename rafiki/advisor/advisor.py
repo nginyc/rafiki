@@ -6,7 +6,7 @@ import logging
 from typing import Union, Dict
 
 from rafiki.model import BaseKnob, IntegerKnob, CategoricalKnob, FloatKnob, \
-                FixedKnob, ListKnob, DynamicListKnob, MetadataKnob, Metadata
+                FixedKnob, ListKnob, MetadataKnob, Metadata
 
 logger = logging.getLogger(__name__)
 
@@ -232,9 +232,6 @@ class RandomKnobAdvisor(BaseKnobAdvisor):
             return knob.value
         elif isinstance(knob, ListKnob):
             return [self._propose(knob.items[i]) for i in range(len(knob))]
-        elif isinstance(knob, DynamicListKnob):
-            list_len = knob.len_min + int(u * (knob.len_max - knob.len_min + 1))
-            return [self._propose(knob.items[i]) for i in range(list_len)]
         else:
             raise UnsupportedKnobTypeError(knob.__class__)
 
