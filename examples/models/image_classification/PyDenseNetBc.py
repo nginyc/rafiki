@@ -1,5 +1,6 @@
 import math
 import os
+import json
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -66,7 +67,18 @@ class PyDenseNetBc(BaseModel):
         model_file_path = os.path.join(params_dir, 'model.pt')
         torch.save(self._model.net.state_dict(), model_file_path)
 
+        # Save pre-processing params
+        train_params_file_path = os.path.join(params_dir, 'train_params.json')
+        with open(train_params_file_path, 'w') as f:
+            f.write(json.dumps(self._train_params))
+
     def load_parameters(self, params_dir):
+        # Load pre-processing params
+        train_params_file_path = os.path.join(params_dir, 'train_params.json')
+        with open(train_params_file_path, 'r') as f:
+            json_str = f.read()
+            self._train_params = json.loads(json_str)
+
         # Load state dict of net
         model_file_path = os.path.join(params_dir, 'model.pt')
         net_state_dict = torch.load(model_file_path)
