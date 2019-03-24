@@ -225,7 +225,7 @@ def _maybe_read_knobs_from_args(knob_config, args):
     for (name, knob) in knob_config.items():
         if knob.value_type in [int, float, str]:
             parser.add_argument('--{}'.format(name), type=knob.value_type)
-        elif knob.value_type in [list]:
+        elif knob.value_type in [list, bool]:
             parser.add_argument('--{}'.format(name), type=str)
         
     args_namespace = vars(parser.parse_known_args(args)[0])
@@ -233,8 +233,8 @@ def _maybe_read_knobs_from_args(knob_config, args):
     for (name, knob) in knob_config.items():
         if name in args_namespace and args_namespace[name] is not None:
             value = args_namespace[name]
-            if knob.value_type in [list]:
-                value = json.loads(value)
+            if knob.value_type in [list, bool]:
+                value = eval(value)
             knobs_from_args[name] = value
             _info('Setting knob "{}" to be fixed value of "{}"...'.format(name, value))
 

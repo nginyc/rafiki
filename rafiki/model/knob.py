@@ -99,12 +99,12 @@ class FixedKnob(BaseKnob):
 
     @staticmethod
     def _validate_value(value):
-        if isinstance(value, int):
+        if isinstance(value, bool):
+            value_type = bool
+        elif isinstance(value, int):
             value_type = int
         elif isinstance(value, float):
             value_type = float
-        elif isinstance(value, bool):
-            value_type = bool
         elif isinstance(value, str):
             value_type = str
         elif isinstance(value, list):
@@ -233,49 +233,3 @@ class ListKnob(BaseKnob):
                 raise ValueError('Item {} should be of type `BaseKnob`'.format(i))
 
         return (list_len, items)
-
-class DynamicListKnob(BaseKnob):
-    '''
-    Knob type represent a list of knobs of a dynamic size 
-    '''
-
-    def __init__(self, len_min, len_max, get_item=None, items=None):
-        (self._len_min, self._len_max, self._items) = \
-            self._validate_values(len_min, len_max, get_item, items)
-        super().__init__()
-
-    @property
-    def value_type(self):
-        return list
-        
-    @property
-    def items(self):
-        return self._items
-
-    @property
-    def len_min(self):
-        return self._len_min
-    
-    @property
-    def len_max(self):
-        return self._len_max
-    
-    @staticmethod
-    def _validate_values(len_min, len_max, get_item, items):
-        if not isinstance(len_min, int) or len_min < 0:
-            raise ValueError('`len_min` should be a non-negative `int`')
-        
-        if not isinstance(len_max, int) or len_max < len_min:
-            raise ValueError('`len_max` should be a `int` at least `len_min`')
-
-        if items is None:
-            if get_item is None:
-                raise ValueError('`get_item` should be specified if `items` is not')
-
-            items = [get_item(i) for i in range(0, len_max)]
-
-        for (i, knob) in enumerate(items):
-            if not isinstance(knob, BaseKnob):
-                raise ValueError('Item {} should be of type `BaseKnob`'.format(i))
-
-        return (len_min, len_max, items)

@@ -4,6 +4,7 @@ import os
 import numpy as np
 import math
 import random
+import json
 from datetime import datetime
 from collections import namedtuple
 
@@ -11,8 +12,8 @@ from rafiki.model import BaseModel, utils, IntegerKnob, CategoricalKnob, FloatKn
 from rafiki.advisor import tune_model
 
 _Model = namedtuple('_Model', ['images_ph', 'classes_ph', 'is_train_ph', 'step', 'probs', 'acc', 'loss',
-                                'train_op', 'init_op', 'summary_op'])
-
+                                'train_op', 'init_op', 'summary_op', 
+                                'shared_var_phs', 'shared_vars_assign_op'])
 class TfAllCnnModelC(BaseModel):
     '''
     Model C in https://arxiv.org/pdf/1412.6806.pdf
@@ -35,16 +36,18 @@ class TfAllCnnModelC(BaseModel):
             'pool_dropout_rate_2': FloatKnob(0, 0.7),
             'initializer_type': CategoricalKnob(['he_normal', 'glorot_normal']),
             'early_stop_patience_epochs': FixedKnob(5),
+            'if_share_params': FixedKnob(True)
         }
 
     def __init__(self, **knobs):
         self._knobs = knobs
         
-    def train(self, dataset_uri, *args):
+    def train(self, dataset_uri, shared_params):
         (train_images, train_classes, train_val_images, 
             train_val_classes, self._train_params) = self._load_train_dataset(dataset_uri)
-        (self._graph, self._sess, self._model, monitored_values) = self._build_model()
+        (self._model, self._graph, self._sess, self._saver, monitored_values) = self._build_model()
         with self._graph.as_default():
+            self._load_shared_vars(shared_params)
             self._train_summaries = self._train_model(train_images, train_classes, 
                                                     train_val_images, train_val_classes, 
                                                     monitored_values)
@@ -62,12 +65,81 @@ class TfAllCnnModelC(BaseModel):
         pass
 
     def save_parameters(self, params_dir):
-        # TODO
-        pass
+        # Save model parameters
+        model_file_path = os.path.join(params_dir, 'model')
+        with self._graph.as_default():
+            self._saver.save(self._sess, model_file_path)
+
+        # Save pre-processing params
+        train_params_file_path = os.path.join(params_dir, 'train_params.json')
+        with open(train_params_file_path, 'w') as f:
+            f.write(json.dumps(self._train_params))
+
+        # Dump train summaries
+        summaries_dir_path = os.path.join(params_dir, 'summaries')
+        os.mkdir(summaries_dir_path)
+        writer = tf.summary.FileWriter(summaries_dir_path, self._graph)
+        if self._train_summaries is not None:
+            for (steps, summary) in self._train_summaries:
+                writer.add_summary(summary, steps)
 
     def load_parameters(self, params_dir):
-        # TODO
-        pass
+        # Load pre-processing params
+        train_params_file_path = os.path.join(params_dir, 'train_params.json')
+        with open(train_params_file_path, 'r') as f:
+            json_str = f.read()
+            self._train_params = json.loads(json_str)
+
+        # Build model
+        (self._model, self._graph, self._sess, 
+            self._saver, self._monitored_values) = self._build_model()
+
+        # Load model parameters
+        with self._graph.as_default():
+            model_file_path = os.path.join(params_dir, 'model')
+            self._saver.restore(self._sess, model_file_path)
+
+    def get_shared_parameters(self):
+        if_share_params = self._knobs['if_share_params']
+
+        if not if_share_params:
+            return None
+            
+        with self._graph.as_default():
+            shared_tf_vars = self._get_shared_tf_vars()
+            values = self._sess.run(shared_tf_vars)
+
+        shared_vars = {
+            tf_var.name: value
+            for (tf_var, value)
+            in zip(shared_tf_vars, values)
+        }
+
+        return shared_vars
+
+    def _get_shared_tf_vars(self):
+        return tf.global_variables()
+
+    def _load_shared_vars(self, shared_vars):
+        if len(shared_vars) == 0:
+            return
+
+        m = self._model
+
+        # Get current values for vars
+        shared_tf_vars = self._get_shared_tf_vars()
+        values = self._sess.run(shared_tf_vars)
+        utils.logger.log('Loading {} / {} shared variables...'.format(len(shared_vars), len(shared_tf_vars)))
+
+        # Build feed dict for op for loading shared params
+        # For each param, use current value of param in session if not in shared vars
+        var_feeddict = {
+            m.shared_var_phs[tf_var.name]: shared_vars[tf_var.name] 
+            if tf_var.name in shared_vars else values[i]
+            for (i, tf_var) in enumerate(shared_tf_vars)
+        }
+        
+        self._sess.run(m.shared_vars_assign_op, feed_dict=var_feeddict)
 
     def _train_model(self, train_images, train_classes, 
                     train_val_images, train_val_classes, monitored_values):
@@ -170,12 +242,21 @@ class TfAllCnnModelC(BaseModel):
             # Monitor values
             (summary_op, monitored_values) = self._add_monitoring_of_values()
 
+            # Allow loading of shared parameters
+            shared_tf_vars = self._get_shared_tf_vars()
+            (shared_var_phs, shared_vars_assign_op) = self._add_vars_assign_op(shared_tf_vars)
+
+            # Add saver
+            tf_vars = tf.global_variables()
+            saver = tf.train.Saver(tf_vars)
+
             # Session
             sess = self._make_session()
 
-            model = _Model(images_ph, classes_ph, is_train_ph, step, probs, acc, loss, train_op, init_op, summary_op)
+            model = _Model(images_ph, classes_ph, is_train_ph, step, probs, acc, 
+                            loss, train_op, init_op, summary_op, shared_var_phs, shared_vars_assign_op)
 
-        return (graph, sess, model, monitored_values)
+        return (model, graph, sess, saver, monitored_values)
 
     def _feed_dataset_to_model(self, images, run_ops, is_train=False, classes=None):
         m = self._model
@@ -388,6 +469,17 @@ class TfAllCnnModelC(BaseModel):
     # Utils
     ####################################
 
+    def _add_vars_assign_op(self, vars):
+        var_phs = {
+            tf_var.name: tf.placeholder(dtype=tf_var.dtype, shape=tf_var.shape)
+            for tf_var in vars
+        }
+        vars_assign_op = tf.group([
+            tf.assign(tf_var, ph) 
+            for (tf_var, ph) in zip(vars, var_phs.values())
+        ], name='vars_assign_op')
+
+        return (var_phs, vars_assign_op)
 
     def _do_global_avg_pool(self, X, in_w, in_h, in_ch):
         X = tf.reduce_mean(X, (1, 2))

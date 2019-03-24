@@ -17,7 +17,7 @@ from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKn
 _Model = namedtuple('_Model', ['dataset_init_op',
         'train_op', 'summary_op', 'images_ph', 'classes_ph', 'is_train_ph', 
         'probs', 'acc', 'step', 'normal_arch_ph', 'reduction_arch_ph', 
-        'shared_params_phs', 'shared_params_assign_op'])
+        'shared_var_phs', 'shared_vars_assign_op'])
 
 class TfEnasTrain(BaseModel):
     '''
@@ -159,8 +159,8 @@ class TfEnasTrain(BaseModel):
         (self._model, self._graph, self._sess, 
             self._saver, self._monitored_values) = self._build_model()
 
+        # Load model parameters
         with self._graph.as_default():
-            # Load model parameters
             model_file_path = os.path.join(params_dir, 'model')
             self._saver.restore(self._sess, model_file_path)
 
@@ -1057,7 +1057,19 @@ class TfEnasSearch(TfEnasTrain):
         num_epochs = self._knobs['trial_epochs']
         if num_epochs > 0:
             with self._graph.as_default():
-                return self._retrieve_shared_vars()
+                shared_tf_vars = self._get_shared_tf_vars()
+                values = self._sess.run(shared_tf_vars)
+
+            shared_vars = {
+                tf_var.name: value
+                for (tf_var, value)
+                in zip(shared_tf_vars, values)
+            }
+            
+            # Update loaded vars hash
+            TfEnasSearch._loaded_vars_hash_memo = self._get_shared_vars_hash(shared_vars)
+
+            return shared_vars
         else:
             return None # No new trained parameters to share
 
@@ -1071,19 +1083,6 @@ class TfEnasSearch(TfEnasTrain):
         dataset = super()._load_dataset(dataset_uri, train_params)
         self._datasets_memo[dataset_uri] = dataset
         return dataset
-
-    def _retrieve_shared_vars(self):
-        shared_tf_vars = self._get_shared_tf_vars()
-        values = self._sess.run(shared_tf_vars)
-        shared_vars = {
-            tf_var.name: value
-            for (tf_var, value)
-            in zip(shared_tf_vars, values)
-        }
-
-        # Update loaded vars hash
-        TfEnasSearch._loaded_vars_hash_memo = self._get_shared_vars_hash(shared_vars)
-        return shared_vars
 
     def _maybe_load_shared_vars(self, shared_vars, num_epochs):
         # If shared vars has been loaded in previous trial, don't bother loading again
@@ -1107,12 +1106,15 @@ class TfEnasSearch(TfEnasTrain):
         # Build feed dict for op for loading shared params
         # For each param, use current value of param in session if not in shared vars
         var_feeddict = {
-            m.shared_params_phs[tf_var.name]: shared_vars[tf_var.name] 
+            m.shared_var_phs[tf_var.name]: shared_vars[tf_var.name] 
             if tf_var.name in shared_vars else values[i]
             for (i, tf_var) in enumerate(shared_tf_vars)
         }
         
-        self._sess.run(m.shared_params_assign_op, feed_dict=var_feeddict)
+        self._sess.run(m.shared_vars_assign_op, feed_dict=var_feeddict)
+
+    def _get_shared_tf_vars(self):
+        return tf.global_variables()
 
     def _build_model(self):
         # Use memoized graph when possible
@@ -1171,21 +1173,14 @@ class TfEnasSearch(TfEnasTrain):
 
             # Allow loading of shared parameters
             shared_tf_vars = self._get_shared_tf_vars()
-            shared_params_phs = {
-                tf_var.name: tf.placeholder(dtype=tf_var.dtype, shape=tf_var.shape)
-                for tf_var in shared_tf_vars
-            }
-            shared_params_assign_op = tf.group([
-                tf.assign(tf_var, ph) 
-                for (tf_var, ph) in zip(shared_tf_vars, shared_params_phs.values())
-            ], name='shared_params_assign_op')
+            (shared_var_phs, shared_vars_assign_op) = self._add_vars_assign_op(shared_tf_vars)
 
             # Make session
             sess = self._make_session()
 
         model = _Model(dataset_init_op, train_op, summary_op, 
                         images_ph, classes_ph, is_train_ph, probs, acc, step, normal_arch_ph, 
-                        reduction_arch_ph, shared_params_phs, shared_params_assign_op)
+                        reduction_arch_ph, shared_var_phs, shared_vars_assign_op)
 
         TfEnasSearch._model_memo = _ModelMemo(
             self._train_params, self._knobs, graph, sess,
@@ -1193,6 +1188,18 @@ class TfEnasSearch(TfEnasTrain):
         )
 
         return (model, graph, sess, saver, monitored_values)
+
+    def _add_vars_assign_op(self, vars):
+        var_phs = {
+            tf_var.name: tf.placeholder(dtype=tf_var.dtype, shape=tf_var.shape)
+            for tf_var in vars
+        }
+        vars_assign_op = tf.group([
+            tf.assign(tf_var, ph) 
+            for (tf_var, ph) in zip(vars, var_phs.values())
+        ], name='vars_assign_op')
+
+        return (var_phs, vars_assign_op)
 
     def _if_model_same(self, model_memo):
         if model_memo is None:
@@ -1281,9 +1288,6 @@ class TfEnasSearch(TfEnasTrain):
         X = op_Xs[op]
 
         return X
-
-    def _get_shared_tf_vars(self):
-        return tf.global_variables()
 
     def _get_shared_vars_hash(self, shared_vars):
         shared_vars_plain = { name: value.tolist() for (name, value) in shared_vars.items() }
