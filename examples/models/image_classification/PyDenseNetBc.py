@@ -220,7 +220,7 @@ class PyDenseNetBc(BaseModel):
         utils.logger.log('Loading train dataset...')
 
         dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
-                                                        mode='RGB')
+                                                        mode='RGB', if_shuffle=True)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         train_val_samples = min(dataset.size // 5, max_train_val_samples) # up to 1/5 of samples for train-val
         (train_images, train_classes) = (images[train_val_samples:], classes[train_val_samples:])

@@ -1,5 +1,6 @@
 from PIL import Image
 import numpy as np
+import random
 import requests
 import logging
 import os
@@ -324,6 +325,6 @@ class ImageFilesDataset(ModelDataset):
 
     def _shuffle(self, images, classes):
         zipped = list(zip(images, classes))
-        np.random.shuffle(zipped)
-        (images, classes) = list(zip(*zipped))
+        random.shuffle(zipped)
+        (images, classes) = zip(*zipped)
         return (images, classes)

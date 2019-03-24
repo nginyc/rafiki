@@ -180,6 +180,12 @@ class TfAllCnnModelC(BaseModel):
     def _feed_dataset_to_model(self, images, run_ops, is_train=False, classes=None):
         m = self._model
 
+        # Shuffle dataset if training
+        if is_train:
+            zipped = list(zip(images, classes))
+            random.shuffle(zipped)
+            (images, classes) = zip(*zipped)
+        
         # Initialize dataset (mock classes if required)
         self._sess.run(m.init_op, feed_dict={
             m.images_ph: images, 
