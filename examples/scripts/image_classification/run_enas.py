@@ -50,7 +50,6 @@ def run_enas(client, enable_gpu, full=True):
             models={
                 search_model: {
                     'advisor_id': advisor_id,
-                    'should_save': False,
                     'knobs': { 'num_layers': 0, 'initial_block_ch': 4 } if not full else {}
                 }
             }

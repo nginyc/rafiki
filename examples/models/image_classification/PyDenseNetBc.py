@@ -15,7 +15,7 @@ import torchvision.transforms as transforms
 from collections import OrderedDict
 import abc
 
-from rafiki.model import BaseModel, utils, FixedKnob, MetadataKnob, Metadata, FloatKnob, CategoricalKnob
+from rafiki.model import BaseModel, utils, FixedKnob, FloatKnob, CategoricalKnob, SharedParams, TrialConfig
 from rafiki.advisor import tune_model
 
 _Model = namedtuple('_Model', ['net', 'step'])
@@ -33,7 +33,6 @@ class PyDenseNetBc(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'trial_count': MetadataKnob(Metadata.TRIAL_COUNT),
             'max_trial_epochs': FixedKnob(200),
             'lr': FloatKnob(1e-4, 1, is_exp=True),
             'lr_decay': FloatKnob(1e-3, 1e-1, is_exp=True),
@@ -46,6 +45,25 @@ class PyDenseNetBc(BaseModel):
             'early_stop_patience_epochs': FixedKnob(5),
             'if_share_params': FixedKnob(True)
         }
+
+    @staticmethod
+    def get_trial_config(trial_no, total_trials, running_trial_nos):
+        num_final_trials = 10
+
+        # Last X trials to train from scratch
+        is_final_trial = (total_trials - trial_no) < num_final_trials
+
+        if is_final_trial:
+            # Disable early stopping, disable param sharing and maximize epochs
+            override_knobs = { 
+                'max_trial_epochs': 300,
+                'max_train_val_samples': 0
+            }
+            return TrialConfig(override_knobs=override_knobs, 
+                                shared_params=SharedParams.NONE)
+        else:
+            return TrialConfig(shared_params=SharedParams.LOCAL_BEST,
+                                should_save=False)
 
     def train(self, dataset_uri, shared_params):
         (train_dataset, train_val_dataset, self._train_params) = self._load_train_dataset(dataset_uri)
@@ -101,7 +119,7 @@ class PyDenseNetBc(BaseModel):
                 params['{}:{}'.format(prefix, name)] = value.cpu().numpy()
 
         merge_params('net', net.state_dict())
-        params['step'] = step
+        params['step'] = np.asarray(step)
 
         return params
 
@@ -119,7 +137,7 @@ class PyDenseNetBc(BaseModel):
 
         net_state_dict = extract_params('net')
         net.load_state_dict(net_state_dict, strict=False)
-        step = params['step']
+        step = int(params['step'])
 
         self._model = _Model(net, step)
 
@@ -548,7 +566,6 @@ if __name__ == '__main__':
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
         val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
         test_dataset_uri='data/cifar_10_for_image_classification_test.zip',
-        total_trials=100,
-        should_save=False
+        total_trials=100
     )
 

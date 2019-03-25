@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import os
 from sqlalchemy import create_engine, distinct
 from sqlalchemy.orm import sessionmaker
@@ -115,7 +115,7 @@ class MetaStore(object):
 
     def mark_train_job_as_stopped(self, train_job):
         train_job.status = TrainJobStatus.STOPPED
-        train_job.datetime_stopped = datetime.datetime.utcnow()
+        train_job.datetime_stopped = datetime.utcnow()
         self._session.add(train_job)
 
     ####################################
@@ -214,7 +214,7 @@ class MetaStore(object):
 
     def mark_inference_job_as_stopped(self, inference_job):
         inference_job.status = InferenceJobStatus.STOPPED
-        inference_job.datetime_stopped = datetime.datetime.utcnow()
+        inference_job.datetime_stopped = datetime.utcnow()
         self._session.add(inference_job)
 
     ####################################
@@ -283,12 +283,12 @@ class MetaStore(object):
 
     def mark_service_as_errored(self, service):
         service.status = ServiceStatus.ERRORED
-        service.datetime_stopped = datetime.datetime.utcnow()
+        service.datetime_stopped = datetime.utcnow()
         self._session.add(service)
 
     def mark_service_as_stopped(self, service):
         service.status = ServiceStatus.STOPPED
-        service.datetime_stopped = datetime.datetime.utcnow()
+        service.datetime_stopped = datetime.utcnow()
         self._session.add(service)
 
     def get_service(self, service_id):
@@ -357,8 +357,9 @@ class MetaStore(object):
     # Trials
     ####################################
 
-    def create_trial(self, sub_train_job_id, model_id, worker_id):
+    def create_trial(self, sub_train_job_id, no, model_id, worker_id):
         trial = Trial(
+            no=no,
             sub_train_job_id=sub_train_job_id,
             model_id=model_id,
             worker_id=worker_id
@@ -402,31 +403,46 @@ class MetaStore(object):
 
         return trials
 
-    def get_trials_of_sub_train_job(self, sub_train_job_id):
-        trials = self._session.query(Trial) \
-            .filter(Trial.sub_train_job_id == sub_train_job_id) \
-            .order_by(Trial.datetime_started.desc()).all()
+    def get_trials_of_sub_train_job(self, sub_train_job_id, min_datetime_updated=None):
+        query = self._session.query(Trial) \
+            .filter(Trial.sub_train_job_id == sub_train_job_id)
+
+        if min_datetime_updated is not None:
+            query = query.filter(Trial.datetime_updated >= min_datetime_updated)
+
+        trials = query.order_by(Trial.datetime_started.desc()).all()
 
         return trials
 
-    def mark_trial_as_running(self, trial, knobs, shared_params_count):
+    def mark_trial_as_running(self, trial, knobs, shared_param_id):
         trial.status = TrialStatus.RUNNING
         trial.knobs = knobs
-        trial.shared_params_count = shared_params_count
+        trial.shared_param_id = shared_param_id
+        trial.datetime_updated = datetime.utcnow()
         self._session.add(trial)
         return trial
 
     def mark_trial_as_errored(self, trial):
         trial.status = TrialStatus.ERRORED
-        trial.datetime_stopped = datetime.datetime.utcnow()
+        trial.datetime_stopped = datetime.utcnow()
+        trial.datetime_updated = datetime.utcnow()
         self._session.add(trial)
         return trial
 
-    def mark_trial_as_complete(self, trial, score, params_dir):
+    def mark_trial_as_completed(self, trial, score, params_dir, out_shared_param_id):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
         trial.params_dir = params_dir
-        trial.datetime_stopped = datetime.datetime.utcnow()
+        trial.out_shared_param_id = out_shared_param_id
+        trial.datetime_stopped = datetime.utcnow()
+        trial.datetime_updated = datetime.utcnow()
+        self._session.add(trial)
+        return trial
+
+    def mark_trial_as_terminated(self, trial):
+        trial.status = TrialStatus.TERMINATED
+        trial.datetime_stopped = datetime.utcnow()
+        trial.datetime_updated = datetime.utcnow()
         self._session.add(trial)
         return trial
 
@@ -434,12 +450,6 @@ class MetaStore(object):
         trial_log = TrialLog(trial_id=trial.id, line=line, level=level)
         self._session.add(trial_log)
         return trial_log
-
-    def mark_trial_as_terminated(self, trial):
-        trial.status = TrialStatus.TERMINATED
-        trial.datetime_stopped = datetime.datetime.utcnow()
-        self._session.add(trial)
-        return trial
 
     ####################################
     # Others

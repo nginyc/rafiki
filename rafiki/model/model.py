@@ -1,9 +1,31 @@
 import abc
 import numpy as np
-from typing import Union, Dict, Type
+from enum import Enum
+from typing import Union, Dict, Type, List
 
 from .knob import BaseKnob
 
+class SharedParams(Enum):
+    LOCAL_RECENT = 'LOCAL_RECENT'
+    LOCAL_BEST = 'LOCAL_BEST'
+    GLOBAL_RECENT = 'GLOBAL_RECENT'
+    GLOBAL_BEST = 'GLOBAL_BEST'
+    NONE = 'NONE'
+
+class TrialConfig():
+    def __init__(self, 
+                is_valid: bool = True, # If a trial is invalid, the worker will sleep for a while before trying again
+                should_evaluate: bool = True, # Whether this trial should be evaluated
+                should_save: bool = True, # Whether this trial's trained model should be saved
+                shared_params: SharedParams = SharedParams.LOCAL_RECENT, # Shared parameters to use for this trial
+                override_knobs: Dict[str, any] = {}): # These override values in knobs proposed for this trial
+
+        self.is_valid = is_valid
+        self.should_evaluate = should_evaluate
+        self.shared_params = shared_params
+        self.should_save = should_save
+        self.override_knobs = override_knobs
+            
 class BaseModel(abc.ABC):
     '''
     Rafiki's base model class that Rafiki models should extend. 
@@ -43,15 +65,18 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @staticmethod
-    def validate_knobs(knobs: Dict[str, any]) -> Union[Dict[str, any], None]:
+    def get_trial_config(trial_no: int, total_trials: int, running_trial_nos: List[int]) -> TrialConfig:
         '''
-        Validates a set of knobs for the model.
-        If this returns `None`, the set of knobs would be discarded.
+        Returns the configuration for a specific trial identified by its number.
+        Allows for declarative scheduling and configuration of trials. 
 
-        :returns: Possibly modified set of knobs that is valid, or `None` if this set of knobs should be discarded
-        :rtype: dict[str, any]
+        :param int trial_no: Upcoming trial no to get configuration for 
+        :param int total_trials: Total no. of trials for this instance of tuning
+        :param list[int] running_trial_nos: Trial nos of other trials that are currently concurrently running 
+        :returns: Trial configuration for trial #`trial_no`
+        :rtype: TrialConfig
         '''
-        return knobs
+        return TrialConfig()
 
     @staticmethod
     def setup():

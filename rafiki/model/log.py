@@ -1,6 +1,6 @@
 import os
 import traceback
-import datetime
+from datetime import datetime
 import json
 import logging
 import numpy as np
@@ -112,7 +112,7 @@ class LoggerUtils():
 
     def _log(self, log_type, log_dict={}):
         log_dict['type'] = log_type
-        log_dict['time'] = datetime.datetime.now().strftime(MODEL_LOG_DATETIME_FORMAT)
+        log_dict['time'] = datetime.now().strftime(MODEL_LOG_DATETIME_FORMAT)
         log_line = json.dumps(log_dict)
         self._logger.info(log_line)
 
@@ -205,4 +205,4 @@ class LoggerUtilsDebugHandler(logging.Handler):
             self._print(log_line)
         
     def _print(self, message):
-        print('[{}][{}]'.format(__name__, str(datetime.datetime.now())), message)
+        print('[{}][{}]'.format(__name__, str(datetime.now())), message)

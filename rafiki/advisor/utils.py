@@ -7,10 +7,12 @@ import inspect
 import argparse
 import time
 import numpy as np
+from collections import namedtuple
+from datetime import datetime
 from typing import Union, Dict, Type
 
 from rafiki.model import BaseModel, BaseKnob, serialize_knob_config, deserialize_knob_config, \
-                        parse_model_install_command, load_model_class
+                        parse_model_install_command, load_model_class, SharedParams
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.param_store import ParamStore
 from rafiki.predictor import ensemble_predictions
@@ -21,7 +23,7 @@ class InvalidModelClassException(Exception): pass
 
 def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_dataset_uri: str, 
                 test_dataset_uri: str = None, total_trials: int = 25, params_root_dir: str = 'params/', 
-                should_save: bool = True, advisor: Advisor = None, to_read_args: bool = True) -> (Dict[str, any], str):
+                advisor: Advisor = None, to_read_args: bool = True) -> (Dict[str, any], float, str):
     '''
     Tunes a model on a given dataset in the current environment.
 
@@ -31,11 +33,10 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     :param str test_dataset_uri: URI of the validation dataset for testing the final best trained model, if provided
     :param int total_trials: Total number of trials to tune the model over
     :param str params_root_dir: Root folder path to create subfolders to save each trial's model parameters
-    :param bool should_save: If model parameters should be saved
     :param Advisor advisor: A pre-created advisor to use for tuning the model
     :param bool to_read_args: Whether should system args be read to retrieve default values for `num_trials` and knobs
-    :rtype: (dict, str)
-    :returns: (<knobs for best trained model>, <params directory for best trained model>)
+    :rtype: (dict, float, str)
+    :returns: (<knobs for best model>, <test score for best model>, <params directory for best model>)
     '''
     # Note start time
     start_time = time.time()
@@ -59,13 +60,14 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     if advisor is None:
         advisor = Advisor(knob_config)
 
-    # Configure shared params store
+    # Configure shared params monitor & store
     param_store = ParamStore()
+    params_monitor = SharedParamsMonitor()
     
     # Variables to track over trials
-    best_score = 0
-    best_knobs = None
-    best_model_inst = None
+    best_model_score = 0
+    best_model_test_score = None
+    best_model_knobs = None
     best_model_params_dir = None
     session_id = str(uuid.uuid4()) # Session ID for params store
 
@@ -77,25 +79,23 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     for i in range(1, total_trials + 1):
         trial_id = str(uuid.uuid4())
         _print_header('Trial #{} (ID: "{}")'.format(i, trial_id))
-        
-        # Get valid proposal from advisor
-        while True:
-            (knobs, params) = advisor.propose()
-            validated_knobs = py_model_class.validate_knobs(knobs)
-            if validated_knobs is None:
-                # Feedback to advisor that knobs are invalid with score of 0
-                advisor.feedback(0, knobs, {})
-                continue
-                
-            knobs = validated_knobs
-            break
-        knobs = { **knobs, **knobs_from_args } # Override knobs from args
+
+        # Get trial config
+        trial_config = py_model_class.get_trial_config(i, total_trials, [])
+        assert trial_config.is_valid
+
+        # Get knobs proposal from advisor
+        knobs = advisor.propose()
+        knobs = { **knobs, **trial_config.override_knobs, **knobs_from_args } # Override knobs from args & trial config
         print('Advisor proposed knobs:', knobs)
 
-        # Retrieve params from store
-        params = param_store.retrieve_params(session_id, params)
-        if len(params) > 0:
-            print('Advisor proposed {} params'.format(len(params)))
+        # Retrieve shared params from store
+        param_id = params_monitor.get_params(trial_config.shared_params)
+        params = {}
+        if param_id is not None:
+            print('Retrieving shared params of ID "{}"...'.format(param_id))
+            params = param_store.retrieve_params(session_id, param_id)
+            print('Retrieved {} shared params'.format(len(params)))
 
         # Load model
         model_inst = py_model_class(**knobs)
@@ -103,51 +103,62 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         # Train model
         print('Training model...')
         model_inst.train(train_dataset_uri, params)
-        trial_params = model_inst.get_shared_parameters() or {}
-        if len(trial_params) > 0:
-            print('Model produced {} shared parameters'.format(len(trial_params)))
+        trial_params = model_inst.get_shared_parameters() or None
+        if trial_params:
+            print('Model produced {} shared params'.format(len(trial_params)))
 
         # Evaluate model
-        print('Evaluating model...')
-        score = model_inst.evaluate(val_dataset_uri)
-        if not isinstance(score, float):
-            raise InvalidModelClassException('`evaluate()` should return a float!')
+        score = None
+        if trial_config.should_evaluate:
+            print('Evaluating model...')
+            score = model_inst.evaluate(val_dataset_uri)
+            if not isinstance(score, float):
+                raise InvalidModelClassException('`evaluate()` should return a float!')
 
-        print('Score on validation dataset:', score)
-            
-        if should_save:
-            print('Saving model parameters...')
+            print('Score on validation dataset:', score)
+        
+        # Save model
+        params_dir = None
+        if trial_config.should_save:
+            print('Saving trained model...')
             params_dir = os.path.join(params_root_dir, trial_id + '/')
             if not os.path.exists(params_dir):
                 os.mkdir(params_dir)
             model_inst.save_parameters(params_dir)
-            print('Model parameters saved in {}'.format(params_dir))
-        else:
-            params_dir = None
+            print('Model saved to {}'.format(params_dir))
 
-        # Update best model
-        if score > best_score:
-            _info('Best model so far! Beats previous best of score {}!'.format(best_score))
-            best_model_params_dir = params_dir
-            best_knobs = knobs
-            best_score = score
-            best_model_inst = model_inst 
+        # If trial has score
+        if score is not None:
+            # Update best model
+            if score > best_model_score:
+                print('Best model so far! Beats previous best of score {}!'.format(best_model_score))
+                best_model_params_dir = params_dir
+                best_model_knobs = knobs
+                best_model_score = score
+                        
+                # Test best model, if test dataset provided
+                if test_dataset_uri is not None:
+                    print('Evaluting model on test dataset...')
+                    best_model_test_score = model_inst.evaluate(test_dataset_uri)
+                    _info('Score on test dataset: {}'.format(best_model_test_score))
+            
+            # Feedback to advisor 
+            advisor.feedback(score, knobs)
 
-        # Feedback to advisor
-        trial_params = param_store.store_params(session_id, trial_params, prefix=trial_id)
-        advisor.feedback(score, knobs, trial_params)
+        # Update params monitor & store
+        if trial_params:
+            print('Storing shared params...')
+            trial_param_id = param_store.store_params(session_id, trial_params, trial_id)
+            params_monitor.add_params(trial_param_id, score)
+            print('Stored shared params of ID "{}"'.format(trial_param_id))
     
     # Declare best model
-    print('Best model has knobs {} with score of {}'.format(best_knobs, best_score))
+    _info('Best model has knobs {} with score of {}'.format(best_model_knobs, best_model_score))
+    if best_model_test_score is not None:
+        _info('...with test score of {}'.format(best_model_test_score))
     if best_model_params_dir is not None:
-        print('Saved at {}'.format(best_model_params_dir)) 
+        _info('...saved at {}'.format(best_model_params_dir)) 
         
-    # Test final best model, if test dataset provided
-    if test_dataset_uri is not None:
-        print('Evaluting best model...')
-        score = best_model_inst.evaluate(test_dataset_uri)
-        print('Score on test dataset:', score)
- 
     # Teardown model class
     print('Running model class teardown...')
     py_model_class.teardown()
@@ -156,7 +167,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     duration = time.time() - start_time
     print('Tuning took a total of {}s'.format(duration))
 
-    return (best_knobs, best_model_params_dir)
+    return (best_model_knobs, best_model_test_score, best_model_params_dir)
 
 def test_model_class(model_file_path: str, model_class: str, task: str, dependencies: Dict[str, str],
                     train_dataset_uri: str, val_dataset_uri: str, enable_gpu: bool = False, queries: list = []):
@@ -218,6 +229,77 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
     _info('The model definition is valid!')
 
     return model_inst
+
+_Params = namedtuple('_Param', ('param_id', 'score', 'time'))
+
+class SharedParamsMonitor():
+    '''
+    Monitors params across trials and maps a shared params policy to the exact params to use for trial
+    '''
+    _worker_to_best_params: Dict[str, _Params] = {}
+    _worker_to_recent_params: Dict[str, _Params] = {}
+
+    def add_params(self, param_id: str, score: float = None, 
+                    time: datetime = None, worker_id: str = None):
+        score = score or 0
+        time = time or datetime.now()
+        params = _Params(param_id, score, time)
+
+        # Update best params for worker
+        if worker_id not in self._worker_to_best_params or \
+            score > self._worker_to_best_params[worker_id].score:
+            self._worker_to_best_params[worker_id] = params
+        
+        # Update recent params for worker
+        if worker_id not in self._worker_to_recent_params or \
+            time > self._worker_to_recent_params[worker_id].time:
+            self._worker_to_recent_params[worker_id] = params
+
+    def get_params(self, shared_params: SharedParams, worker_id: str = None) -> Union[str, None]:
+        if shared_params == SharedParams.NONE:
+            return None
+        elif shared_params == SharedParams.LOCAL_RECENT:
+            return self._get_local_recent_params(worker_id)
+        elif shared_params == SharedParams.LOCAL_BEST:
+            return self._get_local_best_params(worker_id)
+        elif shared_params == SharedParams.GLOBAL_RECENT:
+            return self._get_global_recent_params()
+        elif shared_params == SharedParams.GLOBAL_BEST:
+            return self._get_global_best_params()
+        else:
+            raise ValueError('No such shared params type: "{}"'.format(shared_params))
+    
+    def _get_local_recent_params(self, worker_id):
+        if worker_id not in self._worker_to_recent_params:
+            return None
+        
+        params = self._worker_to_recent_params[worker_id]
+        return params.param_id
+
+    def _get_local_best_params(self, worker_id):
+        if worker_id not in self._worker_to_best_params:
+            return None
+        
+        params = self._worker_to_best_params[worker_id]
+        return params.param_id
+
+    def _get_global_recent_params(self):
+        recent_params = [(params.time, params) for params in self._worker_to_recent_params.values()]
+        if len(recent_params) == 0:
+            return None
+
+        recent_params.sort()
+        (_, params) = recent_params[-1]
+        return params.param_id
+
+    def _get_global_best_params(self):
+        best_params = [(params.score, params) for params in self._worker_to_best_params.values()]
+        if len(best_params) == 0:
+            return None
+
+        best_params.sort()
+        (_, params) = best_params[-1]
+        return params.param_id
 
 def _maybe_read_knobs_from_args(knob_config, args):
     parser = argparse.ArgumentParser()

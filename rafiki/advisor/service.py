@@ -47,31 +47,29 @@ class AdvisorService(object):
             'is_deleted': is_deleted 
         }
 
-    def generate_proposal(self, advisor_id, worker_id):
+    def generate_proposal(self, advisor_id):
         advisor = self._get_advisor(advisor_id)
         if advisor is None:
             raise InvalidAdvisorError()
 
-        (knobs, params) = advisor.propose(worker_id)
+        knobs = advisor.propose()
 
         return {
-            'knobs': knobs,
-            'params': params
+            'knobs': knobs
         }
 
     # Feedbacks to the advisor on the score of a set of knobs
     # Additionally, returns another proposal of knobs after ingesting feedback
-    def feedback(self, advisor_id, score, knobs, params, worker_id):
+    def feedback(self, advisor_id, score, knobs):
         advisor = self._get_advisor(advisor_id)
         if advisor is None:
             raise InvalidAdvisorError()
 
-        advisor.feedback(score, knobs, params, worker_id)
-        (knobs, params) = advisor.propose(worker_id)
+        advisor.feedback(score, knobs)
+        knobs = advisor.propose()
 
         return {
-            'knobs': knobs,
-            'params': params
+            'knobs': knobs
         }
 
     def _get_advisor(self, advisor_id):

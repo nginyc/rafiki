@@ -583,6 +583,5 @@ if __name__ == '__main__':
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
         val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
         test_dataset_uri='data/cifar_10_for_image_classification_test.zip',
-        total_trials=200,
-        should_save=False
+        total_trials=200
     )

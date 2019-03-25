@@ -2,7 +2,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, ForeignKey, Integer, LargeBinary, DateTime
 from sqlalchemy.dialects.postgresql import JSON, ARRAY
 import uuid
-import datetime
+from datetime import datetime
 
 from rafiki.constants import InferenceJobStatus, ServiceStatus, TrainJobStatus, \
     TrialStatus, ModelAccessRight
@@ -13,7 +13,7 @@ def generate_uuid():
     return str(uuid.uuid4())
 
 def generate_datetime():
-    return datetime.datetime.utcnow()
+    return datetime.utcnow()
 
 class InferenceJob(Base):
     __tablename__ = 'inference_job'
@@ -95,15 +95,18 @@ class Trial(Base):
     __tablename__ = 'trial'
 
     id = Column(String, primary_key=True, default=generate_uuid)
+    no = Column(Integer, nullable=False)
     sub_train_job_id = Column(String, ForeignKey('sub_train_job.id'), nullable=False)
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
+    datetime_updated = Column(DateTime, nullable=False, default=generate_datetime)
     status = Column(String, nullable=False, default=TrialStatus.STARTED)
     worker_id = Column(String, nullable=False)
     params_dir = Column(String, default=None)
     knobs = Column(JSON, default=None)
-    score = Column(Float, default=0)
-    shared_params_count = Column(Integer, default=None)
+    score = Column(Float, default=None)
+    shared_param_id = Column(String, default=None)
+    out_shared_param_id = Column(String, default=None)
     datetime_stopped = Column(DateTime, default=None)
 
 class TrialLog(Base):

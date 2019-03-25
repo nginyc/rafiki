@@ -261,27 +261,6 @@ class Admin(object):
             for x in train_jobs
         ]
 
-    def get_trials_of_train_job(self, app, app_version=-1):
-        train_job = self._meta_store.get_train_job_by_app_version(app, app_version=app_version)
-        if train_job is None:
-            raise InvalidTrainJobError()
-
-        trials = self._meta_store.get_trials_of_train_job(train_job.id)
-        trials_models = [self._meta_store.get_model(x.model_id) for x in trials]
-        
-        return [
-            {
-                'id': trial.id,
-                'knobs': trial.knobs,
-                'datetime_started': trial.datetime_started,
-                'status': trial.status,
-                'datetime_stopped': trial.datetime_stopped,
-                'model_name': model.name,
-                'score': trial.score
-            }
-            for (trial, model) in zip(trials, trials_models)
-        ]
-
     def stop_sub_train_job(self, sub_train_job_id):
         sub_train_job = self._services_manager.stop_sub_train_job_services(sub_train_job_id)
         return {
@@ -344,14 +323,14 @@ class Admin(object):
 
         return {
             'id': trial.id,
+            'no': trial.no,
+            'worker_id': trial.worker_id,
             'knobs': trial.knobs,
             'datetime_started': trial.datetime_started,
             'status': trial.status,
             'datetime_stopped': trial.datetime_stopped,
             'model_name': model.name,
-            'score': trial.score,
-            'knobs': trial.knobs,
-            'worker_id': trial.worker_id
+            'score': trial.score
         }
 
     def get_trial_logs(self, trial_id):
@@ -376,6 +355,29 @@ class Admin(object):
 
         # TODO: Fix
         return None
+
+    def get_trials_of_train_job(self, app, app_version=-1):
+        train_job = self._meta_store.get_train_job_by_app_version(app, app_version=app_version)
+        if train_job is None:
+            raise InvalidTrainJobError()
+
+        trials = self._meta_store.get_trials_of_train_job(train_job.id)
+        trials_models = [self._meta_store.get_model(x.model_id) for x in trials]
+        
+        return [
+            {
+                'id': trial.id,
+                'no': trial.no,
+                'worker_id': trial.worker_id,
+                'knobs': trial.knobs,
+                'datetime_started': trial.datetime_started,
+                'status': trial.status,
+                'datetime_stopped': trial.datetime_stopped,
+                'model_name': model.name,
+                'score': trial.score
+            }
+            for (trial, model) in zip(trials, trials_models)
+        ]
 
     ####################################
     # Inference Job

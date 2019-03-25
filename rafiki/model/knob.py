@@ -52,33 +52,6 @@ class CategoricalKnob(BaseKnob):
 
         return (value_type)
 
-class Metadata(Enum):
-    TRIAL_COUNT = ('TRIAL_COUNT', int) # No. of trials that have been completed for model
-    WORKER_ID = ('WORKER_ID', str) # ID of worker the trial is running in
-
-class MetadataKnob(BaseKnob):
-    '''
-    Knob type representing some piece of metadata from Rafiki.
-    '''
-    def __init__(self, metadata: Metadata):
-        super().__init__()
-        (self._metadata) = self._validate(metadata)
-
-    @property
-    def value_type(self):
-        (name, typ) = self._metadata.value
-        return typ
-
-    @property
-    def metadata(self):
-        return self._metadata
-
-    @staticmethod
-    def _validate(metadata):
-        if not isinstance(metadata, Metadata):
-            raise TypeError('`metadata` must be of type `Metadata`')
-        return (metadata)
-
 class FixedKnob(BaseKnob):
     '''
     Knob type representing a single fixed value of type ``int``, ``float``, ``bool`` or ``str``.

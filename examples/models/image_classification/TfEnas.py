@@ -12,7 +12,7 @@ import argparse
 
 from rafiki.advisor import Advisor, tune_model
 from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
-                            FixedKnob, ListKnob, Metadata, MetadataKnob
+                            FixedKnob, ListKnob, TrialConfig, SharedParams
 
 _Model = namedtuple('_Model', ['dataset_init_op',
         'train_op', 'summary_op', 'images_ph', 'classes_ph', 'is_train_ph', 
@@ -55,7 +55,6 @@ class TfEnasTrain(BaseModel):
                     return CategoricalKnob(ops) # op for input 1/2
                     
         return {
-            'trial_count': MetadataKnob(Metadata.TRIAL_COUNT),
             'max_image_size': FixedKnob(32),
             'trial_epochs': FixedKnob(630), # No. of epochs to run trial over
             'ops': FixedKnob(ops),
@@ -999,21 +998,16 @@ class TfEnasSearch(TfEnasTrain):
     _loaded_vars_hash_memo = None # Hash of vars loaded, if no training has happened
 
     @staticmethod
-    def validate_knobs(knobs):
-        knobs = TfEnasTrain.validate_knobs(knobs)
-
-        trial_count = knobs['trial_count']
-        skip_training_trials = 30
+    def get_trial_config(trial_no, total_trials, running_trial_nos):
+        train_every_num_epochs = 30
+        T = train_every_num_epochs + 1 
 
         # Every (X + 1) trials, only train 1 epoch for the first trial
         # The other X trials is for training the controller
-        cur_trial_epochs = 1 if (trial_count % (skip_training_trials + 1) == 0) else 0 
+        is_train_trial = ((trial_no - 1) % T == 0)
 
-        # Override certain fixed knobs for ENAS search
-        knobs = {
-            **knobs,
+        override_knobs = {
             'batch_size': 64,
-            'trial_epochs': cur_trial_epochs,
             'initial_block_ch': 20,
             'reg_decay': 2e-4,
             'num_layers': 6,
@@ -1021,7 +1015,30 @@ class TfEnasSearch(TfEnasTrain):
             'dropout_keep_prob': 0.9,
             'drop_path_decay_epochs': 150
         }
-        return knobs
+        shared_params = SharedParams.GLOBAL_RECENT 
+
+        if is_train_trial:
+            # For a "train" trial, wait until previous trials to finish
+            if len(running_trial_nos) > 0:
+                return TrialConfig(is_valid=False)
+        
+            # Set trial epoch to 1 & don't evaluate
+            override_knobs.update({ 'trial_epochs': 1 })
+            return TrialConfig(override_knobs=override_knobs, 
+                                shared_params=shared_params,
+                                should_evaluate=False,
+                                should_save=False)
+        else:
+            # For a "eval" trial, just wait until corresponding "train" trial is finished
+            train_trial_no = ((trial_no - 1) // T) * T + 1
+            if train_trial_no in running_trial_nos:
+                return TrialConfig(is_valid=False)
+
+            # Set trial epoch to 0
+            override_knobs.update({ 'trial_epochs': 0 })
+            return TrialConfig(override_knobs=override_knobs,
+                                shared_params=shared_params,
+                                should_save=False)
 
     @staticmethod
     def setup():
@@ -1061,11 +1078,11 @@ class TfEnasSearch(TfEnasTrain):
                 values = self._sess.run(shared_tf_vars)
 
             shared_vars = {
-                tf_var.name: value
+                tf_var.name: np.asarray(value)
                 for (tf_var, value)
                 in zip(shared_tf_vars, values)
             }
-            
+
             # Update loaded vars hash
             TfEnasSearch._loaded_vars_hash_memo = self._get_shared_vars_hash(shared_vars)
 
@@ -1316,29 +1333,26 @@ if __name__ == '__main__':
 
         print('Training advisor...')
         knob_config = TfEnasTrain.get_knob_config()
-        total_trials = args.total_trials if args.total_trials > 0 else 30 * 150
+        total_trials = args.total_trials if args.total_trials > 0 else 31 * 150
         advisor = Advisor(knob_config) 
         tune_model(
             TfEnasSearch, 
             train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
             val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
             total_trials=total_trials,
-            should_save=False,
             advisor=advisor
         )
 
         print('Sampling {} models from trained advisor...'.format(args.num_models))
         for i in range(args.num_models):
-            (knobs, params) = advisor.propose()
-            print('Knobs {}:'.format(i))
-            print('---------------------------')
-            print(knobs)
+            knobs = advisor.propose()
+            print('Knobs {}: {}'.format(i, knobs))
 
     elif args.mode == 'TRAIN':
 
         print('Training models...')
         total_trials = args.total_trials if args.total_trials > 0 else 1
-        (best_knobs, _) = tune_model(
+        best_knobs = tune_model(
             TfEnasTrain,
             train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
             val_dataset_uri='data/cifar_10_for_image_classification_test.zip',
