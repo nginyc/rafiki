@@ -116,22 +116,23 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
                 raise InvalidModelClassException('`evaluate()` should return a float!')
 
             print('Score on validation dataset:', score)
-        
-        # Save model
-        params_dir = None
-        if trial_config.should_save:
-            print('Saving trained model...')
-            params_dir = os.path.join(params_root_dir, trial_id + '/')
-            if not os.path.exists(params_dir):
-                os.mkdir(params_dir)
-            model_inst.save_parameters(params_dir)
-            print('Model saved to {}'.format(params_dir))
 
         # If trial has score
         if score is not None:
             # Update best model
             if score > best_model_score:
-                print('Best model so far! Beats previous best of score {}!'.format(best_model_score))
+                _info('Best model so far! Beats previous best of score {}!'.format(best_model_score))
+                       
+                # Save best model
+                params_dir = None
+                if trial_config.should_save:
+                    print('Saving trained model...')
+                    params_dir = os.path.join(params_root_dir, trial_id + '/')
+                    if not os.path.exists(params_dir):
+                        os.mkdir(params_dir)
+                    model_inst.save_parameters(params_dir)
+                    _info('Model saved to {}'.format(params_dir))
+
                 best_model_params_dir = params_dir
                 best_model_knobs = knobs
                 best_model_score = score
@@ -141,6 +142,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
                     print('Evaluting model on test dataset...')
                     best_model_test_score = model_inst.evaluate(test_dataset_uri)
                     _info('Score on test dataset: {}'.format(best_model_test_score))
+                 
             
             # Feedback to advisor 
             advisor.feedback(score, knobs)

@@ -48,22 +48,7 @@ class PyDenseNetBc(BaseModel):
 
     @staticmethod
     def get_trial_config(trial_no, total_trials, running_trial_nos):
-        num_final_trials = 10
-
-        # Last X trials to train from scratch
-        is_final_trial = (total_trials - trial_no) < num_final_trials
-
-        if is_final_trial:
-            # Disable early stopping, disable param sharing and maximize epochs
-            override_knobs = { 
-                'max_trial_epochs': 300,
-                'max_train_val_samples': 0
-            }
-            return TrialConfig(override_knobs=override_knobs, 
-                                shared_params=SharedParams.NONE)
-        else:
-            return TrialConfig(shared_params=SharedParams.LOCAL_BEST,
-                                should_save=False)
+        return TrialConfig(shared_params=SharedParams.LOCAL_BEST)
 
     def train(self, dataset_uri, shared_params):
         (train_dataset, train_val_dataset, self._train_params) = self._load_train_dataset(dataset_uri)
