@@ -297,6 +297,7 @@ export interface TrainJob {
 
 export interface Trial {
   id: string;
+  no: number;
   status: TrialStatus;
   datetime_started: Date;
   datetime_stopped?: Date;

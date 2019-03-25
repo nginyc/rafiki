@@ -74,7 +74,7 @@ class TrialDetailPage extends React.Component<Props> {
                 <TableCell>{trial.model_name}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell>Worker ID</TableCell>
+                <TableCell>Worker</TableCell>
                 <TableCell>{trial.worker_id}</TableCell>
               </TableRow>
               <TableRow>

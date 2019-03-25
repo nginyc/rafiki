@@ -108,13 +108,13 @@ class TrainJobDetailPage extends React.Component<Props> {
             <TableHead>
               <TableRow>
                 <TableCell padding="none"></TableCell>
-                <TableCell>ID</TableCell>
+                <TableCell>No</TableCell>
                 <TableCell>Model</TableCell>
                 <TableCell>Status</TableCell>
+                <TableCell>Worker</TableCell>
                 <TableCell>Score</TableCell>
                 <TableCell>Started At</TableCell>
                 <TableCell>Stopped At</TableCell>
-                <TableCell>Duration</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -126,18 +126,13 @@ class TrainJobDetailPage extends React.Component<Props> {
                         <Pageview /> 
                       </IconButton>
                     </TableCell>
-                    <TableCell>{x.id}</TableCell>
+                    <TableCell>{x.no}</TableCell>
                     <TableCell>{x.model_name}</TableCell>
                     <TableCell>{x.status}</TableCell>
+                    <TableCell>{x.worker_id}</TableCell>
                     <TableCell>{x.score}</TableCell>
                     <TableCell>{moment(x.datetime_started).fromNow()}</TableCell>
                     <TableCell>{x.datetime_stopped ? moment(x.datetime_stopped).fromNow(): '-'}</TableCell>
-                    <TableCell>{
-                      x.datetime_stopped ? 
-                        // @ts-ignore
-                        moment.duration(x.datetime_stopped - x.datetime_started).humanize()
-                          : '-'
-                      }</TableCell>
                   </TableRow>
                 );
               })}
