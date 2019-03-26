@@ -1,2 +1,2 @@
-from .container_manager import ContainerManager
-from .docker_swarm import DockerSwarmContainerManager, ServiceRequirement, InvalidServiceRequest
+from .container_manager import ContainerManager, InvalidServiceRequestError, ServiceRequirement, ContainerService
+from .docker_swarm import DockerSwarmContainerManager

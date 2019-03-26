@@ -63,6 +63,7 @@ class Service(Base):
     ext_port = Column(Integer)
     hostname = Column(String)
     port = Column(Integer)
+    service_info = Column(JSON)
     container_service_name = Column(String)
     container_service_id = Column(String) # Corresponding service ID for container manager
     requirements = Column(ARRAY(String))

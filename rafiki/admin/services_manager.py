@@ -9,7 +9,8 @@ from rafiki.meta_store import MetaStore
 from rafiki.constants import ServiceStatus, UserType, ServiceType, BudgetType
 from rafiki.config import TRAIN_WORKER_REPLICAS_PER_SUB_TRAIN_JOB, INFERENCE_WORKER_REPLICAS_PER_TRIAL, \
     INFERENCE_MAX_BEST_TRIALS, SERVICE_STATUS_WAIT
-from rafiki.container import DockerSwarmContainerManager, ServiceRequirement, InvalidServiceRequest
+from rafiki.container import DockerSwarmContainerManager, ServiceRequirement, \
+                            InvalidServiceRequestError, ContainerService
 from rafiki.model import parse_model_install_command
 
 logger = logging.getLogger(__name__)
@@ -133,8 +134,7 @@ class ServicesManager(object):
         service_type = ServiceType.INFERENCE
         install_command = parse_model_install_command(model.dependencies, enable_gpu=False)
         environment_vars = {
-            'WORKER_INSTALL_COMMAND': install_command,
-            'CUDA_VISIBLE_DEVICES': '-1' # Hide GPU
+            'WORKER_INSTALL_COMMAND': install_command
         }
 
         service = self._create_service(
@@ -168,7 +168,6 @@ class ServicesManager(object):
         install_command = parse_model_install_command(model.dependencies, enable_gpu=enable_gpu)
         environment_vars = {
             'WORKER_INSTALL_COMMAND': install_command,
-            **({'CUDA_VISIBLE_DEVICES': -1} if not enable_gpu else {}) # Hide GPU if not enabled
         }
 
         requirements = []
@@ -191,7 +190,8 @@ class ServicesManager(object):
             return
 
         try:
-            self._container_manager.destroy_service(service.container_service_id)
+            container_service = self._get_container_service_from_service(service)
+            self._container_manager.destroy_service(container_service)
             self._meta_store.mark_service_as_stopped(service)
             self._meta_store.commit()
         except Exception:
@@ -277,19 +277,16 @@ class ServicesManager(object):
                 requirements=requirements
             )
             
-            container_service_id = container_service['id']
-            hostname = container_service['hostname']
-            port = container_service.get('port', None)
-
             self._meta_store.mark_service_as_deploying(
                 service,
                 container_service_name=container_service_name,
-                container_service_id=container_service_id,
+                container_service_id=container_service.id,
                 replicas=replicas,
-                hostname=hostname,
-                port=port,
+                hostname=container_service.hostname,
+                port=container_service.port,
                 ext_hostname=ext_hostname,
-                ext_port=ext_port
+                ext_port=ext_port,
+                service_info = container_service.info
             )
             self._meta_store.commit()
 
@@ -323,4 +320,11 @@ class ServicesManager(object):
             for sub_inference_job in sub_inference_jobs
         }
 
+    def _get_container_service_from_service(self, service):
+        service_id = service.container_service_id
+        hostname = service.hostname
+        port = service.port
+        info = service.service_info
+        container_service = ContainerService(service_id, hostname, port, info)
+        return container_service
     

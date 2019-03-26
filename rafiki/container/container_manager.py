@@ -1,11 +1,20 @@
 import abc
 import os
+from enum import Enum
+from collections import namedtuple
+from typing import List, Dict
 
-class InvalidServiceRequest(Exception):
-    pass
+class InvalidServiceRequestError(Exception): pass
 
-class ServiceRequirement():
-    GPU = 'gpu'
+class ContainerService():
+    def __init__(self, id: str, hostname: str, port: int, info: Dict[str, any] = {}):
+        self.id = id # ID for the service created
+        self.hostname = hostname # Hostname for the service created (in the internal network)
+        self.port = port # Port for the service created (in the internal network), None if no container port is passed
+        self.info = info
+
+class ServiceRequirement(Enum):
+    GPU = 'gpu' # Allocates a single GPU to the service
 
 class ContainerManager(abc.ABC):
     def __init__(self, **kwargs):
@@ -14,12 +23,12 @@ class ContainerManager(abc.ABC):
     @abc.abstractmethod
     def create_service(self, service_name, docker_image, replicas, 
                         args, environment_vars, mounts={}, publish_port=None,
-                        requirements=[]):
+                        requirements: List[ServiceRequirement] = []) -> ContainerService:
         '''
             Creates a service with a set number of replicas.
 
             The service should regenerate replicas if they exit with a non-zero code. 
-            However, if a replica exit with code 0, it should not regenerate the replica.
+            However, if a replica exits with code 0, it should not regenerate the replica.
 
             Args
                 service_name: String - Name of the service
@@ -32,31 +41,27 @@ class ContainerManager(abc.ABC):
                     The service should then be reachable at the host port on the host
                 requirements: [ServiceRequirement] - List of requirements for the service
                 
-            Returns {String: String} where
-                id: String - ID for the service created
-                hostname: String - Hostname for the service created (in the internal network)
-                port: String - Port for the service created (in the internal network)
-                    None if no container port is passed
+            Returns `Service`
         '''
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def update_service(self, service_id, replicas):
+    def update_service(self, service: ContainerService, replicas):
         '''
             Updates the service's properties e.g. scaling the number of replicas
 
             Args
-                service_id: String - ID of service to update
+                service: ContainerService to update
                 replicas: Int - Adjusted number of replicas for the service
         '''
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def destroy_service(self, service_id):
+    def destroy_service(self, service: ContainerService):
         '''
             Stops & destroys a service
 
             Args
-                service_id: String - ID of service to destroy
+                service: ContainerService to destroy
         '''
         raise NotImplementedError()

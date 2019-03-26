@@ -265,7 +265,7 @@ class MetaStore(object):
 
     def mark_service_as_deploying(self, service, container_service_id, 
                                 container_service_name, replicas, hostname,
-                                port, ext_hostname, ext_port):
+                                port, ext_hostname, ext_port, service_info):
         service.container_service_id = container_service_id
         service.container_service_name = container_service_name
         service.replicas = replicas
@@ -273,6 +273,7 @@ class MetaStore(object):
         service.port = port
         service.ext_hostname = ext_hostname
         service.ext_port = ext_port
+        service.service_info = service_info
         service.status = ServiceStatus.DEPLOYING
         self._session.add(service)
 
