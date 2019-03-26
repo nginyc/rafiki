@@ -135,7 +135,7 @@ class DockerSwarmContainerManager(ContainerManager):
             }]
 
         # Modify service based on deployment info
-        constraints.append('node.id={}'.format(deployment.node_id)) # Add node constraint
+        constraints.append('node.id=={}'.format(deployment.node_id)) # Add node constraint
         if deployment.gpu_no is not None:
             env.append('CUDA_VISIBLE_DEVICES={}'.format(deployment.gpu_no)) # GPU no
         else:
@@ -177,17 +177,23 @@ class DockerSwarmContainerManager(ContainerManager):
         return node
 
     def _parse_node(self, docker_node):
-        available_gpus_str = docker_node.attrs.get('Spec', {}).get('Labels', {}).get(LABEL_AVAILBLE_GPUS, '')
-        available_gpus = [int(x) for x in available_gpus_str.split(',')]
-        num_services = docker_node.attrs.get('Spec', {}).get('Labels', {}).get(LABEL_NUM_SERVICES, 0)
+        spec = docker_node.attrs.get('Spec', {})
+        spec_labels = spec.get('Labels', {})
+        available_gpus_str = spec_labels.get(LABEL_AVAILBLE_GPUS, '')
+        available_gpus = [int(x) for x in available_gpus_str.split(',') if len(x) > 0]
+        num_services = int(spec_labels.get(LABEL_NUM_SERVICES, 0))
         return _Node(docker_node.id, available_gpus, num_services)
 
     def _update_node(self, node_id, available_gpus, num_services):
         docker_node = self._client.nodes.get(node_id)
+        spec = docker_node.attrs.get('Spec', {})
+        spec_labels = spec.get('Labels', {})
         available_gpus_str = ','.join(available_gpus)
         docker_node.update({
+            **spec,
             'Labels': {
+                **spec_labels,
                 LABEL_AVAILBLE_GPUS: available_gpus_str,
-                LABEL_NUM_SERVICES: num_services
+                LABEL_NUM_SERVICES: str(num_services)
             }
         })
