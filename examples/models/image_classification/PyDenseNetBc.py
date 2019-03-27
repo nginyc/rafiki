@@ -48,7 +48,16 @@ class PyDenseNetBc(BaseModel):
 
     @staticmethod
     def get_trial_config(trial_no, total_trials, running_trial_nos):
-        return TrialConfig(shared_params=SharedParams.LOCAL_BEST)
+        t = total_trials
+        t_div = 25
+        e_base = 0.5
+        e = pow(e_base, 1 + t / t_div)
+        # Restart params with decreasing probability
+        if np.random.random() < e:
+            return TrialConfig(shared_params=SharedParams.NONE)
+        # Otherwise, use best params across workers
+        else:
+            return TrialConfig(shared_params=SharedParams.GLOBAL_BEST)
 
     def train(self, dataset_uri, shared_params):
         (train_dataset, train_val_dataset, self._train_params) = self._load_train_dataset(dataset_uri)
