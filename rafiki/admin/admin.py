@@ -287,7 +287,7 @@ class Admin(object):
     def refresh_train_job_status(self, train_job_id):
         train_job = self._meta_store.get_train_job(train_job_id)
         sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(train_job.id)
-        services = [self._meta_store.get_service(x.service_id) for x in sub_train_jobs]
+        services = [self._meta_store.get_service(x.service_id) for x in sub_train_jobs if x.service_id is not None]
 
         count = {
             ServiceStatus.STARTED: 0,
@@ -455,7 +455,7 @@ class Admin(object):
             raise InvalidRunningInferenceJobError()
         
         sub_inference_jobs = self._meta_store.get_sub_inference_jobs_of_inference_job(inference_job.id)
-        services = [self._meta_store.get_service(x.service_id) for x in sub_inference_jobs]
+        services = [self._meta_store.get_service(x.service_id) for x in sub_inference_jobs if x.service_id is not None]
         trials = [self._meta_store.get_trial(x.trial_id) for x in sub_inference_jobs]
         models = [self._meta_store.get_model(x.model_id) for x in trials]
         predictor_service = self._meta_store.get_service(inference_job.predictor_service_id)

@@ -88,8 +88,9 @@ class ServicesManager(object):
         # Stop all workers for inference job
         sub_inference_jobs = self._meta_store.get_sub_inference_jobs_of_inference_job(inference_job_id)
         for sub_inference_job in sub_inference_jobs:
-            service = self._meta_store.get_service(sub_inference_job.service_id)
-            self._stop_service(service)
+            if sub_inference_job.service_id is not None:
+                service = self._meta_store.get_service(sub_inference_job.service_id)
+                self._stop_service(service)
 
         return inference_job
 
@@ -119,8 +120,9 @@ class ServicesManager(object):
         
     def stop_sub_train_job_services(self, sub_train_job_id):
         sub_train_job = self._meta_store.get_sub_train_job(sub_train_job_id)
-        service = self._meta_store.get_service(sub_train_job.service_id)
-        self._stop_service(service)
+        if sub_train_job.service_id is not None:
+            service = self._meta_store.get_service(sub_train_job.service_id)
+            self._stop_service(service)
         return sub_train_job
 
     ####################################
@@ -222,7 +224,7 @@ class ServicesManager(object):
             container_manager_type=container_manager_type,
             service_type=service_type,
             docker_image=docker_image,
-            requirements=requirements
+            requirements=[x.value for x in requirements]
         )
         self._meta_store.commit()
 
