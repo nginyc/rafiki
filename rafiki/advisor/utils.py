@@ -84,18 +84,18 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         trial_config = py_model_class.get_trial_config(i, total_trials, [])
         assert trial_config.is_valid
 
-        # Get knobs proposal from advisor
+        # Get knobs proposal from advisor, overriding knobs from args & trial config
         knobs = advisor.propose()
-        knobs = { **knobs, **trial_config.override_knobs, **knobs_from_args } # Override knobs from args & trial config
+        knobs = { **knobs, **trial_config.override_knobs, **knobs_from_args } 
         print('Advisor proposed knobs:', knobs)
 
         # Retrieve shared params from store
         param_id = params_monitor.get_params(trial_config.shared_params)
         params = {}
         if param_id is not None:
+            print('To use {} shared params'.format(trial_config.shared_params.name))
             print('Retrieving shared params of ID "{}"...'.format(param_id))
             params = param_store.retrieve_params(session_id, param_id)
-            print('Retrieved {} shared params'.format(len(params)))
 
         # Load model
         model_inst = py_model_class(**knobs)

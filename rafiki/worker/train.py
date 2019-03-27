@@ -260,7 +260,7 @@ class TrainWorker(object):
         # Load actual params from store
         params = {}
         if param_id is not None:
-            logger.info('Retrieving shared params of ID "{}"...'.format(param_id))
+            logger.info('To use {} shared params'.format(trial_config.shared_params))
             params = self._param_store.retrieve_params(job_info.sub_train_job_id, param_id)
             logger.info('Retrieved {} shared params'.format(len(params)))
 
