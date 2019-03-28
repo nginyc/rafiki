@@ -119,8 +119,8 @@ class DockerSwarmContainerManager(ContainerManager):
 
         # Modify service based on deployment info
         constraints.append('node.id=={}'.format(deployment.node_id)) # Add node constraint
-        if deployment.use_gpu:
-            env.append('CUDA_VISIBLE_DEVICES={}'.format(','.join(deployment.gpu_nos))) # GPU nos
+        if len(deployment.gpu_nos) > 0:
+            env.append('CUDA_VISIBLE_DEVICES={}'.format(','.join([str(x) for x in deployment.gpu_nos]))) # GPU nos
         else:
             env.append('CUDA_VISIBLE_DEVICES=-1') # No GPU
 

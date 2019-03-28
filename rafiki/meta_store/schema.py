@@ -110,7 +110,7 @@ class Trial(Base):
     out_shared_param_id = Column(String, default=None)
     datetime_stopped = Column(DateTime, default=None)
 
-    __table_args__ = [UniqueConstraint('sub_train_job_id', 'no', '_sub_train_job_id_no_uc')] # Unique by (sub train job, trial no)
+    __table_args__ = (UniqueConstraint('sub_train_job_id', 'no', name='_sub_train_job_id_no_uc'),) # Unique by (sub train job, trial no)
 
 class TrialLog(Base):
     __tablename__ = 'trial_log'

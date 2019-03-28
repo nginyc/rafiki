@@ -471,6 +471,7 @@ class MetaStore(object):
         try:
             self._session.commit()
         except Exception as e:
+            self._session.rollback()
             # Check if error is due to duplicate trial no
             if '_sub_train_job_id_no_uc' in str(e):
                 raise DuplicateTrialNoError()

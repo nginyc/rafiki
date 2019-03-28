@@ -33,7 +33,7 @@ class AvailableGpu():
         self.id = id
         self.memory_free = memory_free
 
-    def __str__(self):
+    def __repr__(self):
         return str({ 'id': self.id, 'memory_free': self.memory_free })
             
 class BaseModel(abc.ABC):
@@ -60,7 +60,7 @@ class BaseModel(abc.ABC):
     :param knobs: Dictionary of knob values for this model instance
     :type knobs: dict[str, any]
     '''   
-    def __init__(self, available_gpus: List[AvailableGpu] = [], shared_params: Dict[str, np.array] = {}, **knobs):
+    def __init__(self, shared_params: Dict[str, np.array] = {}, **knobs):
         pass
 
     @staticmethod
@@ -89,7 +89,7 @@ class BaseModel(abc.ABC):
         return TrialConfig()
 
     @staticmethod
-    def setup():
+    def setup(available_gpus: List[AvailableGpu] = []):
         '''
         Runs class-wide setup logic (e.g. initialize a graph/session shared across trials).
         '''

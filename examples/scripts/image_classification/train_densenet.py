@@ -9,7 +9,9 @@ from rafiki.constants import BudgetType, TaskType, ModelDependency
 
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
 
-def train_densenet(client, enable_gpu, total_trials):
+def train_densenet(client, enable_gpu, full):
+    total_trials = 10 if not full else 100 
+
     app_id = gen_id()
     app = 'cifar_10_densenet_{}'.format(app_id)
     model_name = 'PyDenseNetBc_{}'.format(app_id)
@@ -38,7 +40,9 @@ def train_densenet(client, enable_gpu, total_trials):
             BudgetType.ENABLE_GPU: 1 if enable_gpu else 0
         },
         models={
-            model_name: {}
+            model_name: {
+                'knobs': { 'batch_size': 32, 'max_trial_epochs': 10 } if not full else {}
+            }
         }
     )
     pprint.pprint(train_job)
@@ -46,16 +50,16 @@ def train_densenet(client, enable_gpu, total_trials):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--full', action='store_true', help='Whether to do training for its full duration/capacity')
     parser.add_argument('--enable_gpu', action='store_true', help='Whether to use GPU')
     parser.add_argument('--host', type=str, default='localhost', help='Host of Rafiki instance')
     parser.add_argument('--admin_port', type=int, default=3000, help='Port for Rafiki Admin on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=SUPERADMIN_PASSWORD, help='Password of user')
-    parser.add_argument('--total_trials', type=int, default=100, help='Total no. of trials')
     (args, _) = parser.parse_known_args()
 
     # Initialize client
     client = Client(admin_host=args.host, admin_port=args.admin_port)
     client.login(email=args.email, password=args.password)
 
-    train_densenet(client, args.enable_gpu, args.total_trials)
+    train_densenet(client, args.enable_gpu, args.full)

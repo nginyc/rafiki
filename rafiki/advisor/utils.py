@@ -74,7 +74,8 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
 
     # Setup model class
     print('Running model class setup...')
-    py_model_class.setup()
+    available_gpus = get_available_gpus()
+    py_model_class.setup(available_gpus)
 
     # For every trial
     for i in range(1, total_trials + 1):
@@ -99,8 +100,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
             params = param_store.retrieve_params(session_id, param_id)
 
         # Load model
-        available_gpus = get_available_gpus()
-        model_inst = py_model_class(available_gpus=available_gpus, shared_params=params, **knobs)
+        model_inst = py_model_class(shared_params=params, **knobs)
 
         # Train model
         print('Training model...')

@@ -26,23 +26,11 @@ class PyDenseNetBc(BaseModel):
 
     Credits to https://github.com/gpleiss/efficient_densenet_pytorch
     '''
+    _gpu = None
 
-    def __init__(self, available_gpus, shared_params, **knobs):
+    def __init__(self, shared_params, **knobs):
         self._knobs = knobs
-        self._available_gpus = available_gpus
         self._shared_params = shared_params
-
-        # Make sure there is at least 1 GPU with enough memory, otherwise to use CPU
-        batch_size = self._knobs['batch_size'] 
-        memory_needed = batch_size / 32 * 2 * 1024 # batch size 32 => 2GB memory
-        available_gpus = [x for x in available_gpus if x.memory_free >= memory_needed]
-        utils.logger.log('Available GPUs: {}'.format(available_gpus))
-        if len(available_gpus) > 0:
-            gpu = available_gpus[0]
-            utils.logger.log('Using GPU #{}...'.format(gpu.id))
-            self._gpu = gpu
-        else:
-            self._gpu = None
 
     @staticmethod
     def get_knob_config():
@@ -62,16 +50,27 @@ class PyDenseNetBc(BaseModel):
 
     @staticmethod
     def get_trial_config(trial_no, total_trials, running_trial_nos):
-        t = total_trials
-        t_div = 25
+        t = trial_no
+        t_div = total_trials
         e_base = 0.5
-        e = pow(e_base, 1 + t / t_div)
+        e = pow(e_base, 1 + 5 * (t - 1) / t_div) # 0.5 -> 0.0156
         # Restart params with decreasing probability
         if np.random.random() < e:
             return TrialConfig(shared_params=SharedParams.NONE)
         # Otherwise, use best params across workers
         else:
             return TrialConfig(shared_params=SharedParams.GLOBAL_BEST)
+    
+    @staticmethod
+    def setup(available_gpus):
+        # Make sure there is at least 1 GPU with enough memory, otherwise to use CPU
+        memory_needed = 4 * 1024 # 4GB memory
+        available_gpus = [x for x in available_gpus if x.memory_free >= memory_needed]
+        utils.logger.log('Available GPUs: {}'.format(available_gpus))
+        if len(available_gpus) > 0:
+            gpu = available_gpus[0]
+            utils.logger.log('Using GPU #{}...'.format(gpu.id))
+            PyDenseNetBc._gpu = gpu
 
     def train(self, dataset_uri):
         (train_dataset, train_val_dataset, self._train_params) = self._load_train_dataset(dataset_uri)
@@ -321,7 +320,7 @@ class PyDenseNetBc(BaseModel):
         return max_trial_epochs
 
     def _set_device(self, tensors):
-        gpu = self._gpu
+        gpu = PyDenseNetBc._gpu
         if gpu is not None:
             return [x.cuda(gpu.id) for x in tensors]
         else:            

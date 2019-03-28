@@ -55,9 +55,7 @@ class TrainWorker(object):
         advisor_id = self._maybe_create_advisor(job_info, clazz)
 
         # Run model setup
-        logger.info('Running model class setup...')
-        clazz.setup()
-
+        has_setup = False
         knobs = None
 
         while True:
@@ -67,13 +65,20 @@ class TrainWorker(object):
                 logger.info('Budget for sub train job has reached')
                 self._client.send_event('sub_train_job_budget_reached', sub_train_job_id=sub_train_job_id)
 
-
             # Perform trial & record results
             try:
                 logger_info = self._start_logging_to_trial(
                     lambda log_line, log_lvl: 
                         self._job_monitor.log_to_trial(self._trial_id, log_line, log_lvl))
 
+                # Setup model if not
+                if not has_setup:
+                    logger.info('Running model class setup...')
+                    # TODO: Fix race condition on free GPU memory
+                    available_gpus = get_available_gpus()
+                    clazz.setup(available_gpus)
+                    has_setup = True
+                
                 logger.info('Started trial #{} of ID "{}"...'.format(trial_no, self._trial_id))
 
                 # Wait for trial to become valid
@@ -112,8 +117,9 @@ class TrainWorker(object):
                 self._trial_id = None
 
         # Run model teardown
-        logger.info('Running model class teardown...')
-        clazz.teardown()
+        if has_setup:
+            logger.info('Running model class teardown...')
+            clazz.teardown()
 
         # Train job must have finished, delete advisor & shared params
         self._maybe_delete_advisor(advisor_id, job_info)
@@ -163,8 +169,7 @@ class TrainWorker(object):
 
         # Initialize & train model
         logger.info('Training model...')
-        available_gpus = get_available_gpus()
-        model_inst = clazz(available_gpus, shared_params, **knobs)
+        model_inst = clazz(shared_params, **knobs)
         model_inst.train(train_dataset_uri)
         trial_shared_params = model_inst.get_shared_parameters() or None
         if trial_shared_params:
@@ -275,7 +280,7 @@ class TrainWorker(object):
         # Load actual params from store
         params = {}
         if param_id is not None:
-            logger.info('To use {} shared params'.format(trial_config.shared_params))
+            logger.info('To use {} shared params'.format(trial_config.shared_params.name))
             params = self._param_store.retrieve_params(job_info.sub_train_job_id, param_id)
             logger.info('Retrieved {} shared params'.format(len(params)))
 
@@ -447,8 +452,7 @@ class _SubTrainJobMonitor():
                 trial = self._meta_store.create_trial(sub_train_job_id, no, model_id, worker_id)
                 self._meta_store.commit()
                 logger.info('Created trial #{} of ID "{}" in store'.format(no, trial.id))
-
-            return trial.id
+                return trial.id
         except DuplicateTrialNoError:
             logger.info('Avoided creating duplicate trial #{} in store!'.format(no))
             return None
