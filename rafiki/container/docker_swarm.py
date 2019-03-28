@@ -14,7 +14,7 @@ LABEL_NUM_SERVICES = 'num_services'
 logger = logging.getLogger(__name__)
 
 _Node = namedtuple('_Node', ['id', 'available_gpus', 'num_services'])
-_Deployment = namedtuple('_Deployment', ['node_id', 'gpu_no'])
+_Deployment = namedtuple('_Deployment', ['node_id', 'gpu_nos'])
 
 class DockerSwarmContainerManager(ContainerManager):
     def __init__(self,
@@ -31,7 +31,6 @@ class DockerSwarmContainerManager(ContainerManager):
                                 args, environment_vars, mounts, publish_port)
         info = {
             'node_id': deployment.node_id,
-            'gpu_no': deployment.gpu_no,
             'service_name': service_name,
             'replicas': replicas
         }
@@ -51,8 +50,7 @@ class DockerSwarmContainerManager(ContainerManager):
     def destroy_service(self, service: ContainerService):
         self._destroy_sevice(service.id)
         node_id = service.info['node_id']
-        gpu_no = service.info['gpu_no']
-        deployment = _Deployment(node_id, gpu_no)
+        deployment = _Deployment(node_id)
         self._unmark_deployment(deployment)
         logger.info('Deleted service of ID "{}"'.format(service.id))
 
@@ -69,41 +67,26 @@ class DockerSwarmContainerManager(ContainerManager):
         # Choose the node with fewest services
         (_, node) = sorted([(x.num_services, x) for x in nodes])[0]
 
-        # Add GPU no if required
-        gpu_no = None
-        if ServiceRequirement.GPU in requirements:
-            gpu_no = node.available_gpus[0]
-        
-        deployment = _Deployment(node.id, gpu_no)
+        deployment = _Deployment(node.id, node.available_gpus)
         return deployment
 
     def _mark_deployment(self, deployment):
         node_id = deployment.node_id
-        gpu_no = deployment.gpu_no
 
-        # Update available GPUs & num services on node
+        # Update num services on node
         node = self._get_node(node_id)
-        available_gpus = node.available_gpus
-        num_services = node.num_services
+        num_services = node.num_services + 1
 
-        if gpu_no is not None:
-            available_gpus = [x for x in available_gpus if x != gpu_no]
-
-        self._update_node(node_id, available_gpus, num_services + 1)
+        self._update_node(node_id, num_services)
 
     def _unmark_deployment(self, deployment):
         node_id = deployment.node_id
-        gpu_no = deployment.gpu_no
         
-        # Update available GPUs & num services on node
+        # Update num services on node
         node = self._get_node(node_id)
-        available_gpus = node.available_gpus
-        num_services = node.num_services
+        num_services = max(0, node.num_services - 1)
 
-        if gpu_no is not None:
-            available_gpus = list(set(available_gpus + [gpu_no]))
-        
-        self._update_node(node_id, available_gpus, max(0, num_services - 1))
+        self._update_node(node_id, num_services)
 
     def _destroy_sevice(self, service_id):
         service = self._client.services.get(service_id)
@@ -136,8 +119,8 @@ class DockerSwarmContainerManager(ContainerManager):
 
         # Modify service based on deployment info
         constraints.append('node.id=={}'.format(deployment.node_id)) # Add node constraint
-        if deployment.gpu_no is not None:
-            env.append('CUDA_VISIBLE_DEVICES={}'.format(deployment.gpu_no)) # GPU no
+        if deployment.use_gpu:
+            env.append('CUDA_VISIBLE_DEVICES={}'.format(','.join(deployment.gpu_nos))) # GPU nos
         else:
             env.append('CUDA_VISIBLE_DEVICES=-1') # No GPU
 
@@ -184,16 +167,14 @@ class DockerSwarmContainerManager(ContainerManager):
         num_services = int(spec_labels.get(LABEL_NUM_SERVICES, 0))
         return _Node(docker_node.id, available_gpus, num_services)
 
-    def _update_node(self, node_id, available_gpus, num_services):
+    def _update_node(self, node_id, num_services):
         docker_node = self._client.nodes.get(node_id)
         spec = docker_node.attrs.get('Spec', {})
         spec_labels = spec.get('Labels', {})
-        available_gpus_str = ','.join(available_gpus)
         docker_node.update({
             **spec,
             'Labels': {
                 **spec_labels,
-                LABEL_AVAILBLE_GPUS: available_gpus_str,
                 LABEL_NUM_SERVICES: str(num_services)
             }
         })

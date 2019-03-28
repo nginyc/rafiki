@@ -10,6 +10,8 @@ from .schema import Base, TrainJob, SubTrainJob, \
     InferenceJob, SubInferenceJob, Trial, Model, User, Service, \
     TrialLog
 
+class DuplicateTrialNoError(Exception): pass
+
 class MetaStore(object):
     def __init__(self, **kwargs):
         host = kwargs.get('postgres_host', os.environ.get('POSTGRES_HOST', 'localhost'))
@@ -466,7 +468,14 @@ class MetaStore(object):
         self.disconnect()
 
     def commit(self):
-        self._session.commit()
+        try:
+            self._session.commit()
+        except Exception as e:
+            # Check if error is due to duplicate trial no
+            if '_sub_train_job_id_no_uc' in str(e):
+                raise DuplicateTrialNoError()
+            else:
+                raise e
 
     # Ensures that future database queries load fresh data from underlying database
     def expire(self):

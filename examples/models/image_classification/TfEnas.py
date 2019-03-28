@@ -84,16 +84,11 @@ class TfEnasTrain(BaseModel):
             'init_params_dir': FixedKnob('') # Params directory to resume training from
         }
 
-    @staticmethod
-    def setup():
-        # Log available devices 
-        utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
-
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
 
-    def train(self, dataset_uri, shared_params):
+    def train(self, dataset_uri):
         num_epochs = self._knobs['trial_epochs']
         init_params_dir = self._knobs['init_params_dir']
 
@@ -353,15 +348,8 @@ class TfEnasTrain(BaseModel):
         batch_size = self._knobs['batch_size']
         cutout_size = self._knobs['cutout_size']
 
-        # Create TF dataset
-        dataset = tf.data.Dataset.from_tensor_slices((images, classes)) \
-                    .batch(batch_size)
-        dataset_itr = dataset.make_initializable_iterator()
-        (images, classes) = dataset_itr.get_next()
-        dataset_init_op = dataset_itr.initializer
-
-        # Do random crop + horizontal flip for each image
-        def preprocess(image):
+        # Do random crop + horizontal flip for each train image
+        def _preprocess_train_image(image):
             image = tf.pad(image, [[4, 4], [4, 4], [0, 0]])
             image = tf.image.random_crop(image, (w, h, in_ch))
             image = tf.image.random_flip_left_right(image)
@@ -370,12 +358,19 @@ class TfEnasTrain(BaseModel):
                 image = self._do_cutout(image, w, h, cutout_size)
             
             return image
+        
+        def _preprocess(image, clazz):
+            image = tf.cond(is_train, lambda: _preprocess_train_image(image), lambda: image)
+            image = tf.cast(image, tf.float32)
+            return (image, clazz)
 
-        # Only preprocess images during train
-        X = tf.cond(is_train, 
-                        lambda: tf.map_fn(preprocess, images, back_prop=False),
-                        lambda: images)
-        X = tf.cast(X, tf.float32)
+        # Create TF dataset
+        dataset = tf.data.Dataset.from_tensor_slices((images, classes))
+        dataset = dataset.apply(tf.data.experimental.map_and_batch(map_func=_preprocess, batch_size=batch_size))
+        dataset = dataset.prefetch(batch_size)
+        dataset_itr = dataset.make_initializable_iterator()
+        (X, classes) = dataset_itr.get_next()
+        dataset_init_op = dataset_itr.initializer
 
         return (X, classes, dataset_init_op)
     
@@ -485,24 +480,26 @@ class TfEnasTrain(BaseModel):
             zipped = list(zip(images, classes))
             random.shuffle(zipped)
             (images, classes) = zip(*zipped)
-
+    
         # Initialize dataset (mock classes if required)
         self._sess.run(m.dataset_init_op, feed_dict={
             m.images_ph: images, 
-            m.classes_ph: classes if classes is not None else np.zeros((len(images),))
-        })
-
-        feed_dict = {
+            m.classes_ph: classes if classes is not None else np.zeros((len(images),)),
             m.is_train_ph: is_train
-        }
+        })
 
         # Feed architectures if placeholders are present
         if m.normal_arch_ph is not None and m.reduction_arch_ph is not None:
             (normal_arch, reduction_arch) = self._get_arch()
-            feed_dict.update({
+            feed_dict = {
                 m.normal_arch_ph: normal_arch,
-                m.reduction_arch_ph: reduction_arch
-            })
+                m.reduction_arch_ph: reduction_arch,
+                m.is_train_ph: is_train
+            }
+        else:
+            feed_dict = {
+                m.is_train_ph: is_train
+            }
 
         while True:
             try:
@@ -1058,14 +1055,18 @@ class TfEnasSearch(TfEnasTrain):
         TfEnasSearch._model_memo = None
         TfEnasSearch._loaded_vars_id_memo = None
 
-    def train(self, dataset_uri, shared_params):
+    def __init__(self, shared_params, **knobs):
+        super().__init__(**knobs)
+        self._shared_params = shared_params
+
+    def train(self, dataset_uri):
         num_epochs = self._knobs['trial_epochs']
         (images, classes, self._train_params) = self._prepare_dataset(dataset_uri)
         (self._model, self._graph, self._sess, self._saver, 
             self._monitored_values) = self._build_model()
         
         with self._graph.as_default():
-            self._maybe_load_shared_vars(shared_params, num_epochs)
+            self._maybe_load_shared_vars(self._shared_params, num_epochs)
             self._train_summaries = []
             if num_epochs == 0:
                 utils.logger.log('Skipping training...')

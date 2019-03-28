@@ -25,6 +25,16 @@ class TrialConfig():
         self.shared_params = shared_params
         self.should_save = should_save
         self.override_knobs = override_knobs
+
+class AvailableGpu():
+    def __init__(self,
+                id: int, # 0-based index of GPU
+                memory_free: int): # Amount of GPU memory free in MB
+        self.id = id
+        self.memory_free = memory_free
+
+    def __str__(self):
+        return str({ 'id': self.id, 'memory_free': self.memory_free })
             
 class BaseModel(abc.ABC):
     '''
@@ -50,7 +60,7 @@ class BaseModel(abc.ABC):
     :param knobs: Dictionary of knob values for this model instance
     :type knobs: dict[str, any]
     '''   
-    def __init__(self, **knobs):
+    def __init__(self, available_gpus: List[AvailableGpu] = [], shared_params: Dict[str, np.array] = {}, **knobs):
         pass
 
     @staticmethod
@@ -93,7 +103,7 @@ class BaseModel(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def train(self, dataset_uri: str, shared_params: Dict[str, np.array]):
+    def train(self, dataset_uri: str):
         '''
         Train this model instance with given dataset and initialized knob values.
         Additionally, a dictionary of trained shared parameters from previous trials is passed.

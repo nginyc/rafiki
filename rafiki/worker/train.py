@@ -9,14 +9,15 @@ from datetime import datetime
 from rafiki.utils.auth import make_superadmin_client
 from rafiki.client import Client
 from rafiki.constants import BudgetType, TrainJobStatus, TrialStatus, ServiceStatus
-from rafiki.meta_store import MetaStore
-from rafiki.advisor import SharedParamsMonitor
+from rafiki.meta_store import MetaStore, DuplicateTrialNoError
+from rafiki.advisor import SharedParamsMonitor, get_available_gpus
 from rafiki.model import BaseModel, load_model_class, serialize_knob_config, logger as model_logger, TrialConfig
 from rafiki.param_store import ParamStore
 
 logger = logging.getLogger(__name__)
 
-WAIT_TRIAL_SLEEP_SECS = 10
+INVALID_TRIAL_SLEEP_SECS = 10
+NO_NEXT_TRIAL_SLEEP_SECS = 5 * 60
 
 class InvalidTrainJobError(Exception): pass
 class InvalidSubTrainJobError(Exception): pass
@@ -42,7 +43,6 @@ class TrainWorker(object):
         self._job_monitor.start()
         job_info = self._job_monitor.job_info
         sub_train_job_id = job_info.sub_train_job_id
-        worker_id = self._worker_id
 
         self._client.send_event('sub_train_job_worker_started', sub_train_job_id=sub_train_job_id)
         logger.info('Worker is for sub train job of ID "{}"'.format(sub_train_job_id))
@@ -61,15 +61,12 @@ class TrainWorker(object):
         knobs = None
 
         while True:
-            # Wait for valid trial
-            (trial_no, trial_config) = self._wait_for_valid_trial(clazz)
+            # Secure a trial from store
+            trial_no = self._create_trial()
             if trial_no is None: # When there are no trials to conduct
                 logger.info('Budget for sub train job has reached')
                 self._client.send_event('sub_train_job_budget_reached', sub_train_job_id=sub_train_job_id)
-                break
 
-            # Create the new trial
-            self._trial_id = self._job_monitor.create_trial(trial_no, worker_id)
 
             # Perform trial & record results
             try:
@@ -77,8 +74,11 @@ class TrainWorker(object):
                     lambda log_line, log_lvl: 
                         self._job_monitor.log_to_trial(self._trial_id, log_line, log_lvl))
 
-                logger.info('Starting trial #{} of ID "{}"...'.format(trial_no, self._trial_id))
+                logger.info('Started trial #{} of ID "{}"...'.format(trial_no, self._trial_id))
 
+                # Wait for trial to become valid
+                trial_config = self._wait_for_trial_validity(trial_no, clazz)
+                
                 # Generate knobs for trial
                 knobs = self._retrieve_knobs(advisor_id, job_info, trial_config, knobs)
 
@@ -163,8 +163,9 @@ class TrainWorker(object):
 
         # Initialize & train model
         logger.info('Training model...')
-        model_inst = clazz(**knobs)
-        model_inst.train(train_dataset_uri, shared_params)
+        available_gpus = get_available_gpus()
+        model_inst = clazz(available_gpus, shared_params, **knobs)
+        model_inst.train(train_dataset_uri)
         trial_shared_params = model_inst.get_shared_parameters() or None
         if trial_shared_params:
             logger.info('Trial produced {} shared parameters'.format(len(trial_shared_params)))
@@ -187,44 +188,58 @@ class TrainWorker(object):
 
         return (score, trial_shared_params, params_dir)
 
-    def _wait_for_valid_trial(self, clazz: Type[BaseModel]):
-        sleep_secs = WAIT_TRIAL_SLEEP_SECS
+    def _create_trial(self):
+        trial_no = None
 
-        while True:
+        while self._trial_id is None:
             # Sync trials from underlying store
             self._job_monitor.sync_trials()
 
+            # Determine next trial no
+            (trial_no, _, running_trial_nos) = self._job_monitor.get_sub_train_job_progress()
+
+            # If no next trial
+            if trial_no is None:
+                # If some trials as still running, sleep
+                if len(running_trial_nos) > 0:
+                    sleep_secs = NO_NEXT_TRIAL_SLEEP_SECS
+                    logger.info('Trial nos concurrently running: {}'.format(running_trial_nos))
+                    logger.info('No next trial but trials are still running. Sleeping for {}s...'.format(sleep_secs))
+                    time.sleep(sleep_secs)
+                
+                # Otherwise, we're done with this sub train job
+                else:
+                    return None
+            else:
+                # Try to create trial with trial no
+                self._trial_id = self._job_monitor.create_trial(trial_no, self._worker_id)
+        
+        return trial_no
+
+    def _wait_for_trial_validity(self, trial_no, clazz: Type[BaseModel]):
+        while True:
             # Update shared params monitor
             new_completed_trials = self._job_monitor.retrieve_new_completed_trials()
             for x in new_completed_trials:
                 self._shared_params_monitor.add_params(x.out_shared_param_id, x.score, 
                                                     x.datetime_started, x.worker_id)
 
-            # TODO: Handle race conditions
-            (trial_no, total_trials, running_trial_nos) = self._job_monitor.get_sub_train_job_progress()
-            if len(running_trial_nos) > 0:
-                logger.info('Trial nos concurrently running: {}'.format(running_trial_nos))
+            (_, total_trials, running_trial_nos) = self._job_monitor.get_sub_train_job_progress()
+            logger.info('Trial nos concurrently running: {}'.format(running_trial_nos))
 
-            # If no next trial
-            if trial_no is None:
-                # If some as still running, sleep
-                if len(running_trial_nos) > 0:
-                    logger.info('Some trials are still running. Sleeping for {}s...'.format(sleep_secs))
-                    time.sleep(sleep_secs)
-                    continue
-                # Otherwise, we're done with this sub train job
-                else:
-                    return (None, None)
-            
-            # If next trial exists, check if it is invalid based on trial config
+            # Check if trial is valid based on trial config
             trial_config = clazz.get_trial_config(trial_no, total_trials, running_trial_nos)
-            if not trial_config.is_valid:
-                logger.info('Trial #{} is currently invalid. Sleeping for {}s...'.format(trial_no, sleep_secs))
-                time.sleep(sleep_secs)
-                continue
+            if trial_config.is_valid:
+                # Good to start the trial
+                return trial_config
 
-            # Good to start a trial
-            return (trial_no, trial_config)
+            # Trial is still invalid
+            sleep_secs = INVALID_TRIAL_SLEEP_SECS
+            logger.info('Trial #{} is currently invalid. Sleeping for {}s...'.format(trial_no, sleep_secs))
+            time.sleep(sleep_secs)
+
+            # Sync trials from underlying store
+            self._job_monitor.sync_trials()
 
     # Retrieves proposal of a set of knobs from advisor for a trial, overriding values as required
     def _retrieve_knobs(self, advisor_id, job_info: _JobInfo, trial_config: TrialConfig, knobs):
@@ -426,13 +441,17 @@ class _SubTrainJobMonitor():
         sub_train_job_id = self.job_info.sub_train_job_id
         model_id = self.job_info.model_id
 
-        with self._meta_store:
-            logger.info('Creating new trial in store...')
-            trial = self._meta_store.create_trial(sub_train_job_id, no, model_id, worker_id)
-            self._meta_store.commit()
-            logger.info('Created trial of ID "{}" in store'.format(trial.id))
+        try:
+            with self._meta_store:
+                logger.info('Creating new trial in store...')
+                trial = self._meta_store.create_trial(sub_train_job_id, no, model_id, worker_id)
+                self._meta_store.commit()
+                logger.info('Created trial #{} of ID "{}" in store'.format(no, trial.id))
 
             return trial.id
+        except DuplicateTrialNoError:
+            logger.info('Avoided creating duplicate trial #{} in store!'.format(no))
+            return None
 
     def mark_trial_as_errored(self, trial_id):
         logger.info('Marking trial as errored in store...')

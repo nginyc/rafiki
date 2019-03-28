@@ -1,1 +1,1 @@
-from .meta_store import MetaStore
+from .meta_store import MetaStore, DuplicateTrialNoError
