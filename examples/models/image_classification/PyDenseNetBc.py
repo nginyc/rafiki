@@ -27,8 +27,22 @@ class PyDenseNetBc(BaseModel):
     Credits to https://github.com/gpleiss/efficient_densenet_pytorch
     '''
 
-    def __init__(self, **knobs):
+    def __init__(self, available_gpus, shared_params, **knobs):
         self._knobs = knobs
+        self._available_gpus = available_gpus
+        self._shared_params = shared_params
+
+        # Make sure there is at least 1 GPU with enough memory, otherwise to use CPU
+        batch_size = self._knobs['batch_size'] 
+        memory_needed = batch_size / 32 * 2 * 1024 # batch size 32 => 2GB memory
+        available_gpus = [x for x in available_gpus if x.memory_free >= memory_needed]
+        utils.logger.log('Available GPUs: {}'.format(available_gpus))
+        if len(available_gpus) > 0:
+            gpu = available_gpus[0]
+            utils.logger.log('Using GPU #{}...'.format(gpu.id))
+            self._gpu = gpu
+        else:
+            self._gpu = None
 
     @staticmethod
     def get_knob_config():
@@ -59,10 +73,10 @@ class PyDenseNetBc(BaseModel):
         else:
             return TrialConfig(shared_params=SharedParams.GLOBAL_BEST)
 
-    def train(self, dataset_uri, shared_params):
+    def train(self, dataset_uri):
         (train_dataset, train_val_dataset, self._train_params) = self._load_train_dataset(dataset_uri)
         self._model = self._build_model()
-        self._load_shared_parameters(shared_params)
+        self._load_shared_parameters(self._shared_params)
         self._train_model(train_dataset, train_val_dataset)
 
     def evaluate(self, dataset_uri):
@@ -142,14 +156,13 @@ class PyDenseNetBc(BaseModel):
 
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
         net.eval()
-        if torch.cuda.is_available():
-            utils.logger.log('Using CUDA...')
-            net = net.cuda()
+        [net] = self._set_device([net])
 
         with torch.no_grad():
             # Train for epoch
             corrects = 0
             for (batch_images, batch_classes) in dataloader: 
+                [batch_images, batch_classes] = self._set_device([batch_images, batch_classes])
                 probs = net(batch_images)
                 preds = probs.max(1)[1]
                 corrects += sum(preds.eq(batch_classes).cpu().numpy())
@@ -184,9 +197,7 @@ class PyDenseNetBc(BaseModel):
         (optimizer, scheduler) = self._get_optimizer(net, trial_epochs)
 
         net.train()
-        if torch.cuda.is_available():
-            utils.logger.log('Using CUDA...')
-            net = net.cuda()
+        [net] = self._set_device([net])
 
         early_stop_condition = EarlyStopCondition(patience=early_stop_patience)
         for epoch in range(trial_epochs):
@@ -198,6 +209,7 @@ class PyDenseNetBc(BaseModel):
             train_loss = RunningAverage()
             train_acc = RunningAverage()
             for (batch_images, batch_classes) in train_dataloader:
+                [batch_images, batch_classes] = self._set_device([batch_images, batch_classes])
                 probs = net(batch_images)
                 loss = F.cross_entropy(probs, batch_classes)
                 preds = probs.max(1)[1]
@@ -219,6 +231,7 @@ class PyDenseNetBc(BaseModel):
                 train_val_loss = RunningAverage()
                 train_val_acc = RunningAverage()
                 for (batch_images, batch_classes) in train_val_dataloader:
+                    [batch_images, batch_classes] = self._set_device([batch_images, batch_classes])
                     probs = net(batch_images)
                     loss = F.cross_entropy(probs, batch_classes)
                     preds = probs.max(1)[1]
@@ -306,6 +319,13 @@ class PyDenseNetBc(BaseModel):
     def _get_trial_epochs(self):
         max_trial_epochs = self._knobs['max_trial_epochs']
         return max_trial_epochs
+
+    def _set_device(self, tensors):
+        gpu = self._gpu
+        if gpu is not None:
+            return [x.cuda(gpu.id) for x in tensors]
+        else:            
+            return tensors
 
 #####################################################################################
 # Implementation of DenseNet
@@ -489,10 +509,6 @@ class ImageDataset(Dataset):
             image = self._transform(Image.fromarray(image))
         else:
             image = torch.tensor(image)
-
-        if torch.cuda.is_available():
-            image = image.cuda()
-            image_class = image_class.cuda()
 
         return (image, image_class)
 

@@ -19,6 +19,8 @@ _Model = namedtuple('_Model', ['dataset_init_op',
         'probs', 'acc', 'step', 'normal_arch_ph', 'reduction_arch_ph', 
         'shared_var_phs', 'shared_vars_assign_op'])
 
+ENAS_SEARCH_TRAIN_EVERY_NUM_TRIALS = 300
+
 class TfEnasTrain(BaseModel):
     '''
     Implements the child model of "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
@@ -82,16 +84,11 @@ class TfEnasTrain(BaseModel):
             'init_params_dir': FixedKnob('') # Params directory to resume training from
         }
 
-    @staticmethod
-    def setup():
-        # Log available devices 
-        utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
-
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
 
-    def train(self, dataset_uri, shared_params):
+    def train(self, dataset_uri):
         num_epochs = self._knobs['trial_epochs']
         init_params_dir = self._knobs['init_params_dir']
 
@@ -168,6 +165,7 @@ class TfEnasTrain(BaseModel):
     ####################################
 
     def _prepare_dataset(self, dataset_uri, train_params=None):
+        # TODO: Optimize
         (images, classes, image_size, num_classes) = self._load_dataset(dataset_uri, train_params)
         if train_params is None:
             (images, norm_mean, norm_std) = utils.dataset.normalize_images(images)
@@ -350,15 +348,8 @@ class TfEnasTrain(BaseModel):
         batch_size = self._knobs['batch_size']
         cutout_size = self._knobs['cutout_size']
 
-        # Create TF dataset
-        dataset = tf.data.Dataset.from_tensor_slices((images, classes)) \
-                    .batch(batch_size)
-        dataset_itr = dataset.make_initializable_iterator()
-        (images, classes) = dataset_itr.get_next()
-        dataset_init_op = dataset_itr.initializer
-
-        # Do random crop + horizontal flip for each image
-        def preprocess(image):
+        # Do random crop + horizontal flip for each train image
+        def _preprocess_train_image(image):
             image = tf.pad(image, [[4, 4], [4, 4], [0, 0]])
             image = tf.image.random_crop(image, (w, h, in_ch))
             image = tf.image.random_flip_left_right(image)
@@ -367,12 +358,19 @@ class TfEnasTrain(BaseModel):
                 image = self._do_cutout(image, w, h, cutout_size)
             
             return image
+        
+        def _preprocess(image, clazz):
+            image = tf.cond(is_train, lambda: _preprocess_train_image(image), lambda: image)
+            image = tf.cast(image, tf.float32)
+            return (image, clazz)
 
-        # Only preprocess images during train
-        X = tf.cond(is_train, 
-                        lambda: tf.map_fn(preprocess, images, back_prop=False),
-                        lambda: images)
-        X = tf.cast(X, tf.float32)
+        # Create TF dataset
+        dataset = tf.data.Dataset.from_tensor_slices((images, classes))
+        dataset = dataset.apply(tf.data.experimental.map_and_batch(map_func=_preprocess, batch_size=batch_size))
+        dataset = dataset.prefetch(batch_size)
+        dataset_itr = dataset.make_initializable_iterator()
+        (X, classes) = dataset_itr.get_next()
+        dataset_init_op = dataset_itr.initializer
 
         return (X, classes, dataset_init_op)
     
@@ -482,24 +480,26 @@ class TfEnasTrain(BaseModel):
             zipped = list(zip(images, classes))
             random.shuffle(zipped)
             (images, classes) = zip(*zipped)
-
+    
         # Initialize dataset (mock classes if required)
         self._sess.run(m.dataset_init_op, feed_dict={
             m.images_ph: images, 
-            m.classes_ph: classes if classes is not None else np.zeros((len(images),))
-        })
-
-        feed_dict = {
+            m.classes_ph: classes if classes is not None else np.zeros((len(images),)),
             m.is_train_ph: is_train
-        }
+        })
 
         # Feed architectures if placeholders are present
         if m.normal_arch_ph is not None and m.reduction_arch_ph is not None:
             (normal_arch, reduction_arch) = self._get_arch()
-            feed_dict.update({
+            feed_dict = {
                 m.normal_arch_ph: normal_arch,
-                m.reduction_arch_ph: reduction_arch
-            })
+                m.reduction_arch_ph: reduction_arch,
+                m.is_train_ph: is_train
+            }
+        else:
+            feed_dict = {
+                m.is_train_ph: is_train
+            }
 
         while True:
             try:
@@ -995,12 +995,12 @@ class TfEnasSearch(TfEnasTrain):
     # Memoise across trials to speed up training
     _datasets_memo = {} # { <dataset_uri> -> <dataset> }
     _model_memo = None # of class `_MemoModel`
-    _loaded_vars_hash_memo = None # Hash of vars loaded, if no training has happened
+    _loaded_vars_id_memo = None # ID of vars loaded, if no training has happened
 
     @staticmethod
     def get_trial_config(trial_no, total_trials, running_trial_nos):
-        train_every_num_epochs = 30
-        T = train_every_num_epochs + 1 
+        train_every_num_trials = ENAS_SEARCH_TRAIN_EVERY_NUM_TRIALS
+        T = train_every_num_trials + 1 
 
         # Every (X + 1) trials, only train 1 epoch for the first trial
         # The other X trials is for training the controller
@@ -1044,7 +1044,7 @@ class TfEnasSearch(TfEnasTrain):
     def setup():
         TfEnasSearch._datasets_memo = {}
         TfEnasSearch._model_memo = None
-        TfEnasSearch._loaded_vars_hash_memo = None
+        TfEnasSearch._loaded_vars_id_memo = None
 
     @staticmethod
     def teardown():
@@ -1053,16 +1053,20 @@ class TfEnasSearch(TfEnasTrain):
 
         TfEnasSearch._datasets_memo = {}
         TfEnasSearch._model_memo = None
-        TfEnasSearch._loaded_vars_hash_memo = None
+        TfEnasSearch._loaded_vars_id_memo = None
 
-    def train(self, dataset_uri, shared_params):
+    def __init__(self, shared_params, **knobs):
+        super().__init__(**knobs)
+        self._shared_params = shared_params
+
+    def train(self, dataset_uri):
         num_epochs = self._knobs['trial_epochs']
         (images, classes, self._train_params) = self._prepare_dataset(dataset_uri)
         (self._model, self._graph, self._sess, self._saver, 
             self._monitored_values) = self._build_model()
         
         with self._graph.as_default():
-            self._maybe_load_shared_vars(shared_params, num_epochs)
+            self._maybe_load_shared_vars(self._shared_params, num_epochs)
             self._train_summaries = []
             if num_epochs == 0:
                 utils.logger.log('Skipping training...')
@@ -1083,8 +1087,12 @@ class TfEnasSearch(TfEnasTrain):
                 in zip(shared_tf_vars, values)
             }
 
-            # Update loaded vars hash
-            TfEnasSearch._loaded_vars_hash_memo = self._get_shared_vars_hash(shared_vars)
+            # Add an ID for diffing
+            shared_vars_id = np.random.rand()
+            shared_vars['id'] = np.array(shared_vars_id)
+
+            # Memo ID
+            TfEnasSearch._loaded_vars_id_memo = shared_vars_id
 
             return shared_vars
         else:
@@ -1102,17 +1110,17 @@ class TfEnasSearch(TfEnasTrain):
         return dataset
 
     def _maybe_load_shared_vars(self, shared_vars, num_epochs):
+        if len(shared_vars) == 0:
+            return
+
         # If shared vars has been loaded in previous trial, don't bother loading again
-        shared_vars_hash = self._get_shared_vars_hash(shared_vars)
-        if TfEnasSearch._loaded_vars_hash_memo == shared_vars_hash:
+        shared_vars_id = shared_vars['id']
+        if TfEnasSearch._loaded_vars_id_memo == shared_vars_id:
             utils.logger.log('Skipping loading of shared variables...')
         else:
             self._load_shared_vars(shared_vars)
 
     def _load_shared_vars(self, shared_vars):
-        if len(shared_vars) == 0:
-            return
-
         m = self._model
 
         # Get current values for vars
@@ -1306,10 +1314,6 @@ class TfEnasSearch(TfEnasTrain):
 
         return X
 
-    def _get_shared_vars_hash(self, shared_vars):
-        shared_vars_plain = { name: value.tolist() for (name, value) in shared_vars.items() }
-        return hash(frozenset(shared_vars_plain))
-
 class TimedRepeatCondition():
     def __init__(self, every_secs=60):
         self._every_secs = every_secs
@@ -1326,14 +1330,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', type=str, choices=['TRAIN', 'SEARCH'], default='SEARCH')
     parser.add_argument('--total_trials', type=int, default=0) # No. of trials
-    parser.add_argument('--num_models', type=str, default=10) # How many models to sample after training advisor
+    parser.add_argument('--num_samples', type=str, default=10) # How many models to sample after training advisor
     (args, _) = parser.parse_known_args()
 
     if args.mode == 'SEARCH':
 
         print('Training advisor...')
         knob_config = TfEnasTrain.get_knob_config()
-        total_trials = args.total_trials if args.total_trials > 0 else 31 * 150
+        period = (ENAS_SEARCH_TRAIN_EVERY_NUM_TRIALS + 1)
+        total_trials = args.total_trials if args.total_trials > 0 else period * 150
         advisor = Advisor(knob_config) 
         tune_model(
             TfEnasSearch, 
@@ -1343,8 +1348,8 @@ if __name__ == '__main__':
             advisor=advisor
         )
 
-        print('Sampling {} models from trained advisor...'.format(args.num_models))
-        for i in range(args.num_models):
+        print('Sampling {} models from trained advisor...'.format(args.num_samples))
+        for i in range(args.num_samples):
             knobs = advisor.propose()
             print('Knobs {}: {}'.format(i, knobs))
 

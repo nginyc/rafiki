@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Float, ForeignKey, Integer, LargeBinary, DateTime
+from sqlalchemy import Column, String, Float, ForeignKey, Integer, LargeBinary, DateTime, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSON, ARRAY
 import uuid
 from datetime import datetime
@@ -109,6 +109,8 @@ class Trial(Base):
     shared_param_id = Column(String, default=None)
     out_shared_param_id = Column(String, default=None)
     datetime_stopped = Column(DateTime, default=None)
+
+    __table_args__ = [UniqueConstraint('sub_train_job_id', 'no', '_sub_train_job_id_no_uc')] # Unique by (sub train job, trial no)
 
 class TrialLog(Base):
     __tablename__ = 'trial_log'

@@ -6,13 +6,14 @@ import uuid
 import inspect
 import argparse
 import time
+import GPUtil
 import numpy as np
 from collections import namedtuple
 from datetime import datetime
 from typing import Union, Dict, Type
 
 from rafiki.model import BaseModel, BaseKnob, serialize_knob_config, deserialize_knob_config, \
-                        parse_model_install_command, load_model_class, SharedParams
+                        parse_model_install_command, load_model_class, SharedParams, AvailableGpu
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.param_store import ParamStore
 from rafiki.predictor import ensemble_predictions
@@ -98,11 +99,12 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
             params = param_store.retrieve_params(session_id, param_id)
 
         # Load model
-        model_inst = py_model_class(**knobs)
+        available_gpus = get_available_gpus()
+        model_inst = py_model_class(available_gpus=available_gpus, shared_params=params, **knobs)
 
         # Train model
         print('Training model...')
-        model_inst.train(train_dataset_uri, params)
+        model_inst.train(train_dataset_uri)
         trial_params = model_inst.get_shared_parameters() or None
         if trial_params:
             print('Model produced {} shared params'.format(len(trial_params)))
@@ -231,6 +233,12 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
     _info('The model definition is valid!')
 
     return model_inst
+
+def get_available_gpus():
+    gpus = GPUtil.getGPUs()
+    gpus = [AvailableGpu(x.id, x.memoryFree) for x in gpus]
+    gpus.sort(key=lambda x: x.memory_free, reverse=True)
+    return gpus
 
 _Params = namedtuple('_Param', ('param_id', 'score', 'time'))
 
