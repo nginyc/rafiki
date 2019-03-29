@@ -78,11 +78,13 @@ class TrainWorker(object):
                     available_gpus = get_available_gpus()
                     clazz.setup(available_gpus)
                     has_setup = True
-                
-                logger.info('Started trial #{} of ID "{}"...'.format(trial_no, self._trial_id))
 
                 # Wait for trial to become valid
                 trial_config = self._wait_for_trial_validity(trial_no, clazz)
+
+                # Mark trial as started
+                logger.info('Starting trial #{} of ID "{}"...'.format(trial_no, self._trial_id))
+                self._job_monitor.mark_trial_as_started(self._trial_id)
                 
                 # Generate knobs for trial
                 knobs = self._retrieve_knobs(advisor_id, job_info, trial_config, knobs)
@@ -201,14 +203,14 @@ class TrainWorker(object):
             self._job_monitor.sync_trials()
 
             # Determine next trial no
-            (trial_no, _, running_trial_nos) = self._job_monitor.get_sub_train_job_progress()
+            (trial_no, _, concurrent_trial_nos) = self._job_monitor.get_sub_train_job_progress()
 
             # If no next trial
             if trial_no is None:
                 # If some trials as still running, sleep
-                if len(running_trial_nos) > 0:
+                if len(concurrent_trial_nos) > 0:
                     sleep_secs = NO_NEXT_TRIAL_SLEEP_SECS
-                    logger.info('Trial nos concurrently running: {}'.format(running_trial_nos))
+                    logger.info('Trial nos concurrently running: {}'.format(concurrent_trial_nos))
                     logger.info('No next trial but trials are still running. Sleeping for {}s...'.format(sleep_secs))
                     time.sleep(sleep_secs)
                 
@@ -229,11 +231,11 @@ class TrainWorker(object):
                 self._shared_params_monitor.add_params(x.out_shared_param_id, x.score, 
                                                     x.datetime_started, x.worker_id)
 
-            (_, total_trials, running_trial_nos) = self._job_monitor.get_sub_train_job_progress()
-            logger.info('Trial nos concurrently running: {}'.format(running_trial_nos))
+            (_, total_trials, concurrent_trial_nos) = self._job_monitor.get_sub_train_job_progress()
+            logger.info('Trial nos concurrently running: {}'.format(concurrent_trial_nos))
 
             # Check if trial is valid based on trial config
-            trial_config = clazz.get_trial_config(trial_no, total_trials, running_trial_nos)
+            trial_config = clazz.get_trial_config(trial_no, total_trials, concurrent_trial_nos)
             if trial_config.is_valid:
                 # Good to start the trial
                 return trial_config
@@ -434,13 +436,13 @@ class _SubTrainJobMonitor():
         total_trials = self._total_trials
         
         done_trials = [x for x in self._trials.values() if x.status in [TrialStatus.COMPLETED, TrialStatus.ERRORED]]
-        running_trials = [x for x in self._trials.values() if x.status in [TrialStatus.RUNNING, TrialStatus.STARTED]]
-        valid_trials = done_trials + running_trials
+        concurrent_trials = [x for x in self._trials.values() if x.status in [TrialStatus.RUNNING, TrialStatus.STARTED]]
+        valid_trials = done_trials + concurrent_trials
 
         next_trial_no = (len(valid_trials) + 1) if len(valid_trials) < total_trials else None
-        running_trial_nos = [x.no for x in running_trials]
+        concurrent_trial_nos = [x.no for x in concurrent_trials]
         
-        return (next_trial_no, total_trials, running_trial_nos)
+        return (next_trial_no, total_trials, concurrent_trial_nos)
 
     def create_trial(self, no, worker_id):
         sub_train_job_id = self.job_info.sub_train_job_id
@@ -462,6 +464,12 @@ class _SubTrainJobMonitor():
         with self._meta_store:
             trial = self._meta_store.get_trial(trial_id)
             self._meta_store.mark_trial_as_errored(trial)
+    
+    def mark_trial_as_started(self, trial_id):
+        logger.info('Marking trial as started in store...')
+        with self._meta_store:
+            trial = self._meta_store.get_trial(trial_id)
+            self._meta_store.mark_trial_as_started(trial)
 
     def mark_trial_as_running(self, trial_id, knobs, shared_param_id):
         logger.info('Marking trial as running in store...')

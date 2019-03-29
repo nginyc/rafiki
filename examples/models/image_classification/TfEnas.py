@@ -84,6 +84,10 @@ class TfEnasTrain(BaseModel):
             'init_params_dir': FixedKnob('') # Params directory to resume training from
         }
 
+    @staticmethod
+    def setup(available_gpus):
+        utils.logger.log('Available GPUs: {}'.format(available_gpus))
+
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
@@ -998,7 +1002,7 @@ class TfEnasSearch(TfEnasTrain):
     _loaded_vars_id_memo = None # ID of vars loaded, if no training has happened
 
     @staticmethod
-    def get_trial_config(trial_no, total_trials, running_trial_nos):
+    def get_trial_config(trial_no, total_trials, concurrent_trial_nos):
         train_every_num_trials = ENAS_SEARCH_TRAIN_EVERY_NUM_TRIALS
         T = train_every_num_trials + 1 
 
@@ -1019,7 +1023,7 @@ class TfEnasSearch(TfEnasTrain):
 
         if is_train_trial:
             # For a "train" trial, wait until previous trials to finish
-            if len(running_trial_nos) > 0:
+            if len(concurrent_trial_nos) > 0:
                 return TrialConfig(is_valid=False)
         
             # Set trial epoch to 1 & don't evaluate
@@ -1031,7 +1035,7 @@ class TfEnasSearch(TfEnasTrain):
         else:
             # For a "eval" trial, just wait until corresponding "train" trial is finished
             train_trial_no = ((trial_no - 1) // T) * T + 1
-            if train_trial_no in running_trial_nos:
+            if train_trial_no in concurrent_trial_nos:
                 return TrialConfig(is_valid=False)
 
             # Set trial epoch to 0
@@ -1041,7 +1045,9 @@ class TfEnasSearch(TfEnasTrain):
                                 should_save=False)
 
     @staticmethod
-    def setup():
+    def setup(available_gpus):
+        TfEnasTrain.setup(available_gpus)
+
         TfEnasSearch._datasets_memo = {}
         TfEnasSearch._model_memo = None
         TfEnasSearch._loaded_vars_id_memo = None

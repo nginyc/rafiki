@@ -49,7 +49,7 @@ class PyDenseNetBc(BaseModel):
         }
 
     @staticmethod
-    def get_trial_config(trial_no, total_trials, running_trial_nos):
+    def get_trial_config(trial_no, total_trials, concurrent_trial_nos):
         t = trial_no
         t_div = total_trials
         e_base = 0.5

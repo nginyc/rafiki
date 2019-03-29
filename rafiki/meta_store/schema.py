@@ -101,7 +101,7 @@ class Trial(Base):
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     datetime_updated = Column(DateTime, nullable=False, default=generate_datetime)
-    status = Column(String, nullable=False, default=TrialStatus.STARTED)
+    status = Column(String, nullable=False, default=TrialStatus.PENDING)
     worker_id = Column(String, nullable=False)
     params_dir = Column(String, default=None)
     knobs = Column(JSON, default=None)

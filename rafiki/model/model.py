@@ -75,14 +75,14 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @staticmethod
-    def get_trial_config(trial_no: int, total_trials: int, running_trial_nos: List[int]) -> TrialConfig:
+    def get_trial_config(trial_no: int, total_trials: int, concurrent_trial_nos: List[int]) -> TrialConfig:
         '''
         Returns the configuration for a specific trial identified by its number.
         Allows for declarative scheduling and configuration of trials. 
 
         :param int trial_no: Upcoming trial no to get configuration for 
         :param int total_trials: Total no. of trials for this instance of tuning
-        :param list[int] running_trial_nos: Trial nos of other trials that are currently concurrently running 
+        :param list[int] concurrent_trial_nos: Trial nos of other trials that are currently concurrently running 
         :returns: Trial configuration for trial #`trial_no`
         :rtype: TrialConfig
         '''

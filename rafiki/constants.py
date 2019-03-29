@@ -27,6 +27,7 @@ class TrainJobStatus():
     STOPPED = 'STOPPED'
 
 class TrialStatus():
+    PENDING = 'PENDING'
     STARTED = 'STARTED'
     RUNNING = 'RUNNING'
     ERRORED = 'ERRORED'

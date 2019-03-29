@@ -417,6 +417,12 @@ class MetaStore(object):
 
         return trials
 
+    def mark_trial_as_started(self, trial):
+        trial.status = TrialStatus.STARTED
+        trial.datetime_updated = datetime.utcnow()
+        self._session.add(trial)
+        return trial
+
     def mark_trial_as_running(self, trial, knobs, shared_param_id):
         trial.status = TrialStatus.RUNNING
         trial.knobs = knobs
@@ -471,7 +477,6 @@ class MetaStore(object):
         try:
             self._session.commit()
         except Exception as e:
-            self._session.rollback()
             # Check if error is due to duplicate trial no
             if '_sub_train_job_id_no_uc' in str(e):
                 raise DuplicateTrialNoError()
