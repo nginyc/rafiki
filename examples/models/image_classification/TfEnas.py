@@ -14,10 +14,8 @@ from rafiki.advisor import Advisor, tune_model
 from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
                             FixedKnob, ListKnob, TrialConfig, SharedParams
 
-_Model = namedtuple('_Model', ['dataset_init_op',
-        'train_op', 'summary_op', 'images_ph', 'classes_ph', 'is_train_ph', 
-        'probs', 'acc', 'step', 'normal_arch_ph', 'reduction_arch_ph', 
-        'shared_var_phs', 'shared_vars_assign_op'])
+_Model = namedtuple('_Model', ['dataset_init_op', 'train_op', 'summary_op', 'images_ph', 'classes_ph', 'is_train_ph', 
+        'probs', 'corrects', 'step', 'normal_arch_ph', 'reduction_arch_ph', 'shared_var_phs', 'shared_vars_assign_op'])
 
 ENAS_SEARCH_TRAIN_EVERY_NUM_TRIALS = 300
 
@@ -95,9 +93,8 @@ class TfEnasTrain(BaseModel):
     def train(self, dataset_uri):
         num_epochs = self._knobs['trial_epochs']
         init_params_dir = self._knobs['init_params_dir']
-
-        (images, classes, self._train_params) = self._prepare_dataset(dataset_uri)
-        
+        (images, classes, self._train_params) = self._load_dataset(dataset_uri)
+          
         if not init_params_dir:
             (self._model, self._graph, self._sess, self._saver, 
                 self._monitored_values) = self._build_model()
@@ -106,27 +103,27 @@ class TfEnasTrain(BaseModel):
             self.load_parameters(init_params_dir)
         
         with self._graph.as_default():
-            self._train_summaries = self._train_model(images, classes, num_epochs)
+            self._feed_dataset_to_model(images, classes, is_train=True)
+            self._train_summaries = self._train_model(num_epochs)
             utils.logger.log('Evaluating model on train dataset...')
-            acc = self._evaluate_model(images, classes)
+            acc = self._evaluate_model()
             utils.logger.log('Train accuracy: {}'.format(acc))
 
     def evaluate(self, dataset_uri):
-        (images, classes, _) = self._prepare_dataset(dataset_uri, train_params=self._train_params)
+        (images, classes, _) = self._load_dataset(dataset_uri, train_params=self._train_params)
         with self._graph.as_default():
+            self._feed_dataset_to_model(images, classes)
             utils.logger.log('Evaluating model on validation dataset...')
-            acc = self._evaluate_model(images, classes)
+            acc = self._evaluate_model()
             utils.logger.log('Validation accuracy: {}'.format(acc))
         return acc
 
     def predict(self, queries):
         image_size = self._train_params['image_size']
-        norm_mean = self._train_params['norm_mean']
-        norm_std = self._train_params['norm_std']
         images = utils.dataset.transform_images(queries, image_size=image_size, mode='RGB')
-        (images, _, _) = utils.dataset.normalize_images(images, norm_mean, norm_std)
         with self._graph.as_default():
-            probs = self._predict_with_model(images)
+            self._feed_dataset_to_model(images)
+            probs = self._predict_with_model()
         return probs.tolist()
 
     def save_parameters(self, params_dir):
@@ -168,25 +165,6 @@ class TfEnasTrain(BaseModel):
     # Private methods
     ####################################
 
-    def _prepare_dataset(self, dataset_uri, train_params=None):
-        # TODO: Optimize
-        (images, classes, image_size, num_classes) = self._load_dataset(dataset_uri, train_params)
-        if train_params is None:
-            (images, norm_mean, norm_std) = utils.dataset.normalize_images(images)
-            train_params = {
-                'N': len(images),
-                'image_size': image_size,
-                'K': num_classes,
-                'norm_mean': norm_mean,
-                'norm_std': norm_std
-            }
-            return (images, classes, train_params)
-        else:
-            norm_mean = train_params['norm_mean']
-            norm_std = train_params['norm_std']
-            (images, _, _) = utils.dataset.normalize_images(images, mean=norm_mean, std=norm_std)
-            return (images, classes, train_params)
-
     def _load_dataset(self, dataset_uri, train_params=None):
         max_image_size = self._knobs['max_image_size']
         image_size = train_params['image_size'] if train_params is not None else max_image_size
@@ -195,7 +173,18 @@ class TfEnasTrain(BaseModel):
         dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=image_size, 
                                                             mode='RGB')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-        return (images, classes, dataset.image_size, dataset.classes)
+        norm_mean = np.mean(images, axis=(0, 1, 2)).tolist() 
+        norm_std = np.std(images, axis=(0, 1, 2)).tolist()  
+          
+        train_params = {
+            'N': len(images),
+            'image_size': dataset.image_size,
+            'K': dataset.classes,
+            'norm_mean': norm_mean,
+            'norm_std': norm_std
+        }
+        
+        return (images, classes, train_params)
 
     def _build_model(self):
         w = self._train_params['image_size']
@@ -222,10 +211,8 @@ class TfEnasTrain(BaseModel):
                 self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
             (logits, aux_logits_list) = self._forward(X, step, normal_arch, reduction_arch, is_train_ph)
             
-            # Compute probabilities, predictions, accuracy
-            probs = tf.nn.softmax(logits)
-            preds = tf.argmax(logits, axis=1, output_type=tf.int32)
-            acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
+            # Compute predictions
+            (probs, corrects) = self._compute_predictions(logits, classes)
 
             # Compute training loss
             total_loss = self._compute_loss(logits, aux_logits_list, classes)
@@ -246,8 +233,8 @@ class TfEnasTrain(BaseModel):
             # Make session
             sess = self._make_session()
 
-        model = _Model(dataset_init_op, train_op, summary_op, 
-                    images_ph, classes_ph, is_train_ph, probs, acc, step, None, None, None, None)
+        model = _Model(dataset_init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, 
+                        probs, corrects, step, None, None, None, None)
 
         return (model, graph, sess, saver, monitored_values)
 
@@ -351,6 +338,8 @@ class TfEnasTrain(BaseModel):
     def _preprocess(self, images, classes, is_train, w, h, in_ch):
         batch_size = self._knobs['batch_size']
         cutout_size = self._knobs['cutout_size']
+        image_norm_mean = self._train_params['norm_mean']
+        image_norm_std = self._train_params['norm_std']
 
         # Do random crop + horizontal flip for each train image
         def _preprocess_train_image(image):
@@ -365,11 +354,16 @@ class TfEnasTrain(BaseModel):
         
         def _preprocess(image, clazz):
             image = tf.cond(is_train, lambda: _preprocess_train_image(image), lambda: image)
-            image = tf.cast(image, tf.float32)
             return (image, clazz)
+
+        # Bulk preprocessing of images
+        images = tf.cast(images, tf.float32)
+        images = (images - image_norm_mean) / image_norm_std # Normalize
+        images = images / 255 # Convert to [0, 1]
 
         # Create TF dataset
         dataset = tf.data.Dataset.from_tensor_slices((images, classes))
+        dataset = dataset.repeat()
         dataset = dataset.apply(tf.data.experimental.map_and_batch(map_func=_preprocess, batch_size=batch_size))
         dataset = dataset.prefetch(batch_size)
         dataset_itr = dataset.make_initializable_iterator()
@@ -429,7 +423,18 @@ class TfEnasTrain(BaseModel):
         sess.run(tf.global_variables_initializer())
         return sess
 
-    def _train_model(self, images, classes, num_epochs):
+    def _feed_dataset_to_model(self, images, classes=None, is_train=False):
+        m = self._model
+        
+        # Initialize dataset (mock classes if required)
+        utils.logger.log('Feeding dataset to model...')
+        self._sess.run(m.dataset_init_op, feed_dict={
+            m.images_ph: images, 
+            m.classes_ph: classes if classes is not None else np.zeros((len(images),)),
+            m.is_train_ph: is_train
+        })
+
+    def _train_model(self, num_epochs):
         m = self._model
 
         # Define plots for monitored values
@@ -441,14 +446,14 @@ class TfEnasTrain(BaseModel):
         log_condition = TimedRepeatCondition()
         for epoch in range(num_epochs):
             utils.logger.log('Running epoch {}...'.format(epoch))
-            stepper = self._feed_dataset_to_model(images, [m.train_op, m.summary_op, m.acc, m.step, *self._monitored_values.values()], 
-                                                is_train=True, classes=classes)
+            stepper = self._get_dataset_iterator([m.train_op, m.summary_op, m.corrects, m.step, *self._monitored_values.values()], 
+                                                is_train=True)
 
             # To track mean batch accuracy
-            accs = []
-            for (_, summary, batch_acc, batch_steps, *values) in stepper:
+            corrects = []
+            for (_, summary, batch_corrects, batch_steps, *values) in stepper:
                 train_summaries.append((batch_steps, summary))
-                accs.append(batch_acc)
+                corrects.extend(batch_corrects)
 
                 # Periodically, log monitored values
                 if log_condition.check():
@@ -456,42 +461,39 @@ class TfEnasTrain(BaseModel):
                         **{ name: v for (name, v) in zip(self._monitored_values.keys(), values) })
 
             # Log mean batch accuracy and epoch
-            mean_acc = np.mean(accs)
+            mean_acc = np.mean(corrects)
             utils.logger.log(epoch=epoch, mean_acc=mean_acc)
 
         return train_summaries
 
-    def _evaluate_model(self, images, classes):
-        probs = self._predict_with_model(images)
-        preds = np.argmax(probs, axis=1)
-        acc = np.mean(preds == np.asarray(classes))
+    def _evaluate_model(self):
+        m = self._model
+
+        corrects = []
+        stepper = self._get_dataset_iterator([m.corrects])
+        for (batch_corrects,) in stepper:
+            corrects.extend(batch_corrects)
+
+        acc = np.mean(corrects)
         return acc
 
-    def _predict_with_model(self, images):
+    def _predict_with_model(self):
         m = self._model
+
         all_probs = []
-        stepper = self._feed_dataset_to_model(images, [m.probs])
+        stepper = self._get_dataset_iterator([m.probs])
         for (batch_probs,) in stepper:
             all_probs.extend(batch_probs)
+        all_probs = np.asarray(all_probs)
 
-        return np.asarray(all_probs)
+        return all_probs
 
-    def _feed_dataset_to_model(self, images, run_ops, is_train=False, classes=None):
+    def _get_dataset_iterator(self, run_ops, is_train=False):
+        batch_size = self._knobs['batch_size']
+        N = self._train_params['N']
+        steps_per_epoch = math.ceil(N / batch_size)
         m = self._model
-        
-        # Shuffle dataset if training
-        if is_train:
-            zipped = list(zip(images, classes))
-            random.shuffle(zipped)
-            (images, classes) = zip(*zipped)
-    
-        # Initialize dataset (mock classes if required)
-        self._sess.run(m.dataset_init_op, feed_dict={
-            m.images_ph: images, 
-            m.classes_ph: classes if classes is not None else np.zeros((len(images),)),
-            m.is_train_ph: is_train
-        })
-
+ 
         # Feed architectures if placeholders are present
         if m.normal_arch_ph is not None and m.reduction_arch_ph is not None:
             (normal_arch, reduction_arch) = self._get_arch()
@@ -505,12 +507,9 @@ class TfEnasTrain(BaseModel):
                 m.is_train_ph: is_train
             }
 
-        while True:
-            try:
-                results = self._sess.run(run_ops, feed_dict=feed_dict)
-                yield results
-            except tf.errors.OutOfRangeError:
-                break
+        for _ in range(steps_per_epoch):
+            results = self._sess.run(run_ops, feed_dict=feed_dict)
+            yield results
 
     def _get_arch(self):
         use_cell_arch_type = self._knobs['use_cell_arch_type']
@@ -592,6 +591,12 @@ class TfEnasTrain(BaseModel):
             aux_logits = self._add_fully_connected(X, (ch,), K, no_reg=True)
 
         return aux_logits
+
+    def _compute_predictions(self, logits, classes):
+        probs = tf.nn.softmax(logits)
+        preds = tf.argmax(logits, axis=1, output_type=tf.int32)
+        corrects = tf.equal(preds, classes)
+        return (probs, corrects)
 
     def _compute_loss(self, logits, aux_logits_list, classes):
         reg_decay = self._knobs['reg_decay']
@@ -1000,6 +1005,7 @@ class TfEnasSearch(TfEnasTrain):
     _datasets_memo = {} # { <dataset_uri> -> <dataset> }
     _model_memo = None # of class `_MemoModel`
     _loaded_vars_id_memo = None # ID of vars loaded, if no training has happened
+    _loaded_dataset_memo = None # Dataset (<dataset_uri>, <is_train>) loaded into the graph
 
     @staticmethod
     def get_trial_config(trial_no, total_trials, concurrent_trial_nos):
@@ -1067,7 +1073,7 @@ class TfEnasSearch(TfEnasTrain):
 
     def train(self, dataset_uri):
         num_epochs = self._knobs['trial_epochs']
-        (images, classes, self._train_params) = self._prepare_dataset(dataset_uri)
+        (images, classes, self._train_params) = self._load_dataset(dataset_uri)
         (self._model, self._graph, self._sess, self._saver, 
             self._monitored_values) = self._build_model()
         
@@ -1075,10 +1081,29 @@ class TfEnasSearch(TfEnasTrain):
             self._maybe_load_shared_vars(self._shared_params, num_epochs)
             self._train_summaries = []
             if num_epochs == 0:
-                utils.logger.log('Skipping training...')
+                # Skipping training
                 return
 
-            self._train_summaries = self._train_model(images, classes, num_epochs)
+            self._feed_dataset_to_model(images, classes, dataset_uri=dataset_uri, is_train=True)
+            self._train_summaries = self._train_model(num_epochs)
+
+    def evaluate(self, dataset_uri):
+        (images, classes, _) = self._load_dataset(dataset_uri, train_params=self._train_params)
+        with self._graph.as_default():
+            self._feed_dataset_to_model(images, classes, dataset_uri=dataset_uri)
+            utils.logger.log('Evaluating model on validation dataset...')
+            acc = self._evaluate_model()
+            utils.logger.log('Validation accuracy: {}'.format(acc))
+        return acc
+
+    def _feed_dataset_to_model(self, images, classes, dataset_uri=None, is_train=False):
+        if dataset_uri is None or TfEnasSearch._loaded_dataset_memo != (dataset_uri, is_train):
+            # To load new dataset
+            super()._feed_dataset_to_model(images, classes, is_train=is_train)
+            TfEnasSearch._loaded_dataset_memo = (dataset_uri, is_train)
+        else:
+            # Otherwise, dataset has previously been loaded, so do nothing
+            pass
 
     def get_shared_parameters(self):
         num_epochs = self._knobs['trial_epochs']
@@ -1107,7 +1132,6 @@ class TfEnasSearch(TfEnasTrain):
     def _load_dataset(self, dataset_uri, train_params=None):
         # Try to use memoized dataset
         if dataset_uri in TfEnasSearch._datasets_memo:
-            utils.logger.log('Using memoized dataset...')
             dataset = TfEnasSearch._datasets_memo[dataset_uri]
             return dataset
 
@@ -1122,7 +1146,7 @@ class TfEnasSearch(TfEnasTrain):
         # If shared vars has been loaded in previous trial, don't bother loading again
         shared_vars_id = shared_vars['id']
         if TfEnasSearch._loaded_vars_id_memo == shared_vars_id:
-            utils.logger.log('Skipping loading of shared variables...')
+            pass # Skipping loading of shared variables
         else:
             self._load_shared_vars(shared_vars)
 
@@ -1150,7 +1174,6 @@ class TfEnasSearch(TfEnasTrain):
     def _build_model(self):
         # Use memoized graph when possible
         if self._if_model_same(TfEnasSearch._model_memo):
-            utils.logger.log('Using previously built model...')
             model_memo = TfEnasSearch._model_memo
             return (model_memo.model, model_memo.graph, model_memo.sess, model_memo.saver, 
                     model_memo.monitored_values)
@@ -1181,10 +1204,8 @@ class TfEnasSearch(TfEnasTrain):
                 self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
             (logits, aux_logits_list) = self._forward(X, step, normal_arch_ph, reduction_arch_ph, is_train_ph)
             
-            # Compute probabilities, predictions, accuracy
-            probs = tf.nn.softmax(logits)
-            preds = tf.argmax(logits, axis=1, output_type=tf.int32)
-            acc = tf.reduce_mean(tf.cast(tf.equal(preds, classes), tf.float32))
+            # Compute predictions
+            (probs, corrects) = self._compute_predictions(logits, classes)
 
             # Compute training loss
             total_loss = self._compute_loss(logits, aux_logits_list, classes)
@@ -1209,9 +1230,9 @@ class TfEnasSearch(TfEnasTrain):
             # Make session
             sess = self._make_session()
 
-        model = _Model(dataset_init_op, train_op, summary_op, 
-                        images_ph, classes_ph, is_train_ph, probs, acc, step, normal_arch_ph, 
-                        reduction_arch_ph, shared_var_phs, shared_vars_assign_op)
+        model = _Model(dataset_init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, 
+                        probs, corrects, step, normal_arch_ph, reduction_arch_ph, shared_var_phs, 
+                        shared_vars_assign_op)
 
         TfEnasSearch._model_memo = _ModelMemo(
             self._train_params, self._knobs, graph, sess,
