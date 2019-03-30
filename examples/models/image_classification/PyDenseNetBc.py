@@ -63,6 +63,7 @@ class PyDenseNetBc(BaseModel):
     
     @staticmethod
     def setup(available_gpus):
+        # TODO: Fix race condition on GPU 
         # Make sure there is at least 1 GPU with enough memory, otherwise to use CPU
         memory_needed = 4 * 1024 # 4GB memory
         available_gpus = [x for x in available_gpus if x.memory_free >= memory_needed]

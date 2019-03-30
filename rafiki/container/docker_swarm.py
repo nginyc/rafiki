@@ -31,6 +31,7 @@ class DockerSwarmContainerManager(ContainerManager):
                                 args, environment_vars, mounts, publish_port)
         info = {
             'node_id': deployment.node_id,
+            'gpu_nos': deployment.gpu_nos,
             'service_name': service_name,
             'replicas': replicas
         }
@@ -50,7 +51,8 @@ class DockerSwarmContainerManager(ContainerManager):
     def destroy_service(self, service: ContainerService):
         self._destroy_sevice(service.id)
         node_id = service.info['node_id']
-        deployment = _Deployment(node_id)
+        gpu_nos = service.info['gpu_nos']
+        deployment = _Deployment(node_id, gpu_nos)
         self._unmark_deployment(deployment)
         logger.info('Deleted service of ID "{}"'.format(service.id))
 
