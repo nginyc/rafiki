@@ -82,10 +82,6 @@ class TfEnasTrain(BaseModel):
             'init_params_dir': FixedKnob('') # Params directory to resume training from
         }
 
-    @staticmethod
-    def setup(available_gpus):
-        utils.logger.log('Available GPUs: {}'.format(available_gpus))
-
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
@@ -103,18 +99,16 @@ class TfEnasTrain(BaseModel):
             self.load_parameters(init_params_dir)
         
         with self._graph.as_default():
-            self._feed_dataset_to_model(images, classes, is_train=True)
-            self._train_summaries = self._train_model(num_epochs)
+            self._train_summaries = self._train_model(images, classes, num_epochs)
             utils.logger.log('Evaluating model on train dataset...')
-            acc = self._evaluate_model()
+            acc = self._evaluate_model(images, classes)
             utils.logger.log('Train accuracy: {}'.format(acc))
 
     def evaluate(self, dataset_uri):
         (images, classes, _) = self._load_dataset(dataset_uri, train_params=self._train_params)
         with self._graph.as_default():
-            self._feed_dataset_to_model(images, classes)
             utils.logger.log('Evaluating model on validation dataset...')
-            acc = self._evaluate_model()
+            acc = self._evaluate_model(images, classes, dataset_uri=dataset_uri)
             utils.logger.log('Validation accuracy: {}'.format(acc))
         return acc
 
@@ -122,8 +116,7 @@ class TfEnasTrain(BaseModel):
         image_size = self._train_params['image_size']
         images = utils.dataset.transform_images(queries, image_size=image_size, mode='RGB')
         with self._graph.as_default():
-            self._feed_dataset_to_model(images)
-            probs = self._predict_with_model()
+            probs = self._predict_with_model(images)
         return probs.tolist()
 
     def save_parameters(self, params_dir):
@@ -422,7 +415,7 @@ class TfEnasTrain(BaseModel):
         sess.run(tf.global_variables_initializer())
         return sess
 
-    def _feed_dataset_to_model(self, images, classes=None, is_train=False):
+    def _feed_dataset_to_model(self, images, classes=None, dataset_uri=None, is_train=False):
         m = self._model
         
         # Initialize dataset (mock classes if required)
@@ -433,8 +426,11 @@ class TfEnasTrain(BaseModel):
             m.is_train_ph: is_train
         })
 
-    def _train_model(self, num_epochs):
+    def _train_model(self, images, classes, num_epochs, dataset_uri=None):
         m = self._model
+        N = len(images)
+
+        self._feed_dataset_to_model(images, classes, dataset_uri=dataset_uri, is_train=True)
 
         # Define plots for monitored values
         for (name, _) in self._monitored_values.items():
@@ -445,7 +441,7 @@ class TfEnasTrain(BaseModel):
         log_condition = TimedRepeatCondition()
         for epoch in range(num_epochs):
             utils.logger.log('Running epoch {}...'.format(epoch))
-            stepper = self._get_dataset_iterator([m.train_op, m.summary_op, m.corrects, m.step, *self._monitored_values.values()], 
+            stepper = self._get_dataset_iterator(N, [m.train_op, m.summary_op, m.corrects, m.step, *self._monitored_values.values()], 
                                                 is_train=True)
 
             # To track mean batch accuracy
@@ -465,31 +461,36 @@ class TfEnasTrain(BaseModel):
 
         return train_summaries
 
-    def _evaluate_model(self):
+    def _evaluate_model(self, images, classes, dataset_uri=None):
         m = self._model
+        N = len(images)
+
+        self._feed_dataset_to_model(images, classes, dataset_uri=dataset_uri)
 
         corrects = []
-        stepper = self._get_dataset_iterator([m.corrects])
+        stepper = self._get_dataset_iterator(N, [m.corrects])
         for (batch_corrects,) in stepper:
             corrects.extend(batch_corrects)
 
         acc = np.mean(corrects)
         return acc
 
-    def _predict_with_model(self):
+    def _predict_with_model(self, images):
         m = self._model
+        N = len(images)
+
+        self._feed_dataset_to_model(images)
 
         all_probs = []
-        stepper = self._get_dataset_iterator([m.probs])
+        stepper = self._get_dataset_iterator(N, [m.probs])
         for (batch_probs,) in stepper:
             all_probs.extend(batch_probs)
         all_probs = np.asarray(all_probs)
 
         return all_probs
 
-    def _get_dataset_iterator(self, run_ops, is_train=False):
+    def _get_dataset_iterator(self, N, run_ops, is_train=False):
         batch_size = self._knobs['batch_size']
-        N = self._train_params['N']
         steps_per_epoch = math.ceil(N / batch_size)
         m = self._model
  
@@ -1050,9 +1051,7 @@ class TfEnasSearch(TfEnasTrain):
                                 should_save=False)
 
     @staticmethod
-    def setup(available_gpus):
-        TfEnasTrain.setup(available_gpus)
-
+    def setup():
         TfEnasSearch._datasets_memo = {}
         TfEnasSearch._model_memo = None
         TfEnasSearch._loaded_vars_id_memo = None
@@ -1083,22 +1082,20 @@ class TfEnasSearch(TfEnasTrain):
                 # Skipping training
                 return
 
-            self._feed_dataset_to_model(images, classes, dataset_uri=dataset_uri, is_train=True)
-            self._train_summaries = self._train_model(num_epochs)
+            self._train_summaries = self._train_model(images, classes, num_epochs, dataset_uri=dataset_uri)
 
     def evaluate(self, dataset_uri):
         (images, classes, _) = self._load_dataset(dataset_uri, train_params=self._train_params)
         with self._graph.as_default():
-            self._feed_dataset_to_model(images, classes, dataset_uri=dataset_uri)
             utils.logger.log('Evaluating model on validation dataset...')
-            acc = self._evaluate_model()
+            acc = self._evaluate_model(images, classes, dataset_uri=dataset_uri)
             utils.logger.log('Validation accuracy: {}'.format(acc))
         return acc
 
     def _feed_dataset_to_model(self, images, classes, dataset_uri=None, is_train=False):
         if dataset_uri is None or TfEnasSearch._loaded_dataset_memo != (dataset_uri, is_train):
             # To load new dataset
-            super()._feed_dataset_to_model(images, classes, is_train=is_train)
+            super()._feed_dataset_to_model(images, classes, dataset_uri=dataset_uri, is_train=is_train)
             TfEnasSearch._loaded_dataset_memo = (dataset_uri, is_train)
         else:
             # Otherwise, dataset has previously been loaded, so do nothing

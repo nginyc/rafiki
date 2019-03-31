@@ -74,8 +74,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
 
     # Setup model class
     print('Running model class setup...')
-    available_gpus = get_available_gpus()
-    py_model_class.setup(available_gpus)
+    py_model_class.setup()
 
     # For every trial
     for i in range(1, total_trials + 1):
@@ -233,12 +232,6 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
     _info('The model definition is valid!')
 
     return model_inst
-
-def get_available_gpus():
-    gpus = GPUtil.getGPUs()
-    gpus = [AvailableGpu(x.id, x.memoryFree) for x in gpus]
-    gpus.sort(key=lambda x: x.memory_free, reverse=True)
-    return gpus
 
 _Params = namedtuple('_Param', ('param_id', 'score', 'time'))
 

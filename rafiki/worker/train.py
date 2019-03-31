@@ -10,7 +10,7 @@ from rafiki.utils.auth import make_superadmin_client
 from rafiki.client import Client
 from rafiki.constants import BudgetType, TrainJobStatus, TrialStatus, ServiceStatus
 from rafiki.meta_store import MetaStore, DuplicateTrialNoError
-from rafiki.advisor import SharedParamsMonitor, get_available_gpus
+from rafiki.advisor import SharedParamsMonitor
 from rafiki.model import BaseModel, load_model_class, serialize_knob_config, logger as model_logger, TrialConfig
 from rafiki.param_store import ParamStore
 
@@ -74,9 +74,7 @@ class TrainWorker(object):
                 # Setup model if not
                 if not has_setup:
                     logger.info('Running model class setup...')
-                    # TODO: Fix race condition on free GPU memory
-                    available_gpus = get_available_gpus()
-                    clazz.setup(available_gpus)
+                    clazz.setup()
                     has_setup = True
 
                 # Wait for trial to become valid

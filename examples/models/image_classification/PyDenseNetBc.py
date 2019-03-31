@@ -26,7 +26,6 @@ class PyDenseNetBc(BaseModel):
 
     Credits to https://github.com/gpleiss/efficient_densenet_pytorch
     '''
-    _gpu = None
 
     def __init__(self, shared_params, **knobs):
         self._knobs = knobs
@@ -61,18 +60,6 @@ class PyDenseNetBc(BaseModel):
         else:
             return TrialConfig(shared_params=SharedParams.GLOBAL_BEST)
     
-    @staticmethod
-    def setup(available_gpus):
-        # TODO: Fix race condition on GPU 
-        # Make sure there is at least 1 GPU with enough memory, otherwise to use CPU
-        memory_needed = 4 * 1024 # 4GB memory
-        available_gpus = [x for x in available_gpus if x.memory_free >= memory_needed]
-        utils.logger.log('Available GPUs: {}'.format(available_gpus))
-        if len(available_gpus) > 0:
-            gpu = available_gpus[0]
-            utils.logger.log('Using GPU #{}...'.format(gpu.id))
-            PyDenseNetBc._gpu = gpu
-
     def train(self, dataset_uri):
         (train_dataset, train_val_dataset, self._train_params) = self._load_train_dataset(dataset_uri)
         self._model = self._build_model()
@@ -321,9 +308,8 @@ class PyDenseNetBc(BaseModel):
         return max_trial_epochs
 
     def _set_device(self, tensors):
-        gpu = PyDenseNetBc._gpu
-        if gpu is not None:
-            return [x.cuda(gpu.id) for x in tensors]
+        if torch.cuda.is_available():
+            return [x.cuda() for x in tensors]
         else:            
             return tensors
 
