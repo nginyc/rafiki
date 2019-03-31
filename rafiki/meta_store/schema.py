@@ -15,25 +15,6 @@ def generate_uuid():
 def generate_datetime():
     return datetime.utcnow()
 
-class InferenceJob(Base):
-    __tablename__ = 'inference_job'
-
-    id = Column(String, primary_key=True, default=generate_uuid)
-    status = Column(String, nullable=False, default=InferenceJobStatus.STARTED)
-    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
-    train_job_id = Column(String, ForeignKey('train_job.id'))
-    user_id = Column(String, ForeignKey('user.id'), nullable=False)
-    predictor_service_id = Column(String, ForeignKey('service.id'))
-    datetime_stopped = Column(DateTime, default=None)
-
-class SubInferenceJob(Base):
-    __tablename__ = 'sub_inference_job'
-
-    id = Column(String, primary_key=True, default=generate_uuid)
-    inference_job_id = Column(String, ForeignKey('inference_job.id'))
-    trial_id = Column(String, ForeignKey('trial.id'), nullable=False)
-    service_id = Column(String, ForeignKey('service.id'), default=None)
-
 class Model(Base):
     __tablename__ = 'model'
 
@@ -58,7 +39,8 @@ class Service(Base):
     status = Column(String, nullable=False, default=ServiceStatus.STARTED)
     docker_image = Column(String, nullable=False)
     container_manager_type = Column(String, nullable=False)
-    replicas = Column(Integer, default=0)
+    gpus = Column(Integer, nullable=False)
+    replicas = Column(Integer, nullable=False)
     ext_hostname = Column(String)
     ext_port = Column(Integer)
     hostname = Column(String)
@@ -91,6 +73,37 @@ class SubTrainJob(Base):
     model_id = Column(String, ForeignKey('model.id'))
     service_id = Column(String, ForeignKey('service.id'), default=None)
     config = Column(JSON, nullable=False)
+
+class SubTrainJobWorker(Base):
+    __tablename__ = 'sub_train_job_worker'
+
+    service_id = Column(String, ForeignKey('service.id'), primary_key=True)
+    sub_train_job_id = Column(String, ForeignKey('sub_train_job.id'))
+
+class InferenceJob(Base):
+    __tablename__ = 'inference_job'
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    status = Column(String, nullable=False, default=InferenceJobStatus.STARTED)
+    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
+    train_job_id = Column(String, ForeignKey('train_job.id'))
+    user_id = Column(String, ForeignKey('user.id'), nullable=False)
+    predictor_service_id = Column(String, ForeignKey('service.id'))
+    datetime_stopped = Column(DateTime, default=None)
+
+class SubInferenceJob(Base):
+    __tablename__ = 'sub_inference_job'
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    inference_job_id = Column(String, ForeignKey('inference_job.id'))
+    trial_id = Column(String, ForeignKey('trial.id'), nullable=False)
+    service_id = Column(String, ForeignKey('service.id'), default=None)
+
+class SubInferenceJobWorker(Base):
+    __tablename__ = 'sub_inference_job_worker'
+
+    service_id = Column(String, ForeignKey('service.id'), primary_key=True)
+    sub_inference_job_id = Column(String, ForeignKey('sub_inference_job.id'))
 
 class Trial(Base):
     __tablename__ = 'trial'

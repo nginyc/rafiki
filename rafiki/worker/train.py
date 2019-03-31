@@ -19,9 +19,7 @@ logger = logging.getLogger(__name__)
 INVALID_TRIAL_SLEEP_SECS = 10
 NO_NEXT_TRIAL_SLEEP_SECS = 5 * 60
 
-class InvalidTrainJobError(Exception): pass
-class InvalidSubTrainJobError(Exception): pass
-class InvalidModelError(Exception): pass
+class InvalidWorkerError(Exception): pass
 class InvalidBudgetTypeError(Exception): pass
 
 _JobInfo = namedtuple('_JobInfo', ['sub_train_job_id', 'sub_train_job_config', 'train_dataset_uri', 
@@ -64,6 +62,7 @@ class TrainWorker(object):
             if trial_no is None: # When there are no trials to conduct
                 logger.info('Budget for sub train job has reached')
                 self._client.send_event('sub_train_job_budget_reached', sub_train_job_id=sub_train_job_id)
+                break
 
             # Perform trial & record results
             try:
@@ -370,17 +369,21 @@ class _SubTrainJobMonitor():
 
         logger.info('Reading job info from store...')
         with self._meta_store:
-            sub_train_job = self._meta_store.get_sub_train_job_by_service(service_id)
+            worker = self._meta_store.get_sub_train_job_worker(service_id)
+            if worker is None:
+                raise InvalidWorkerError('No such worker with service ID "{}"'.format(service_id))
+
+            sub_train_job = self._meta_store.get_sub_train_job(worker.sub_train_job_id)
             if sub_train_job is None:
-                raise InvalidSubTrainJobError()
+                raise InvalidWorkerError('No such sub train job with ID "{}"'.format(worker.sub_train_job_id))
 
             train_job = self._meta_store.get_train_job(sub_train_job.train_job_id)
             if train_job is None:
-                raise InvalidTrainJobError()
+                raise InvalidWorkerError('No such train job with ID "{}"'.format(sub_train_job.train_job_id))
 
             model = self._meta_store.get_model(sub_train_job.model_id)
             if model is None:
-                raise InvalidModelError()
+                raise InvalidWorkerError('No such model with ID "{}"'.format(sub_train_job.model_id))
 
             self.job_info = _JobInfo(sub_train_job.id, sub_train_job.config,
                                 train_job.train_dataset_uri, train_job.val_dataset_uri,

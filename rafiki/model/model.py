@@ -89,7 +89,7 @@ class BaseModel(abc.ABC):
         return TrialConfig()
 
     @staticmethod
-    def setup(available_gpus: List[AvailableGpu] = []):
+    def setup():
         '''
         Runs class-wide setup logic (e.g. initialize a graph/session shared across trials).
         '''

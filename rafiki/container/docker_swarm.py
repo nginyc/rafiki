@@ -5,8 +5,7 @@ import docker
 import logging
 from collections import namedtuple
 
-from .container_manager import ContainerManager, ServiceRequirement, \
-                                InvalidServiceRequestError, ContainerService
+from .container_manager import ContainerManager, InvalidServiceRequestError, ContainerService
 
 LABEL_AVAILBLE_GPUS = 'available_gpus'
 LABEL_NUM_SERVICES = 'num_services'
@@ -24,8 +23,9 @@ class DockerSwarmContainerManager(ContainerManager):
 
     def create_service(self, service_name, docker_image, replicas, 
                         args, environment_vars, mounts={}, publish_port=None,
-                        requirements=[]) -> ContainerService:
-        deployment = self._get_deployment(requirements)
+                        gpus=0) -> ContainerService:
+
+        deployment = self._get_deployment(gpus)
         (service_id, hostname, port) \
             = self._create_service(deployment, service_name, docker_image, replicas, 
                                 args, environment_vars, mounts, publish_port)
@@ -41,13 +41,6 @@ class DockerSwarmContainerManager(ContainerManager):
         logger.info('Created service of ID "{}" with info {}'.format(service.id, service.info))
         return service
 
-    def update_service(self, service: ContainerService, replicas):
-        docker_service = self._client.services.get(service.id)
-        docker_service.scale(replicas)
-
-        logger.info('Updated service of ID "{}" to {} replicas' \
-            .format(service.id, replicas))
-
     def destroy_service(self, service: ContainerService):
         self._destroy_sevice(service.id)
         node_id = service.info['node_id']
@@ -56,39 +49,45 @@ class DockerSwarmContainerManager(ContainerManager):
         self._unmark_deployment(deployment)
         logger.info('Deleted service of ID "{}"'.format(service.id))
 
-    def _get_deployment(self, requirements) -> _Deployment:
+    def _get_deployment(self, gpus) -> _Deployment:
         nodes = self._get_nodes()
+        print(nodes)
         
         # Filter nodes with GPU if required
-        if ServiceRequirement.GPU in requirements:
-            nodes = [x for x in nodes if len(x.available_gpus) > 0]
+        if gpus > 0:
+            nodes = [x for x in nodes if len(x.available_gpus) >= gpus]
         
         if len(nodes) == 0:
-            raise InvalidServiceRequestError('There are no valid nodes to deploy the service on')
+            raise InvalidServiceRequestError('There are no valid nodes with at least {} gpus to deploy service'.format(gpus))
         
         # Choose the node with fewest services
         (_, node) = sorted([(x.num_services, x) for x in nodes])[0]
 
-        deployment = _Deployment(node.id, node.available_gpus)
+        # Assign GPUs
+        gpu_nos = node.available_gpus[:gpus]
+
+        deployment = _Deployment(node.id, gpu_nos)
         return deployment
 
     def _mark_deployment(self, deployment):
         node_id = deployment.node_id
 
-        # Update num services on node
+        # Update num services and GPUs available for node
         node = self._get_node(node_id)
         num_services = node.num_services + 1
+        available_gpus = [x for x in node.available_gpus if x not in deployment.gpu_nos]
 
-        self._update_node(node_id, num_services)
+        self._update_node(node_id, num_services, available_gpus)
 
     def _unmark_deployment(self, deployment):
         node_id = deployment.node_id
         
-        # Update num services on node
+        # Update num services and GPUs available for node
         node = self._get_node(node_id)
         num_services = max(0, node.num_services - 1)
+        available_gpus = list(set(node.available_gpus + deployment.gpu_nos))
 
-        self._update_node(node_id, num_services)
+        self._update_node(node_id, num_services, available_gpus)
 
     def _destroy_sevice(self, service_id):
         service = self._client.services.get(service_id)
@@ -169,7 +168,7 @@ class DockerSwarmContainerManager(ContainerManager):
         num_services = int(spec_labels.get(LABEL_NUM_SERVICES, 0))
         return _Node(docker_node.id, available_gpus, num_services)
 
-    def _update_node(self, node_id, num_services):
+    def _update_node(self, node_id, num_services, available_gpus):
         docker_node = self._client.nodes.get(node_id)
         spec = docker_node.attrs.get('Spec', {})
         spec_labels = spec.get('Labels', {})
@@ -177,6 +176,7 @@ class DockerSwarmContainerManager(ContainerManager):
             **spec,
             'Labels': {
                 **spec_labels,
-                LABEL_NUM_SERVICES: str(num_services)
+                LABEL_NUM_SERVICES: str(num_services),
+                LABEL_AVAILBLE_GPUS: ','.join([str(x) for x in available_gpus])
             }
         })

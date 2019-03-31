@@ -9,7 +9,7 @@ from rafiki.constants import BudgetType, TaskType, ModelDependency
 
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
 
-def train_densenet(client, enable_gpu, full):
+def train_densenet(client, gpus, full):
     total_trials = 10 if not full else 100 
 
     app_id = gen_id()
@@ -37,7 +37,7 @@ def train_densenet(client, enable_gpu, full):
         val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
         budget={ 
             BudgetType.MODEL_TRIAL_COUNT: total_trials,
-            BudgetType.ENABLE_GPU: 1 if enable_gpu else 0
+            BudgetType.GPU_COUNT: gpus
         },
         models={
             model_name: {
@@ -51,7 +51,7 @@ def train_densenet(client, enable_gpu, full):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--full', action='store_true', help='Whether to do training for its full duration/capacity')
-    parser.add_argument('--enable_gpu', action='store_true', help='Whether to use GPU')
+    parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
     parser.add_argument('--host', type=str, default=os.environ.get('RAFIKI_ADDR'), help='Host of Rafiki instance')
     parser.add_argument('--admin_port', type=int, default=os.environ.get('ADMIN_EXT_PORT'), help='Port for Rafiki Admin on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
@@ -62,4 +62,4 @@ if __name__ == '__main__':
     client = Client(admin_host=args.host, admin_port=args.admin_port)
     client.login(email=args.email, password=args.password)
 
-    train_densenet(client, args.enable_gpu, args.full)
+    train_densenet(client, args.gpus, args.full)
