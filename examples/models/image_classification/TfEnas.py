@@ -365,7 +365,6 @@ class TfEnasTrain(BaseModel):
         dataset = tf.data.Dataset.from_tensor_slices((images, classes))
         dataset = dataset.repeat()
         dataset = dataset.apply(tf.data.experimental.map_and_batch(map_func=_preprocess, batch_size=batch_size))
-        dataset = dataset.prefetch(batch_size)
         dataset_itr = dataset.make_initializable_iterator()
         (X, classes) = dataset_itr.get_next()
         dataset_init_op = dataset_itr.initializer
