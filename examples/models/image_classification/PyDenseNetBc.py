@@ -27,9 +27,9 @@ class PyDenseNetBc(BaseModel):
     Credits to https://github.com/gpleiss/efficient_densenet_pytorch
     '''
 
-    def __init__(self, shared_params, **knobs):
+    def __init__(self, **knobs):
         self._knobs = knobs
-        self._shared_params = shared_params
+        self._shared_params = {}
 
     @staticmethod
     def get_knob_config():
@@ -117,6 +117,13 @@ class PyDenseNetBc(BaseModel):
         params['step'] = np.asarray(step)
 
         return params
+
+    def set_shared_parameters(self, shared_params):
+        self._shared_params = shared_params
+
+    ####################################
+    # Private methods
+    ####################################
 
     def _load_shared_parameters(self, params):
         (net, step) = self._model

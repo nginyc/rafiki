@@ -168,7 +168,9 @@ class TrainWorker(object):
 
         # Initialize & train model
         logger.info('Training model...')
-        model_inst = clazz(shared_params, **knobs)
+        model_inst = clazz(**knobs)
+        if len(shared_params) > 0:
+            model_inst.set_shared_parameters(shared_params)
         model_inst.train(train_dataset_uri)
         trial_shared_params = model_inst.get_shared_parameters() or None
         if trial_shared_params:

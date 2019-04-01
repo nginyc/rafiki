@@ -17,7 +17,7 @@ from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKn
 _Model = namedtuple('_Model', ['dataset_init_op', 'train_op', 'summary_op', 'images_ph', 'classes_ph', 'is_train_ph', 
         'probs', 'corrects', 'step', 'normal_arch_ph', 'reduction_arch_ph', 'shared_var_phs', 'shared_vars_assign_op'])
 
-ENAS_SEARCH_TRAIN_EVERY_NUM_TRIALS = 300
+ENAS_SEARCH_TRAIN_EVERY_NUM_TRIALS = 30
 
 class TfEnasTrain(BaseModel):
     '''
@@ -1067,7 +1067,7 @@ class TfEnasSearch(TfEnasTrain):
 
     def __init__(self, shared_params, **knobs):
         super().__init__(**knobs)
-        self._shared_params = shared_params
+        self._shared_params = {}
 
     def train(self, dataset_uri):
         num_epochs = self._knobs['trial_epochs']
@@ -1092,15 +1092,9 @@ class TfEnasSearch(TfEnasTrain):
             utils.logger.log('Validation accuracy: {}'.format(acc))
         return acc
 
-    def _feed_dataset_to_model(self, images, classes, dataset_uri=None, is_train=False):
-        if dataset_uri is None or TfEnasSearch._loaded_dataset_memo != (dataset_uri, is_train):
-            # To load new dataset
-            super()._feed_dataset_to_model(images, classes, dataset_uri=dataset_uri, is_train=is_train)
-            TfEnasSearch._loaded_dataset_memo = (dataset_uri, is_train)
-        else:
-            # Otherwise, dataset has previously been loaded, so do nothing
-            pass
-
+    def set_shared_parameters(self, shared_params):
+        self._shared_params = shared_params
+        
     def get_shared_parameters(self):
         num_epochs = self._knobs['trial_epochs']
         if num_epochs > 0:
@@ -1124,6 +1118,19 @@ class TfEnasSearch(TfEnasTrain):
             return shared_vars
         else:
             return None # No new trained parameters to share
+
+    ####################################
+    # Private methods
+    ####################################
+
+    def _feed_dataset_to_model(self, images, classes, dataset_uri=None, is_train=False):
+        if dataset_uri is None or TfEnasSearch._loaded_dataset_memo != (dataset_uri, is_train):
+            # To load new dataset
+            super()._feed_dataset_to_model(images, classes, dataset_uri=dataset_uri, is_train=is_train)
+            TfEnasSearch._loaded_dataset_memo = (dataset_uri, is_train)
+        else:
+            # Otherwise, dataset has previously been loaded, so do nothing
+            pass
 
     def _load_dataset(self, dataset_uri, train_params=None):
         # Try to use memoized dataset

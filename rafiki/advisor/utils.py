@@ -6,7 +6,6 @@ import uuid
 import inspect
 import argparse
 import time
-import GPUtil
 import numpy as np
 from collections import namedtuple
 from datetime import datetime
@@ -35,7 +34,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     :param int total_trials: Total number of trials to tune the model over
     :param str params_root_dir: Root folder path to create subfolders to save each trial's model parameters
     :param Advisor advisor: A pre-created advisor to use for tuning the model
-    :param bool to_read_args: Whether should system args be read to retrieve default values for `num_trials` and knobs
+    :param bool to_read_args: Whether should system args be read to retrieve default values for `total_trials` and knobs
     :rtype: (dict, float, str)
     :returns: (<knobs for best model>, <test score for best model>, <params directory for best model>)
     '''
@@ -99,10 +98,12 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
             params = param_store.retrieve_params(session_id, param_id)
 
         # Load model
-        model_inst = py_model_class(shared_params=params, **knobs)
+        model_inst = py_model_class(**knobs)
 
         # Train model
         print('Training model...')
+        if len(params) > 0:
+            model_inst.set_shared_parameters(params)
         model_inst.train(train_dataset_uri)
         trial_params = model_inst.get_shared_parameters() or None
         if trial_params:

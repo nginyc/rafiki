@@ -26,16 +26,7 @@ class TrialConfig():
         self.should_save = should_save
         self.override_knobs = override_knobs
 
-class AvailableGpu():
-    def __init__(self,
-                id: int, # 0-based index of GPU
-                memory_free: int): # Amount of GPU memory free in MB
-        self.id = id
-        self.memory_free = memory_free
 
-    def __repr__(self):
-        return str({ 'id': self.id, 'memory_free': self.memory_free })
-            
 class BaseModel(abc.ABC):
     '''
     Rafiki's base model class that Rafiki models should extend. 
@@ -60,7 +51,7 @@ class BaseModel(abc.ABC):
     :param knobs: Dictionary of knob values for this model instance
     :type knobs: dict[str, any]
     '''   
-    def __init__(self, shared_params: Dict[str, np.array] = {}, **knobs):
+    def __init__(self, **knobs):
         pass
 
     @staticmethod
@@ -161,6 +152,15 @@ class BaseModel(abc.ABC):
         Returns a dictionary of trained parameters to share with future trials, after the model has been *trained*.
 
         :returns: { <param_name>: <param_value> }
-        :rtype: dict
+        :rtype: Union[None, Dict[str, np.array]]
         '''
         return None
+
+    def set_shared_parameters(self, shared_params: Dict[str, np.array]):
+        '''
+        Sets this model's shared parameters as an *untrained* model
+
+        :param shared_params: { <param_name>: <param_value> }
+        :type shaed_params: Dict[str, np.array]
+        '''
+        pass
