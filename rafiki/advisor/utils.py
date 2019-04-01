@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Union, Dict, Type
 
 from rafiki.model import BaseModel, BaseKnob, serialize_knob_config, deserialize_knob_config, \
-                        parse_model_install_command, load_model_class, SharedParams, AvailableGpu
+                        parse_model_install_command, load_model_class, SharedParams
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.param_store import ParamStore
 from rafiki.predictor import ensemble_predictions

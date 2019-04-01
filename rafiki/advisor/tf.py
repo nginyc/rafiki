@@ -1,10 +1,15 @@
 import tensorflow as tf
 import numpy as np
 import bisect
+import logging
 
 from rafiki.model import ListKnob, CategoricalKnob
 
 from .advisor import BaseKnobAdvisor, UnsupportedKnobTypeError
+
+logger = logging.getLogger(__name__)
+
+ENAS_CONTROLLER_MINIBATCH_SIZE = 1
 
 class EnasKnobAdvisor(BaseKnobAdvisor):
     '''
@@ -67,116 +72,136 @@ class EnasKnobAdvisorListModel():
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
         self._knob = knob
+        self._batch_size = ENAS_CONTROLLER_MINIBATCH_SIZE
+        self._batch_items = [] # A running batch of items for feedback
+        self._batch_scores = [] # A running batch of corresponding scores for feedback
 
         with self._graph.as_default():
-            self._build_model()
-            self._make_train_op()
+            (self._item_logits, self._out_item_idxs, 
+                self._train_op, self._losses, self._rewards,
+                self._item_idxs_ph, self._scores_ph) = self._build_model(self._knob)
             self._start_session()
 
-            tf_vars = self._get_all_variables()
-            model_params_count = self._count_model_parameters(tf_vars)
-            # print('Model has {} parameters'.format(model_params_count))
-
     def propose(self):
-        item_knobs = self._knob.items
-        item_idxs = self._item_idxs
-
-        with self._graph.as_default():
-            item_idxs_real = self._sess.run(item_idxs)
-            items = [item_knob.values[idx] for (item_knob, idx) in zip(item_knobs, item_idxs_real)]
-
+        items = self._predict_with_model()
         return items
 
     def feedback(self, items, score):
+        self._batch_items.append(items)
+        self._batch_scores.append(score)
+        
+        if len(self._batch_items) < self._batch_size:
+            return
+
+        self._train_model(self._batch_items, self._batch_scores)
+        self._batch_items = []
+        self._batch_scores = []
+
+    def _predict_with_model(self):
         item_knobs = self._knob.items
-        item_idxs = [item_knob.values.index(item) for (item_knob, item) in zip(item_knobs, items)]
+        out_item_idxs = self._out_item_idxs
 
         with self._graph.as_default():
-            (reward_base, loss, reward, _) = self._sess.run(
-                [self._reward_base, self._loss, self._reward, self._train_op],
+            item_idxs_real = self._sess.run(out_item_idxs)
+            items = [item_knob.values[idx] for (item_knob, idx) in zip(item_knobs, item_idxs_real)]
+            return items
+
+    def _train_model(self, batch_items, batch_scores):
+        item_knobs = self._knob.items
+
+        # Convert item values to indexes
+        batch_item_idxs = [[item_knob.values.index(item) for (item_knob, item) in zip(item_knobs, items)] for items in batch_items]
+
+        logger.info('Training controller...')
+
+        with self._graph.as_default():
+            (losses, rewards, _) = self._sess.run(
+                [self._losses, self._rewards, self._train_op],
                 feed_dict={
-                    self._item_idxs_ph: item_idxs,
-                    self._score_ph: score
+                    self._item_idxs_ph: batch_item_idxs,
+                    self._scores_ph: batch_scores
                 }
             )
 
-            # print('Reward: {}'.format(reward))
-            # print('Reward baseline: {}'.format(reward_base))
-            # print('Loss: {}'.format(loss))
-            # print('Logits: {}'.format(list(item_logits)))
+            print('Rewards: {}'.format(rewards))
+            print('Losses: {}'.format(losses))
 
     def _start_session(self):
         self._sess.run(tf.global_variables_initializer())
 
-    def _make_train_op(self):
-        knob = self._knob
-        item_logits = self._item_logits
+    def _build_model(self, knob):
+        batch_size = self._batch_size
         N = len(knob) # Length of list
+
+        # List of counts corresponding to the no. of values for each list item
+        Ks = [len(item_knob.values) for item_knob in knob.items]
+
+        # Placeholders for item indexes and associated score
+        item_idxs_ph = tf.placeholder(dtype=tf.int32, shape=(batch_size, N))
+        scores_ph = tf.placeholder(dtype=tf.float32, shape=(batch_size,))
+
+        (item_logits, out_item_idxs) = self._forward(Ks)
+        (train_op, losses, rewards) = self._make_train_op(item_logits, item_idxs_ph, scores_ph)
+
+        model_params_count = self._count_model_parameters()
+
+        return (item_logits, out_item_idxs, train_op, losses, rewards, item_idxs_ph, scores_ph)
+      
+    def _make_train_op(self, item_logits, item_idxs, scores):
+        batch_size = self._batch_size
         base_decay = 0.99
         learning_rate = 0.0035
         adam_beta1 = 0
         adam_epsilon = 1e-3
         entropy_weight = 0.0001
 
-        # Placeholders for item indexes and associated score
-        item_idxs_ph = tf.placeholder(dtype=tf.int32, shape=(N,))
-        score_ph = tf.placeholder(dtype=tf.float32)
-
         # Compute log probs & entropy
-        sample_log_probs = self._compute_sample_log_probs(item_idxs_ph, item_logits)
+        sample_log_probs = self._compute_sample_log_probs(item_idxs, item_logits)
         sample_entropy = self._compute_sample_entropy(item_logits)
 
-        # Compute reward
+        # Compute rewards in a batch
         # Adding entropy encourages exploration
-        reward = score_ph
-        reward += entropy_weight * sample_entropy
+        rewards = scores
+        rewards += entropy_weight * sample_entropy
 
         # Baseline reward for REINFORCE
         reward_base = tf.Variable(0., name='reward_base', dtype=tf.float32, trainable=False)
 
         # Update baseline whenever reward updates
-        base_update = tf.assign_sub(reward_base, (1 - base_decay) * (reward_base - reward))
+        base_update = tf.assign_sub(reward_base, (1 - base_decay) * (reward_base - tf.reduce_mean(rewards)))
         with tf.control_dependencies([base_update]):
-            reward = tf.identity(reward)
+            rewards = tf.identity(rewards)
 
-        # Compute loss
-        loss = sample_log_probs * (reward - reward_base)
+        # Compute losses in a batch
+        losses = sample_log_probs * (rewards - reward_base)
 
         # Add optimizer
         tf_vars = self._get_all_variables()
         steps = tf.Variable(0, name='steps', dtype=tf.int32, trainable=False)
-        grads = tf.gradients(loss, tf_vars)
+        grads = tf.gradients(losses, tf_vars)
+        grads = [x / tf.constant(batch_size, dtype=tf.float32) for x in grads] # Average all gradients
         opt = tf.train.AdamOptimizer(learning_rate, beta1=adam_beta1, epsilon=adam_epsilon,
                                     use_locking=True)
         train_op = opt.apply_gradients(zip(grads, tf_vars), global_step=steps)
         
-        self._train_op = train_op
-        self._loss = loss
-        self._reward = reward
-        self._reward_base = reward_base
-        self._item_idxs_ph = item_idxs_ph
-        self._score_ph = score_ph
+        return (train_op, losses, rewards)
 
-    def _build_model(self):
-        knob = self._knob
-        N = len(knob) # Length of list
+    def _forward(self, Ks):
+        N = len(Ks) # Length of list
         H = 32 # Number of units in LSTM
         lstm_num_layers = 2
         temperature = 0
         tanh_constant = 1.1
 
-        # List of counts corresponding to the no. of values for each list item
-        Ks = [len(item_knob.values) for item_knob in knob.items]
-
         # Build LSTM
-        lstm  = self._build_lstm(lstm_num_layers, H)
+        lstm = self._build_lstm(lstm_num_layers, H)
 
         # Initial embedding passed to LSTM
         initial_embed = self._make_var('item_embed_initial', (1, H))
 
         # TODO: Add attention
         
-        item_idxs = []
+        out_item_idxs = []
         item_logits = []
         lstm_states = [None]
         item_embeds = [initial_embed]
@@ -193,10 +218,10 @@ class EnasKnobAdvisorListModel():
                 logits = self._add_temperature(logits, temperature)
                 logits = self._add_tanh_constant(logits, tanh_constant)
                 item_logits.append(logits)
-
+                
                 # Draw and save item index from probability distribution by `X`
                 item_idx = self._sample_from_logits(logits)
-                item_idxs.append(item_idx)
+                out_item_idxs.append(item_idx)
 
                 # If not the final item
                 if i < N - 1:
@@ -205,19 +230,22 @@ class EnasKnobAdvisorListModel():
                     item_embed = tf.reshape(tf.nn.embedding_lookup(embeds, item_idx), (1, -1))
                     item_embeds.append(item_embed)
 
-        self._item_idxs = item_idxs
-        self._item_logits = item_logits
+        return (item_logits, out_item_idxs)
 
     def _compute_sample_log_probs(self, item_idxs, item_logits):
         N = len(item_logits)
-        sample_log_probs = tf.constant(0., dtype=tf.float32, name='sample_log_probs')
+        batch_size = tf.shape(item_idxs)[0] # item_idxs is of shape (bs, N)
+        
+        item_idxs = tf.transpose(item_idxs, (1, 0)) # item_idxs is of shape (N, bs)
+        sample_log_probs = tf.zeros((batch_size,), dtype=tf.float32, name='sample_log_probs')
 
         for i in range(N):
-            idx = item_idxs[i]
-            logits = item_logits[i]
-            log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=tf.reshape(logits, (1, -1)), 
-                                                                        labels=tf.reshape(idx, (1,)))
-            sample_log_probs += log_probs[0]
+            idxs = item_idxs[i] # Indexes for item i in a batch
+            logits = item_logits[i] # Logits for item i
+            logits = tf.reshape(tf.tile(logits, (batch_size, 1)), (batch_size, -1)) 
+            idxs = tf.reshape(idxs, (batch_size,))
+            log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=idxs)
+            sample_log_probs += log_probs
         
         return sample_log_probs
 
@@ -242,13 +270,15 @@ class EnasKnobAdvisorListModel():
         idx = tf.multinomial(tf.reshape(logits, (1, -1)), 1)[0][0]
         return idx
 
-    def _count_model_parameters(self, tf_vars):
+    def _count_model_parameters(self):
+        tf_trainable_vars = tf.trainable_variables()
         num_params = 0
         # print('Model parameters:')
-        for var in tf_vars:
-            # print(var)
+        for var in tf_trainable_vars:
+            # print(str(var))
             num_params += np.prod([dim.value for dim in var.get_shape()])
 
+        # print('Model has {} parameters'.format(num_params))
         return num_params
 
     def _add_temperature(self, logits, temperature):

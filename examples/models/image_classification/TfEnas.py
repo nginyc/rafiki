@@ -17,7 +17,7 @@ from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKn
 _Model = namedtuple('_Model', ['dataset_init_op', 'train_op', 'summary_op', 'images_ph', 'classes_ph', 'is_train_ph', 
         'probs', 'corrects', 'step', 'normal_arch_ph', 'reduction_arch_ph', 'shared_var_phs', 'shared_vars_assign_op'])
 
-ENAS_SEARCH_TRAIN_EVERY_NUM_TRIALS = 30
+ENAS_SEARCH_TRAIN_EVERY_NUM_TRIALS = 300
 
 class TfEnasTrain(BaseModel):
     '''
@@ -1065,7 +1065,7 @@ class TfEnasSearch(TfEnasTrain):
         TfEnasSearch._model_memo = None
         TfEnasSearch._loaded_vars_id_memo = None
 
-    def __init__(self, shared_params, **knobs):
+    def __init__(self, **knobs):
         super().__init__(**knobs)
         self._shared_params = {}
 
@@ -1094,7 +1094,7 @@ class TfEnasSearch(TfEnasTrain):
 
     def set_shared_parameters(self, shared_params):
         self._shared_params = shared_params
-        
+
     def get_shared_parameters(self):
         num_epochs = self._knobs['trial_epochs']
         if num_epochs > 0:
