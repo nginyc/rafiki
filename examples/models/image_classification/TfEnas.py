@@ -14,8 +14,11 @@ from rafiki.advisor import Advisor, tune_model
 from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
                             FixedKnob, ListKnob, TrialConfig, SharedParams
 
-_Model = namedtuple('_Model', ['dataset_init_op', 'train_op', 'summary_op', 'images_ph', 'classes_ph', 'is_train_ph', 
-        'probs', 'corrects', 'step', 'normal_arch_ph', 'reduction_arch_ph', 'shared_var_phs', 'shared_vars_assign_op'])
+_Model = namedtuple('_Model', ['train_dataset_init_op', 'pred_dataset_init_op', 'train_op', 'summary_op',  
+        'probs', 'corrects', 'step', 'shared_vars_assign_op', 'ph', 'shared_var_phs'])
+
+_ModelPlaceholder = namedtuple('_ModelPlaceholder', ['train_images', 'train_classes', 'pred_images', 'pred_classes', 
+                                                    'is_train', 'normal_arch', 'reduction_arch'])
 
 ENAS_SEARCH_TRAIN_EVERY_NUM_TRIALS = 300
 
@@ -180,9 +183,6 @@ class TfEnasTrain(BaseModel):
         return (images, classes, train_params)
 
     def _build_model(self):
-        w = self._train_params['image_size']
-        h = self._train_params['image_size']
-        in_ch = 3 # Num channels of input images
         (normal_arch, reduction_arch) = self._get_arch() # Fixed architecture
 
         utils.logger.log('Building model...')
@@ -192,17 +192,15 @@ class TfEnasTrain(BaseModel):
         
         with graph.as_default():
             # Define input placeholders to graph
-            images_ph = tf.placeholder(tf.float32, name='images_ph', shape=(None, w, h, in_ch)) # Images
-            classes_ph = tf.placeholder(tf.int32, name='classes_ph', shape=(None,)) # Classes
-            is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=()) # Are we training or predicting?
+            ph = self._make_placeholders()
 
             # Initialize steps variable
             step = self._make_var('step', (), dtype=tf.int32, trainable=False, initializer=tf.initializers.constant(0))
 
             # Preprocess & do inference
-            (X, classes, dataset_init_op) = \
-                self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
-            (logits, aux_logits_list) = self._forward(X, step, normal_arch, reduction_arch, is_train_ph)
+            (X, classes, train_dataset_init_op, pred_dataset_init_op) = \
+                self._preprocess(ph.train_images, ph.train_classes, ph.pred_images, ph.pred_classes, ph.is_train)
+            (logits, aux_logits_list) = self._forward(X, step, normal_arch, reduction_arch, ph.is_train)
             
             # Compute predictions
             (probs, corrects) = self._compute_predictions(logits, classes)
@@ -226,10 +224,31 @@ class TfEnasTrain(BaseModel):
             # Make session
             sess = self._make_session()
 
-        model = _Model(dataset_init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, 
-                        probs, corrects, step, None, None, None, None)
+        model = _Model(train_dataset_init_op, pred_dataset_init_op, train_op, summary_op, 
+                        probs, corrects, step, ph, None)
 
         return (model, graph, sess, saver, monitored_values)
+
+    def _make_placeholders(self):
+        w = self._train_params['image_size']
+        h = self._train_params['image_size']
+        cell_num_blocks = self._knobs['cell_num_blocks']
+        N = self._knobs['batch_size']
+        in_ch = 3 # Num channels of input images
+
+        images_default = tf.zeros((N, w, h, in_ch), tf.int32)
+        classes_default = tf.zeros((N,), tf.int32)
+
+        train_images_ph = tf.placeholder_with_default(images_default, name='train_images_ph', shape=(None, w, h, in_ch)) # Train images
+        pred_images_ph = tf.placeholder_with_default(images_default, name='pred_images_ph', shape=(None, w, h, in_ch)) # Predict images
+        train_classes_ph = tf.placeholder_with_default(classes_default, name='train_classes_ph', shape=(None,)) # Train classes
+        pred_classes_ph = tf.placeholder_with_default(classes_default, name='pred_classes_ph', shape=(None,)) # Predict classes
+        is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=()) # Are we training or predicting?
+        normal_arch_ph = tf.placeholder(tf.int32, name='normal_arch_ph', shape=(cell_num_blocks, 4))
+        reduction_arch_ph = tf.placeholder(tf.int32, name='reduction_arch_ph', shape=(cell_num_blocks, 4))
+
+        return _ModelPlaceholder(train_images_ph, train_classes_ph, pred_images_ph, pred_classes_ph, is_train_ph, 
+                                normal_arch_ph, reduction_arch_ph)
 
     def _forward(self, X, step, normal_arch, reduction_arch, is_train):
         K = self._train_params['K'] # No. of classes
@@ -328,14 +347,25 @@ class TfEnasTrain(BaseModel):
 
         return train_op
 
-    def _preprocess(self, images, classes, is_train, w, h, in_ch):
+    def _preprocess(self, train_images, train_classes, pred_images, pred_classes, is_train):
         batch_size = self._knobs['batch_size']
         cutout_size = self._knobs['cutout_size']
         image_norm_mean = self._train_params['norm_mean']
         image_norm_std = self._train_params['norm_std']
+        w = self._train_params['image_size']
+        h = self._train_params['image_size']
+        in_ch = 3 # Num channels of input images
+        
+        def _prepare(images, classes):
+            # Bulk preprocessing of images
+            images = tf.cast(images, tf.float32)
+            images = (images - image_norm_mean) / image_norm_std # Normalize
+            images = images / 255 # Convert to [0, 1]
+            return (images, classes)
 
-        # Do random crop + horizontal flip for each train image
-        def _preprocess_train_image(image):
+        # Prepare train dataset
+        def _preprocess_train(image, clazz):
+            # Do random crop + horizontal flip for each train image
             image = tf.pad(image, [[4, 4], [4, 4], [0, 0]])
             image = tf.image.random_crop(image, (w, h, in_ch))
             image = tf.image.random_flip_left_right(image)
@@ -343,26 +373,28 @@ class TfEnasTrain(BaseModel):
             if cutout_size > 0:
                 image = self._do_cutout(image, w, h, cutout_size)
             
-            return image
-        
-        def _preprocess(image, clazz):
-            image = tf.cond(is_train, lambda: _preprocess_train_image(image), lambda: image)
             return (image, clazz)
+        
+        (train_images, train_classes) = _prepare(train_images, train_classes) 
+        train_dataset = tf.data.Dataset.from_tensor_slices((train_images, train_classes)).repeat()
+        train_dataset = train_dataset.apply(tf.data.experimental.map_and_batch(map_func=_preprocess_train, batch_size=batch_size))
+        train_dataset_itr = train_dataset.make_initializable_iterator()
+        (train_images_batch, train_classes_batch) = train_dataset_itr.get_next()
+        train_dataset_init_op = train_dataset_itr.initializer
 
-        # Bulk preprocessing of images
-        images = tf.cast(images, tf.float32)
-        images = (images - image_norm_mean) / image_norm_std # Normalize
-        images = images / 255 # Convert to [0, 1]
+        # Prepare predict dataset
+        (pred_images, pred_classes) = _prepare(pred_images, pred_classes) 
+        pred_dataset = tf.data.Dataset.from_tensor_slices((pred_images, pred_classes)).repeat()
+        pred_dataset = pred_dataset.batch(batch_size)
+        pred_dataset_itr = pred_dataset.make_initializable_iterator()
+        (pred_images_batch, pred_classes_batch) = pred_dataset_itr.get_next()
+        pred_dataset_init_op = pred_dataset_itr.initializer
 
-        # Create TF dataset
-        dataset = tf.data.Dataset.from_tensor_slices((images, classes))
-        dataset = dataset.repeat()
-        dataset = dataset.apply(tf.data.experimental.map_and_batch(map_func=_preprocess, batch_size=batch_size))
-        dataset_itr = dataset.make_initializable_iterator()
-        (X, classes) = dataset_itr.get_next()
-        dataset_init_op = dataset_itr.initializer
+        # Select correct dataset
+        images_batch = tf.cond(is_train, lambda: train_images_batch, lambda: pred_images_batch)
+        classes_batch = tf.cond(is_train, lambda: train_classes_batch, lambda: pred_classes_batch)
 
-        return (X, classes, dataset_init_op)
+        return (images_batch, classes_batch, train_dataset_init_op, pred_dataset_init_op)
     
     def _get_drop_path_keep_prob(self, layers_ratio, step, is_train):
         batch_size = self._knobs['batch_size'] 
@@ -420,11 +452,21 @@ class TfEnasTrain(BaseModel):
         
         # Initialize dataset (mock classes if required)
         utils.logger.log('Feeding dataset to model...')
-        self._sess.run(m.dataset_init_op, feed_dict={
-            m.images_ph: images, 
-            m.classes_ph: classes if classes is not None else np.zeros((len(images),)),
-            m.is_train_ph: is_train
-        })
+        
+        if is_train:
+            feed_dict = {
+                m.ph.train_images: images,
+                m.ph.train_classes: classes,
+                m.ph.is_train: True
+            }
+        else:
+            feed_dict = {
+                m.ph.pred_images: images,
+                m.ph.pred_classes: classes,
+                m.ph.is_train: False
+            }
+
+        self._sess.run([m.train_dataset_init_op, m.pred_dataset_init_op], feed_dict=feed_dict)
 
     def _train_model(self, images, classes, num_epochs, dataset_uri=None):
         m = self._model
@@ -494,21 +536,14 @@ class TfEnasTrain(BaseModel):
         steps_per_epoch = math.ceil(N / batch_size)
         m = self._model
  
-        # Feed architectures if placeholders are present
-        if m.normal_arch_ph is not None and m.reduction_arch_ph is not None:
-            (normal_arch, reduction_arch) = self._get_arch()
-            feed_dict = {
-                m.normal_arch_ph: normal_arch,
-                m.reduction_arch_ph: reduction_arch,
-                m.is_train_ph: is_train
-            }
-        else:
-            feed_dict = {
-                m.is_train_ph: is_train
-            }
+        (normal_arch, reduction_arch) = self._get_arch()
 
         for _ in range(steps_per_epoch):
-            results = self._sess.run(run_ops, feed_dict=feed_dict)
+            results = self._sess.run(run_ops, feed_dict={
+                m.ph.normal_arch: normal_arch,
+                m.ph.reduction_arch: reduction_arch,
+                m.ph.is_train: is_train
+            })
             yield results
 
     def _get_arch(self):
@@ -1005,7 +1040,8 @@ class TfEnasSearch(TfEnasTrain):
     _datasets_memo = {} # { <dataset_uri> -> <dataset> }
     _model_memo = None # of class `_MemoModel`
     _loaded_vars_id_memo = None # ID of vars loaded, if no training has happened
-    _loaded_dataset_memo = None # Dataset (<dataset_uri>, <is_train>) loaded into the graph
+    _loaded_train_dataset_memo = None # Train dataset <dataset_uri> loaded into the graph
+    _loaded_pred_dataset_memo = None # Predict dataset <dataset_uri> loaded into the graph
 
     @staticmethod
     def get_trial_config(trial_no, total_trials, concurrent_trial_nos):
@@ -1124,10 +1160,14 @@ class TfEnasSearch(TfEnasTrain):
     ####################################
 
     def _feed_dataset_to_model(self, images, classes, dataset_uri=None, is_train=False):
-        if dataset_uri is None or TfEnasSearch._loaded_dataset_memo != (dataset_uri, is_train):
+        memo = TfEnasSearch._loaded_train_dataset_memo if True else TfEnasSearch._loaded_pred_dataset_memo
+        if dataset_uri is None or memo != dataset_uri:
             # To load new dataset
             super()._feed_dataset_to_model(images, classes, dataset_uri=dataset_uri, is_train=is_train)
-            TfEnasSearch._loaded_dataset_memo = (dataset_uri, is_train)
+            if True:
+                TfEnasSearch._loaded_train_dataset_memo = dataset_uri
+            else:
+                TfEnasSearch._loaded_pred_dataset_memo = dataset_uri
         else:
             # Otherwise, dataset has previously been loaded, so do nothing
             pass
@@ -1181,11 +1221,6 @@ class TfEnasSearch(TfEnasTrain):
             return (model_memo.model, model_memo.graph, model_memo.sess, model_memo.saver, 
                     model_memo.monitored_values)
         
-        w = self._train_params['image_size']
-        h = self._train_params['image_size']
-        cell_num_blocks = self._knobs['cell_num_blocks']
-        in_ch = 3 # Num channels of input images
-
         utils.logger.log('Building model...')
 
         # Create graph
@@ -1193,19 +1228,15 @@ class TfEnasSearch(TfEnasTrain):
         
         with graph.as_default():
             # Define input placeholders to graph
-            images_ph = tf.placeholder(tf.int8, name='images_ph', shape=(None, w, h, in_ch)) # Images
-            classes_ph = tf.placeholder(tf.int32, name='classes_ph', shape=(None,)) # Classes
-            is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=()) # Are we training or predicting?
-            normal_arch_ph = tf.placeholder(tf.int32, name='normal_arch_ph', shape=(cell_num_blocks, 4))
-            reduction_arch_ph = tf.placeholder(tf.int32, name='reduction_arch_ph', shape=(cell_num_blocks, 4))
+            ph = self._make_placeholders()
 
             # Initialize steps variable
             step = self._make_var('step', (), dtype=tf.int32, trainable=False, initializer=tf.initializers.constant(0))
 
             # Preprocess & do inference
-            (X, classes, dataset_init_op) = \
-                self._preprocess(images_ph, classes_ph, is_train_ph, w, h, in_ch)
-            (logits, aux_logits_list) = self._forward(X, step, normal_arch_ph, reduction_arch_ph, is_train_ph)
+            (X, classes, train_dataset_init_op, pred_dataset_init_op) = \
+                self._preprocess(ph.train_images, ph.train_classes, ph.pred_images, ph.pred_classes, ph.is_train)
+            (logits, aux_logits_list) = self._forward(X, step, ph.normal_arch, ph.reduction_arch, ph.is_train)
             
             # Compute predictions
             (probs, corrects) = self._compute_predictions(logits, classes)
@@ -1233,9 +1264,8 @@ class TfEnasSearch(TfEnasTrain):
             # Make session
             sess = self._make_session()
 
-        model = _Model(dataset_init_op, train_op, summary_op, images_ph, classes_ph, is_train_ph, 
-                        probs, corrects, step, normal_arch_ph, reduction_arch_ph, shared_var_phs, 
-                        shared_vars_assign_op)
+        model = _Model(train_dataset_init_op, pred_dataset_init_op, train_op, summary_op, 
+                        probs, corrects, step, shared_vars_assign_op, ph, shared_var_phs)
 
         TfEnasSearch._model_memo = _ModelMemo(
             self._train_params, self._knobs, graph, sess,

@@ -9,7 +9,7 @@ from .advisor import BaseKnobAdvisor, UnsupportedKnobTypeError
 
 logger = logging.getLogger(__name__)
 
-ENAS_CONTROLLER_MINIBATCH_SIZE = 1
+ENAS_CONTROLLER_MINIBATCH_SIZE = 10
 
 class EnasKnobAdvisor(BaseKnobAdvisor):
     '''
@@ -123,8 +123,8 @@ class EnasKnobAdvisorListModel():
                 }
             )
 
-            print('Rewards: {}'.format(rewards))
-            print('Losses: {}'.format(losses))
+            # print('Rewards: {}'.format(rewards))
+            # print('Losses: {}'.format(losses))
 
     def _start_session(self):
         self._sess.run(tf.global_variables_initializer())
