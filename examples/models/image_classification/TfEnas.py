@@ -225,7 +225,7 @@ class TfEnasTrain(BaseModel):
             sess = self._make_session()
 
         model = _Model(train_dataset_init_op, pred_dataset_init_op, train_op, summary_op, 
-                        probs, corrects, step, ph, None)
+                        probs, corrects, step, None, ph, None)
 
         return (model, graph, sess, saver, monitored_values)
 
