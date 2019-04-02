@@ -16,7 +16,8 @@ class AdvisorService(object):
     def __init__(self):
         self._advisors: Dict[str, BaseAdvisor] = {}
 
-    def create_advisor(self, knob_config, advisor_id=None, advisor_type=None, advisor_config={}):
+    def create_advisor(self, knob_config, advisor_id=None, 
+                        advisor_type=None, advisor_config={}):
         is_created = False
         advisor = None
 
@@ -28,6 +29,7 @@ class AdvisorService(object):
             advisor_id = str(uuid.uuid4()) if advisor_id is None else advisor_id
             self._advisors[advisor_id] = advisor
             is_created = True
+            logger.info('Created advisor {} of ID "{}"...'.format(advisor.__class__, advisor_id))
 
         return {
             'id': advisor_id,
@@ -41,6 +43,7 @@ class AdvisorService(object):
         if advisor is not None:
             del self._advisors[advisor_id]
             is_deleted = True
+            logger.info('Deleted advisor of ID "{}"...'.format(advisor_id))
 
         return {
             'id': advisor_id,
@@ -48,30 +51,27 @@ class AdvisorService(object):
             'is_deleted': is_deleted 
         }
 
-    def generate_proposal(self, advisor_id):
+    def get_proposal_from_advisor(self, advisor_id, trial_no, 
+                                total_trials, concurrent_trial_nos=[]):
+
         advisor = self._get_advisor(advisor_id)
         if advisor is None:
             raise InvalidAdvisorError()
 
-        knobs = advisor.propose()
+        proposal = advisor.propose(trial_no, total_trials, concurrent_trial_nos)
+        logger.info('[ID: "{}"] Proposing {} for trial #{} with concurrent trials {}...'
+                    .format(advisor_id, proposal.to_jsonable(), trial_no, concurrent_trial_nos))
+        return proposal
 
-        return {
-            'knobs': knobs
-        }
-
-    # Feedbacks to the advisor on the score of a set of knobs
-    # Additionally, returns another proposal of knobs after ingesting feedback
-    def feedback(self, advisor_id, score, knobs):
+    def feedback(self, advisor_id, score, proposal):
         advisor = self._get_advisor(advisor_id)
         if advisor is None:
             raise InvalidAdvisorError()
 
-        advisor.feedback(score, knobs)
-        knobs = advisor.propose()
+        logger.info('[ID: "{}"] Received feedback of score {} for proposal {}...'
+                    .format(advisor_id, score, proposal.to_jsonable()))
 
-        return {
-            'knobs': knobs
-        }
+        advisor.feedback(score, proposal)
 
     def _get_advisor(self, advisor_id):
         if advisor_id not in self._advisors:

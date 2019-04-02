@@ -98,14 +98,21 @@ class ServicesManager(object):
         sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(train_job_id)
 
         total_gpus = int(train_job.budget.get(BudgetType.GPU_COUNT, 0))
-        sub_train_job_gpus = self._get_gpus_for_sub_train_jobs(total_gpus, sub_train_jobs)
+        (jobs_gpus, jobs_cpus) = self._get_deployment_for_sub_train_jobs(total_gpus, sub_train_jobs)
         
         # Create workers for each sub train job, associate services to job and wait for them to be running
         services = []
-        for (sub_train_job, gpus) in zip(sub_train_jobs, sub_train_job_gpus):
+        for (sub_train_job, gpus, cpus) in zip(sub_train_jobs, jobs_gpus, jobs_cpus):
             # Assume 1 GPU per worker
             for _ in range(gpus):
                 service = self._create_sub_train_job_worker(sub_train_job)
+                self._meta_store.create_sub_train_job_worker(sub_train_job.id, service.id)
+                self._meta_store.commit()
+                services.append(service)
+
+            # CPU workers
+            for _ in range(cpus):
+                service = self._create_sub_train_job_worker(sub_train_job, gpus=0)
                 self._meta_store.create_sub_train_job_worker(sub_train_job.id, service.id)
                 self._meta_store.commit()
                 services.append(service)
@@ -121,7 +128,6 @@ class ServicesManager(object):
         # Stop all workers for train job
         for sub_train_job in sub_train_jobs:
             self.stop_sub_train_job_services(sub_train_job.id)
-
         return train_job
         
     def stop_sub_train_job_services(self, sub_train_job_id):
@@ -138,12 +144,19 @@ class ServicesManager(object):
     # Private
     ####################################
 
-    def _get_gpus_for_sub_train_jobs(self, total_gpus, sub_train_jobs):
+    def _get_deployment_for_sub_train_jobs(self, total_gpus, sub_train_jobs):
         # Evenly distribute GPus across sub train jobs, letting first few sub train jobs have 1 more GPU to fully allocate
         N = len(sub_train_jobs)
         base_gpus = total_gpus // N
         extra_gpus = total_gpus - base_gpus * N
-        return ([base_gpus + 1] * extra_gpus) + [base_gpus] * (N - extra_gpus)
+        jobs_gpus = ([base_gpus + 1] * extra_gpus) + [base_gpus] * (N - extra_gpus)
+
+        # For jobs with no GPU, add 1 CPU
+        jobs_cpus = []
+        for gpus in jobs_gpus:
+            jobs_cpus.append(0 if gpus > 0 else 1)
+
+        return (jobs_gpus, jobs_cpus)
 
     def _create_sub_inference_job_worker(self, sub_inference_job):
         trial = self._meta_store.get_trial(sub_inference_job.trial_id)

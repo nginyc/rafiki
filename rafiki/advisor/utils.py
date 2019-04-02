@@ -88,10 +88,10 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         print('Advisor proposed knobs:', knobs)
 
         # Retrieve shared params from store
-        param_id = params_monitor.get_params(proposal.params)
+        param_id = params_monitor.get_params(proposal.params_type)
         params = {}
         if param_id is not None:
-            print('To use {} params'.format(proposal.params.name))
+            print('To use {} params'.format(proposal.params_type.name))
             print('Retrieving params of ID "{}"...'.format(param_id))
             params = param_store.retrieve_params(session_id, param_id)
 
@@ -106,7 +106,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         if proposal.should_train:
             print('Training model...')
             model_inst.train(train_dataset_uri)
-            trial_params = model_inst.save_parameters() or None
+            trial_params = model_inst.dump_parameters() or None
             if trial_params:
                 print('Model produced {} params'.format(len(trial_params)))
 

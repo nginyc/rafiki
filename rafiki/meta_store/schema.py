@@ -117,10 +117,10 @@ class Trial(Base):
     status = Column(String, nullable=False, default=TrialStatus.PENDING)
     worker_id = Column(String, nullable=False)
     params_dir = Column(String, default=None)
-    knobs = Column(JSON, default=None)
     score = Column(Float, default=None)
-    shared_param_id = Column(String, default=None)
-    out_shared_param_id = Column(String, default=None)
+    proposal = Column(JSON, default=None)
+    param_id = Column(String, default=None)
+    out_param_id = Column(String, default=None)
     datetime_stopped = Column(DateTime, default=None)
 
     __table_args__ = (UniqueConstraint('sub_train_job_id', 'no', name='_sub_train_job_id_no_uc'),) # Unique by (sub train job, trial no)

@@ -442,27 +442,21 @@ class MetaStore(object):
 
         return trials
 
-    def get_trials_of_sub_train_job(self, sub_train_job_id, min_datetime_updated=None):
+    def get_trials_of_sub_train_job(self, sub_train_job_id, min_trial_no):
         query = self._session.query(Trial) \
             .filter(Trial.sub_train_job_id == sub_train_job_id)
 
-        if min_datetime_updated is not None:
-            query = query.filter(Trial.datetime_updated >= min_datetime_updated)
+        if min_trial_no is not None:
+            query = query.filter(Trial.no >= min_trial_no)
 
         trials = query.order_by(Trial.datetime_started.desc()).all()
 
         return trials
 
-    def mark_trial_as_started(self, trial):
-        trial.status = TrialStatus.STARTED
-        trial.datetime_updated = datetime.utcnow()
-        self._session.add(trial)
-        return trial
-
-    def mark_trial_as_running(self, trial, knobs, shared_param_id):
+    def mark_trial_as_running(self, trial, proposal, param_id):
         trial.status = TrialStatus.RUNNING
-        trial.knobs = knobs
-        trial.shared_param_id = shared_param_id
+        trial.proposal = proposal
+        trial.param_id = param_id
         trial.datetime_updated = datetime.utcnow()
         self._session.add(trial)
         return trial
@@ -474,11 +468,11 @@ class MetaStore(object):
         self._session.add(trial)
         return trial
 
-    def mark_trial_as_completed(self, trial, score, params_dir, out_shared_param_id):
+    def mark_trial_as_completed(self, trial, score, params_dir, out_param_id):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
         trial.params_dir = params_dir
-        trial.out_shared_param_id = out_shared_param_id
+        trial.out_param_id = out_param_id
         trial.datetime_stopped = datetime.utcnow()
         trial.datetime_updated = datetime.utcnow()
         self._session.add(trial)
@@ -515,6 +509,7 @@ class MetaStore(object):
         except Exception as e:
             # Check if error is due to duplicate trial no
             if '_sub_train_job_id_no_uc' in str(e):
+                self._session.rollback()
                 raise DuplicateTrialNoError()
             else:
                 raise e

@@ -5,7 +5,8 @@ from typing import Union, Dict, Type, List
 
 from .knob import BaseKnob
 
-Params = Dict[str, Union[float, int, str, np.ndarray]]
+KnobConfig = Dict[str, BaseKnob]
+Params = Dict[str, Union[str, np.ndarray]]
 
 class BaseModel(abc.ABC):
     '''
@@ -36,13 +37,13 @@ class BaseModel(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def get_knob_config() -> Dict[str, BaseKnob]:
+    def get_knob_config() -> KnobConfig:
         '''
         Return a dictionary defining this model class' knob configuration 
         (i.e. list of knob names, their data types and their ranges).
 
         :returns: Dictionary defining this model's knob configuration 
-        :rtype: dict[str, rafiki.model.BaseKnob]
+        :rtype: KnobConfig
         '''
         raise NotImplementedError()
 
@@ -113,7 +114,7 @@ class BaseModel(abc.ABC):
         '''
         raise NotImplementedError()
 
-    def save_parameters(self) -> Union[None, Params]:
+    def dump_parameters(self) -> Union[None, Params]:
         '''
         Returns a dictionary of model parameters to share with future trials, after the model has been *trained*.
         :returns: { <param_name>: <param_value> }

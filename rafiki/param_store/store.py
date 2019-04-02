@@ -121,9 +121,9 @@ class ParamStore(object):
         # Convert from JSON
         params = json.loads(params_str)
 
-        # Convert lists to numpy arrays
+        # Convert lists or numbers to numpy arrays
         for (name, value) in params.items():
-            if isinstance(value, list):
+            if isinstance(value, (list, int, float)):
                 params[name] = np.asarray(value)
         
         return params
