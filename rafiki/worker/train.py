@@ -10,8 +10,8 @@ from rafiki.utils.auth import make_superadmin_client
 from rafiki.client import Client
 from rafiki.constants import BudgetType, TrainJobStatus, TrialStatus, ServiceStatus
 from rafiki.meta_store import MetaStore, DuplicateTrialNoError
-from rafiki.advisor import SharedParamsMonitor
-from rafiki.model import BaseModel, load_model_class, serialize_knob_config, logger as model_logger, TrialConfig
+from rafiki.advisor import ParamsMonitor, Proposal, Params
+from rafiki.model import BaseModel, load_model_class, serialize_knob_config, logger as model_logger
 from rafiki.param_store import ParamStore
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class TrainWorker(object):
         self._worker_id = container_id
         self._param_store = param_store or ParamStore(redis_host=os.environ['REDIS_HOST'],
                                                         redis_port=os.environ['REDIS_PORT'])
-        self._shared_params_monitor = SharedParamsMonitor()
+        self._params_monitor = ParamsMonitor()
         self._client = make_superadmin_client()
         self._trial_id = None
 
@@ -82,24 +82,27 @@ class TrainWorker(object):
                 # Mark trial as started
                 logger.info('Starting trial #{} of ID "{}"...'.format(trial_no, self._trial_id))
                 self._job_monitor.mark_trial_as_started(self._trial_id)
+
+                # Retrieve proposal
+                knobs = self._retrieve_proposal(advisor_id, job_info, trial_config, knobs)
                 
                 # Generate knobs for trial
                 knobs = self._retrieve_knobs(advisor_id, job_info, trial_config, knobs)
 
                 # Generate shared params for trial
-                (shared_params, shared_param_id) = self._retrieve_shared_params(job_info, trial_config)
+                (params, shared_param_id) = self._retrieve_params(job_info, trial_config)
 
                 # Train & evaluate model for trial
                 self._job_monitor.mark_trial_as_running(self._trial_id, knobs, shared_param_id)
-                (score, trial_shared_params, params_dir) = \
-                    self._train_and_evaluate_model(job_info, clazz, trial_config, knobs, shared_params)
+                (score, trial_params, params_dir) = \
+                    self._train_and_evaluate_model(job_info, clazz, trial_config, knobs, params)
 
                 # If score exists, give feedback based on result of trial
                 if score is not None:
                     knobs = self._feedback(advisor_id, job_info, score, knobs)
 
                 # Store output shared params of trial
-                trial_param_id = self._store_shared_params(job_info, self._trial_id, trial_shared_params)
+                trial_param_id = self._store_params(job_info, self._trial_id, trial_params)
 
                 # Mark trial as completed
                 self._job_monitor.mark_trial_as_completed(self._trial_id, score, params_dir, trial_param_id)
@@ -161,38 +164,38 @@ class TrainWorker(object):
         root_logger.removeHandler(log_handler)
         py_model_logger.removeHandler(log_handler)
 
-    def _train_and_evaluate_model(self, job_info: _JobInfo, clazz: Type[BaseModel], trial_config: TrialConfig,
-                                knobs, shared_params):
+    def _train_and_evaluate_model(self, job_info: _JobInfo, clazz: Type[BaseModel],
+                                knobs, params, should_save, should_evaluate):
         train_dataset_uri = job_info.train_dataset_uri
         val_dataset_uri = job_info.val_dataset_uri
 
         # Initialize & train model
         logger.info('Training model...')
         model_inst = clazz(**knobs)
-        if len(shared_params) > 0:
-            model_inst.set_shared_parameters(shared_params)
+        if len(params) > 0:
+            model_inst.set_shared_parameters(params)
         model_inst.train(train_dataset_uri)
-        trial_shared_params = model_inst.get_shared_parameters() or None
-        if trial_shared_params:
-            logger.info('Trial produced {} shared parameters'.format(len(trial_shared_params)))
+        trial_params = model_inst.get_shared_parameters() or None
+        if trial_params:
+            logger.info('Trial produced {} shared parameters'.format(len(trial_params)))
 
         # Evaluate model
         score = None
-        if trial_config.should_evaluate:
+        if should_evaluate:
             logger.info('Evaluating model...')
             score = model_inst.evaluate(val_dataset_uri)
             logger.info('Trial score: {}'.format(score))
 
         # Save model
         params_dir = None
-        if trial_config.should_save:
+        if should_save:
             logger.info('Saving trained model...')
             params_dir = os.path.join(self._params_root_dir, self._trial_id)
             if not os.path.exists(params_dir):
                 os.mkdir(params_dir)
             model_inst.save_parameters(params_dir)
 
-        return (score, trial_shared_params, params_dir)
+        return (score, trial_params, params_dir)
 
     def _create_trial(self):
         trial_no = None
@@ -227,7 +230,7 @@ class TrainWorker(object):
             # Update shared params monitor
             new_completed_trials = self._job_monitor.retrieve_new_completed_trials()
             for x in new_completed_trials:
-                self._shared_params_monitor.add_params(x.out_shared_param_id, x.score, 
+                self._params_monitor.add_params(x.out_shared_param_id, x.score, 
                                                     x.datetime_started, x.worker_id)
 
             (_, total_trials, concurrent_trial_nos) = self._job_monitor.get_sub_train_job_progress()
@@ -272,30 +275,30 @@ class TrainWorker(object):
         return knobs
 
     # Retrieves shared params for a trial
-    def _retrieve_shared_params(self, job_info: _JobInfo, trial_config: TrialConfig):
+    def _retrieve_params(self, job_info: _JobInfo, trial_config: TrialConfig):
         worker_id = self._worker_id
 
         # Get exact params
-        param_id = self._shared_params_monitor.get_params(trial_config.shared_params, worker_id)
+        param_id = self._params_monitor.get_params(trial_config.params, worker_id)
 
         # Load actual params from store
         params = {}
         if param_id is not None:
-            logger.info('To use {} shared params'.format(trial_config.shared_params.name))
+            logger.info('To use {} shared params'.format(trial_config.params.name))
             params = self._param_store.retrieve_params(job_info.sub_train_job_id, param_id)
             logger.info('Retrieved {} shared params'.format(len(params)))
 
         return (params, param_id)
 
     # Retrieves shared params for a trial
-    def _store_shared_params(self, job_info: _JobInfo, trial_id: str, trial_shared_params: dict):
+    def _store_params(self, job_info: _JobInfo, trial_id: str, trial_params: dict):
         sub_train_job_id = job_info.sub_train_job_id
 
-        if trial_shared_params is None:
+        if trial_params is None:
             return
 
         logger.info('Storing shared params...')
-        trial_param_id = self._param_store.store_params(sub_train_job_id, trial_shared_params, trial_id)
+        trial_param_id = self._param_store.store_params(sub_train_job_id, trial_params, trial_id)
         logger.info('Stored shared params of ID "{}"'.format(trial_param_id))
 
         return trial_param_id

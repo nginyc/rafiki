@@ -10,17 +10,15 @@ from collections import namedtuple
 import numpy as np
 import argparse
 
-from rafiki.advisor import Advisor, tune_model
+from rafiki.advisor import tune_model, make_advisor
 from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
-                            FixedKnob, ListKnob, TrialConfig, SharedParams
+                            FixedKnob, ListKnob
 
 _Model = namedtuple('_Model', ['train_dataset_init_op', 'pred_dataset_init_op', 'train_op', 'summary_op',  
         'probs', 'corrects', 'step', 'shared_vars_assign_op', 'ph', 'shared_var_phs'])
 
 _ModelPlaceholder = namedtuple('_ModelPlaceholder', ['train_images', 'train_classes', 'pred_images', 'pred_classes', 
                                                     'is_train', 'normal_arch', 'reduction_arch'])
-
-ENAS_SEARCH_TRAIN_EVERY_NUM_TRIALS = 300
 
 class TfEnasTrain(BaseModel):
     '''
@@ -82,30 +80,43 @@ class TfEnasTrain(BaseModel):
             'use_aux_head': FixedKnob(False),
             'cell_archs': ListKnob(2 * cell_num_blocks * 4, lambda i: cell_arch_item(i)),
             'use_cell_arch_type': FixedKnob(''), # '' | 'ENAS' | 'NASNET-A',
-            'init_params_dir': FixedKnob('') # Params directory to resume training from
+            'init_params_dir': FixedKnob(''), # Params directory to resume training from
+            'if_compute_train_accuracy': FixedKnob(True)
         }
 
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
+        self._model = None
+        self._graph = None
+        self._sess = None
+        self._saver = None
+        self._monitored_values = None
+        self._train_params = None
+        self._train_summaries = None
 
     def train(self, dataset_uri):
-        num_epochs = self._knobs['trial_epochs']
         init_params_dir = self._knobs['init_params_dir']
+        if_compute_train_accuracy = self._knobs['if_compute_train_accuracy']
+
         (images, classes, self._train_params) = self._load_dataset(dataset_uri)
-          
-        if not init_params_dir:
+
+        # Maybe load from init params dir
+        if init_params_dir:
+            utils.logger.log('Loading parameters from "{}"...'.format(init_params_dir))
+            self.load_parameters_from_disk(init_params_dir)
+        elif self._model is None:
             (self._model, self._graph, self._sess, self._saver, 
                 self._monitored_values) = self._build_model()
-        else:
-            utils.logger.log('Loading parameters from "{}"...'.format(init_params_dir))
-            self.load_parameters(init_params_dir)
         
         with self._graph.as_default():
-            self._train_summaries = self._train_model(images, classes, num_epochs)
-            utils.logger.log('Evaluating model on train dataset...')
-            acc = self._evaluate_model(images, classes)
-            utils.logger.log('Train accuracy: {}'.format(acc))
+            self._train_summaries = self._train_model(images, classes, dataset_uri=dataset_uri)
+
+            # Maybe compute train accuracy
+            if if_compute_train_accuracy:
+                utils.logger.log('Evaluating model on train dataset...')
+                acc = self._evaluate_model(images, classes)
+                utils.logger.log('Train accuracy: {}'.format(acc))
 
     def evaluate(self, dataset_uri):
         (images, classes, _) = self._load_dataset(dataset_uri, train_params=self._train_params)
@@ -122,7 +133,7 @@ class TfEnasTrain(BaseModel):
             probs = self._predict_with_model(images)
         return probs.tolist()
 
-    def save_parameters(self, params_dir):
+    def save_parameters_to_disk(self, params_dir):
         # Save model parameters
         model_file_path = os.path.join(params_dir, 'model')
         with self._graph.as_default():
@@ -136,12 +147,12 @@ class TfEnasTrain(BaseModel):
         # Dump train summaries
         summaries_dir_path = os.path.join(params_dir, 'summaries')
         os.mkdir(summaries_dir_path)
-        writer = tf.summary.FileWriter(summaries_dir_path, self._graph)
         if self._train_summaries is not None:
+            writer = tf.summary.FileWriter(summaries_dir_path, self._graph)
             for (steps, summary) in self._train_summaries:
                 writer.add_summary(summary, steps)
 
-    def load_parameters(self, params_dir):
+    def load_parameters_from_disk(self, params_dir):
         # Load pre-processing params
         train_params_file_path = os.path.join(params_dir, 'train_params.json')
         with open(train_params_file_path, 'r') as f:
@@ -156,6 +167,34 @@ class TfEnasTrain(BaseModel):
         with self._graph.as_default():
             model_file_path = os.path.join(params_dir, 'model')
             self._saver.restore(self._sess, model_file_path)
+
+    def save_parameters(self):
+        params = {}
+
+        # Add train params
+        params['train_params'] = json.dumps(self._train_params)
+
+        # Add model parameters
+        with self._graph.as_default():
+            tf_vars = tf.global_variables()
+            values = self._sess.run(tf_vars)
+
+            for (tf_var, value) in zip(tf_vars, values):
+                params[tf_var.name] = np.asarray(value)
+
+        return params
+
+    def load_parameters(self, params):
+        # Add train params
+        self._train_params = json.loads(params['train_params'])
+
+        # Build model
+        (self._model, self._graph, self._sess, 
+            self._saver, self._monitored_values) = self._build_model()
+
+        # Add model parameters
+        with self._graph.as_default():
+            self._load_tf_vars(params)
 
     ####################################
     # Private methods
@@ -182,9 +221,7 @@ class TfEnasTrain(BaseModel):
         
         return (images, classes, train_params)
 
-    def _build_model(self):
-        (normal_arch, reduction_arch) = self._get_arch() # Fixed architecture
-
+    def _build_model(self, is_arch_dynamic=False):
         utils.logger.log('Building model...')
 
         # Create graph
@@ -193,6 +230,11 @@ class TfEnasTrain(BaseModel):
         with graph.as_default():
             # Define input placeholders to graph
             ph = self._make_placeholders()
+
+            # Use fixed archs if specified, otherwise use placeholders'
+            (normal_arch, reduction_arch) = self._get_arch()
+            normal_arch = normal_arch if not is_arch_dynamic else ph.normal_arch
+            reduction_arch = reduction_arch if not is_arch_dynamic else ph.reduction_arch
 
             # Initialize steps variable
             step = self._make_var('step', (), dtype=tf.int32, trainable=False, initializer=tf.initializers.constant(0))
@@ -221,13 +263,33 @@ class TfEnasTrain(BaseModel):
             tf_vars = tf.global_variables()
             saver = tf.train.Saver(tf_vars)
 
+            # Allow loading of model variables
+            (shared_var_phs, shared_vars_assign_op) = self._add_vars_assign_op(tf_vars)
+
+            model = _Model(train_dataset_init_op, pred_dataset_init_op, train_op, summary_op, 
+                    probs, corrects, step, shared_vars_assign_op, ph, shared_var_phs)
+
             # Make session
             sess = self._make_session()
-
-        model = _Model(train_dataset_init_op, pred_dataset_init_op, train_op, summary_op, 
-                        probs, corrects, step, None, ph, None)
+            self._init_session(sess, model)
 
         return (model, graph, sess, saver, monitored_values)
+
+    def _load_tf_vars(self, params):
+        m = self._model
+
+        tf_vars = tf.global_variables()
+        values = self._sess.run(tf_vars) # Get current values for vars
+
+        # Build feed dict for op for loading vars
+        # For each var, use current value of param in session if not in params
+        var_feeddict = {
+            m.shared_var_phs[tf_var.name]: params[tf_var.name] 
+            if tf_var.name in params else values[i]
+            for (i, tf_var) in enumerate(tf_vars)
+        }
+
+        self._sess.run(m.shared_vars_assign_op, feed_dict=var_feeddict)
 
     def _make_placeholders(self):
         w = self._train_params['image_size']
@@ -236,13 +298,10 @@ class TfEnasTrain(BaseModel):
         N = self._knobs['batch_size']
         in_ch = 3 # Num channels of input images
 
-        images_default = tf.zeros((N, w, h, in_ch), tf.int32)
-        classes_default = tf.zeros((N,), tf.int32)
-
-        train_images_ph = tf.placeholder_with_default(images_default, name='train_images_ph', shape=(None, w, h, in_ch)) # Train images
-        pred_images_ph = tf.placeholder_with_default(images_default, name='pred_images_ph', shape=(None, w, h, in_ch)) # Predict images
-        train_classes_ph = tf.placeholder_with_default(classes_default, name='train_classes_ph', shape=(None,)) # Train classes
-        pred_classes_ph = tf.placeholder_with_default(classes_default, name='pred_classes_ph', shape=(None,)) # Predict classes
+        train_images_ph = tf.placeholder(tf.int32, name='train_images_ph', shape=(None, w, h, in_ch)) # Train images
+        pred_images_ph = tf.placeholder(tf.int32, name='pred_images_ph', shape=(None, w, h, in_ch)) # Predict images
+        train_classes_ph = tf.placeholder(tf.int32, name='train_classes_ph', shape=(None,)) # Train classes
+        pred_classes_ph = tf.placeholder(tf.int32, name='pred_classes_ph', shape=(None,)) # Predict classes
         is_train_ph = tf.placeholder(tf.bool, name='is_train_ph', shape=()) # Are we training or predicting?
         normal_arch_ph = tf.placeholder(tf.int32, name='normal_arch_ph', shape=(cell_num_blocks, 4))
         reduction_arch_ph = tf.placeholder(tf.int32, name='reduction_arch_ph', shape=(cell_num_blocks, 4))
@@ -440,11 +499,27 @@ class TfEnasTrain(BaseModel):
 
         return lr
 
+    def _init_session(self, sess, model):
+        w = self._train_params['image_size']
+        h = self._train_params['image_size']
+        in_ch = 3 
+        m = model
+
+        # Do initialization of all variables
+        sess.run(tf.global_variables_initializer())
+
+        # Load datasets with defaults
+        sess.run([m.train_dataset_init_op, m.pred_dataset_init_op], feed_dict={
+            m.ph.train_images: np.zeros((1, w, h, in_ch)),
+            m.ph.train_classes: np.zeros((1,)),
+            m.ph.pred_images: np.zeros((1, w, h, in_ch)),
+            m.ph.pred_classes: np.zeros((1,))
+        })
+
     def _make_session(self):
         config = tf.ConfigProto(allow_soft_placement=True)
         config.gpu_options.allow_growth = True
         sess = tf.Session(config=config)
-        sess.run(tf.global_variables_initializer())
         return sess
 
     def _feed_dataset_to_model(self, images, classes=None, dataset_uri=None, is_train=False):
@@ -454,21 +529,20 @@ class TfEnasTrain(BaseModel):
         utils.logger.log('Feeding dataset to model...')
         
         if is_train:
-            feed_dict = {
+            self._sess.run(m.train_dataset_init_op, feed_dict={
                 m.ph.train_images: images,
                 m.ph.train_classes: classes,
                 m.ph.is_train: True
-            }
+            })
         else:
-            feed_dict = {
+            self._sess.run(m.pred_dataset_init_op, feed_dict={
                 m.ph.pred_images: images,
                 m.ph.pred_classes: classes,
                 m.ph.is_train: False
-            }
+            })
 
-        self._sess.run([m.train_dataset_init_op, m.pred_dataset_init_op], feed_dict=feed_dict)
-
-    def _train_model(self, images, classes, num_epochs, dataset_uri=None):
+    def _train_model(self, images, classes, dataset_uri=None):
+        num_epochs = self._knobs['trial_epochs']
         m = self._model
         N = len(images)
 
@@ -806,6 +880,18 @@ class TfEnasTrain(BaseModel):
         X = op_method(X, w, h, ch, is_train, stride) 
         return X
 
+    def _add_vars_assign_op(self, vars):
+        var_phs = {
+            tf_var.name: tf.placeholder(dtype=tf_var.dtype, shape=tf_var.shape)
+            for tf_var in vars
+        }
+        vars_assign_op = tf.group([
+            tf.assign(tf_var, ph) 
+            for (tf_var, ph) in zip(vars, var_phs.values())
+        ], name='vars_assign_op')
+
+        return (var_phs, vars_assign_op)
+
     ####################################
     # Block Ops
     ####################################
@@ -1039,52 +1125,26 @@ class TfEnasSearch(TfEnasTrain):
     # Memoise across trials to speed up training
     _datasets_memo = {} # { <dataset_uri> -> <dataset> }
     _model_memo = None # of class `_MemoModel`
-    _loaded_vars_id_memo = None # ID of vars loaded, if no training has happened
+    _loaded_tf_vars_id_memo = None # ID of TF vars loaded
     _loaded_train_dataset_memo = None # Train dataset <dataset_uri> loaded into the graph
     _loaded_pred_dataset_memo = None # Predict dataset <dataset_uri> loaded into the graph
 
     @staticmethod
-    def get_trial_config(trial_no, total_trials, concurrent_trial_nos):
-        train_every_num_trials = ENAS_SEARCH_TRAIN_EVERY_NUM_TRIALS
-        T = train_every_num_trials + 1 
+    def get_knob_config():
+        knob_config = TfEnasTrain.get_knob_config()
 
-        # Every (X + 1) trials, only train 1 epoch for the first trial
-        # The other X trials is for training the controller
-        is_train_trial = ((trial_no - 1) % T == 0)
-
-        override_knobs = {
-            'batch_size': 64,
-            'initial_block_ch': 20,
-            'reg_decay': 2e-4,
-            'num_layers': 6,
-            'sgdr_alpha': 0.01,
-            'dropout_keep_prob': 0.9,
-            'drop_path_decay_epochs': 150
+        return {
+            **knob_config,
+            'trial_epochs': FixedKnob(1), # Only 1 epoch per train trial
+            'initial_block_ch': FixedKnob(20),
+            'batch_size': FixedKnob(128),
+            'dropout_keep_prob': FixedKnob(0.9),
+            'sgdr_alpha': FixedKnob(0.01),
+            'num_layers': FixedKnob(6),
+            'drop_path_keep_prob': FixedKnob(0.9),
+            'drop_path_decay_epochs': FixedKnob(150),
+            'if_compute_train_accuracy': FixedKnob(False)
         }
-        shared_params = SharedParams.GLOBAL_RECENT 
-
-        if is_train_trial:
-            # For a "train" trial, wait until previous trials to finish
-            if len(concurrent_trial_nos) > 0:
-                return TrialConfig(is_valid=False)
-        
-            # Set trial epoch to 1 & don't evaluate
-            override_knobs.update({ 'trial_epochs': 1 })
-            return TrialConfig(override_knobs=override_knobs, 
-                                shared_params=shared_params,
-                                should_evaluate=False,
-                                should_save=False)
-        else:
-            # For a "eval" trial, just wait until corresponding "train" trial is finished
-            train_trial_no = ((trial_no - 1) // T) * T + 1
-            if train_trial_no in concurrent_trial_nos:
-                return TrialConfig(is_valid=False)
-
-            # Set trial epoch to 0
-            override_knobs.update({ 'trial_epochs': 0 })
-            return TrialConfig(override_knobs=override_knobs,
-                                shared_params=shared_params,
-                                should_save=False)
 
     @staticmethod
     def setup():
@@ -1101,191 +1161,45 @@ class TfEnasSearch(TfEnasTrain):
         TfEnasSearch._model_memo = None
         TfEnasSearch._loaded_vars_id_memo = None
 
-    def __init__(self, **knobs):
-        super().__init__(**knobs)
-        self._shared_params = {}
+    def save_parameters(self):
+        params = super().save_parameters()
 
-    def train(self, dataset_uri):
-        num_epochs = self._knobs['trial_epochs']
-        (images, classes, self._train_params) = self._load_dataset(dataset_uri)
-        (self._model, self._graph, self._sess, self._saver, 
-            self._monitored_values) = self._build_model()
-        
-        with self._graph.as_default():
-            self._maybe_load_shared_vars(self._shared_params, num_epochs)
-            self._train_summaries = []
-            if num_epochs == 0:
-                # Skipping training
-                return
+        # Add an ID for diffing
+        vars_id = np.random.rand()
+        params['vars_id'] = vars_id
 
-            self._train_summaries = self._train_model(images, classes, num_epochs, dataset_uri=dataset_uri)
+        # Memo ID
+        TfEnasSearch._loaded_tf_vars_id_memo = vars_id
 
-    def evaluate(self, dataset_uri):
-        (images, classes, _) = self._load_dataset(dataset_uri, train_params=self._train_params)
-        with self._graph.as_default():
-            utils.logger.log('Evaluating model on validation dataset...')
-            acc = self._evaluate_model(images, classes, dataset_uri=dataset_uri)
-            utils.logger.log('Validation accuracy: {}'.format(acc))
-        return acc
-
-    def set_shared_parameters(self, shared_params):
-        self._shared_params = shared_params
-
-    def get_shared_parameters(self):
-        num_epochs = self._knobs['trial_epochs']
-        if num_epochs > 0:
-            with self._graph.as_default():
-                shared_tf_vars = self._get_shared_tf_vars()
-                values = self._sess.run(shared_tf_vars)
-
-            shared_vars = {
-                tf_var.name: np.asarray(value)
-                for (tf_var, value)
-                in zip(shared_tf_vars, values)
-            }
-
-            # Add an ID for diffing
-            shared_vars_id = np.random.rand()
-            shared_vars['id'] = np.array(shared_vars_id)
-
-            # Memo ID
-            TfEnasSearch._loaded_vars_id_memo = shared_vars_id
-
-            return shared_vars
-        else:
-            return None # No new trained parameters to share
+        return params
 
     ####################################
     # Private methods
     ####################################
 
-    def _feed_dataset_to_model(self, images, classes, dataset_uri=None, is_train=False):
-        memo = TfEnasSearch._loaded_train_dataset_memo if True else TfEnasSearch._loaded_pred_dataset_memo
-        if dataset_uri is None or memo != dataset_uri:
-            # To load new dataset
-            super()._feed_dataset_to_model(images, classes, dataset_uri=dataset_uri, is_train=is_train)
-            if True:
-                TfEnasSearch._loaded_train_dataset_memo = dataset_uri
-            else:
-                TfEnasSearch._loaded_pred_dataset_memo = dataset_uri
+    def _load_tf_vars(self, params):
+        # If same TF vars has been loaded in previous trial, don't bother loading again
+        vars_id = params['vars_id']
+        if TfEnasSearch._loaded_tf_vars_id_memo == vars_id:
+            pass # Skipping loading of vars
         else:
-            # Otherwise, dataset has previously been loaded, so do nothing
-            pass
-
-    def _load_dataset(self, dataset_uri, train_params=None):
-        # Try to use memoized dataset
-        if dataset_uri in TfEnasSearch._datasets_memo:
-            dataset = TfEnasSearch._datasets_memo[dataset_uri]
-            return dataset
-
-        dataset = super()._load_dataset(dataset_uri, train_params)
-        self._datasets_memo[dataset_uri] = dataset
-        return dataset
-
-    def _maybe_load_shared_vars(self, shared_vars, num_epochs):
-        if len(shared_vars) == 0:
-            return
-
-        # If shared vars has been loaded in previous trial, don't bother loading again
-        shared_vars_id = shared_vars['id']
-        if TfEnasSearch._loaded_vars_id_memo == shared_vars_id:
-            pass # Skipping loading of shared variables
-        else:
-            self._load_shared_vars(shared_vars)
-
-    def _load_shared_vars(self, shared_vars):
-        m = self._model
-
-        # Get current values for vars
-        shared_tf_vars = self._get_shared_tf_vars()
-        values = self._sess.run(shared_tf_vars)
-        utils.logger.log('Loading {} / {} shared variables...'.format(len(shared_vars), len(shared_tf_vars)))
-
-        # Build feed dict for op for loading shared params
-        # For each param, use current value of param in session if not in shared vars
-        var_feeddict = {
-            m.shared_var_phs[tf_var.name]: shared_vars[tf_var.name] 
-            if tf_var.name in shared_vars else values[i]
-            for (i, tf_var) in enumerate(shared_tf_vars)
-        }
-        
-        self._sess.run(m.shared_vars_assign_op, feed_dict=var_feeddict)
-
-    def _get_shared_tf_vars(self):
-        return tf.global_variables()
+            super()._load_tf_vars(params)
 
     def _build_model(self):
-        # Use memoized graph when possible
-        if self._if_model_same(TfEnasSearch._model_memo):
-            model_memo = TfEnasSearch._model_memo
-            return (model_memo.model, model_memo.graph, model_memo.sess, model_memo.saver, 
-                    model_memo.monitored_values)
-        
-        utils.logger.log('Building model...')
+        # Use memoized model when possible
+        if not self._if_model_same(TfEnasSearch._model_memo):
+            (model, graph, sess, saver, monitored_values) = \
+                super()._build_model(is_arch_dynamic=True) # Use dynamic arch
 
-        # Create graph
-        graph = tf.Graph()
-        
-        with graph.as_default():
-            # Define input placeholders to graph
-            ph = self._make_placeholders()
+            TfEnasSearch._model_memo = _ModelMemo(
+                self._train_params, self._knobs, graph, sess,
+                saver, monitored_values, model
+            )
 
-            # Initialize steps variable
-            step = self._make_var('step', (), dtype=tf.int32, trainable=False, initializer=tf.initializers.constant(0))
-
-            # Preprocess & do inference
-            (X, classes, train_dataset_init_op, pred_dataset_init_op) = \
-                self._preprocess(ph.train_images, ph.train_classes, ph.pred_images, ph.pred_classes, ph.is_train)
-            (logits, aux_logits_list) = self._forward(X, step, ph.normal_arch, ph.reduction_arch, ph.is_train)
-            
-            # Compute predictions
-            (probs, corrects) = self._compute_predictions(logits, classes)
-
-            # Compute training loss
-            total_loss = self._compute_loss(logits, aux_logits_list, classes)
-
-            # Optimize training loss
-            train_op = self._optimize(total_loss, step)
-
-            # Count model parameters
-            model_params_count = self._count_model_parameters()
-
-            # Monitor values
-            (summary_op, monitored_values) = self._add_monitoring_of_values()
-
-            # Add saver
-            tf_vars = tf.global_variables()
-            saver = tf.train.Saver(tf_vars)
-
-            # Allow loading of shared parameters
-            shared_tf_vars = self._get_shared_tf_vars()
-            (shared_var_phs, shared_vars_assign_op) = self._add_vars_assign_op(shared_tf_vars)
-
-            # Make session
-            sess = self._make_session()
-
-        model = _Model(train_dataset_init_op, pred_dataset_init_op, train_op, summary_op, 
-                        probs, corrects, step, shared_vars_assign_op, ph, shared_var_phs)
-
-        TfEnasSearch._model_memo = _ModelMemo(
-            self._train_params, self._knobs, graph, sess,
-            saver, monitored_values, model
-        )
-
-        return (model, graph, sess, saver, monitored_values)
-
-    def _add_vars_assign_op(self, vars):
-        var_phs = {
-            tf_var.name: tf.placeholder(dtype=tf_var.dtype, shape=tf_var.shape)
-            for tf_var in vars
-        }
-        vars_assign_op = tf.group([
-            tf.assign(tf_var, ph) 
-            for (tf_var, ph) in zip(vars, var_phs.values())
-        ], name='vars_assign_op')
-
-        return (var_phs, vars_assign_op)
-
+        model_memo = TfEnasSearch._model_memo
+        return (model_memo.model, model_memo.graph, model_memo.sess, model_memo.saver, 
+                model_memo.monitored_values)
+                
     def _if_model_same(self, model_memo):
         if model_memo is None:
             return False
@@ -1302,6 +1216,29 @@ class TfEnasSearch(TfEnasTrain):
                 return False
         
         return True
+
+    def _feed_dataset_to_model(self, images, classes, dataset_uri=None, is_train=False):
+        memo = TfEnasSearch._loaded_train_dataset_memo if is_train else TfEnasSearch._loaded_pred_dataset_memo
+        if dataset_uri is None or memo != dataset_uri:
+            # To load new dataset
+            super()._feed_dataset_to_model(images, classes, dataset_uri=dataset_uri, is_train=is_train)
+            if is_train:
+                TfEnasSearch._loaded_train_dataset_memo = dataset_uri
+            else:
+                TfEnasSearch._loaded_pred_dataset_memo = dataset_uri
+        else:
+            # Otherwise, dataset has previously been loaded, so do nothing
+            pass
+
+    def _load_dataset(self, dataset_uri, train_params=None):
+        # Try to use memoized dataset
+        if dataset_uri in TfEnasSearch._datasets_memo:
+            dataset = TfEnasSearch._datasets_memo[dataset_uri]
+            return dataset
+
+        dataset = super()._load_dataset(dataset_uri, train_params)
+        self._datasets_memo[dataset_uri] = dataset
+        return dataset
 
     def _apply_reduction_cell_op(self, idx, op, w, h, ch, cell_inputs, blocks, is_train):
         # Build output for each possible input
@@ -1389,29 +1326,19 @@ class TimedRepeatCondition():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', type=str, choices=['TRAIN', 'SEARCH'], default='SEARCH')
-    parser.add_argument('--total_trials', type=int, default=0) # No. of trials
-    parser.add_argument('--num_samples', type=str, default=10) # How many models to sample after training advisor
+    parser.add_argument('--total_trials', type=int, default=0, help='No. of trials to conduct')
     (args, _) = parser.parse_known_args()
 
     if args.mode == 'SEARCH':
 
         print('Training advisor...')
-        knob_config = TfEnasTrain.get_knob_config()
-        period = (ENAS_SEARCH_TRAIN_EVERY_NUM_TRIALS + 1)
-        total_trials = args.total_trials if args.total_trials > 0 else period * 150
-        advisor = Advisor(knob_config) 
+        total_trials = args.total_trials if args.total_trials > 0 else 301 * 150
         tune_model(
             TfEnasSearch, 
             train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
             val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-            total_trials=total_trials,
-            advisor=advisor
+            total_trials=total_trials
         )
-
-        print('Sampling {} models from trained advisor...'.format(args.num_samples))
-        for i in range(args.num_samples):
-            knobs = advisor.propose()
-            print('Knobs {}: {}'.format(i, knobs))
 
     elif args.mode == 'TRAIN':
 

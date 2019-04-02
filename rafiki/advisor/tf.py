@@ -3,71 +3,116 @@ import numpy as np
 import bisect
 import logging
 
-from rafiki.model import ListKnob, CategoricalKnob
+from rafiki.model import ListKnob, CategoricalKnob, FixedKnob
 
-from .advisor import BaseKnobAdvisor, UnsupportedKnobTypeError
+from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, ParamsType
 
 logger = logging.getLogger(__name__)
 
 ENAS_CONTROLLER_MINIBATCH_SIZE = 10
+ENAS_CONTROLLER_NUM_EVAL_TRIALS = 300
 
-class EnasKnobAdvisor(BaseKnobAdvisor):
+class EnasAdvisor(BaseAdvisor):
     '''
     Implements the controller of "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
     
     Paper: https://arxiv.org/abs/1802.03268
     '''
-    def start(self, knob_config):
-        self._knob_config = self._validate_knob_config(knob_config)
-        self._list_knob_models = self._build_models()
-
-    def propose(self):
-        knobs = {}
-        for (name, knob) in self._knob_config.items():
-            knobs[name] = self._propose_for_knob(name, knob)
-
-        return knobs
-
-    def feedback(self, score, knobs):
-        for (name, value) in knobs.items():
-            knob = self._knob_config[name]
-            self._feedback_for_knob(name, knob, value, score)
-    
-    def _validate_knob_config(self, knob_config):
+    @staticmethod
+    def is_compatible(knob_config):
+        # Supports only ListKnob of CategoricalKnobs, and FixedKnob
         for knob in knob_config.values():
             if isinstance(knob, ListKnob):
-                # Supports only `ListKnob` of `CategoricalKnob`
                 for knob in knob.items:
                     if not isinstance(knob, CategoricalKnob):
-                        raise UnsupportedKnobTypeError('Only `ListKnob` of `CategoricalKnob` is supported')
-            else:
-                raise UnsupportedKnobTypeError(knob.__class__)
+                        return False
+            elif not isinstance(knob, FixedKnob):
+                return False
 
-        return knob_config
+        return True
+        
+    def __init__(self, knob_config):
+        (self._fixed_knobs, knob_config) = _extract_fixed_knobs(knob_config)
+        self._list_knob_models = self._build_models(knob_config)
 
-    def _feedback_for_knob(self, name, knob, knob_value, score):
-        if isinstance(knob, ListKnob):
-            list_knob_model = self._list_knob_models[name]
+    def propose(self, trial_no, total_trials, concurrent_trial_nos=[]):
+        knobs = {}
+        for (name, list_knob_model) in self._list_knob_models.items():
+            knobs[name] = list_knob_model.propose()
+
+        # Add fixed knobs
+        knobs = { **self._fixed_knobs, **knobs }
+
+        params = ParamsType.GLOBAL_RECENT
+
+        trial_type = self._get_trial_type(trial_no, concurrent_trial_nos)
+        if trial_type is None:
+            return Proposal(knobs, params, is_valid=False)
+        elif trial_type == 'TRAIN':
+            return Proposal(knobs, params, should_train=True, should_evaluate=False,
+                            should_save_to_disk=True)
+        elif trial_type == 'EVAL':
+            return Proposal(knobs, params, should_train=False, should_evaluate=True,
+                            should_save_to_disk=False)
+        
+        return knobs
+
+    def feedback(self, score, proposal):
+        knobs = proposal.knobs
+        
+        for (name, list_knob_model) in self._list_knob_models.items():
+            knob_value = knobs[name]
             list_knob_model.feedback(knob_value, score)
 
-    def _propose_for_knob(self, name, knob):
-        if isinstance(knob, ListKnob):
-            list_knob_model = self._list_knob_models[name]
-            return list_knob_model.propose()
-
-    def _build_models(self):
-        knob_config = self._knob_config
-        list_knobs = [(name, knob) for (name, knob) in knob_config.items() if isinstance(knob, ListKnob)]
+    def _build_models(self, knob_config):
+        list_knobs = [(name, knob) for (name, knob) in knob_config.items()]
 
         # Build a model for each list knob
         list_knob_models = {}
         for (name, list_knob) in list_knobs:
             with tf.variable_scope(name):
-                list_knob_models[name] = EnasKnobAdvisorListModel(list_knob)
+                list_knob_models[name] = EnasAdvisorListModel(list_knob)
 
         return list_knob_models
 
-class EnasKnobAdvisorListModel():
+    def _get_trial_type(self, trial_no, concurrent_trial_nos):
+        num_eval_trials = ENAS_CONTROLLER_NUM_EVAL_TRIALS
+        E = ENAS_CONTROLLER_MINIBATCH_SIZE
+        T = num_eval_trials + 1 # Period
+
+        # Every (X + 1) trials, only train 1 epoch for the first trial
+        # The other X trials is for training the controller
+        is_train_trial = ((trial_no - 1) % T == 0)
+
+        if is_train_trial:
+            # For a "train" trial, wait until previous trials to finish
+            if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
+                return None
+            else:
+                return 'TRAIN'
+        else:
+            # For a "eval" trial, must wait for the previous "eval" minibatch to finish
+            train_trial_no = ((trial_no - 1) // T) * T + 1 # Corresponding train trial
+            # Corresponding head trial for minibatch
+            minibatch_head_trial_no = train_trial_no + (trial_no - train_trial_no - 1) // E * E + 1 
+            if self._if_preceding_trials_are_running(minibatch_head_trial_no, concurrent_trial_nos):
+                return None
+            else:
+                return 'EVAL'
+        
+    def _if_preceding_trials_are_running(self, trial_no, concurrent_trial_nos):
+        if len(concurrent_trial_nos) == 0:
+            return False
+
+        min_trial_no = min(concurrent_trial_nos)
+        return min_trial_no < trial_no
+
+def _extract_fixed_knobs(knob_config):
+    fixed_knobs = { name: knob.value for (name, knob) in knob_config.items() if isinstance(knob, FixedKnob) }
+    knob_config = { name: knob for (name, knob) in knob_config.items() if not isinstance(knob, FixedKnob) }
+    return (fixed_knobs, knob_config)
+
+class EnasAdvisorListModel():
     def __init__(self, knob):
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)

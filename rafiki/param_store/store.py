@@ -5,6 +5,8 @@ from typing import Dict
 import uuid
 import logging
 
+from rafiki.model import Params
+
 from .cache import Cache
 
 logger = logging.getLogger(__name__)
@@ -27,9 +29,9 @@ class ParamStore(object):
     :param str session_id: Unique session ID for parameters
     :param str param_id: ID for parameters
     :returns: Parameters as a { <name>: <numpy array> } dictionary
-    :rtype: dict[str, np.array]
+    :rtype: Params
     '''
-    def retrieve_params(self, session_id: str, param_id: str) -> Dict[str, np.array]:
+    def retrieve_params(self, session_id: str, param_id: str) -> Params:
         # Check in cache first
         params = self._cache.get(param_id)
         if params is not None:
@@ -60,17 +62,14 @@ class ParamStore(object):
     Stores parameters for a session into underlying storage.
 
     :param str session_id: Unique session ID for parameters
-    :param dict params: Parameters as a { <name>: <numpy array> } dictionary
+    :param Params params: Parameters as a { <name>: <numpy array> } dictionary
     :param str trial_id: Associated trial ID for parameters
     :returns: ID for parameters
     :rtype: str
     '''
-    def store_params(self, session_id: str, params: Dict[str, np.array], trial_id: str = None) -> str:
+    def store_params(self, session_id: str, params: Params, trial_id: str = None) -> str:
         if params is None:
             raise InvalidParamsError('`params` cannot be `None`')    
-        
-        if not all([isinstance(x, np.ndarray) for x in params.values()]):
-            raise InvalidParamsError('All params should be of type `np.array`')
 
         trial_id = trial_id or uuid.uuid4()
         session_key = '{}:{}'.format(self.REDIS_NAMESPACE, session_id) 
@@ -109,7 +108,10 @@ class ParamStore(object):
 
     def _serialize_params(self, params):
         # Convert numpy arrays to lists
-        params_for_json = { name: value.tolist() for (name, value) in params.items() }
+        params_for_json = { 
+            name: value.tolist() if isinstance(value, np.ndarray) else value
+            for (name, value) in params.items() 
+        }
 
         # Convert to JSON
         params_str = json.dumps(params_for_json)
@@ -121,7 +123,8 @@ class ParamStore(object):
 
         # Convert lists to numpy arrays
         for (name, value) in params.items():
-            params[name] = np.asarray(value)
+            if isinstance(value, list):
+                params[name] = np.asarray(value)
         
         return params
 

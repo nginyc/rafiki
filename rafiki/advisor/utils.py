@@ -12,18 +12,18 @@ from datetime import datetime
 from typing import Union, Dict, Type
 
 from rafiki.model import BaseModel, BaseKnob, serialize_knob_config, deserialize_knob_config, \
-                        parse_model_install_command, load_model_class, SharedParams
+                        parse_model_install_command, load_model_class
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.param_store import ParamStore
 from rafiki.predictor import ensemble_predictions
 
-from .advisor import Advisor
+from .advisor import make_advisor, BaseAdvisor, ParamsType
 
 class InvalidModelClassException(Exception): pass
 
 def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_dataset_uri: str, 
                 test_dataset_uri: str = None, total_trials: int = 25, params_root_dir: str = 'params/', 
-                advisor: Advisor = None, to_read_args: bool = True) -> (Dict[str, any], float, str):
+                advisor: BaseAdvisor = None, to_read_args: bool = True) -> (Dict[str, any], float, str):
     '''
     Tunes a model on a given dataset in the current environment.
 
@@ -33,7 +33,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     :param str test_dataset_uri: URI of the validation dataset for testing the final best trained model, if provided
     :param int total_trials: Total number of trials to tune the model over
     :param str params_root_dir: Root folder path to create subfolders to save each trial's model parameters
-    :param Advisor advisor: A pre-created advisor to use for tuning the model
+    :param BaseAdvisor advisor: A pre-created advisor to use for tuning the model
     :param bool to_read_args: Whether should system args be read to retrieve default values for `total_trials` and knobs
     :rtype: (dict, float, str)
     :returns: (<knobs for best model>, <test score for best model>, <params directory for best model>)
@@ -58,11 +58,12 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
 
     # Configure advisor
     if advisor is None:
-        advisor = Advisor(knob_config)
+        advisor = make_advisor(knob_config)
+    print('Using advisor "{}"...'.format(advisor.__class__))
 
     # Configure shared params monitor & store
     param_store = ParamStore()
-    params_monitor = SharedParamsMonitor()
+    params_monitor = ParamsMonitor()
     
     # Variables to track over trials
     best_model_score = 0
@@ -80,38 +81,38 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         trial_id = str(uuid.uuid4())
         _print_header('Trial #{} (ID: "{}")'.format(i, trial_id))
 
-        # Get trial config
-        trial_config = py_model_class.get_trial_config(i, total_trials, [])
-        assert trial_config.is_valid
-
-        # Get knobs proposal from advisor, overriding knobs from args & trial config
-        knobs = advisor.propose()
-        knobs = { **knobs, **trial_config.override_knobs, **knobs_from_args } 
+        # Get proposal from advisor, overriding knobs from args & trial config
+        proposal = advisor.propose(i, total_trials)
+        assert proposal.is_valid
+        knobs = { **proposal.knobs, **knobs_from_args } 
         print('Advisor proposed knobs:', knobs)
 
         # Retrieve shared params from store
-        param_id = params_monitor.get_params(trial_config.shared_params)
+        param_id = params_monitor.get_params(proposal.params)
         params = {}
         if param_id is not None:
-            print('To use {} shared params'.format(trial_config.shared_params.name))
-            print('Retrieving shared params of ID "{}"...'.format(param_id))
+            print('To use {} params'.format(proposal.params.name))
+            print('Retrieving params of ID "{}"...'.format(param_id))
             params = param_store.retrieve_params(session_id, param_id)
 
         # Load model
         model_inst = py_model_class(**knobs)
+        if len(params) > 0:
+            print('Loading params for model...')
+            model_inst.load_parameters(params)
 
         # Train model
-        print('Training model...')
-        if len(params) > 0:
-            model_inst.set_shared_parameters(params)
-        model_inst.train(train_dataset_uri)
-        trial_params = model_inst.get_shared_parameters() or None
-        if trial_params:
-            print('Model produced {} shared params'.format(len(trial_params)))
+        trial_params = None
+        if proposal.should_train:
+            print('Training model...')
+            model_inst.train(train_dataset_uri)
+            trial_params = model_inst.save_parameters() or None
+            if trial_params:
+                print('Model produced {} params'.format(len(trial_params)))
 
         # Evaluate model
         score = None
-        if trial_config.should_evaluate:
+        if proposal.should_evaluate:
             print('Evaluating model...')
             score = model_inst.evaluate(val_dataset_uri)
             if not isinstance(score, float):
@@ -127,12 +128,12 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
                        
                 # Save best model
                 params_dir = None
-                if trial_config.should_save:
-                    print('Saving trained model...')
+                if proposal.should_save_to_disk:
+                    print('Saving trained model to disk...')
                     params_dir = os.path.join(params_root_dir, trial_id + '/')
                     if not os.path.exists(params_dir):
                         os.mkdir(params_dir)
-                    model_inst.save_parameters(params_dir)
+                    model_inst.save_parameters_to_disk(params_dir)
                     _info('Model saved to {}'.format(params_dir))
 
                 best_model_params_dir = params_dir
@@ -145,16 +146,16 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
                     best_model_test_score = model_inst.evaluate(test_dataset_uri)
                     _info('Score on test dataset: {}'.format(best_model_test_score))
                  
-            
-            # Feedback to advisor 
-            advisor.feedback(score, knobs)
+            # Feedback to advisor
+            print('Giving feedback to advisor...')
+            advisor.feedback(score, proposal)
 
         # Update params monitor & store
         if trial_params:
-            print('Storing shared params...')
+            print('Storing trial\'s params...')
             trial_param_id = param_store.store_params(session_id, trial_params, trial_id)
             params_monitor.add_params(trial_param_id, score)
-            print('Stored shared params of ID "{}"'.format(trial_param_id))
+            print('Stored params of ID "{}"'.format(trial_param_id))
     
     # Declare best model
     _info('Best model has knobs {} with score of {}'.format(best_model_knobs, best_model_score))
@@ -173,6 +174,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
 
     return (best_model_knobs, best_model_test_score, best_model_params_dir)
 
+# TODO: Fix method
 def test_model_class(model_file_path: str, model_class: str, task: str, dependencies: Dict[str, str],
                     train_dataset_uri: str, val_dataset_uri: str, enable_gpu: bool = False, queries: list = []):
     '''
@@ -236,7 +238,7 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
 
 _Params = namedtuple('_Param', ('param_id', 'score', 'time'))
 
-class SharedParamsMonitor():
+class ParamsMonitor():
     '''
     Monitors params across trials and maps a shared params policy to the exact params to use for trial
     '''
@@ -259,19 +261,19 @@ class SharedParamsMonitor():
             time > self._worker_to_recent_params[worker_id].time:
             self._worker_to_recent_params[worker_id] = params
 
-    def get_params(self, shared_params: SharedParams, worker_id: str = None) -> Union[str, None]:
-        if shared_params == SharedParams.NONE:
+    def get_params(self, params: ParamsType, worker_id: str = None) -> Union[str, None]:
+        if params == ParamsType.NONE:
             return None
-        elif shared_params == SharedParams.LOCAL_RECENT:
+        elif params == ParamsType.LOCAL_RECENT:
             return self._get_local_recent_params(worker_id)
-        elif shared_params == SharedParams.LOCAL_BEST:
+        elif params == ParamsType.LOCAL_BEST:
             return self._get_local_best_params(worker_id)
-        elif shared_params == SharedParams.GLOBAL_RECENT:
+        elif params == ParamsType.GLOBAL_RECENT:
             return self._get_global_recent_params()
-        elif shared_params == SharedParams.GLOBAL_BEST:
+        elif params == ParamsType.GLOBAL_BEST:
             return self._get_global_best_params()
         else:
-            raise ValueError('No such shared params type: "{}"'.format(shared_params))
+            raise ValueError('No such shared params type: "{}"'.format(params))
     
     def _get_local_recent_params(self, worker_id):
         if worker_id not in self._worker_to_recent_params:

@@ -42,12 +42,12 @@ class TfAllCnnModelC(BaseModel):
     def __init__(self, **knobs):
         self._knobs = knobs
         
-    def train(self, dataset_uri, shared_params):
+    def train(self, dataset_uri, params):
         (train_images, train_classes, train_val_images, 
             train_val_classes, self._train_params) = self._load_train_dataset(dataset_uri)
         (self._model, self._graph, self._sess, self._saver, monitored_values) = self._build_model()
         with self._graph.as_default():
-            self._load_shared_vars(shared_params)
+            self._load_shared_vars(params)
             self._train_summaries = self._train_model(train_images, train_classes, 
                                                     train_val_images, train_val_classes, 
                                                     monitored_values)

@@ -5,27 +5,7 @@ from typing import Union, Dict, Type, List
 
 from .knob import BaseKnob
 
-class SharedParams(Enum):
-    LOCAL_RECENT = 'LOCAL_RECENT'
-    LOCAL_BEST = 'LOCAL_BEST'
-    GLOBAL_RECENT = 'GLOBAL_RECENT'
-    GLOBAL_BEST = 'GLOBAL_BEST'
-    NONE = 'NONE'
-
-class TrialConfig():
-    def __init__(self, 
-                is_valid: bool = True, # If a trial is invalid, the worker will sleep for a while before trying again
-                should_evaluate: bool = True, # Whether this trial should be evaluated
-                should_save: bool = True, # Whether this trial's trained model should be saved
-                shared_params: SharedParams = SharedParams.LOCAL_RECENT, # Shared parameters to use for this trial
-                override_knobs: Dict[str, any] = {}): # These override values in knobs proposed for this trial
-
-        self.is_valid = is_valid
-        self.should_evaluate = should_evaluate
-        self.shared_params = shared_params
-        self.should_save = should_save
-        self.override_knobs = override_knobs
-
+Params = Dict[str, Union[float, int, str, np.ndarray]]
 
 class BaseModel(abc.ABC):
     '''
@@ -55,6 +35,7 @@ class BaseModel(abc.ABC):
         pass
 
     @staticmethod
+    @abc.abstractmethod
     def get_knob_config() -> Dict[str, BaseKnob]:
         '''
         Return a dictionary defining this model class' knob configuration 
@@ -64,20 +45,6 @@ class BaseModel(abc.ABC):
         :rtype: dict[str, rafiki.model.BaseKnob]
         '''
         raise NotImplementedError()
-
-    @staticmethod
-    def get_trial_config(trial_no: int, total_trials: int, concurrent_trial_nos: List[int]) -> TrialConfig:
-        '''
-        Returns the configuration for a specific trial identified by its number.
-        Allows for declarative scheduling and configuration of trials. 
-
-        :param int trial_no: Upcoming trial no to get configuration for 
-        :param int total_trials: Total no. of trials for this instance of tuning
-        :param list[int] concurrent_trial_nos: Trial nos of other trials that are currently concurrently running 
-        :returns: Trial configuration for trial #`trial_no`
-        :rtype: TrialConfig
-        '''
-        return TrialConfig()
 
     @staticmethod
     def setup():
@@ -100,7 +67,6 @@ class BaseModel(abc.ABC):
         Additionally, a dictionary of trained shared parameters from previous trials is passed.
 
         :param str dataset_uri: URI of the dataset in a format specified by the task
-        :param dict shared_params: { <param_name>: <param_value> }
         '''
         raise NotImplementedError()
 
@@ -132,7 +98,7 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def save_parameters(self, params_dir: str):
+    def save_parameters_to_disk(self, params_dir: str):
         '''
         Saves the parameters of this model to a directory.
         This will be called only when model is *trained*.
@@ -140,27 +106,25 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def load_parameters(self, params_dir: str):
+    def load_parameters_from_disk(self, params_dir: str):
         '''
         Loads the parameters of this model from a directory.
         The model will be considered *trained* subsequently.
         '''
         raise NotImplementedError()
 
-    def get_shared_parameters(self) -> Union[None, Dict[str, np.array]]:
+    def save_parameters(self) -> Union[None, Params]:
         '''
-        Returns a dictionary of trained parameters to share with future trials, after the model has been *trained*.
-
+        Returns a dictionary of model parameters to share with future trials, after the model has been *trained*.
         :returns: { <param_name>: <param_value> }
-        :rtype: Union[None, Dict[str, np.array]]
+        :rtype: Union[None, Params]
         '''
         return None
 
-    def set_shared_parameters(self, shared_params: Dict[str, np.array]):
+    def load_parameters(self, params: Params):
         '''
-        Sets this model's shared parameters as an *untrained* model
-
-        :param shared_params: { <param_name>: <param_value> }
-        :type shaed_params: Dict[str, np.array]
+        Loads the parameters of this model that has been shared from previous trials.
+        The model will be considered *trained* subsequently.
+        :param Params params: { <param_name>: <param_value> }
         '''
         pass
