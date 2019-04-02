@@ -51,7 +51,6 @@ class DockerSwarmContainerManager(ContainerManager):
 
     def _get_deployment(self, gpus) -> _Deployment:
         nodes = self._get_nodes()
-        print(nodes)
         
         # Filter nodes with GPU if required
         if gpus > 0:
