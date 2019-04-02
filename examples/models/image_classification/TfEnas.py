@@ -15,7 +15,7 @@ from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKn
                             FixedKnob, ListKnob
 
 _Model = namedtuple('_Model', ['train_dataset_init_op', 'pred_dataset_init_op', 'train_op', 'summary_op',  
-        'probs', 'corrects', 'step', 'shared_vars_assign_op', 'ph', 'shared_var_phs'])
+        'probs', 'corrects', 'step', 'vars_assign_op', 'ph', 'var_phs'])
 
 _ModelPlaceholder = namedtuple('_ModelPlaceholder', ['train_images', 'train_classes', 'pred_images', 'pred_classes', 
                                                     'is_train', 'normal_arch', 'reduction_arch'])
@@ -168,7 +168,7 @@ class TfEnasTrain(BaseModel):
             model_file_path = os.path.join(params_dir, 'model')
             self._saver.restore(self._sess, model_file_path)
 
-    def save_parameters(self):
+    def dump_parameters(self):
         params = {}
 
         # Add train params
@@ -264,10 +264,10 @@ class TfEnasTrain(BaseModel):
             saver = tf.train.Saver(tf_vars)
 
             # Allow loading of model variables
-            (shared_var_phs, shared_vars_assign_op) = self._add_vars_assign_op(tf_vars)
+            (var_phs, vars_assign_op) = self._add_vars_assign_op(tf_vars)
 
             model = _Model(train_dataset_init_op, pred_dataset_init_op, train_op, summary_op, 
-                    probs, corrects, step, shared_vars_assign_op, ph, shared_var_phs)
+                    probs, corrects, step, vars_assign_op, ph, var_phs)
 
             # Make session
             sess = self._make_session()
@@ -284,12 +284,12 @@ class TfEnasTrain(BaseModel):
         # Build feed dict for op for loading vars
         # For each var, use current value of param in session if not in params
         var_feeddict = {
-            m.shared_var_phs[tf_var.name]: params[tf_var.name] 
+            m.var_phs[tf_var.name]: params[tf_var.name] 
             if tf_var.name in params else values[i]
             for (i, tf_var) in enumerate(tf_vars)
         }
 
-        self._sess.run(m.shared_vars_assign_op, feed_dict=var_feeddict)
+        self._sess.run(m.vars_assign_op, feed_dict=var_feeddict)
 
     def _make_placeholders(self):
         w = self._train_params['image_size']
@@ -1161,8 +1161,8 @@ class TfEnasSearch(TfEnasTrain):
         TfEnasSearch._model_memo = None
         TfEnasSearch._loaded_vars_id_memo = None
 
-    def save_parameters(self):
-        params = super().save_parameters()
+    def dump_parameters(self):
+        params = super().dump_parameters()
 
         # Add an ID for diffing
         vars_id = np.random.rand()

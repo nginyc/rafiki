@@ -6,23 +6,22 @@ from rafiki.client import Client
 from rafiki.model import serialize_knob_config
 from rafiki.config import SUPERADMIN_EMAIL
 from rafiki.constants import BudgetType, TaskType, ModelDependency
-from examples.models.image_classification.TfEnas import TfEnasTrain
+from examples.models.image_classification.TfEnas import TfEnasSearch
 
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
 
 def run_enas(client, gpus, full=True):
     app_id = gen_id()
     search_app = 'cifar_10_enas_search_{}'.format(app_id)
-    train_app = 'cifar_10_enas_train_{}'.format(app_id)
     search_model = 'TfEnasSearch_{}'.format(app_id)
-    train_model = 'TfEnasTrain_{}'.format(app_id)
-    search_trial_count = 31 * 10 if not full else 31 * 150
-    train_trial_count = 3
+    search_trial_count = 301 * 10 if not full else 301 * 150
+    # train_app = 'cifar_10_enas_train_{}'.format(app_id)
+    # train_model = 'TfEnasTrain_{}'.format(app_id)
+    # train_trial_count = 3
 
     print('Creating advisor...')
-    knob_config = TfEnasTrain.get_knob_config()
-    knob_config_str = serialize_knob_config(knob_config)
-    advisor = client.create_advisor(knob_config_str)
+    knob_config = TfEnasSearch.get_knob_config()
+    advisor = client.create_advisor(knob_config)
     pprint.pprint(advisor)
     advisor_id = advisor['id']
 
@@ -55,37 +54,7 @@ def run_enas(client, gpus, full=True):
             }
         )
         pprint.pprint(train_job)
-        wait_until_train_job_has_stopped(client, search_app)
-
-        print('Creating model for training final models sampled from ENAS...')
-        model = client.create_model(
-            name=train_model,
-            task=TaskType.IMAGE_CLASSIFICATION,
-            model_file_path='examples/models/image_classification/TfEnas.py',
-            model_class='TfEnasTrain',
-            dependencies={ ModelDependency.TENSORFLOW: '1.12.0' }
-        )
-        pprint.pprint(model)
-
-        print('Creating train job for training final models sampled from ENAS...')
-        train_job = client.create_train_job(
-            app=train_app,
-            task=TaskType.IMAGE_CLASSIFICATION,
-            train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-            val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-            budget={ 
-                BudgetType.MODEL_TRIAL_COUNT: train_trial_count,
-                BudgetType.GPU_COUNT: gpus
-            },
-            models={
-                train_model: {
-                    'advisor_id': advisor_id,
-                    'knobs': { 'num_layers': 8, 'trial_epochs': 10, 'initial_block_ch': 4 } if not full else {}
-                }
-            }
-        )
-        pprint.pprint(train_job)
-        wait_until_train_job_has_stopped(client, train_app)
+        wait_until_train_job_has_stopped(client, search_app, timeout=None)
 
     finally:
         print('Deleting advisor...')

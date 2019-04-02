@@ -86,7 +86,7 @@ class PyDenseNetBc(BaseModel):
         self._model = self._build_model()
         self._model.net.load_state_dict(net_state_dict)
 
-    def save_parameters(self):
+    def dump_parameters(self):
         (net, step) = self._model
 
         params = {}
@@ -102,7 +102,7 @@ class PyDenseNetBc(BaseModel):
         merge_params('net', net.state_dict())
         
         # Add step
-        params['step'] = step
+        params['step'] = np.asarray(step)
 
         return params
 
@@ -121,9 +121,9 @@ class PyDenseNetBc(BaseModel):
         net.load_state_dict(net_state_dict, strict=False)
 
         # Add step
-        step = params['step']
+        step = int(params['step'])
 
-        self._model = (step, net)
+        self._model = (net, step)
 
     ####################################
     # Private methods
