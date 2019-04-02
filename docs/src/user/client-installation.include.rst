@@ -6,7 +6,7 @@
 
     ::
 
-        pip install -r ./rafiki/client/requirements.txt
+        pip install -r ./rafiki/requirements.txt
 
 4. Set ``$PYTHONPATH`` to the project's root folder:
 
