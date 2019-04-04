@@ -53,8 +53,6 @@ COPY rafiki/utils/requirements.txt rafiki/utils/requirements.txt
 RUN pip install -r rafiki/utils/requirements.txt
 COPY rafiki/meta_store/requirements.txt rafiki/meta_store/requirements.txt
 RUN pip install -r rafiki/meta_store/requirements.txt
-COPY rafiki/model/requirements.txt rafiki/model/requirements.txt
-RUN pip install -r rafiki/model/requirements.txt
 COPY rafiki/advisor/requirements.txt rafiki/advisor/requirements.txt
 RUN pip install -r rafiki/advisor/requirements.txt
 COPY rafiki/param_store/requirements.txt rafiki/param_store/requirements.txt
