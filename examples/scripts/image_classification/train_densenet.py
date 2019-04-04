@@ -50,7 +50,7 @@ def train_densenet(client, gpus, full, param_policy):
             models={
                 model_name: {
                     'advisor_id': advisor_id,
-                    'knobs': { 'batch_size': 32, 'max_trial_epochs': 10 } if not full else {}
+                    'knobs': { 'batch_size': 32, 'trial_epochs': 10, 'early_stop_trial_epochs': 1 } if not full else {}
                 }
             }
         )
