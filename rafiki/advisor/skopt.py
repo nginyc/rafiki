@@ -2,6 +2,7 @@ from skopt.space import Real, Integer, Categorical
 from skopt.optimizer import Optimizer
 from collections import OrderedDict
 from enum import Enum
+import math
 import numpy as np
 
 from rafiki.model import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob
@@ -10,8 +11,9 @@ from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, ParamsType, Tr
 
 class ParamPolicy(Enum):
     NONE = 'NONE'
-    LINEAR_GREEDY = 'LINEAR_GREEDY'
-    EXP_GREEDY = 'EXP_GREEDY'
+    GREEDY = 'GREEDY' # Always wants global best
+    LINEAR_GREEDY = 'LINEAR_GREEDY' # (1 - p) probability of wanting global best, p decreases linearly
+    EXP_GREEDY = 'EXP_GREEDY' # (1 - p) probability of wanting global best, p decays exponentially
 
 class SkoptAdvisor(BaseAdvisor):
     '''
@@ -27,7 +29,7 @@ class SkoptAdvisor(BaseAdvisor):
 
         return True
 
-    def __init__(self, knob_config, param_policy=ParamPolicy.LINEAR_GREEDY):
+    def __init__(self, knob_config, param_policy=ParamPolicy.EXP_GREEDY):
         (self._fixed_knobs, knob_config) = _extract_fixed_knobs(knob_config)
         self._dimensions = self._get_dimensions(knob_config)
         self._optimizer = self._make_optimizer(self._dimensions)
@@ -105,6 +107,8 @@ class SkoptAdvisor(BaseAdvisor):
         policy = self._param_policy
         if policy == ParamPolicy.NONE:
             return ParamsType.NONE
+        elif policy == ParamPolicy.GREEDY:
+            return ParamsType.GLOBAL_BEST
         elif policy == ParamPolicy.EXP_GREEDY:
             return self._propose_exp_greedy_param(trial_no, total_trials)
         elif policy == ParamPolicy.LINEAR_GREEDY:
@@ -136,8 +140,8 @@ class SkoptAdvisor(BaseAdvisor):
     def _propose_exp_greedy_param(self, trial_no, total_trials):
         t = trial_no
         t_div = total_trials
-        e_base = 0.99
-        e = pow(e_base, 500 * t / t_div) # 0.99 -> 0.0065
+        e = math.exp(-4 * t / t_div) # e ^ (-4x) => 1 -> 0 exponential decay
+        print(e)
         # No params with decreasing probability
         if np.random.random() < e:
             return ParamsType.NONE
@@ -147,7 +151,8 @@ class SkoptAdvisor(BaseAdvisor):
     def _propose_linear_greedy_param(self, trial_no, total_trials):
         t = trial_no
         t_div = total_trials
-        e = 1 - t / t_div # 1 -> 0 linearly
+        e = 0.5 - 0.5 * t / t_div # 0.5 -> 0 linearly
+        print(e)
         # No params with decreasing probability
         if np.random.random() < e:
             return ParamsType.NONE

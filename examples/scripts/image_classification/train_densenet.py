@@ -69,7 +69,7 @@ if __name__ == '__main__':
     parser.add_argument('--admin_port', type=int, default=os.environ.get('ADMIN_EXT_PORT'), help='Port for Rafiki Admin on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
-    parser.add_argument('--param_policy', type=str, default='LINEAR_GREEDY', help='Param policy for the SkOpt advisor to be used')
+    parser.add_argument('--param_policy', type=str, default='EXP_GREEDY', help='Param policy for the SkOpt advisor to be used')
     (args, _) = parser.parse_known_args()
 
     # Initialize client
