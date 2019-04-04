@@ -5,37 +5,9 @@ from typing import Union, Dict, Type, List
 
 from .knob import BaseKnob
 
-class SharedParams(Enum):
-    LOCAL_RECENT = 'LOCAL_RECENT'
-    LOCAL_BEST = 'LOCAL_BEST'
-    GLOBAL_RECENT = 'GLOBAL_RECENT'
-    GLOBAL_BEST = 'GLOBAL_BEST'
-    NONE = 'NONE'
+KnobConfig = Dict[str, BaseKnob]
+Params = Dict[str, Union[str, np.ndarray]]
 
-class TrialConfig():
-    def __init__(self, 
-                is_valid: bool = True, # If a trial is invalid, the worker will sleep for a while before trying again
-                should_evaluate: bool = True, # Whether this trial should be evaluated
-                should_save: bool = True, # Whether this trial's trained model should be saved
-                shared_params: SharedParams = SharedParams.LOCAL_RECENT, # Shared parameters to use for this trial
-                override_knobs: Dict[str, any] = {}): # These override values in knobs proposed for this trial
-
-        self.is_valid = is_valid
-        self.should_evaluate = should_evaluate
-        self.shared_params = shared_params
-        self.should_save = should_save
-        self.override_knobs = override_knobs
-
-class AvailableGpu():
-    def __init__(self,
-                id: int, # 0-based index of GPU
-                memory_free: int): # Amount of GPU memory free in MB
-        self.id = id
-        self.memory_free = memory_free
-
-    def __repr__(self):
-        return str({ 'id': self.id, 'memory_free': self.memory_free })
-            
 class BaseModel(abc.ABC):
     '''
     Rafiki's base model class that Rafiki models should extend. 
@@ -60,36 +32,23 @@ class BaseModel(abc.ABC):
     :param knobs: Dictionary of knob values for this model instance
     :type knobs: dict[str, any]
     '''   
-    def __init__(self, shared_params: Dict[str, np.array] = {}, **knobs):
+    def __init__(self, train_strategy, **knobs):
         pass
 
     @staticmethod
-    def get_knob_config() -> Dict[str, BaseKnob]:
+    @abc.abstractmethod
+    def get_knob_config() -> KnobConfig:
         '''
         Return a dictionary defining this model class' knob configuration 
         (i.e. list of knob names, their data types and their ranges).
 
         :returns: Dictionary defining this model's knob configuration 
-        :rtype: dict[str, rafiki.model.BaseKnob]
+        :rtype: KnobConfig
         '''
         raise NotImplementedError()
 
     @staticmethod
-    def get_trial_config(trial_no: int, total_trials: int, running_trial_nos: List[int]) -> TrialConfig:
-        '''
-        Returns the configuration for a specific trial identified by its number.
-        Allows for declarative scheduling and configuration of trials. 
-
-        :param int trial_no: Upcoming trial no to get configuration for 
-        :param int total_trials: Total no. of trials for this instance of tuning
-        :param list[int] running_trial_nos: Trial nos of other trials that are currently concurrently running 
-        :returns: Trial configuration for trial #`trial_no`
-        :rtype: TrialConfig
-        '''
-        return TrialConfig()
-
-    @staticmethod
-    def setup(available_gpus: List[AvailableGpu] = []):
+    def setup():
         '''
         Runs class-wide setup logic (e.g. initialize a graph/session shared across trials).
         '''
@@ -109,7 +68,6 @@ class BaseModel(abc.ABC):
         Additionally, a dictionary of trained shared parameters from previous trials is passed.
 
         :param str dataset_uri: URI of the dataset in a format specified by the task
-        :param dict shared_params: { <param_name>: <param_value> }
         '''
         raise NotImplementedError()
 
@@ -141,7 +99,7 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def save_parameters(self, params_dir: str):
+    def save_parameters_to_disk(self, params_dir: str):
         '''
         Saves the parameters of this model to a directory.
         This will be called only when model is *trained*.
@@ -149,18 +107,25 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def load_parameters(self, params_dir: str):
+    def load_parameters_from_disk(self, params_dir: str):
         '''
         Loads the parameters of this model from a directory.
         The model will be considered *trained* subsequently.
         '''
         raise NotImplementedError()
 
-    def get_shared_parameters(self) -> Union[None, Dict[str, np.array]]:
+    def dump_parameters(self) -> Union[None, Params]:
         '''
-        Returns a dictionary of trained parameters to share with future trials, after the model has been *trained*.
-
+        Returns a dictionary of model parameters to share with future trials, after the model has been *trained*.
         :returns: { <param_name>: <param_value> }
-        :rtype: dict
+        :rtype: Union[None, Params]
         '''
         return None
+
+    def load_parameters(self, params: Params):
+        '''
+        Loads the parameters of this model that has been shared from previous trials.
+        The model will be considered *trained* subsequently.
+        :param Params params: { <param_name>: <param_value> }
+        '''
+        pass

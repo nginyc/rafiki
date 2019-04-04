@@ -22,7 +22,7 @@ def wait_until_train_job_has_stopped(client, app, timeout=60*20, tick=10):
             return
 
         # Still running...
-        if length >= timeout:
+        if timeout is not None and length >= timeout:
             raise TimeoutError('Train job is running for too long')
 
         length += tick

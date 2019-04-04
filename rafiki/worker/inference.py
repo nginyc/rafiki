@@ -16,10 +16,7 @@ from rafiki.config import INFERENCE_WORKER_SLEEP, INFERENCE_WORKER_PREDICT_BATCH
 
 logger = logging.getLogger(__name__)
 
-class InvalidInferenceJobError(Exception): pass
-class InvalidSubInferenceJobError(Exception): pass
-class InvalidTrialError(Exception): pass
-class InvalidModelError(Exception): pass
+class InvalidWorkerError(Exception): pass
 
 _SubInferenceJob = namedtuple('_SubInferenceJob', ['id'])
 _InferenceJob = namedtuple('_InferenceJob', ['id'])
@@ -97,21 +94,25 @@ class InferenceWorker(object):
     def _read_worker_info(self):
         logger.info('Reading info for worker...')
         with self._meta_store:
-            sub_inference_job = self._meta_store.get_sub_inference_job_by_service(self._service_id)
+            worker = self._meta_store.get_sub_inference_job_worker(self._service_id)
+            if worker is None:
+                raise InvalidWorkerError('No such worker with service ID "{}"'.format(self._service_id))
+
+            sub_inference_job = self._meta_store.get_sub_inference_job(worker.sub_inference_job_id)
             if sub_inference_job is None:
-                raise InvalidSubInferenceJobError()
+                raise InvalidWorkerError('No such sub inference job with ID "{}"'.format(worker.sub_inference_job_id))
 
             inference_job = self._meta_store.get_inference_job(sub_inference_job.inference_job_id)
             if inference_job is None:
-                raise InvalidInferenceJobError()
+                raise InvalidWorkerError('No such inference job with ID "{}"'.format(sub_inference_job.inference_job_id))
 
             trial = self._meta_store.get_trial(sub_inference_job.trial_id)
             if trial is None or trial.params_dir is None: # Must have model saved
-                raise InvalidTrialError()
+                raise InvalidWorkerError('No such trial with ID "{}"'.format(sub_inference_job.trial_id))
             
             model = self._meta_store.get_model(trial.model_id)
             if model is None:
-                raise InvalidModelError()
+                raise InvalidWorkerError('No such model with ID "{}"'.format(trial.model_id))
 
             return (
                 _SubInferenceJob(sub_inference_job.id),

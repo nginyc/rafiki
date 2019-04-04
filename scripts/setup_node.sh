@@ -10,3 +10,4 @@ while true; do
     echo "Please key in a comman-separated list of GPU numbers e.g. '' or '0,2'."
 done
 docker node update --label-add available_gpus=$gpus $hostname
+docker node update --label-add num_services=0 $hostname

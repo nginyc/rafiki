@@ -9,14 +9,14 @@ import torch.nn.functional as F
 import torch.utils.checkpoint as cp
 from PIL import Image
 from datetime import datetime
+import argparse
 from collections import namedtuple
 from torch.utils.data import Dataset, DataLoader, random_split
 import torchvision.transforms as transforms
 from collections import OrderedDict
-import abc
 
-from rafiki.model import BaseModel, utils, FixedKnob, FloatKnob, CategoricalKnob, SharedParams, TrialConfig
-from rafiki.advisor import tune_model
+from rafiki.model import BaseModel, utils, FixedKnob, FloatKnob, CategoricalKnob
+from rafiki.advisor import tune_model, make_advisor, AdvisorType, TrainStrategy
 
 _Model = namedtuple('_Model', ['net', 'step'])
 
@@ -26,16 +26,16 @@ class PyDenseNetBc(BaseModel):
 
     Credits to https://github.com/gpleiss/efficient_densenet_pytorch
     '''
-    _gpu = None
 
-    def __init__(self, shared_params, **knobs):
+    def __init__(self, train_strategy, **knobs):
         self._knobs = knobs
-        self._shared_params = shared_params
+        self._model = None
+        self._train_strategy = train_strategy
 
     @staticmethod
     def get_knob_config():
         return {
-            'max_trial_epochs': FixedKnob(200),
+            'trial_epochs': FixedKnob(300),
             'lr': FloatKnob(1e-4, 1, is_exp=True),
             'lr_decay': FloatKnob(1e-3, 1e-1, is_exp=True),
             'opt_momentum': FloatKnob(0.7, 1, is_exp=True),
@@ -43,40 +43,16 @@ class PyDenseNetBc(BaseModel):
             'batch_size': CategoricalKnob([32, 64, 128]),
             'drop_rate': FloatKnob(0, 0.4),
             'max_image_size': FixedKnob(32),
-            'max_train_val_samples': FixedKnob(1024),
-            'early_stop_patience_epochs': FixedKnob(5),
-            'if_share_params': FixedKnob(True)
+            'early_stop_trial_epochs': FixedKnob(100),
+            'early_stop_train_val_samples': FixedKnob(1024),
+            'early_stop_patience_epochs': FixedKnob(5)
         }
-
-    @staticmethod
-    def get_trial_config(trial_no, total_trials, running_trial_nos):
-        t = trial_no
-        t_div = total_trials
-        e_base = 0.5
-        e = pow(e_base, 1 + 5 * (t - 1) / t_div) # 0.5 -> 0.0156
-        # Restart params with decreasing probability
-        if np.random.random() < e:
-            return TrialConfig(shared_params=SharedParams.NONE)
-        # Otherwise, use best params across workers
-        else:
-            return TrialConfig(shared_params=SharedParams.GLOBAL_BEST)
-    
-    @staticmethod
-    def setup(available_gpus):
-        # Make sure there is at least 1 GPU with enough memory, otherwise to use CPU
-        memory_needed = 4 * 1024 # 4GB memory
-        available_gpus = [x for x in available_gpus if x.memory_free >= memory_needed]
-        utils.logger.log('Available GPUs: {}'.format(available_gpus))
-        if len(available_gpus) > 0:
-            gpu = available_gpus[0]
-            utils.logger.log('Using GPU #{}...'.format(gpu.id))
-            PyDenseNetBc._gpu = gpu
 
     def train(self, dataset_uri):
         (train_dataset, train_val_dataset, self._train_params) = self._load_train_dataset(dataset_uri)
-        self._model = self._build_model()
-        self._load_shared_parameters(self._shared_params)
-        self._train_model(train_dataset, train_val_dataset)
+        if self._model is None:
+            self._model = self._build_model()
+        self._model = self._train_model(self._model, train_dataset, train_val_dataset)
 
     def evaluate(self, dataset_uri):
         dataset = self._load_val_dataset(dataset_uri, self._train_params)
@@ -87,7 +63,7 @@ class PyDenseNetBc(BaseModel):
         # TODO
         pass
 
-    def save_parameters(self, params_dir):
+    def save_parameters_to_disk(self, params_dir):
         # Save state dict of net
         model_file_path = os.path.join(params_dir, 'model.pt')
         torch.save(self._model.net.state_dict(), model_file_path)
@@ -97,7 +73,7 @@ class PyDenseNetBc(BaseModel):
         with open(train_params_file_path, 'w') as f:
             f.write(json.dumps(self._train_params))
 
-    def load_parameters(self, params_dir):
+    def load_parameters_from_disk(self, params_dir):
         # Load pre-processing params
         train_params_file_path = os.path.join(params_dir, 'train_params.json')
         with open(train_params_file_path, 'r') as f:
@@ -112,41 +88,48 @@ class PyDenseNetBc(BaseModel):
         self._model = self._build_model()
         self._model.net.load_state_dict(net_state_dict)
 
-    def get_shared_parameters(self):
+    def dump_parameters(self):
         (net, step) = self._model
-        if_share_params = self._knobs['if_share_params']
 
-        if not if_share_params:
-            return None
-
-        # Merge state of net and step into 1 dictionary
         params = {}
+
+        # Add train params
+        params['train_params'] = json.dumps(self._train_params)
+
+        # Add net's params
         def merge_params(prefix, state_dict):
             for (name, value) in state_dict.items():
                 params['{}:{}'.format(prefix, name)] = value.cpu().numpy()
 
         merge_params('net', net.state_dict())
+        
+        # Add step
         params['step'] = np.asarray(step)
 
         return params
 
-    def _load_shared_parameters(self, params):
-        (net, step) = self._model
-        
-        if len(params) == 0:
-            return
+    def load_parameters(self, params):
+        # Add train params
+        self._train_params = json.loads(params['train_params'])
 
-        utils.logger.log('Loading shared parameters...')
-
+        # Add net
         def extract_params(prefix):
             return { ':'.join(name.split(':')[1:]): torch.from_numpy(value) 
                     for (name, value) in params.items() if name.startswith(prefix + ':') }    
 
+        model = self._build_model()
+        net = model.net
         net_state_dict = extract_params('net')
         net.load_state_dict(net_state_dict, strict=False)
+
+        # Add step
         step = int(params['step'])
 
-        self._model = _Model(net, step)
+        self._model = (net, step)
+
+    ####################################
+    # Private methods
+    ####################################
 
     def _evaluate(self, dataset):
         batch_size = self._knobs['batch_size']
@@ -179,11 +162,18 @@ class PyDenseNetBc(BaseModel):
 
         return _Model(net, 0)
 
-    def _train_model(self, train_dataset, train_val_dataset):
-        trial_epochs = self._get_trial_epochs()
+    def _train_model(self, model, train_dataset, train_val_dataset):
+        train_strategy = self._train_strategy
+        trial_epochs = self._knobs['trial_epochs']
+        early_stop_trial_epochs = self._knobs['early_stop_trial_epochs']
         batch_size = self._knobs['batch_size']
         early_stop_patience = self._knobs['early_stop_patience_epochs']
-        (net, step) = self._model
+        (net, step) = model
+
+        # Determine no. of epochs
+        num_epochs = trial_epochs
+        if train_strategy == TrainStrategy.EARLY_STOP:
+            num_epochs = early_stop_trial_epochs
 
         # Define plots
         utils.logger.define_plot('Losses over Epoch', ['train_loss', 'train_val_loss'], x_axis='epoch')
@@ -193,13 +183,13 @@ class PyDenseNetBc(BaseModel):
 
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         train_val_dataloader = DataLoader(train_val_dataset, batch_size=batch_size)
-        (optimizer, scheduler) = self._get_optimizer(net, trial_epochs)
+        (optimizer, scheduler) = self._get_optimizer(net, num_epochs)
 
         net.train()
         [net] = self._set_device([net])
 
         early_stop_condition = EarlyStopCondition(patience=early_stop_patience)
-        for epoch in range(trial_epochs):
+        for epoch in range(num_epochs):
             utils.logger.log('Running epoch {}...'.format(epoch))
 
             scheduler.step()
@@ -247,18 +237,25 @@ class PyDenseNetBc(BaseModel):
                     utils.logger.log('Early stopping...')
                     break
 
-        self._model = _Model(net, step)
+        model = _Model(net, step)
+        return model
 
     def _load_train_dataset(self, dataset_uri):
-        max_train_val_samples = self._knobs['max_train_val_samples']
+        early_stop_train_val_samples = self._knobs['early_stop_train_val_samples']
         max_image_size = self._knobs['max_image_size']
+        train_strategy = self._train_strategy
+
+        # Allocate train val only if early stopping
+        train_val_samples = 0
+        if train_strategy == TrainStrategy.EARLY_STOP:
+            train_val_samples = early_stop_train_val_samples
 
         utils.logger.log('Loading train dataset...')
 
         dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
                                                         mode='RGB', if_shuffle=True)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-        train_val_samples = min(dataset.size // 5, max_train_val_samples) # up to 1/5 of samples for train-val
+        train_val_samples = min(dataset.size // 5, train_val_samples) # up to 1/5 of samples for train-val
         (train_images, train_classes) = (images[train_val_samples:], classes[train_val_samples:])
         (train_val_images, train_val_classes) = (images[:train_val_samples], classes[:train_val_samples])
 
@@ -315,14 +312,9 @@ class PyDenseNetBc(BaseModel):
         utils.logger.log('Model has {} parameters'.format(params_count))
         return params_count
 
-    def _get_trial_epochs(self):
-        max_trial_epochs = self._knobs['max_trial_epochs']
-        return max_trial_epochs
-
     def _set_device(self, tensors):
-        gpu = PyDenseNetBc._gpu
-        if gpu is not None:
-            return [x.cuda(gpu.id) for x in tensors]
+        if torch.cuda.is_available():
+            return [x.cuda() for x in tensors]
         else:            
             return tensors
 
@@ -567,14 +559,21 @@ class EarlyStopCondition():
             return False
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--param_policy', type=str, default='LINEAR_GREEDY', 
+                    help='Param policy for advisor') 
+    (args, _) = parser.parse_known_args()
+
+    knob_config = PyDenseNetBc.get_knob_config()
+    advisor = make_advisor(knob_config, advisor_type=AdvisorType.SKOPT, 
+                            param_policy=args.param_policy)
+
     tune_model(
         PyDenseNetBc, 
-        # train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-        # val_dataset_uri='data/fashion_mnist_for_image_classification_val.zip',
-        # test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
         train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
         val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
         test_dataset_uri='data/cifar_10_for_image_classification_test.zip',
-        total_trials=100
+        total_trials=100,
+        advisor=advisor
     )
 

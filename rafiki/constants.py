@@ -1,6 +1,6 @@
 class BudgetType():
     MODEL_TRIAL_COUNT = 'MODEL_TRIAL_COUNT'
-    ENABLE_GPU = 'ENABLE_GPU'
+    GPU_COUNT = 'GPU_COUNT'
 
 class ModelDependency():
     TENSORFLOW = 'tensorflow'
@@ -27,7 +27,7 @@ class TrainJobStatus():
     STOPPED = 'STOPPED'
 
 class TrialStatus():
-    STARTED = 'STARTED'
+    PENDING = 'PENDING'
     RUNNING = 'RUNNING'
     ERRORED = 'ERRORED'
     TERMINATED = 'TERMINATED'

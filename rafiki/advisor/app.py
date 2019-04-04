@@ -9,6 +9,7 @@ from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.utils.auth import generate_token, UnauthorizedError, auth
 
 from .service import AdvisorService, InvalidAdvisorError
+from .advisor import Proposal
 
 service = AdvisorService()
 
@@ -52,14 +53,19 @@ def create_advisor(auth):
 
 @app.route('/advisors/<advisor_id>/propose', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
-def generate_proposal(auth, advisor_id):
+def get_proposal_from_advisor(auth, advisor_id):
     params = get_request_params()
-    return jsonify(service.generate_proposal(advisor_id, **params))
+    proposal = service.get_proposal_from_advisor(advisor_id, **params)
+    return jsonify(proposal.to_jsonable())
 
 @app.route('/advisors/<advisor_id>/feedback', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def feedback(auth, advisor_id):
     params = get_request_params()
+
+    if 'proposal' in params:
+        params['proposal'] = Proposal.from_jsonable(params['proposal'])
+
     return jsonify(service.feedback(advisor_id, **params))
 
 @app.route('/advisors/<advisor_id>', methods=['DELETE'])

@@ -86,8 +86,8 @@ class TrialDetailPage extends React.Component<Props> {
                 <TableCell>{trial.score}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell>Knobs</TableCell>
-                <TableCell>{JSON.stringify(trial.knobs, null, 2)}</TableCell>
+                <TableCell>Proposal</TableCell>
+                <TableCell>{JSON.stringify(trial.proposal, null, 2)}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell>Started at</TableCell>
@@ -158,15 +158,18 @@ class TrialDetailPage extends React.Component<Props> {
   }
 
   render() {
-    const { classes, trialId } = this.props;
+    const { classes } = this.props;
     const { logs, trial } = this.state;
 
     return (
       <React.Fragment>
-        <Typography gutterBottom variant="h2">
-          Trial
-          <span className={classes.headerSub}>{`(ID: ${trialId})`}</span>
-        </Typography>
+        {
+          trial &&
+          <Typography gutterBottom variant="h2">
+            Trial
+            <span className={classes.headerSub}>{`#${trial.no}`}</span>
+          </Typography>
+        }
         {
           trial &&
           this.renderDetails()

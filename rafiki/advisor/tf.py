@@ -1,182 +1,294 @@
 import tensorflow as tf
 import numpy as np
 import bisect
+import logging
 
-from rafiki.model import ListKnob, CategoricalKnob
+from rafiki.model import ListKnob, CategoricalKnob, FixedKnob
 
-from .advisor import BaseKnobAdvisor, UnsupportedKnobTypeError
+from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, ParamsType, TrainStrategy
 
-class EnasKnobAdvisor(BaseKnobAdvisor):
+logger = logging.getLogger(__name__)
+
+class EnasAdvisor(BaseAdvisor):
     '''
     Implements the controller of "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
     
     Paper: https://arxiv.org/abs/1802.03268
     '''
-    def start(self, knob_config):
-        self._knob_config = self._validate_knob_config(knob_config)
-        self._list_knob_models = self._build_models()
-
-    def propose(self):
-        knobs = {}
-        for (name, knob) in self._knob_config.items():
-            knobs[name] = self._propose_for_knob(name, knob)
-
-        return knobs
-
-    def feedback(self, score, knobs):
-        for (name, value) in knobs.items():
-            knob = self._knob_config[name]
-            self._feedback_for_knob(name, knob, value, score)
-    
-    def _validate_knob_config(self, knob_config):
+    @staticmethod
+    def is_compatible(knob_config):
+        # Supports only ListKnob of CategoricalKnobs, and FixedKnob
         for knob in knob_config.values():
             if isinstance(knob, ListKnob):
-                # Supports only `ListKnob` of `CategoricalKnob`
                 for knob in knob.items:
                     if not isinstance(knob, CategoricalKnob):
-                        raise UnsupportedKnobTypeError('Only `ListKnob` of `CategoricalKnob` is supported')
-            else:
-                raise UnsupportedKnobTypeError(knob.__class__)
+                        return False
+            elif not isinstance(knob, FixedKnob):
+                return False
 
-        return knob_config
+        return True
+        
+    def __init__(self, knob_config, batch_size=10, num_eval_trials=300):
+        (self._fixed_knobs, knob_config) = _extract_fixed_knobs(knob_config)
+        self._batch_size = batch_size
+        self._num_eval_trials = num_eval_trials
+        self._list_knob_models = self._build_models(knob_config, batch_size)
+        self._recent_feedback = [] # [(score, proposal)]
 
-    def _feedback_for_knob(self, name, knob, knob_value, score):
-        if isinstance(knob, ListKnob):
-            list_knob_model = self._list_knob_models[name]
+    def propose(self, trial_no, total_trials, concurrent_trial_nos=[]):
+        trial_type = self._get_trial_type(trial_no, total_trials, concurrent_trial_nos)
+
+        if trial_type is None:
+            return Proposal({}, is_valid=False)
+        elif trial_type == 'TRAIN':
+            knobs = self._propose_knobs()
+            return Proposal(knobs, 
+                            params_type=ParamsType.GLOBAL_RECENT, 
+                            train_strategy=TrainStrategy.EARLY_STOP, 
+                            should_evaluate=False,
+                            should_save_to_disk=False)
+        elif trial_type == 'EVAL':
+            knobs = self._propose_knobs()
+            return Proposal(knobs,
+                            params_type=ParamsType.GLOBAL_RECENT, 
+                            train_strategy=TrainStrategy.NONE, 
+                            should_evaluate=True,
+                            should_save_to_disk=False)
+        elif trial_type == 'FINAL_TRAIN':
+            # Do standard model training from scratch with recent best knobs
+            knobs = self._propose_best_recent_knobs()
+            return Proposal(knobs, 
+                            params_type=ParamsType.NONE,
+                            train_strategy=TrainStrategy.STANDARD,
+                            should_evaluate=True,
+                            should_save_to_disk=True)
+
+    def feedback(self, score, proposal):
+        num_sample_trials = 10
+        knobs = proposal.knobs
+        
+        # Keep track of last X trials' knobs & scores (for final train trials)
+        self._recent_feedback = [(score, proposal), *self._recent_feedback[:(num_sample_trials - 1)]]
+
+        for (name, list_knob_model) in self._list_knob_models.items():
+            knob_value = knobs[name]
             list_knob_model.feedback(knob_value, score)
 
-    def _propose_for_knob(self, name, knob):
-        if isinstance(knob, ListKnob):
-            list_knob_model = self._list_knob_models[name]
-            return list_knob_model.propose()
+    def _propose_best_recent_knobs(self):
+        recent_feedback = self._recent_feedback
+        # If hasn't collected feedback, propose from model
+        if len(recent_feedback) == 0:
+            return self._propose_knobs()
 
-    def _build_models(self):
-        knob_config = self._knob_config
-        list_knobs = [(name, knob) for (name, knob) in knob_config.items() if isinstance(knob, ListKnob)]
+        # Otherwise, determine best recent proposal and use it
+        (score, proposal) = sorted(recent_feedback)[-1]
+
+        return proposal.knobs
+
+    def _propose_knobs(self):
+        knobs = {}
+        for (name, list_knob_model) in self._list_knob_models.items():
+            knobs[name] = list_knob_model.propose()
+
+        # Add fixed knobs
+        knobs = { **self._fixed_knobs, **knobs }
+        return knobs
+
+    def _build_models(self, knob_config, batch_size):
+        list_knobs = [(name, knob) for (name, knob) in knob_config.items()]
 
         # Build a model for each list knob
         list_knob_models = {}
         for (name, list_knob) in list_knobs:
             with tf.variable_scope(name):
-                list_knob_models[name] = EnasKnobAdvisorListModel(list_knob)
+                list_knob_models[name] = EnasAdvisorListModel(list_knob, batch_size)
 
         return list_knob_models
 
-class EnasKnobAdvisorListModel():
-    def __init__(self, knob):
+    def _get_trial_type(self, trial_no, total_trials, concurrent_trial_nos):
+        num_final_train_trials = 1
+        num_eval_trials = self._num_eval_trials
+        E = self._batch_size
+        T = num_eval_trials + 1 # Period
+
+        # Schedule: |--<train + eval>---||--<final train>--|
+
+        # Check if final train trial
+        if trial_no > total_trials - num_final_train_trials:
+            if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
+                return None
+
+            return 'FINAL_TRAIN'
+
+        # Otherwise, it is in the <train + eval> phase
+        # Every (X + 1) trials, only train 1 epoch for the first trial
+        # The other X trials is for training the controller
+        is_train_trial = ((trial_no - 1) % T == 0)
+
+        if is_train_trial:
+            # For a "train" trial, wait until previous trials to finish
+            if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
+                return None
+            
+            return 'TRAIN'
+        else:
+            # Within a batch, "eval" trials can be done in parallel
+            # But must wait for the previous "eval" batch to finish
+            train_trial_no = ((trial_no - 1) // T) * T + 1 # Corresponding train trial
+            # Corresponding head trial for minibatch
+            minibatch_head_trial_no = train_trial_no + (trial_no - train_trial_no - 1) // E * E + 1 
+            if self._if_preceding_trials_are_running(minibatch_head_trial_no, concurrent_trial_nos):
+                return None
+
+            return 'EVAL'
+        
+    def _if_preceding_trials_are_running(self, trial_no, concurrent_trial_nos):
+        if len(concurrent_trial_nos) == 0:
+            return False
+
+        min_trial_no = min(concurrent_trial_nos)
+        return min_trial_no < trial_no
+
+def _extract_fixed_knobs(knob_config):
+    fixed_knobs = { name: knob.value for (name, knob) in knob_config.items() if isinstance(knob, FixedKnob) }
+    knob_config = { name: knob for (name, knob) in knob_config.items() if not isinstance(knob, FixedKnob) }
+    return (fixed_knobs, knob_config)
+
+class EnasAdvisorListModel():
+    def __init__(self, knob, batch_size, ):
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
         self._knob = knob
+        self._batch_size = batch_size
+        self._batch_items = [] # A running batch of items for feedback
+        self._batch_scores = [] # A running batch of corresponding scores for feedback
 
         with self._graph.as_default():
-            self._build_model()
-            self._make_train_op()
+            (self._item_logits, self._out_item_idxs, 
+                self._train_op, self._losses, self._rewards,
+                self._item_idxs_ph, self._scores_ph) = self._build_model(self._knob)
             self._start_session()
 
-            tf_vars = self._get_all_variables()
-            model_params_count = self._count_model_parameters(tf_vars)
-            # print('Model has {} parameters'.format(model_params_count))
-
     def propose(self):
-        item_knobs = self._knob.items
-        item_idxs = self._item_idxs
-
-        with self._graph.as_default():
-            item_idxs_real = self._sess.run(item_idxs)
-            items = [item_knob.values[idx] for (item_knob, idx) in zip(item_knobs, item_idxs_real)]
-
+        items = self._predict_with_model()
         return items
 
     def feedback(self, items, score):
+        self._batch_items.append(items)
+        self._batch_scores.append(score)
+        
+        if len(self._batch_items) < self._batch_size:
+            return
+
+        self._train_model(self._batch_items, self._batch_scores)
+        self._batch_items = []
+        self._batch_scores = []
+
+    def _predict_with_model(self):
         item_knobs = self._knob.items
-        item_idxs = [item_knob.values.index(item) for (item_knob, item) in zip(item_knobs, items)]
+        out_item_idxs = self._out_item_idxs
 
         with self._graph.as_default():
-            (reward_base, loss, reward, _) = self._sess.run(
-                [self._reward_base, self._loss, self._reward, self._train_op],
+            item_idxs_real = self._sess.run(out_item_idxs)
+            items = [item_knob.values[idx] for (item_knob, idx) in zip(item_knobs, item_idxs_real)]
+            return items
+
+    def _train_model(self, batch_items, batch_scores):
+        item_knobs = self._knob.items
+
+        # Convert item values to indexes
+        batch_item_idxs = [[item_knob.values.index(item) for (item_knob, item) in zip(item_knobs, items)] for items in batch_items]
+
+        logger.info('Training controller...')
+
+        with self._graph.as_default():
+            (losses, rewards, _) = self._sess.run(
+                [self._losses, self._rewards, self._train_op],
                 feed_dict={
-                    self._item_idxs_ph: item_idxs,
-                    self._score_ph: score
+                    self._item_idxs_ph: batch_item_idxs,
+                    self._scores_ph: batch_scores
                 }
             )
 
-            # print('Reward: {}'.format(reward))
-            # print('Reward baseline: {}'.format(reward_base))
-            # print('Loss: {}'.format(loss))
-            # print('Logits: {}'.format(list(item_logits)))
+            # print('Rewards: {}'.format(rewards))
+            # print('Losses: {}'.format(losses))
 
     def _start_session(self):
         self._sess.run(tf.global_variables_initializer())
 
-    def _make_train_op(self):
-        knob = self._knob
-        item_logits = self._item_logits
+    def _build_model(self, knob):
+        batch_size = self._batch_size
         N = len(knob) # Length of list
+
+        # List of counts corresponding to the no. of values for each list item
+        Ks = [len(item_knob.values) for item_knob in knob.items]
+
+        # Placeholders for item indexes and associated score
+        item_idxs_ph = tf.placeholder(dtype=tf.int32, shape=(batch_size, N))
+        scores_ph = tf.placeholder(dtype=tf.float32, shape=(batch_size,))
+
+        (item_logits, out_item_idxs) = self._forward(Ks)
+        (train_op, losses, rewards) = self._make_train_op(item_logits, item_idxs_ph, scores_ph)
+
+        model_params_count = self._count_model_parameters()
+
+        return (item_logits, out_item_idxs, train_op, losses, rewards, item_idxs_ph, scores_ph)
+      
+    def _make_train_op(self, item_logits, item_idxs, scores):
+        batch_size = self._batch_size
         base_decay = 0.99
         learning_rate = 0.0035
         adam_beta1 = 0
         adam_epsilon = 1e-3
         entropy_weight = 0.0001
 
-        # Placeholders for item indexes and associated score
-        item_idxs_ph = tf.placeholder(dtype=tf.int32, shape=(N,))
-        score_ph = tf.placeholder(dtype=tf.float32)
-
         # Compute log probs & entropy
-        sample_log_probs = self._compute_sample_log_probs(item_idxs_ph, item_logits)
+        sample_log_probs = self._compute_sample_log_probs(item_idxs, item_logits)
         sample_entropy = self._compute_sample_entropy(item_logits)
 
-        # Compute reward
+        # Compute rewards in a batch
         # Adding entropy encourages exploration
-        reward = score_ph
-        reward += entropy_weight * sample_entropy
+        rewards = scores
+        rewards += entropy_weight * sample_entropy
 
         # Baseline reward for REINFORCE
         reward_base = tf.Variable(0., name='reward_base', dtype=tf.float32, trainable=False)
 
         # Update baseline whenever reward updates
-        base_update = tf.assign_sub(reward_base, (1 - base_decay) * (reward_base - reward))
+        base_update = tf.assign_sub(reward_base, (1 - base_decay) * (reward_base - tf.reduce_mean(rewards)))
         with tf.control_dependencies([base_update]):
-            reward = tf.identity(reward)
+            rewards = tf.identity(rewards)
 
-        # Compute loss
-        loss = sample_log_probs * (reward - reward_base)
+        # Compute losses in a batch
+        losses = sample_log_probs * (rewards - reward_base)
 
         # Add optimizer
         tf_vars = self._get_all_variables()
         steps = tf.Variable(0, name='steps', dtype=tf.int32, trainable=False)
-        grads = tf.gradients(loss, tf_vars)
+        grads = tf.gradients(losses, tf_vars)
+        grads = [x / tf.constant(batch_size, dtype=tf.float32) for x in grads] # Average all gradients
         opt = tf.train.AdamOptimizer(learning_rate, beta1=adam_beta1, epsilon=adam_epsilon,
                                     use_locking=True)
         train_op = opt.apply_gradients(zip(grads, tf_vars), global_step=steps)
         
-        self._train_op = train_op
-        self._loss = loss
-        self._reward = reward
-        self._reward_base = reward_base
-        self._item_idxs_ph = item_idxs_ph
-        self._score_ph = score_ph
+        return (train_op, losses, rewards)
 
-    def _build_model(self):
-        knob = self._knob
-        N = len(knob) # Length of list
+    def _forward(self, Ks):
+        N = len(Ks) # Length of list
         H = 32 # Number of units in LSTM
         lstm_num_layers = 2
         temperature = 0
         tanh_constant = 1.1
 
-        # List of counts corresponding to the no. of values for each list item
-        Ks = [len(item_knob.values) for item_knob in knob.items]
-
         # Build LSTM
-        lstm  = self._build_lstm(lstm_num_layers, H)
+        lstm = self._build_lstm(lstm_num_layers, H)
 
         # Initial embedding passed to LSTM
         initial_embed = self._make_var('item_embed_initial', (1, H))
 
         # TODO: Add attention
         
-        item_idxs = []
+        out_item_idxs = []
         item_logits = []
         lstm_states = [None]
         item_embeds = [initial_embed]
@@ -193,10 +305,10 @@ class EnasKnobAdvisorListModel():
                 logits = self._add_temperature(logits, temperature)
                 logits = self._add_tanh_constant(logits, tanh_constant)
                 item_logits.append(logits)
-
+                
                 # Draw and save item index from probability distribution by `X`
                 item_idx = self._sample_from_logits(logits)
-                item_idxs.append(item_idx)
+                out_item_idxs.append(item_idx)
 
                 # If not the final item
                 if i < N - 1:
@@ -205,19 +317,22 @@ class EnasKnobAdvisorListModel():
                     item_embed = tf.reshape(tf.nn.embedding_lookup(embeds, item_idx), (1, -1))
                     item_embeds.append(item_embed)
 
-        self._item_idxs = item_idxs
-        self._item_logits = item_logits
+        return (item_logits, out_item_idxs)
 
     def _compute_sample_log_probs(self, item_idxs, item_logits):
         N = len(item_logits)
-        sample_log_probs = tf.constant(0., dtype=tf.float32, name='sample_log_probs')
+        batch_size = tf.shape(item_idxs)[0] # item_idxs is of shape (bs, N)
+        
+        item_idxs = tf.transpose(item_idxs, (1, 0)) # item_idxs is of shape (N, bs)
+        sample_log_probs = tf.zeros((batch_size,), dtype=tf.float32, name='sample_log_probs')
 
         for i in range(N):
-            idx = item_idxs[i]
-            logits = item_logits[i]
-            log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=tf.reshape(logits, (1, -1)), 
-                                                                        labels=tf.reshape(idx, (1,)))
-            sample_log_probs += log_probs[0]
+            idxs = item_idxs[i] # Indexes for item i in a batch
+            logits = item_logits[i] # Logits for item i
+            logits = tf.reshape(tf.tile(logits, (batch_size, 1)), (batch_size, -1)) 
+            idxs = tf.reshape(idxs, (batch_size,))
+            log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=idxs)
+            sample_log_probs += log_probs
         
         return sample_log_probs
 
@@ -242,13 +357,15 @@ class EnasKnobAdvisorListModel():
         idx = tf.multinomial(tf.reshape(logits, (1, -1)), 1)[0][0]
         return idx
 
-    def _count_model_parameters(self, tf_vars):
+    def _count_model_parameters(self):
+        tf_trainable_vars = tf.trainable_variables()
         num_params = 0
         # print('Model parameters:')
-        for var in tf_vars:
-            # print(var)
+        for var in tf_trainable_vars:
+            # print(str(var))
             num_params += np.prod([dim.value for dim in var.get_shape()])
 
+        # print('Model has {} parameters'.format(num_params))
         return num_params
 
     def _add_temperature(self, logits, temperature):

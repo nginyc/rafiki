@@ -1,4 +1,4 @@
-from .model import BaseModel, SharedParams, TrialConfig, AvailableGpu
+from .model import BaseModel, Params, KnobConfig
 from .dataset import DatasetUtils, CorpusDataset, ImageFilesDataset
 from .log import LoggerUtils
 from .utils import utils, logger, dataset, load_model_class, parse_model_install_command, \

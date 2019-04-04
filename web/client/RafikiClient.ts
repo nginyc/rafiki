@@ -304,7 +304,7 @@ export interface Trial {
   score: number;
   model_name: string;
   worker_id: string;
-  knobs: { [name: string]: any }
+  proposal: object
 }
 
 export interface TrialLogs {

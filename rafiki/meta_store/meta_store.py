@@ -8,7 +8,7 @@ from rafiki.constants import TrainJobStatus, \
 
 from .schema import Base, TrainJob, SubTrainJob, \
     InferenceJob, SubInferenceJob, Trial, Model, User, Service, \
-    TrialLog
+    TrialLog, SubTrainJobWorker, SubInferenceJobWorker
 
 class DuplicateTrialNoError(Exception): pass
 
@@ -144,15 +144,33 @@ class MetaStore(object):
         sub_train_job = self._session.query(SubTrainJob).get(id)
         return sub_train_job
 
-    def get_sub_train_job_by_service(self, service_id):
-        sub_train_job = self._session.query(SubTrainJob) \
-            .filter(SubTrainJob.service_id == service_id).first()
-        return sub_train_job
+    ####################################
+    # Sub Train Job Worker
+    ####################################  
 
-    def update_sub_train_job(self, sub_train_job, service_id):
-        sub_train_job.service_id = service_id
-        self._session.add(sub_train_job)
-        return sub_train_job
+    def create_sub_train_job_worker(self, sub_train_job_id, service_id):
+        worker = SubTrainJobWorker(
+            sub_train_job_id=sub_train_job_id,
+            service_id=service_id
+        )
+        self._session.add(worker)
+        return worker
+
+    def get_sub_train_job_worker(self, service_id):
+        worker = self._session.query(SubTrainJobWorker) \
+            .filter(SubTrainJobWorker.service_id == service_id).first()
+        return worker
+
+    def get_sub_train_job_workers(self, sub_train_job_id):
+        workers = self._session.query(SubTrainJobWorker) \
+                    .filter(SubTrainJobWorker.sub_train_job_id == sub_train_job_id).all()
+        return workers
+
+    def get_sub_train_job_workers_of_train_job(self, train_job_id):
+        workers = self._session.query(SubTrainJobWorker) \
+                    .join(SubTrainJob, SubTrainJob.id == SubTrainJobWorker.sub_train_job_id) \
+                    .filter(SubTrainJob.train_job_id == train_job_id).all()
+        return workers
 
     ####################################
     # Inference Jobs
@@ -235,42 +253,60 @@ class MetaStore(object):
         sub_inference_job = self._session.query(SubInferenceJob).get(id)
         return sub_inference_job
 
-    def get_sub_inference_job_by_service(self, service_id):
-        sub_inference_job = self._session.query(SubInferenceJob) \
-            .filter(SubInferenceJob.service_id == service_id).first()
-        return sub_inference_job
-
     def get_sub_inference_jobs_of_inference_job(self, inference_job_id):
         sub_inference_jobs = self._session.query(SubInferenceJob) \
             .filter(SubInferenceJob.inference_job_id == inference_job_id).all()
         return sub_inference_jobs
 
-    def update_sub_inference_job(self, sub_inference_job, service_id):
-        sub_inference_job.service_id = service_id
-        self._session.add(sub_inference_job)
-        return sub_inference_job
+    ####################################
+    # Sub Inference Job Worker
+    ####################################  
+
+    def create_sub_inference_job_worker(self, sub_inference_job_id, service_id):
+        worker = SubInferenceJobWorker(
+            sub_inference_job_id=sub_inference_job_id,
+            service_id=service_id
+        )
+        self._session.add(worker)
+        return worker
+
+    def get_sub_inference_job_worker(self, service_id):
+        worker = self._session.query(SubInferenceJobWorker) \
+            .filter(SubInferenceJobWorker.service_id == service_id).first()
+        return worker
+
+    def get_sub_inference_job_workers_of_inference_job(self, inference_job_id):
+        workers = self._session.query(SubInferenceJobWorker) \
+                    .join(SubInferenceJob, SubInferenceJob.id == SubInferenceJobWorker.sub_inference_job_id) \
+                    .filter(SubInferenceJob.inference_job_id == inference_job_id).all()
+        return workers
+
+    def get_sub_inference_job_workers(self, sub_inference_job_id):
+        workers = self._session.query(SubInferenceJobWorker) \
+                    .filter(SubInferenceJobWorker.sub_inference_job_id == sub_inference_job_id).all()
+        return workers
 
     ####################################
     # Services
     ####################################
 
     def create_service(self, service_type, container_manager_type, 
-                        docker_image, requirements):
+                        docker_image, replicas, gpus):
         service = Service(
             service_type=service_type,
             docker_image=docker_image,
             container_manager_type=container_manager_type,
-            requirements=requirements
+            replicas=replicas, 
+            gpus=gpus
         )
         self._session.add(service)
         return service
 
     def mark_service_as_deploying(self, service, container_service_id, 
-                                container_service_name, replicas, hostname,
+                                container_service_name, hostname,
                                 port, ext_hostname, ext_port, service_info):
         service.container_service_id = container_service_id
         service.container_service_name = container_service_name
-        service.replicas = replicas
         service.hostname = hostname
         service.port = port
         service.ext_hostname = ext_hostname
@@ -406,21 +442,21 @@ class MetaStore(object):
 
         return trials
 
-    def get_trials_of_sub_train_job(self, sub_train_job_id, min_datetime_updated=None):
+    def get_trials_of_sub_train_job(self, sub_train_job_id, min_trial_no):
         query = self._session.query(Trial) \
             .filter(Trial.sub_train_job_id == sub_train_job_id)
 
-        if min_datetime_updated is not None:
-            query = query.filter(Trial.datetime_updated >= min_datetime_updated)
+        if min_trial_no is not None:
+            query = query.filter(Trial.no >= min_trial_no)
 
         trials = query.order_by(Trial.datetime_started.desc()).all()
 
         return trials
 
-    def mark_trial_as_running(self, trial, knobs, shared_param_id):
+    def mark_trial_as_running(self, trial, proposal, param_id):
         trial.status = TrialStatus.RUNNING
-        trial.knobs = knobs
-        trial.shared_param_id = shared_param_id
+        trial.proposal = proposal
+        trial.param_id = param_id
         trial.datetime_updated = datetime.utcnow()
         self._session.add(trial)
         return trial
@@ -432,11 +468,11 @@ class MetaStore(object):
         self._session.add(trial)
         return trial
 
-    def mark_trial_as_completed(self, trial, score, params_dir, out_shared_param_id):
+    def mark_trial_as_completed(self, trial, score, params_dir, out_param_id):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
         trial.params_dir = params_dir
-        trial.out_shared_param_id = out_shared_param_id
+        trial.out_param_id = out_param_id
         trial.datetime_stopped = datetime.utcnow()
         trial.datetime_updated = datetime.utcnow()
         self._session.add(trial)
@@ -471,9 +507,9 @@ class MetaStore(object):
         try:
             self._session.commit()
         except Exception as e:
-            self._session.rollback()
             # Check if error is due to duplicate trial no
             if '_sub_train_job_id_no_uc' in str(e):
+                self._session.rollback()
                 raise DuplicateTrialNoError()
             else:
                 raise e

@@ -3,8 +3,11 @@ import json
 import pprint
 import pickle
 import os
+from enum import Enum
 
 from rafiki.constants import BudgetType, ModelAccessRight
+from rafiki.model import serialize_knob_config, KnobConfig
+from rafiki.advisor import AdvisorType, Proposal
 
 class RafikiConnectionError(ConnectionError):
     pass
@@ -521,55 +524,66 @@ class Client(object):
     # Advisors
     ####################################
 
-    def create_advisor(self, knob_config_str, advisor_id=None):
+    def create_advisor(self, knob_config: KnobConfig, advisor_id: str = None, 
+                        advisor_type: str = None, advisor_config={}) -> dict:
         '''
         Creates a Rafiki advisor. If `advisor_id` is passed, it will create an advisor
         of that ID, or do nothing if an advisor of that ID has already been created.
 
-        :param str knob_config_str: Serialized knob configuration for advisor session
-        :param rafiki.constants.AdvisorType advisor_type: Type of advisor (`None` for default)
+        :param KnobConfig knob_config: Knob configuration for advisor session
         :param str advisor_id: ID of advisor to create
+        :param AdvisorType advisor_type: Type of advisor
+        :param dict advisor_config: Additional configuration for the advisor
         :returns: Created advisor as dictionary
         :rtype: dict[str, any]
         '''
+        knob_config_str = serialize_knob_config(knob_config)
         json = {
             'advisor_id': advisor_id,
-            'knob_config_str': knob_config_str
+            'knob_config_str': knob_config_str,
+            'advisor_type': advisor_type.value if advisor_type is not None else None,
+            'advisor_config': advisor_config
         }
 
         data = self._post('/advisors', target='advisor', json=json)
         return data
 
-    def generate_proposal(self, advisor_id):
+    def get_proposal_from_advisor(self, advisor_id: str, trial_no: int, 
+                                total_trials: int, concurrent_trial_nos=[]) -> Proposal:
         '''
-        Generate a proposal of knobs from an advisor.
+        Get a proposal from an advisor.
 
         :param str advisor_id: ID of target advisor
-        :returns: Proposal of `knobs`
-        :rtype: dict[str, any]
+        :param int trial_no: Trial no to get proposal for
+        :param int total_trials: Expected total no. of trials for this tuning sessio
+        :param List[int] concurrent_trial_nos: Trial nos that are concurrently running
+        :returns: Proposal from advisor 
+        :rtype: Proposal
         '''
-        data = self._post('/advisors/{}/propose'.format(advisor_id), target='advisor')
-        return data
+        json = {
+            'trial_no': trial_no,
+            'total_trials': total_trials,
+            'concurrent_trial_nos': concurrent_trial_nos
+        }
+        data = self._post('/advisors/{}/propose'.format(advisor_id), target='advisor', json=json)
+        proposal = Proposal.from_jsonable(data)
+        return proposal
 
-    def feedback_to_advisor(self, advisor_id, score, knobs):
+    def feedback_to_advisor(self, advisor_id: str, score: float, proposal: Proposal):
         '''
         Feedbacks to the advisor on the score of a set of knobs.
-        Additionally returns another proposal of knobs after ingesting feedback.
 
         :param str advisor_id: ID of target advisor
         :param float score: Score of the knobs, the higher the number, the better the set of knobs
-        :param str knobs: Knobs to give feedback on
-        :returns: Proposal of `knobs`
-        :rtype: dict[str, any]
+        :param Proposal proposal: Proposal to give feedback on
         '''
-        data = self._post('/advisors/{}/feedback'.format(advisor_id), 
-                        target='advisor', json={
-                            'score': score,
-                            'knobs': knobs
-                        })
-        return data
+        json = {
+            'score': score,
+            'proposal': proposal.to_jsonable()
+        }
+        self._post('/advisors/{}/feedback'.format(advisor_id), target='advisor', json=json)
 
-    def delete_advisor(self, advisor_id):
+    def delete_advisor(self, advisor_id: str) -> dict:
         '''
         Deletes a Rafiki advisor.
 
