@@ -63,7 +63,7 @@ class TfEnas(BaseModel):
             'cell_archs': ListKnob(2 * CELL_NUM_BLOCKS * 4, lambda i: cell_arch_item(i)),
             'use_cell_arch_type': FixedKnob(''), # '' | 'ENAS' | 'NASNET-A',
             'max_image_size': FixedKnob(32),
-            'trial_epochs': FixedKnob(630), # Total no. of epochs during a standard train
+            'trial_epochs': FixedKnob(310), # Total no. of epochs during a standard train
             'batch_size': FixedKnob(128),
             'learning_rate': FixedKnob(0.05), 
             'initial_block_ch': FixedKnob(36),
@@ -78,7 +78,7 @@ class TfEnas(BaseModel):
             'num_layers': FixedKnob(15),
             'aux_loss_mul': FixedKnob(0.4),
             'drop_path_keep_prob': FixedKnob(0.6),
-            'drop_path_decay_epochs': FixedKnob(630),
+            'drop_path_decay_epochs': FixedKnob(310),
             'cutout_size': FixedKnob(0),
             'grad_clip_norm': FixedKnob(5.0),
             'use_aux_head': FixedKnob(False),
@@ -1324,11 +1324,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, default=1, help='Batch size for ENAS controller')
     parser.add_argument('--num_eval_trials', type=int, default=30, help='No. of evaluation trials in a cycle of train-eval in ENAS')
+    parser.add_argument('--train_once', action='store_true', help='Whether to just train 1 (fixed) architecture')
     (args, _) = parser.parse_known_args()
 
-    num_final_train_trials = 1
-    period = args.num_eval_trials + 1
-    trial_count = period * 150 + num_final_train_trials
+    if not args.train_once:
+        num_final_train_trials = 1
+        period = args.num_eval_trials + 1
+        trial_count = period * 150 + num_final_train_trials
+    else:
+        trial_count = 1
 
     advisor_config = { 'num_eval_trials': args.num_eval_trials, 'batch_size': args.batch_size }
     knob_config = TfEnas.get_knob_config()
