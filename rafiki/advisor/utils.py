@@ -67,6 +67,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     
     # Variables to track over trials
     best_model_score = 0
+    best_trial_no = 0 
     best_model_test_score = None
     best_model_knobs = None
     best_model_params_dir = None
@@ -138,13 +139,13 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
                 best_model_params_dir = params_dir
                 best_model_knobs = knobs
                 best_model_score = score
+                best_trial_no = i
                         
                 # Test best model, if test dataset provided
                 if test_dataset_uri is not None:
                     print('Evaluting model on test dataset...')
                     best_model_test_score = model_inst.evaluate(test_dataset_uri)
                     _info('Score on test dataset: {}'.format(best_model_test_score))
-                 
             
             # Feedback to advisor 
             advisor.feedback(score, knobs)
@@ -157,7 +158,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
             print('Stored shared params of ID "{}"'.format(trial_param_id))
     
     # Declare best model
-    _info('Best model has knobs {} with score of {}'.format(best_model_knobs, best_model_score))
+    _info('Best trial #{} has knobs {} with score of {}'.format(best_trial_no, best_model_knobs, best_model_score))
     if best_model_test_score is not None:
         _info('...with test score of {}'.format(best_model_test_score))
     if best_model_params_dir is not None:
