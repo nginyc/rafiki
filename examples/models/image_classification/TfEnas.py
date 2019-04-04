@@ -64,7 +64,7 @@ class TfEnas(BaseModel):
             'use_cell_arch_type': FixedKnob(''), # '' | 'ENAS' | 'NASNET-A',
             'max_image_size': FixedKnob(32),
             'trial_epochs': FixedKnob(630), # Total no. of epochs during a standard train
-            'batch_size': FixedKnob(64),
+            'batch_size': FixedKnob(128),
             'learning_rate': FixedKnob(0.05), 
             'initial_block_ch': FixedKnob(36),
             'stem_ch_mul': FixedKnob(3),
