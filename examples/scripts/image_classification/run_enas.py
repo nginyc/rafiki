@@ -3,58 +3,60 @@ import argparse
 import pprint
 
 from rafiki.client import Client
-from rafiki.model import serialize_knob_config
 from rafiki.config import SUPERADMIN_EMAIL
 from rafiki.constants import BudgetType, TaskType, ModelDependency
-from examples.models.image_classification.TfEnas import TfEnasSearch
+from rafiki.advisor import AdvisorType
 
+from examples.models.image_classification.TfEnas import TfEnas
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
 
 def run_enas(client, gpus, full=True):
     app_id = gen_id()
-    search_app = 'cifar_10_enas_search_{}'.format(app_id)
-    search_model = 'TfEnasSearch_{}'.format(app_id)
-    search_trial_count = 301 * 10 if not full else 301 * 150
-    # train_app = 'cifar_10_enas_train_{}'.format(app_id)
-    # train_model = 'TfEnasTrain_{}'.format(app_id)
-    # train_trial_count = 3
+    num_eval_trials = 60 if not full else 300
+    batch_size = 2 if not full else 10
+    period = num_eval_trials + 1
+    num_final_train_trials = 1
+    trial_count = period * 10 + num_final_train_trials if not full else period * 150 + num_final_train_trials
+    app = 'cifar_10_enas_{}'.format(app_id)
+    model_name = 'TfEnas_{}'.format(app_id)
 
     print('Creating advisor...')
-    knob_config = TfEnasSearch.get_knob_config()
-    advisor = client.create_advisor(knob_config)
+    knob_config = TfEnas.get_knob_config()
+    advisor_config = { 'num_eval_trials': num_eval_trials, 'batch_size': batch_size }
+    advisor = client.create_advisor(knob_config, advisor_type=AdvisorType.ENAS, advisor_config=advisor_config)
     pprint.pprint(advisor)
     advisor_id = advisor['id']
 
     try:
-        print('Creating model for ENAS search...')
+        print('Creating model...')
         model = client.create_model(
-            name=search_model,
+            name=model_name,
             task=TaskType.IMAGE_CLASSIFICATION,
             model_file_path='examples/models/image_classification/TfEnas.py',
-            model_class='TfEnasSearch',
+            model_class='TfEnas',
             dependencies={ ModelDependency.TENSORFLOW: '1.12.0' }
         )
         pprint.pprint(model)
         
-        print('Creating train job for ENAS search...')
+        print('Creating train job...')
         train_job = client.create_train_job(
-            app=search_app,
+            app=app,
             task=TaskType.IMAGE_CLASSIFICATION,
             train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
             val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
             budget={ 
-                BudgetType.MODEL_TRIAL_COUNT: search_trial_count,
+                BudgetType.MODEL_TRIAL_COUNT: trial_count,
                 BudgetType.GPU_COUNT: gpus
             },
             models={
-                search_model: {
+                model_name: {
                     'advisor_id': advisor_id,
-                    'knobs': { 'num_layers': 0, 'initial_block_ch': 4 } if not full else {}
+                    'knobs': { 'num_layers': 2, 'early_stop_num_layers': 0 } if not full else {}
                 }
             }
         )
         pprint.pprint(train_job)
-        wait_until_train_job_has_stopped(client, search_app, timeout=None)
+        wait_until_train_job_has_stopped(client, app, timeout=None)
 
     finally:
         print('Deleting advisor...')

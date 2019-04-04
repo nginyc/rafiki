@@ -16,7 +16,7 @@ import torchvision.transforms as transforms
 from collections import OrderedDict
 
 from rafiki.model import BaseModel, utils, FixedKnob, FloatKnob, CategoricalKnob
-from rafiki.advisor import tune_model, make_advisor, AdvisorType
+from rafiki.advisor import tune_model, make_advisor, AdvisorType, TrainStrategy
 
 _Model = namedtuple('_Model', ['net', 'step'])
 
@@ -27,14 +27,15 @@ class PyDenseNetBc(BaseModel):
     Credits to https://github.com/gpleiss/efficient_densenet_pytorch
     '''
 
-    def __init__(self, **knobs):
+    def __init__(self, train_strategy, **knobs):
         self._knobs = knobs
         self._model = None
+        self._train_strategy = train_strategy
 
     @staticmethod
     def get_knob_config():
         return {
-            'max_trial_epochs': FixedKnob(200),
+            'trial_epochs': FixedKnob(300),
             'lr': FloatKnob(1e-4, 1, is_exp=True),
             'lr_decay': FloatKnob(1e-3, 1e-1, is_exp=True),
             'opt_momentum': FloatKnob(0.7, 1, is_exp=True),
@@ -42,7 +43,8 @@ class PyDenseNetBc(BaseModel):
             'batch_size': CategoricalKnob([32, 64, 128]),
             'drop_rate': FloatKnob(0, 0.4),
             'max_image_size': FixedKnob(32),
-            'max_train_val_samples': FixedKnob(1024),
+            'early_stop_trial_epochs': FixedKnob(100),
+            'early_stop_train_val_samples': FixedKnob(1024),
             'early_stop_patience_epochs': FixedKnob(5)
         }
 
@@ -161,10 +163,17 @@ class PyDenseNetBc(BaseModel):
         return _Model(net, 0)
 
     def _train_model(self, model, train_dataset, train_val_dataset):
-        trial_epochs = self._get_trial_epochs()
+        train_strategy = self._train_strategy
+        trial_epochs = self._knobs['trial_epochs']
+        early_stop_trial_epochs = self._knobs['early_stop_trial_epochs']
         batch_size = self._knobs['batch_size']
         early_stop_patience = self._knobs['early_stop_patience_epochs']
         (net, step) = model
+
+        # Determine no. of epochs
+        num_epochs = trial_epochs
+        if train_strategy == TrainStrategy.EARLY_STOP:
+            num_epochs = early_stop_trial_epochs
 
         # Define plots
         utils.logger.define_plot('Losses over Epoch', ['train_loss', 'train_val_loss'], x_axis='epoch')
@@ -174,13 +183,13 @@ class PyDenseNetBc(BaseModel):
 
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         train_val_dataloader = DataLoader(train_val_dataset, batch_size=batch_size)
-        (optimizer, scheduler) = self._get_optimizer(net, trial_epochs)
+        (optimizer, scheduler) = self._get_optimizer(net, num_epochs)
 
         net.train()
         [net] = self._set_device([net])
 
         early_stop_condition = EarlyStopCondition(patience=early_stop_patience)
-        for epoch in range(trial_epochs):
+        for epoch in range(num_epochs):
             utils.logger.log('Running epoch {}...'.format(epoch))
 
             scheduler.step()
@@ -232,15 +241,21 @@ class PyDenseNetBc(BaseModel):
         return model
 
     def _load_train_dataset(self, dataset_uri):
-        max_train_val_samples = self._knobs['max_train_val_samples']
+        early_stop_train_val_samples = self._knobs['early_stop_train_val_samples']
         max_image_size = self._knobs['max_image_size']
+        train_strategy = self._train_strategy
+
+        # Allocate train val only if early stopping
+        train_val_samples = 0
+        if train_strategy == TrainStrategy.EARLY_STOP:
+            train_val_samples = early_stop_train_val_samples
 
         utils.logger.log('Loading train dataset...')
 
         dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
                                                         mode='RGB', if_shuffle=True)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-        train_val_samples = min(dataset.size // 5, max_train_val_samples) # up to 1/5 of samples for train-val
+        train_val_samples = min(dataset.size // 5, train_val_samples) # up to 1/5 of samples for train-val
         (train_images, train_classes) = (images[train_val_samples:], classes[train_val_samples:])
         (train_val_images, train_val_classes) = (images[:train_val_samples], classes[:train_val_samples])
 
@@ -296,10 +311,6 @@ class PyDenseNetBc(BaseModel):
         params_count = sum(p.numel() for p in net.parameters() if p.requires_grad)
         utils.logger.log('Model has {} parameters'.format(params_count))
         return params_count
-
-    def _get_trial_epochs(self):
-        max_trial_epochs = self._knobs['max_trial_epochs']
-        return max_trial_epochs
 
     def _set_device(self, tensors):
         if torch.cuda.is_available():

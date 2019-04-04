@@ -10,7 +10,7 @@ from rafiki.utils.auth import make_superadmin_client
 from rafiki.client import Client
 from rafiki.constants import BudgetType, TrainJobStatus, TrialStatus, ServiceStatus
 from rafiki.meta_store import MetaStore, DuplicateTrialNoError
-from rafiki.advisor import ParamsMonitor, Proposal, ParamsType
+from rafiki.advisor import ParamsMonitor, Proposal, ParamsType, TrainStrategy
 from rafiki.model import BaseModel, load_model_class, serialize_knob_config, logger as model_logger
 from rafiki.param_store import ParamStore
 
@@ -157,14 +157,15 @@ class TrainWorker(object):
         val_dataset_uri = job_info.val_dataset_uri
 
         # Load model
-        model_inst = clazz(**proposal.knobs)
+        model_inst = clazz(train_strategy=proposal.train_strategy,
+                            **proposal.knobs)
         if len(params) > 0:
             logger.info('Loading params for model...')
             model_inst.load_parameters(params)
 
         # Train model
         trial_params = None
-        if proposal.should_train:
+        if proposal.train_strategy != TrainStrategy.NONE:
             logger.info('Training model...')
             model_inst.train(train_dataset_uri)
             trial_params = model_inst.dump_parameters() or None
@@ -269,7 +270,6 @@ class TrainWorker(object):
         # Load actual params from store
         params = {}
         if param_id is not None:
-            logger.info('To use {} params'.format(params_type))
             params = self._param_store.retrieve_params(job_info.sub_train_job_id, param_id)
             logger.info('Retrieved {} params'.format(len(params)))
 

@@ -32,7 +32,7 @@ class BaseModel(abc.ABC):
     :param knobs: Dictionary of knob values for this model instance
     :type knobs: dict[str, any]
     '''   
-    def __init__(self, **knobs):
+    def __init__(self, train_strategy, **knobs):
         pass
 
     @staticmethod

@@ -6,11 +6,10 @@ import numpy as np
 
 from rafiki.model import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob
 
-from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, ParamsType
+from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, ParamsType, TrainStrategy
 
 class ParamPolicy(Enum):
     NONE = 'NONE'
-    LOCAL_RECENT = 'LOCAL_RECENT'
     LINEAR_GREEDY = 'LINEAR_GREEDY'
     EXP_GREEDY = 'EXP_GREEDY'
 
@@ -33,27 +32,32 @@ class SkoptAdvisor(BaseAdvisor):
         self._dimensions = self._get_dimensions(knob_config)
         self._optimizer = self._make_optimizer(self._dimensions)
         self._param_policy = ParamPolicy(param_policy)
+        self._recent_feedback = [] # [(score, proposal)]
 
     def propose(self, trial_no, total_trials, concurrent_trial_nos=[]):
-        # Ask skopt
-        point = self._optimizer.ask()
-        knobs = { 
-            name: value 
-            for (name, value) 
-            in zip(self._dimensions.keys(), point) 
-        }
+        trial_type = self._get_trial_type(trial_no, total_trials, concurrent_trial_nos)
 
-        # Add fixed knobs
-        knobs = { **self._fixed_knobs, **knobs }
-
-        params = self._propose_param(trial_no, total_trials)
-        
-        proposal = Proposal(knobs, params)
-
-        return proposal
+        if trial_type is None:
+            return Proposal({}, is_valid=False)
+        elif trial_type == 'SEARCH':
+            param = self._propose_param(trial_no, total_trials)
+            knobs = self._propose_knobs()
+            return Proposal(knobs, 
+                            train_strategy=TrainStrategy.EARLY_STOP,
+                            params_type=param)
+        elif trial_type == 'FINAL_TRAIN':
+            knobs = self._propose_best_recent_knobs()
+            return Proposal(knobs,
+                            train_strategy=TrainStrategy.STANDARD,
+                            params_type=ParamsType.NONE)
 
     def feedback(self, score, proposal):
+        num_sample_trials = 10
         knobs = proposal.knobs
+
+        # Keep track of last X trials' knobs & scores (for final train trials)
+        self._recent_feedback = [(score, proposal), *self._recent_feedback[:(num_sample_trials - 1)]]
+
         point = [ knobs[name] for name in self._dimensions.keys() ]
         self._optimizer.tell(point, -score)
 
@@ -73,16 +77,61 @@ class SkoptAdvisor(BaseAdvisor):
         })
         return dimensions
 
+    def _propose_knobs(self):
+        # Ask skopt
+        point = self._optimizer.ask()
+        knobs = { 
+            name: value 
+            for (name, value) 
+            in zip(self._dimensions.keys(), point) 
+        }
+
+        # Add fixed knobs
+        knobs = { **self._fixed_knobs, **knobs }
+        return knobs
+
+    def _propose_best_recent_knobs(self):
+        recent_feedback = self._recent_feedback
+        # If hasn't collected feedback, propose from model
+        if len(recent_feedback) == 0:
+            return self._propose_knobs()
+
+        # Otherwise, determine best recent proposal and use it
+        (score, proposal) = sorted(recent_feedback)[-1]
+
+        return proposal.knobs
+
     def _propose_param(self, trial_no, total_trials):
         policy = self._param_policy
         if policy == ParamPolicy.NONE:
             return ParamsType.NONE
-        elif policy == ParamPolicy.LOCAL_RECENT:
-            return ParamsType.LOCAL_RECENT
         elif policy == ParamPolicy.EXP_GREEDY:
             return self._propose_exp_greedy_param(trial_no, total_trials)
         elif policy == ParamPolicy.LINEAR_GREEDY:
             return self._propose_linear_greedy_param(trial_no, total_trials)
+
+    def _get_trial_type(self, trial_no, total_trials, concurrent_trial_nos):
+        num_final_train_trials = 1
+        policy = self._param_policy
+
+        # If param policy is param sharing
+        if policy in [ParamPolicy.EXP_GREEDY, ParamPolicy.LINEAR_GREEDY]:
+            # Keep conducting search trials
+            return 'SEARCH'
+        
+        # Otherwise, there is no param sharing
+        # Schedule: |--<search>---||--<final train>--|
+
+        # Check if final train trial
+        if trial_no > total_trials - num_final_train_trials:
+            # Wait for all search trials to finish 
+            if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
+                return None
+
+            return 'FINAL_TRAIN'
+
+        # Otherwise, it is a search trial
+        return 'SEARCH'
         
     def _propose_exp_greedy_param(self, trial_no, total_trials):
         t = trial_no
@@ -98,12 +147,20 @@ class SkoptAdvisor(BaseAdvisor):
     def _propose_linear_greedy_param(self, trial_no, total_trials):
         t = trial_no
         t_div = total_trials
-        e = 1 - t / t_div
+        e = 1 - t / t_div # 1 -> 0 linearly
         # No params with decreasing probability
         if np.random.random() < e:
             return ParamsType.NONE
         else:
             return ParamsType.GLOBAL_BEST
+
+    def _if_preceding_trials_are_running(self, trial_no, concurrent_trial_nos):
+        if len(concurrent_trial_nos) == 0:
+            return False
+
+        min_trial_no = min(concurrent_trial_nos)
+        return min_trial_no < trial_no
+
 
 def _knob_to_dimension(knob):
     if isinstance(knob, CategoricalKnob):

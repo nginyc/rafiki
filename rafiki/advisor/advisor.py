@@ -49,25 +49,31 @@ class ParamsType(Enum):
     GLOBAL_BEST = 'GLOBAL_BEST'
     NONE = 'NONE'
 
+class TrainStrategy(Enum):
+    STANDARD = 'STANDARD' # Model should train to its maximum potential
+    EARLY_STOP = 'EARLY_STOP' # Model should stop as early as possible
+    NONE = 'NONE' # Model would not be trained
+
 class Proposal():
     def __init__(self, 
                 knobs: Dict[str, any], 
-                params_type: ParamsType, # Parameters to use for this trial
-                is_valid=True, # If a trial is invalid, the worker will sleep for a while before trying again
-                should_train=True, # Whether this trial should have training
-                should_evaluate=True, # Whether this trial should be evaluated
-                should_save_to_disk=True): # Whether this trial's trained model should be saved to disk
+                params_type: ParamsType = ParamsType.NONE, # Parameters to use for this trial
+                is_valid = True, # If a trial is invalid, the worker will sleep for a while before trying again
+                train_strategy: TrainStrategy = TrainStrategy.STANDARD, # How should the model train
+                should_evaluate = True, # Whether this trial should be evaluated
+                should_save_to_disk = True): # Whether this trial's trained model should be saved to disk
         self.knobs = knobs
         self.params_type = ParamsType(params_type)
         self.is_valid = is_valid
-        self.should_train = should_train
+        self.train_strategy = TrainStrategy(train_strategy)
         self.should_evaluate = should_evaluate
         self.should_save_to_disk = should_save_to_disk
 
     def to_jsonable(self):
         return {
             **self.__dict__,
-            'params_type': self.params_type.value
+            'params_type': self.params_type.value,
+            'train_strategy': self.train_strategy.value
         }
 
     @staticmethod
@@ -88,7 +94,8 @@ class BaseAdvisor(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def propose(self, trial_no: int = None, total_trials: int = None, concurrent_trial_nos: List[int] = []) -> Proposal:
+    def propose(self, trial_no: int = None, total_trials: int = None, 
+                concurrent_trial_nos: List[int] = []) -> Proposal:
         '''
         :param int trial_no: Upcoming trial no to get proposal for
         :param int total_trials: Total no. of trials for this instance of tuning

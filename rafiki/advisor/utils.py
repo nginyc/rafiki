@@ -17,7 +17,7 @@ from rafiki.constants import TaskType, ModelDependency
 from rafiki.param_store import ParamStore
 from rafiki.predictor import ensemble_predictions
 
-from .advisor import make_advisor, BaseAdvisor, ParamsType
+from .advisor import make_advisor, BaseAdvisor, ParamsType, TrainStrategy
 
 class InvalidModelClassException(Exception): pass
 
@@ -86,24 +86,26 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         assert proposal.is_valid
         knobs = { **proposal.knobs, **knobs_from_args } 
         print('Advisor proposed knobs:', knobs)
+        print('Advisor proposed params:', proposal.params_type.name)
+        print('Advisor proposed train strategy:', proposal.train_strategy.name)
 
         # Retrieve shared params from store
         param_id = params_monitor.get_params(proposal.params_type)
         params = {}
         if param_id is not None:
-            print('To use {} params'.format(proposal.params_type.name))
             print('Retrieving params of ID "{}"...'.format(param_id))
             params = param_store.retrieve_params(session_id, param_id)
 
         # Load model
-        model_inst = py_model_class(**knobs)
+        model_inst = py_model_class(train_strategy=proposal.train_strategy, 
+                                    **knobs)
         if len(params) > 0:
             print('Loading params for model...')
             model_inst.load_parameters(params)
 
         # Train model
         trial_params = None
-        if proposal.should_train:
+        if proposal.train_strategy != TrainStrategy.NONE:
             print('Training model...')
             model_inst.train(train_dataset_uri)
             trial_params = model_inst.dump_parameters() or None
