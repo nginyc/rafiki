@@ -560,7 +560,7 @@ class EarlyStopCondition():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--param_policy', type=str, default='LINEAR_GREEDY', 
+    parser.add_argument('--param_policy', type=str, default='EXP_GREEDY', 
                     help='Param policy for advisor') 
     (args, _) = parser.parse_known_args()
 
