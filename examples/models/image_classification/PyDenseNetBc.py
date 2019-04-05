@@ -260,8 +260,8 @@ class PyDenseNetBc(BaseModel):
         (train_val_images, train_val_classes) = (images[:train_val_samples], classes[:train_val_samples])
 
         # Compute normalization params from train data
-        norm_mean = np.mean(np.array(train_images) / 255, axis=(0, 1, 2)).tolist() 
-        norm_std = np.std(np.array(train_images) / 255, axis=(0, 1, 2)).tolist() 
+        norm_mean = np.mean(train_images, axis=(0, 1, 2)).tolist() 
+        norm_std = np.std(train_images, axis=(0, 1, 2)).tolist() 
 
         train_dataset = ImageDataset(train_images, train_classes, dataset.image_size, 
                                     norm_mean, norm_std, is_train=True)
