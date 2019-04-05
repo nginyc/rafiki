@@ -1325,16 +1325,19 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=1, help='Batch size for ENAS controller')
     parser.add_argument('--num_eval_trials', type=int, default=30, help='No. of evaluation trials in a cycle of train-eval in ENAS')
     parser.add_argument('--train_once', action='store_true', help='Whether to just train 1 (fixed) architecture')
+    parser.add_argument('--do_final_trial', action='store_true', help='Whether to train the final best architecture')
     (args, _) = parser.parse_known_args()
 
     if not args.train_once:
-        num_final_train_trials = 1
+        num_final_train_trials = 1 if args.do_final_trial else 0
         period = args.num_eval_trials + 1
         trial_count = period * 150 + num_final_train_trials
     else:
         trial_count = 1
 
-    advisor_config = { 'num_eval_trials': args.num_eval_trials, 'batch_size': args.batch_size }
+    advisor_config = { 'num_eval_trials': args.num_eval_trials, 
+                        'batch_size': args.batch_size, 
+                        'do_final_trial': args.do_final_trial }
     knob_config = TfEnas.get_knob_config()
     advisor = make_advisor(knob_config, advisor_type=AdvisorType.ENAS, **advisor_config)
 
