@@ -1347,7 +1347,7 @@ if __name__ == '__main__':
     if not args.train_once:
         num_final_train_trials = 1 if args.do_final_train else 0
         period = args.num_eval_trials + 1
-        trial_count = period * 2 + num_final_train_trials
+        trial_count = period * 150 + num_final_train_trials
     else:
         trial_count = 1
 
