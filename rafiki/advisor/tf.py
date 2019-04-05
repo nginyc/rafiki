@@ -28,13 +28,13 @@ class EnasAdvisor(BaseAdvisor):
 
         return True
         
-    def __init__(self, knob_config, batch_size=10, num_eval_trials=300, do_final_trial=True):
+    def __init__(self, knob_config, batch_size=10, num_eval_trials=300, do_final_train=True):
         (self._fixed_knobs, knob_config) = _extract_fixed_knobs(knob_config)
         self._batch_size = batch_size
         self._num_eval_trials = num_eval_trials
         self._list_knob_models = self._build_models(knob_config, batch_size)
         self._recent_feedback = [] # [(score, proposal)]
-        self._do_final_trial = do_final_trial
+        self._do_final_train = do_final_train
 
     def propose(self, trial_no, total_trials, concurrent_trial_nos=[]):
         trial_type = self._get_trial_type(trial_no, total_trials, concurrent_trial_nos)
@@ -107,7 +107,7 @@ class EnasAdvisor(BaseAdvisor):
         return list_knob_models
 
     def _get_trial_type(self, trial_no, total_trials, concurrent_trial_nos):
-        num_final_train_trials = 1 if self._do_final_trial else 0
+        num_final_train_trials = 1 if self._do_final_train else 0
         num_eval_trials = self._num_eval_trials
         E = self._batch_size
         T = num_eval_trials + 1 # Period
