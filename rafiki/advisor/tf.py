@@ -45,7 +45,7 @@ class EnasAdvisor(BaseAdvisor):
             knobs = self._propose_knobs()
             return Proposal(knobs, 
                             params_type=ParamsType.GLOBAL_RECENT, 
-                            train_strategy=TrainStrategy.EARLY_STOP, 
+                            train_strategy=TrainStrategy.STOP_EARLY, 
                             should_evaluate=False,
                             should_save_to_disk=False)
         elif trial_type == 'EVAL':

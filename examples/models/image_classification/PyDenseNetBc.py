@@ -172,7 +172,7 @@ class PyDenseNetBc(BaseModel):
 
         # Determine no. of epochs
         num_epochs = trial_epochs
-        if train_strategy == TrainStrategy.EARLY_STOP:
+        if train_strategy == TrainStrategy.STOP_EARLY:
             num_epochs = early_stop_trial_epochs
 
         # Define plots
@@ -247,7 +247,7 @@ class PyDenseNetBc(BaseModel):
 
         # Allocate train val only if early stopping
         train_val_samples = 0
-        if train_strategy == TrainStrategy.EARLY_STOP:
+        if train_strategy == TrainStrategy.STOP_EARLY:
             train_val_samples = early_stop_train_val_samples
 
         utils.logger.log('Loading train dataset...')

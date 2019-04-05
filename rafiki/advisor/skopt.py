@@ -45,7 +45,7 @@ class SkoptAdvisor(BaseAdvisor):
             param = self._propose_param(trial_no, total_trials)
             knobs = self._propose_knobs()
             return Proposal(knobs, 
-                            train_strategy=TrainStrategy.EARLY_STOP,
+                            train_strategy=TrainStrategy.STOP_EARLY,
                             params_type=param)
         elif trial_type == 'FINAL_TRAIN':
             knobs = self._propose_best_recent_knobs()

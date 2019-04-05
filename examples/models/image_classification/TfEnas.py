@@ -113,7 +113,7 @@ class TfEnas(BaseModel):
         self._train_summaries = []
         self._train_run_metadatas = []
 
-        if train_strategy in [TrainStrategy.EARLY_STOP, TrainStrategy.NONE]:
+        if train_strategy in [TrainStrategy.STOP_EARLY, TrainStrategy.NONE]:
             self._knobs = self._override_knobs_to_early_stop(knobs)
         else:
             self._knobs = knobs
@@ -468,18 +468,31 @@ class TfEnas(BaseModel):
             
             with tf.variable_scope('layer_{}'.format(l)):
                 layers_ratio = (l + 1) / (L + 2)
-                prev_layers = [layers[-2] if len(layers) > 1 else layers[-1], layers[-1]]
                 drop_path_keep_prob = self._get_drop_path_keep_prob(layers_ratio, step, is_train, **knobs)
                 
                 # Either add a reduction cell or normal cell
                 if l in reduction_layers:
+                    block_ch *= 2
+
+                    # If dynamic arch, reduce dimensions of last 2 layers
+                    if use_dynamic_arch:
+                        with tf.variable_scope('layer_-1_calibrate'):
+                            layers[-1] = (self._calibrate(*layers[-1], w >> 1, h >> 1, block_ch, is_train), w >> 1, h >> 1, block_ch)
+                        
+                        with tf.variable_scope('layer_-2_calibrate'):
+                            if len(layers) > 1:
+                                layers[-2] = (self._calibrate(*layers[-2], w >> 1, h >> 1, block_ch, is_train), w >> 1, h >> 1, block_ch)
+
                     with tf.variable_scope('reduction_cell'):
-                        block_ch *= 2
-                        (X, w, h, ch) = self._add_reduction_cell(reduction_arch, prev_layers, block_ch, is_train,
+                        input_1 = layers[-2] if len(layers) > 1 else layers[-1]
+                        input_2 = layers[-1]
+                        (X, w, h, ch) = self._add_reduction_cell(reduction_arch, [input_1, input_2], w, h, block_ch, is_train,
                                                                 drop_path_keep_prob, use_dynamic_arch)
                 else:
                     with tf.variable_scope('normal_cell'):
-                        (X, w, h, ch) = self._add_normal_cell(normal_arch, prev_layers, block_ch, is_train,
+                        input_1 = layers[-2] if len(layers) > 1 else layers[-1]
+                        input_2 = layers[-1]
+                        (X, w, h, ch) = self._add_normal_cell(normal_arch, [input_1, input_2], w, h, block_ch, is_train,
                                                             drop_path_keep_prob, use_dynamic_arch)
 
                 # Maybe add auxiliary heads 
@@ -491,7 +504,6 @@ class TfEnas(BaseModel):
             layers.append((X, w, h, ch))
     
         # Global average pooling
-        (X, w, h, ch) = layers[-1] # Get final layer
         X = self._add_global_avg_pool(X, w, h, ch)
 
         # Add dropout
@@ -895,28 +907,12 @@ class TfEnas(BaseModel):
     # Cells
     ####################################
 
-    def _add_reduction_cell(self, cell_arch, inputs, block_ch, is_train, drop_path_keep_prob, use_dynamic_arch):
+    def _add_reduction_cell(self, cell_arch, inputs, w, h, block_ch, is_train, drop_path_keep_prob, use_dynamic_arch):
         b = CELL_NUM_BLOCKS
-        cell_inputs = []
-        blocks = []
-
-        # Initial width & height for this cell as the final input
-        (_, w, h, _) = inputs[-1]
-
-        # Calibrate inputs as necessary and add them to hidden states
-        for (i, (inp, w_inp, h_inp, ch_inp)) in enumerate(inputs):
-            with tf.variable_scope('input_{}_calibrate'.format(i)):
-                inp = self._calibrate(inp, w_inp, h_inp, ch_inp, w, h, block_ch, is_train)
-                        
-                # Apply conv 1x1 on last input
-                if i == len(inputs) - 1:
-                    with tf.variable_scope('input_{}_conv'.format(i)):
-                        inp = self._do_conv(inp, w, h, block_ch, block_ch, is_train)
-
-                cell_inputs.append(inp)
-
+        cell_inputs = self._calibrate_inputs_for_cell(inputs, block_ch, is_train, use_dynamic_arch)
         apply_cell_op = self._apply_reduction_cell_op_dynamic if use_dynamic_arch else self._apply_reduction_cell_op
 
+        blocks = []
         for bi in range(b):
             with tf.variable_scope('block_{}'.format(bi)):
                 idx1 = cell_arch[bi][0]
@@ -936,34 +932,23 @@ class TfEnas(BaseModel):
 
             blocks.append(X)
 
-        (X, comb_ch) = self._combine_cell_blocks(cell_inputs, blocks, cell_arch, block_ch, use_dynamic_arch)
+        if use_dynamic_arch:
+            (X, comb_ch) = self._combine_cell_blocks_dynamic(cell_inputs, blocks, cell_arch, 
+                                                            w >> 1, h >> 1, block_ch, is_train)
+        else:
+            (X, comb_ch) = self._combine_cell_blocks(cell_inputs, blocks, cell_arch, 
+                                                    w >> 1, h >> 1, block_ch, is_train)
 
         X = tf.reshape(X, (-1, w >> 1, h >> 1, comb_ch)) # Sanity shape check
 
         return (X, w >> 1, h >> 1, comb_ch)
 
-    def _add_normal_cell(self, cell_arch, inputs, block_ch, is_train, drop_path_keep_prob, use_dynamic_arch):
+    def _add_normal_cell(self, cell_arch, inputs, w, h, block_ch, is_train, drop_path_keep_prob, use_dynamic_arch):
         b = CELL_NUM_BLOCKS
-        cell_inputs = []
-        blocks = [] 
-
-        # Initial width & height for this cell as the final input
-        (_, w, h, _) = inputs[-1]
-
-        # Calibrate inputs as necessary and add them to hidden states
-        for (i, (inp, w_inp, h_inp, ch_inp)) in enumerate(inputs):
-            with tf.variable_scope('input_{}_calibrate'.format(i)):
-                inp = self._calibrate(inp, w_inp, h_inp, ch_inp, w, h, block_ch, is_train)
-                        
-                # Apply conv 1x1 on last input
-                if i == len(inputs) - 1:
-                    with tf.variable_scope('input_{}_conv'.format(i)):
-                        inp = self._do_conv(inp, w, h, block_ch, block_ch, is_train)
-
-                cell_inputs.append(inp)
-
+        cell_inputs = self._calibrate_inputs_for_cell(inputs, block_ch, is_train, use_dynamic_arch)
         apply_cell_op = self._apply_normal_cell_op_dynamic if use_dynamic_arch else self._apply_normal_cell_op
 
+        blocks = [] 
         for bi in range(b):
             with tf.variable_scope('block_{}'.format(bi)):
                 idx1 = cell_arch[bi][0]
@@ -983,11 +968,34 @@ class TfEnas(BaseModel):
 
             blocks.append(X)
 
-        (X, comb_ch) = self._combine_cell_blocks(cell_inputs, blocks, cell_arch, block_ch, use_dynamic_arch)
+        if use_dynamic_arch:
+            (X, comb_ch) = self._combine_cell_blocks_dynamic(cell_inputs, blocks, cell_arch, 
+                                                            w, h, block_ch, is_train)
+        else:
+            (X, comb_ch) = self._combine_cell_blocks(cell_inputs, blocks, cell_arch, 
+                                                        w, h, block_ch, is_train)
+
 
         X = tf.reshape(X, (-1, w, h, comb_ch)) # Sanity shape check
 
         return (X, w, h, comb_ch)
+
+    def _calibrate_inputs_for_cell(self, inputs, block_ch, is_train, use_dynamic_arch):
+        # Calibrate inputs as necessary to last input layer's dimensions and add them to hidden states
+        cell_inputs = []
+        (_, w_inp_last, h_inp_last, _) = inputs[-1]
+        for (i, (inp, w_inp, h_inp, ch_inp)) in enumerate(inputs):
+            with tf.variable_scope('input_{}_calibrate'.format(i)):
+                inp = self._calibrate(inp, w_inp, h_inp, ch_inp, w_inp_last, h_inp_last, block_ch, is_train)
+
+                # Apply conv 1x1 on last input
+                if not use_dynamic_arch and i == len(inputs) - 1:
+                    with tf.variable_scope('input_{}_conv'.format(i)):
+                        inp = self._do_conv(inp, w_inp_last, h_inp_last, block_ch, block_ch, is_train)
+
+            cell_inputs.append(inp)
+
+        return cell_inputs
 
     def _apply_reduction_cell_op(self, idx, op, w, h, ch, cell_inputs, blocks, is_train):
         # Just build output for select input index
@@ -1051,26 +1059,54 @@ class TfEnas(BaseModel):
       
         return X
     
-    def _combine_cell_blocks(self, cell_inputs, blocks, cell_arch, block_ch, use_dynamic_arch):
-        if use_dynamic_arch:
-            # For dynamic architecture, use all blocks as output
-            out_blocks = blocks
-        else:
-            # Count usage of inputs
-            input_use_counts = [0] * len(cell_inputs + blocks)
-            for (idx1, op1, idx2, op2) in cell_arch:
-                input_use_counts[idx1] += 1
-                input_use_counts[idx2] += 1
+    def _combine_cell_blocks(self, cell_inputs, blocks, cell_arch, w, h, block_ch, is_train):
+        # Count usage of inputs
+        input_use_counts = [0] * len(cell_inputs + blocks)
+        for (idx1, _, idx2, _) in cell_arch:
+            input_use_counts[idx1] += 1
+            input_use_counts[idx2] += 1
 
-            # Output only unused blocks
+        # Concat only unused blocks
+        with tf.variable_scope('combine'):
             block_use_counts = input_use_counts[len(cell_inputs):]
             out_blocks = [block for (block, use_count) in zip(blocks, block_use_counts) if use_count == 0]
-
-        comb_ch = len(out_blocks) * block_ch
-        with tf.variable_scope('combine'):
+            comb_ch = len(out_blocks) * block_ch
             X = tf.concat(out_blocks, axis=3)
 
         return (X, comb_ch)
+
+    def _combine_cell_blocks_dynamic(self, cell_inputs, blocks, cell_arch, w, h, block_ch, is_train):
+        b = CELL_NUM_BLOCKS
+        ni = len(cell_inputs)
+
+        # Count usage of inputs
+        block_uses = []
+        for bi in range(b):
+            idx1 = cell_arch[bi][0]
+            idx2 = cell_arch[bi][2]
+            block_use = tf.one_hot(idx1, ni + b, dtype=tf.int32) + tf.one_hot(idx2, ni + b, dtype=tf.int32)
+            block_uses.append(block_use)
+        block_uses = tf.add_n(block_uses)
+        unused_indices = tf.reshape(tf.to_int32(tf.where(tf.equal(block_uses, 0))), [-1])
+        num_out_blocks = tf.size(unused_indices)
+
+        # Select only unused blocks
+        with tf.variable_scope('select'):
+            stacked_blocks = tf.stack(cell_inputs + blocks)
+            out_blocks = tf.gather(stacked_blocks, unused_indices, axis=0)
+            out_blocks = tf.transpose(out_blocks, (1, 0, 2, 3, 4))
+
+        # Combine to constant channels
+        with tf.variable_scope('combine'):
+            W = self._make_var('W', (b + ni, block_ch * block_ch))
+            W = tf.gather(W, unused_indices, axis=0)
+            W = tf.reshape(W, (1, 1, num_out_blocks * block_ch, block_ch))
+            X = tf.reshape(out_blocks, (-1, w, h, num_out_blocks * block_ch))
+            X = tf.nn.relu(X)
+            X = tf.nn.conv2d(X, W, (1, 1, 1, 1), padding='SAME')
+            X = self._add_batch_norm(X, block_ch, is_train)
+
+        return (X, block_ch)
 
     def _add_op(self, X, op, w, h, ch, is_train, stride=1):
         op_map = self._get_op_map()

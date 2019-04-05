@@ -51,7 +51,7 @@ class ParamsType(Enum):
 
 class TrainStrategy(Enum):
     STANDARD = 'STANDARD' # Model should train to its maximum potential
-    EARLY_STOP = 'EARLY_STOP' # Model should stop as early as possible
+    STOP_EARLY = 'STOP_EARLY' # Model should stop as early as possible
     NONE = 'NONE' # Model would not be trained
 
 class Proposal():
