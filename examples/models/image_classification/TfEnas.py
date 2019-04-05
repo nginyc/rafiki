@@ -83,6 +83,7 @@ class TfEnas(BaseModel):
             'grad_clip_norm': FixedKnob(5.0),
             'use_aux_head': FixedKnob(False),
             'use_dynamic_arch': FixedKnob(False),
+            'if_log_run_metadata': FixedKnob(False),
             'init_params_dir': FixedKnob(''), # Params directory to resume training from
 
             # Early stop settings
@@ -109,7 +110,8 @@ class TfEnas(BaseModel):
         self._saver = None
         self._monitored_values = None
         self._train_params = None
-        self._train_summaries = None
+        self._train_summaries = []
+        self._train_run_metadatas = []
 
         if train_strategy in [TrainStrategy.EARLY_STOP, TrainStrategy.NONE]:
             self._knobs = self._override_knobs_to_early_stop(knobs)
@@ -133,7 +135,7 @@ class TfEnas(BaseModel):
                 self._monitored_values) = self._maybe_build_model(**knobs)
         
         with self._graph.as_default():
-            self._train_summaries = self._train_model(images, classes, dataset_uri=dataset_uri, **knobs)
+            self._train_model(images, classes, dataset_uri=dataset_uri, **knobs)
 
     def evaluate(self, dataset_uri):
         (images, classes, _) = self._maybe_load_dataset(dataset_uri, train_params=self._train_params, **self._knobs)
@@ -162,10 +164,15 @@ class TfEnas(BaseModel):
         # Dump train summaries
         summaries_dir_path = os.path.join(params_dir, 'summaries')
         os.mkdir(summaries_dir_path)
-        if self._train_summaries is not None:
-            writer = tf.summary.FileWriter(summaries_dir_path, self._graph)
-            for (steps, summary) in self._train_summaries:
-                writer.add_summary(summary, steps)
+        writer = tf.summary.FileWriter(summaries_dir_path, self._graph)
+
+        for (step, summary) in self._train_summaries:
+            writer.add_summary(summary, step)
+        for (step, run_metadata) in self._train_run_metadatas:
+            writer.add_run_metadata(run_metadata, step)
+
+        self._train_summaries = []
+        self._train_run_metadatas = []
 
     def load_parameters_from_disk(self, params_dir):
         # Load pre-processing params
@@ -666,18 +673,20 @@ class TfEnas(BaseModel):
         for (name, _) in self._monitored_values.items():
             utils.logger.define_plot('"{}" Over Time'.format(name), [name])
 
-        train_summaries = [] # List of (<steps>, <summary>) collected during training
-
         log_condition = TimedRepeatCondition()
         for epoch in range(num_epochs):
             utils.logger.log('Running epoch {}...'.format(epoch))
-            stepper = self._get_dataset_iterator(N, [m.train_op, m.summary_op, m.corrects, m.step, *self._monitored_values.values()], 
+            stepper = self._get_dataset_iterator(N, [m.train_op, m.summary_op, m.corrects, m.step, 
+                                                    *self._monitored_values.values()], 
                                                 is_train=True, **knobs)
 
             # To track mean batch accuracy
             corrects = []
-            for (_, summary, batch_corrects, batch_steps, *values) in stepper:
-                train_summaries.append((batch_steps, summary))
+            for ((_, summary, batch_corrects, batch_steps, *values), run_metadata) in stepper:
+                self._train_summaries.append((batch_steps, summary)) # List of (<steps>, <summary>) collected during training
+                if run_metadata is not None:
+                    self._train_run_metadatas.append((batch_steps, run_metadata))
+
                 corrects.extend(batch_corrects)
 
                 # Periodically, log monitored values
@@ -689,8 +698,6 @@ class TfEnas(BaseModel):
             mean_acc = np.mean(corrects)
             utils.logger.log(epoch=epoch, mean_acc=mean_acc)
 
-        return train_summaries
-
     def _evaluate_model(self, images, classes, dataset_uri=None, **knobs):
         m = self._model
         N = len(images)
@@ -699,7 +706,7 @@ class TfEnas(BaseModel):
 
         corrects = []
         stepper = self._get_dataset_iterator(N, [m.corrects], **knobs)
-        for (batch_corrects,) in stepper:
+        for ((batch_corrects,), _) in stepper:
             corrects.extend(batch_corrects)
 
         acc = np.mean(corrects)
@@ -714,26 +721,35 @@ class TfEnas(BaseModel):
 
         all_probs = []
         stepper = self._get_dataset_iterator(N, [m.probs], **knobs)
-        for (batch_probs,) in stepper:
+        for ((batch_probs,), _) in stepper:
             all_probs.extend(batch_probs)
         all_probs = np.asarray(all_probs)
 
         return all_probs
 
-    def _get_dataset_iterator(self, N, run_ops, is_train=False, **knobs):
+    def _get_dataset_iterator(self, N, run_ops, is_train=False, if_log_run_metadata=False, **knobs):
         batch_size = knobs['batch_size']
         steps_per_epoch = math.ceil(N / batch_size)
         m = self._model
  
         (normal_arch, reduction_arch) = self._get_fixed_cell_archs(**knobs)
 
+        run_args = {}
         for _ in range(steps_per_epoch):
+
+            run_metadata = None
+            if if_log_run_metadata:
+                run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+                run_metadata = tf.RunMetadata()
+                run_args = { 'options': run_options, 'run_metadata': run_metadata }
+
             results = self._sess.run(run_ops, feed_dict={
                 m.ph.normal_arch: normal_arch,
                 m.ph.reduction_arch: reduction_arch,
                 m.ph.is_train: is_train
-            })
-            yield results
+            }, **run_args)
+
+            yield (results, run_metadata)
 
     def _get_fixed_cell_archs(self, **knobs):
         use_cell_arch_type = knobs['use_cell_arch_type']
@@ -1325,19 +1341,19 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=1, help='Batch size for ENAS controller')
     parser.add_argument('--num_eval_trials', type=int, default=30, help='No. of evaluation trials in a cycle of train-eval in ENAS')
     parser.add_argument('--train_once', action='store_true', help='Whether to just train 1 (fixed) architecture')
-    parser.add_argument('--do_final_trial', action='store_true', help='Whether to train the final best architecture')
+    parser.add_argument('--do_final_train', action='store_true', help='Whether to train the final best architecture')
     (args, _) = parser.parse_known_args()
 
     if not args.train_once:
-        num_final_train_trials = 1 if args.do_final_trial else 0
+        num_final_train_trials = 1 if args.do_final_train else 0
         period = args.num_eval_trials + 1
-        trial_count = period * 150 + num_final_train_trials
+        trial_count = period * 2 + num_final_train_trials
     else:
         trial_count = 1
 
     advisor_config = { 'num_eval_trials': args.num_eval_trials, 
                         'batch_size': args.batch_size, 
-                        'do_final_trial': args.do_final_trial }
+                        'do_final_train': args.do_final_train }
     knob_config = TfEnas.get_knob_config()
     advisor = make_advisor(knob_config, advisor_type=AdvisorType.ENAS, **advisor_config)
 
