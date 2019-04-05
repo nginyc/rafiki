@@ -583,6 +583,19 @@ class Client(object):
         return data
 
     ####################################
+    # Administrative Actions
+    ####################################
+
+    def stop_all_jobs(self):
+        '''
+        Stops all train and inference jobs on Rafiki. 
+
+        Only admins can call this.
+        '''
+        data = self._post('/actions/stop_all_jobs')
+        return data
+
+    ####################################
     # Private
     ####################################
 

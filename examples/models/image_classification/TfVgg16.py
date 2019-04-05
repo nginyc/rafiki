@@ -11,7 +11,6 @@ from urllib.parse import urlparse, parse_qs
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
                         IntegerKnob, FloatKnob, CategoricalKnob, dataset_utils
 from rafiki.constants import TaskType, ModelDependency
-from rafiki.config import APP_MODE
 
 class TfVgg16(BaseModel):
     '''
@@ -20,7 +19,7 @@ class TfVgg16(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': IntegerKnob(1, 1 if APP_MODE != 'DEV' else 10),
+            'epochs': FixedKnob(1),
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
         }

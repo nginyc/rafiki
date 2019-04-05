@@ -6,8 +6,9 @@
   "author": "nginyc",
   "license": "Apache-2.0",
   "scripts": {
-    "build": "webpack --config webpack.config.js",
-    "dev": "webpack-dev-server --open --config webpack.config.js"
+    "build": "webpack --config webpack.config.prod.js",
+    "start": "node app.js",
+    "dev": "webpack-dev-server --open --config webpack.config.dev.js"
   },
   "dependencies": {
     "@material-ui/core": "^3.3.2",

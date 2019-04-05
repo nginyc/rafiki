@@ -6,8 +6,9 @@ import uuid
 import csv
 
 from rafiki.db import Database
-from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus, ModelAccessRight, BudgetType
-from rafiki.config import MIN_SERVICE_PORT, MAX_SERVICE_PORT, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
+from rafiki.constants import ServiceStatus, UserType, ServiceType, InferenceJobStatus, \
+    TrainJobStatus, ModelAccessRight, BudgetType
+from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.model import ModelLogger
 from rafiki.container import DockerSwarmContainerManager 
 
@@ -288,6 +289,18 @@ class Admin(object):
             'sub_train_job_id': worker.sub_train_job_id
         }
 
+    def stop_all_train_jobs(self):
+        train_jobs = self._db.get_train_jobs_by_status(TrainJobStatus.RUNNING)
+        for train_job in train_jobs:
+            self._services_manager.stop_train_services(train_job.id)
+
+        return [
+            {
+                'id': train_job.id
+            }
+            for train_job in train_jobs
+        ]
+
     ####################################
     # Trials
     ####################################
@@ -465,6 +478,18 @@ class Admin(object):
                 'predictor_host': predictor_host
             }
             for (inference_job, train_job, predictor_host) in zip(inference_jobs, train_jobs, predictor_hosts)
+        ]
+
+    def stop_all_inference_jobs(self):
+        inference_jobs = self._db.get_inference_jobs_by_status(InferenceJobStatus.RUNNING)
+        for inference_job in inference_jobs:
+            self._services_manager.stop_inference_services(inference_job.id)
+            
+        return [
+            {
+                'id': inference_job.id
+            }
+            for inference_job in inference_jobs
         ]
 
     ####################################

@@ -1,6 +1,6 @@
 import datetime
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, distinct
 from sqlalchemy.orm import sessionmaker
 
 from rafiki.constants import TrainJobStatus, \
@@ -83,6 +83,12 @@ class Database(object):
     def get_train_job(self, id):
         train_job = self._session.query(TrainJob).get(id)
         return train_job
+
+    def get_train_jobs_by_status(self, status):
+        job_ids = self._session.query(distinct(SubTrainJob.train_job_id)) \
+            .filter(SubTrainJob.status == status).all()
+        return self._session.query(TrainJob) \
+            .filter(TrainJob.id.in_(job_ids)).all()
 
     # Returns for the latest app version unless specified
     def get_train_job_by_app_version(self, app, app_version=-1):
@@ -217,6 +223,12 @@ class Database(object):
             .order_by(InferenceJob.datetime_started.desc()).all()
 
         return inference_jobs
+    
+    def get_inference_jobs_by_status(self, status):
+        jobs = self._session.query(InferenceJob) \
+            .filter(InferenceJob.status == status).all()
+
+        return jobs
 
     ####################################
     # Inference Job Workers
