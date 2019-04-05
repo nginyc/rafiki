@@ -43,7 +43,7 @@ class PyDenseNetBc(BaseModel):
             'batch_size': CategoricalKnob([32, 64, 128]),
             'drop_rate': FloatKnob(0, 0.4),
             'max_image_size': FixedKnob(32),
-            'early_stop_trial_epochs': FixedKnob(100),
+            'early_stop_trial_epochs': FixedKnob(200),
             'early_stop_train_val_samples': FixedKnob(1024),
             'early_stop_patience_epochs': FixedKnob(5)
         }
