@@ -599,9 +599,9 @@ class TfEnas(BaseModel):
             keep_prob = 1 - steps_ratio * (1 - keep_prob)
             keep_prob = tf.cast(keep_prob, tf.float32)
 
-        # Monitor last layer's keep prob
-        if layers_ratio == 1:
-            self._mark_for_monitoring('drop_path_keep_prob', keep_prob)
+            # Monitor last layer's keep prob
+            if layers_ratio == 1:
+                self._mark_for_monitoring('drop_path_keep_prob', keep_prob)
 
         return keep_prob
 
