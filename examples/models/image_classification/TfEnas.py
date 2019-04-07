@@ -82,7 +82,6 @@ class TfEnas(BaseModel):
             'cutout_size': FixedKnob(0),
             'grad_clip_norm': FixedKnob(0),
             'use_aux_head': FixedKnob(False),
-            'use_dynamic_arch': FixedKnob(False),
             'summaries_dir': FixedKnob(''), # Directory to save summaries & runtime metadata to
             'init_params_dir': FixedKnob(''), # Params directory to resume training from
 
@@ -110,11 +109,7 @@ class TfEnas(BaseModel):
         self._saver = None
         self._monitored_values = None
         self._train_params = None
-
-        if train_strategy in [TrainStrategy.STOP_EARLY, TrainStrategy.NONE]:
-            self._knobs = self._override_knobs_to_early_stop(knobs)
-        else:
-            self._knobs = knobs
+        self._knobs = self._process_knobs(knobs, train_strategy)
 
     def train(self, dataset_uri, ):
         knobs = self._knobs
@@ -289,19 +284,21 @@ class TfEnas(BaseModel):
     # Private methods
     ####################################
 
-    def _override_knobs_to_early_stop(self, knobs):
-        knobs = {
+    def _process_knobs(self, knobs, train_strategy):
+        knobs['use_dynamic_arch'] = False
+        if train_strategy in [TrainStrategy.STOP_EARLY, TrainStrategy.NONE]:
+            knobs = {
             **knobs,
-            'use_dynamic_arch': True,
-            'if_compute_train_accuracy': False,
-            'trial_epochs': knobs['early_stop_trial_epochs'],
-            'num_layers': knobs['early_stop_num_layers'],
-            'initial_block_ch': knobs['early_stop_initial_block_ch'],
-            'dropout_keep_prob': knobs['early_stop_dropout_keep_prob'],
-            'sgdr_alpha': knobs['early_stop_sgdr_alpha'],
-            'drop_path_keep_prob': knobs['early_stop_drop_path_keep_prob'],
-            'drop_path_decay_epochs': knobs['early_stop_drop_path_decay_epochs'],
-        }
+                'use_dynamic_arch': True,
+                'trial_epochs': knobs['early_stop_trial_epochs'],
+                'num_layers': knobs['early_stop_num_layers'],
+                'initial_block_ch': knobs['early_stop_initial_block_ch'],
+                'dropout_keep_prob': knobs['early_stop_dropout_keep_prob'],
+                'sgdr_alpha': knobs['early_stop_sgdr_alpha'],
+                'drop_path_keep_prob': knobs['early_stop_drop_path_keep_prob'],
+                'drop_path_decay_epochs': knobs['early_stop_drop_path_decay_epochs'],
+            }
+        
         return knobs
 
     def _load_dataset(self, dataset_uri, train_params=None, **knobs):
@@ -1313,7 +1310,7 @@ class TimedRepeatCondition():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=1, help='Batch size for ENAS controller')
+    parser.add_argument('--enas_batch_size', type=int, default=1, help='Batch size for ENAS controller')
     parser.add_argument('--num_eval_trials', type=int, default=30, help='No. of evaluation trials in a cycle of train-eval in ENAS')
     parser.add_argument('--train_once', action='store_true', help='Whether to just train 1 (fixed) architecture')
     parser.add_argument('--do_final_train', action='store_true', help='Whether to train the final best architecture')
@@ -1327,7 +1324,7 @@ if __name__ == '__main__':
         trial_count = 1
 
     advisor_config = { 'num_eval_trials': args.num_eval_trials, 
-                        'batch_size': args.batch_size, 
+                        'enas_batch_size': args.batch_size, 
                         'do_final_train': args.do_final_train }
     knob_config = TfEnas.get_knob_config()
     advisor = make_advisor(knob_config, advisor_type=AdvisorType.ENAS, **advisor_config)
