@@ -34,7 +34,7 @@ def run_enas(client, gpus, full=True):
             task=TaskType.IMAGE_CLASSIFICATION,
             model_file_path='examples/models/image_classification/TfEnas.py',
             model_class='TfEnas',
-            dependencies={ ModelDependency.TENSORFLOW: '1.12.0' }
+            dependencies={ ModelDependency.TENSORFLOW: '1.13.1' }
         )
         pprint.pprint(model)
         
