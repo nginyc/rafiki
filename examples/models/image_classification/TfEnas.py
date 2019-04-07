@@ -1324,7 +1324,7 @@ if __name__ == '__main__':
         trial_count = 1
 
     advisor_config = { 'num_eval_trials': args.num_eval_trials, 
-                        'enas_batch_size': args.batch_size, 
+                        'batch_size': args.enas_batch_size, 
                         'do_final_train': args.do_final_train }
     knob_config = TfEnas.get_knob_config()
     advisor = make_advisor(knob_config, advisor_type=AdvisorType.ENAS, **advisor_config)
