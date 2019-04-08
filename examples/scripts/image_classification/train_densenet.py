@@ -67,13 +67,14 @@ if __name__ == '__main__':
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
     parser.add_argument('--host', type=str, default=os.environ.get('RAFIKI_ADDR'), help='Host of Rafiki instance')
     parser.add_argument('--admin_port', type=int, default=os.environ.get('ADMIN_EXT_PORT'), help='Port for Rafiki Admin on host')
+    parser.add_argument('--advisor_port', type=int, default=os.environ.get('ADVISOR_EXT_PORT'), help='Port for Rafiki Advisor on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
     parser.add_argument('--param_policy', type=str, default='EXP_GREEDY', help='Param policy for the SkOpt advisor to be used')
     (args, _) = parser.parse_known_args()
 
     # Initialize client
-    client = Client(admin_host=args.host, admin_port=args.admin_port)
+    client = Client(admin_host=args.host, admin_port=args.admin_port, advisor_host=args.host, advisor_port=args.advisor_port)
     client.login(email=args.email, password=args.password)
 
     train_densenet(client, args.gpus, args.full, args.param_policy)
