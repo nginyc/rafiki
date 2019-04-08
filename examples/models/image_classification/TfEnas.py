@@ -32,33 +32,26 @@ class TfEnas(BaseModel):
     Paper: https://arxiv.org/abs/1802.03268
     '''
     # Memoise across trials to speed up training
-    _datasets_memo = {} # { <dataset_uri> -> <dataset> }
-    _model_memo = None # of class `_MemoModel`
-    _loaded_tf_vars_id_memo = None # ID of TF vars loaded
-    _loaded_train_dataset_memo = None # Train dataset <dataset_uri> loaded into the graph
-    _loaded_pred_dataset_memo = None # Predict dataset <dataset_uri> loaded into the graph
+    _datasets_memo = {}                 # { <dataset_uri> -> <dataset> }
+    _model_memo = None                  # of class `_MemoModel`
+    _loaded_tf_vars_id_memo = None      # ID of TF vars loaded
+    _loaded_train_dataset_memo = None   # Train dataset <dataset_uri> loaded into the graph
+    _loaded_pred_dataset_memo = None    # Predict dataset <dataset_uri> loaded into the graph
 
     @staticmethod
     def get_knob_config():
         def cell_arch_item(i):
-            b = i // 4 # block no
-            idx = i % 4 # item index within block
-        
-            # First half of blocks are for normal cell
-            if b < CELL_NUM_BLOCKS:
-                if idx in [0, 2]:
-                    return CategoricalKnob(list(range(b + 2))) # input index 1/2
-                elif idx in [1, 3]:
-                    return CategoricalKnob(OPS) # op for input 1/2
-            
-            # Last half of blocks are for reduction cell
+            b = (i % (CELL_NUM_BLOCKS * 4)) // 4    # Block no
+            idx = i % 4                             # Item index within block
+            if_op = idx in [1, 3]                   # Op or input?
+
+            if if_op:
+                # List of ops
+                return CategoricalKnob(OPS)
             else:
-                b -= CELL_NUM_BLOCKS # block no
-                if idx in [0, 2]:
-                    return CategoricalKnob(list(range(b + 2))) # input index 1/2
-                elif idx in [1, 3]:
-                    return CategoricalKnob(OPS) # op for input 1/2
-                    
+                # List of input indices for block
+                return CategoricalKnob(list(range(b + 2)))
+
         return {
             'cell_archs': ListKnob(2 * CELL_NUM_BLOCKS * 4, lambda i: cell_arch_item(i)),
             'use_cell_arch_type': FixedKnob(''), # '' | 'ENAS' | 'NASNET-A',
