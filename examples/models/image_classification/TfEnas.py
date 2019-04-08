@@ -1017,7 +1017,7 @@ class TfEnas(BaseModel):
         op_method = op_map[op_no]
 
         # If we were to account for reduction
-        if is_reduction and input_idx < ni:
+        if is_reduction and input_idx < len(cell_inputs):
             X = op_method(X, input_idx, ni, w << 1, h << 1, ch, is_reduction=True, is_dynamic=False, is_train=is_train) 
         else:
             X = op_method(X, input_idx, ni, w, h, ch, is_reduction=False, is_dynamic=False, is_train=is_train) 
