@@ -93,13 +93,16 @@ class BaseAdvisor(abc.ABC):
     def __init__(self, knob_config: Dict[str, BaseKnob], **kwargs):
         raise NotImplementedError()
 
+    # TODO: Advisor to read train job progress from DB directly instead of being told by workers 
+    # TODO: Accomodate worker-sensitive proposals
     @abc.abstractmethod
-    def propose(self, trial_no: int = None, total_trials: int = None, 
+    def propose(self, worker_id: str, trial_no: int, total_trials: int, 
                 concurrent_trial_nos: List[int] = []) -> Proposal:
         '''
         :param int trial_no: Upcoming trial no to get proposal for
         :param int total_trials: Total no. of trials for this instance of tuning
         :param list[int] concurrent_trial_nos: Trial nos of other trials that are currently concurrently running 
+        :param str worker_id: ID of worker to get proposal for 
         '''
         raise NotImplementedError()
 
@@ -119,7 +122,7 @@ class RandomAdvisor(BaseAdvisor):
     def __init__(self, knob_config):
         self._knob_config = knob_config
 
-    def propose(self, trial_no, total_trials, concurrent_trial_nos=[]):
+    def propose(self, worker_id, trial_no, total_trials, concurrent_trial_nos=[]):
         # Randomly propose knobs
         knobs = {
             name: self._propose_knob(knob) 

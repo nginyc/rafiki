@@ -4,6 +4,7 @@ import bisect
 from enum import Enum
 import math
 import logging
+from collections import defaultdict
 
 from rafiki.model import ListKnob, CategoricalKnob, FixedKnob
 
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class EnasTrainStrategy(Enum):
     ORIGINAL = 'ORIGINAL' # Cycle between 1 train - X evals, always use GLOBAL_RECENT 
+    ORIGINAL_LOCAL = 'ORIGINAL_LOCAL' # Perform original ENAS locally at each worker, always use LOCAL_RECENT
     EPSILON_TRAIN = 'EPSILON_TRAIN' # Probability p of training, where p decreases exponentially, always use LOCAL_RECENT
 
 class EnasAdvisor(BaseAdvisor):
@@ -34,7 +36,7 @@ class EnasAdvisor(BaseAdvisor):
 
         return True
         
-    def __init__(self, knob_config, train_strategy=EnasTrainStrategy.ORIGINAL, 
+    def __init__(self, knob_config, train_strategy=EnasTrainStrategy.ORIGINAL_LOCAL, 
                 batch_size=1, num_eval_trials=30, do_final_train=True):
         (self._fixed_knobs, knob_config) = _extract_fixed_knobs(knob_config)
         self._batch_size = batch_size
@@ -42,30 +44,38 @@ class EnasAdvisor(BaseAdvisor):
         self._list_knob_models = self._build_models(knob_config, batch_size)
         self._recent_feedback = [] # [(score, proposal)]
         self._do_final_train = do_final_train
+        self._worker_to_trial_nos = defaultdict(list) # { <worker_id>: [<trial no>]}
         self._train_strategy = EnasTrainStrategy(train_strategy)
 
         if self._train_strategy == EnasTrainStrategy.ORIGINAL:
             self._get_trial_type = self._get_trial_type_original
         elif self._train_strategy == EnasTrainStrategy.EPSILON_TRAIN:
             self._get_trial_type = self._get_trial_type_epsilon_train
+        elif self._train_strategy == EnasTrainStrategy.ORIGINAL_LOCAL:
+            self._get_trial_type = self._get_trial_type_original_local
         else:
             raise NotImplementedError()
 
-    def propose(self, trial_no, total_trials, concurrent_trial_nos=[]):
-        trial_type = self._get_trial_type(trial_no, total_trials, concurrent_trial_nos)
+    def propose(self, worker_id, trial_no, total_trials, concurrent_trial_nos=[]):
+        (params_type, trial_type) = self._get_trial_type(worker_id, trial_no, total_trials, concurrent_trial_nos)
+        
         if trial_type is None:
             return Proposal({}, is_valid=False)
-        elif trial_type == 'TRAIN':
+
+        # Keep track of trial nos at each worker
+        self._worker_to_trial_nos[worker_id].append(trial_no)
+
+        if trial_type == 'TRAIN':
             knobs = self._propose_knobs()
             return Proposal(knobs, 
-                            params_type=ParamsType.GLOBAL_RECENT, 
+                            params_type=params_type, 
                             train_strategy=TrainStrategy.STOP_EARLY, 
                             should_evaluate=False,
                             should_save_to_disk=False)
         elif trial_type == 'EVAL':
             knobs = self._propose_knobs()
             return Proposal(knobs,
-                            params_type=ParamsType.GLOBAL_RECENT, 
+                            params_type=params_type, 
                             train_strategy=TrainStrategy.NONE, 
                             should_evaluate=True,
                             should_save_to_disk=False)
@@ -73,7 +83,7 @@ class EnasAdvisor(BaseAdvisor):
             # Do standard model training from scratch with recent best knobs
             knobs = self._propose_best_recent_knobs()
             return Proposal(knobs, 
-                            params_type=ParamsType.NONE,
+                            params_type=params_type,
                             train_strategy=TrainStrategy.STANDARD,
                             should_evaluate=True,
                             should_save_to_disk=True)
@@ -120,7 +130,7 @@ class EnasAdvisor(BaseAdvisor):
 
         return list_knob_models
 
-    def _get_trial_type_epsilon_train(self, trial_no, total_trials, concurrent_trial_nos):
+    def _get_trial_type_epsilon_train(self, worker_id, trial_no, total_trials, concurrent_trial_nos):
         num_final_train_trials = 1 if self._do_final_train else 0
         t = trial_no
         t_div = total_trials
@@ -132,15 +142,15 @@ class EnasAdvisor(BaseAdvisor):
             if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
                 return None
 
-            return 'FINAL_TRAIN'
+            return (ParamsType.NONE, 'FINAL_TRAIN')
                 
         # Train with decreasing probability
         if np.random.random() < e:
-            return 'TRAIN'
+            return (ParamsType.GLOBAL_RECENT, 'TRAIN')
         else:
-            return 'EVAL'
+            return (ParamsType.GLOBAL_RECENT, 'EVAL')
 
-    def _get_trial_type_original(self, trial_no, total_trials, concurrent_trial_nos):
+    def _get_trial_type_original(self, worker_id, trial_no, total_trials, concurrent_trial_nos):
         num_final_train_trials = 1 if self._do_final_train else 0
         num_eval_trials = self._num_eval_trials
         E = self._batch_size
@@ -153,7 +163,7 @@ class EnasAdvisor(BaseAdvisor):
             if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
                 return None
 
-            return 'FINAL_TRAIN'
+            return (ParamsType.NONE, 'FINAL_TRAIN')
 
         # Otherwise, it is in the <train + eval> phase
         # Every (X + 1) trials, only train 1 epoch for the first trial
@@ -165,7 +175,7 @@ class EnasAdvisor(BaseAdvisor):
             if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
                 return None
             
-            return 'TRAIN'
+            return (ParamsType.GLOBAL_RECENT, 'TRAIN')
         else:
             # Within a batch, "eval" trials can be done in parallel
             # But must wait for the previous "eval" batch to finish
@@ -175,7 +185,34 @@ class EnasAdvisor(BaseAdvisor):
             if self._if_preceding_trials_are_running(minibatch_head_trial_no, concurrent_trial_nos):
                 return None
 
-            return 'EVAL'
+            return (ParamsType.GLOBAL_RECENT, 'EVAL')
+
+    def _get_trial_type_original_local(self, worker_id, trial_no, total_trials, concurrent_trial_nos):
+        num_final_train_trials = 1 if self._do_final_train else 0
+        num_eval_trials = self._num_eval_trials
+        T = num_eval_trials + 1 # Period
+        trial_nos = self._worker_to_trial_nos[worker_id]
+        local_trial_no = len(trial_nos) + 1
+
+        # Schedule: |--<train + eval>---||--<final train>--|
+
+        # Check if final train trial
+        if trial_no > total_trials - num_final_train_trials:
+            if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
+                return None
+
+            return (ParamsType.NONE, 'FINAL_TRAIN')
+
+        # Otherwise, it is in the <train + eval> phase
+        # Every (X + 1) trials, only train 1 epoch for the first trial
+        # The other X trials is for training the controller
+        # Use *local* trial no to determine this
+        # Since trials on each worker are executed relatively sequentially, no need to check validity
+        is_train_trial = ((local_trial_no - 1) % T == 0)
+        if is_train_trial:
+            return (ParamsType.LOCAL_RECENT, 'TRAIN')
+        else:
+            return (ParamsType.LOCAL_RECENT, 'EVAL')
         
     def _if_preceding_trials_are_running(self, trial_no, concurrent_trial_nos):
         if len(concurrent_trial_nos) == 0:

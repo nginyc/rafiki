@@ -45,11 +45,10 @@ def create_advisor(auth):
     params = get_request_params()
 
     # Deserialize knob config
-    if 'knob_config_str' in params:
-        params['knob_config'] = deserialize_knob_config(params['knob_config_str'])
-        del params['knob_config_str']
+    knob_config = deserialize_knob_config(params['knob_config_str'])
+    del params['knob_config_str']
 
-    return jsonify(service.create_advisor(**params))
+    return jsonify(service.create_advisor(knob_config, **params))
 
 @app.route('/advisors/<advisor_id>/propose', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])

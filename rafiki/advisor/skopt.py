@@ -36,7 +36,7 @@ class SkoptAdvisor(BaseAdvisor):
         self._param_policy = ParamPolicy(param_policy)
         self._recent_feedback = [] # [(score, proposal)]
 
-    def propose(self, trial_no, total_trials, concurrent_trial_nos=[]):
+    def propose(self, worker_id, trial_no, total_trials, concurrent_trial_nos=[]):
         trial_type = self._get_trial_type(trial_no, total_trials, concurrent_trial_nos)
 
         if trial_type is None:
@@ -141,7 +141,6 @@ class SkoptAdvisor(BaseAdvisor):
         t = trial_no
         t_div = total_trials
         e = math.exp(-4 * t / t_div) # e ^ (-4x) => 1 -> 0 exponential decay
-        print(e)
         # No params with decreasing probability
         if np.random.random() < e:
             return ParamsType.NONE
@@ -152,7 +151,6 @@ class SkoptAdvisor(BaseAdvisor):
         t = trial_no
         t_div = total_trials
         e = 0.5 - 0.5 * t / t_div # 0.5 -> 0 linearly
-        print(e)
         # No params with decreasing probability
         if np.random.random() < e:
             return ParamsType.NONE

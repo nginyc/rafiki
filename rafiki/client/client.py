@@ -548,19 +548,21 @@ class Client(object):
         data = self._post('/advisors', target='advisor', json=json)
         return data
 
-    def get_proposal_from_advisor(self, advisor_id: str, trial_no: int, 
+    def get_proposal_from_advisor(self, advisor_id: str, worker_id: str, trial_no: int, 
                                 total_trials: int, concurrent_trial_nos=[]) -> Proposal:
         '''
         Get a proposal from an advisor.
 
+        :param str worker_id: ID of worker
         :param str advisor_id: ID of target advisor
         :param int trial_no: Trial no to get proposal for
-        :param int total_trials: Expected total no. of trials for this tuning sessio
+        :param int total_trials: Expected total no. of trials for this tuning session
         :param List[int] concurrent_trial_nos: Trial nos that are concurrently running
         :returns: Proposal from advisor 
         :rtype: Proposal
         '''
         json = {
+            'worker_id': worker_id,
             'trial_no': trial_no,
             'total_trials': total_trials,
             'concurrent_trial_nos': concurrent_trial_nos

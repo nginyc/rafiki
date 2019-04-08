@@ -51,16 +51,16 @@ class AdvisorService(object):
             'is_deleted': is_deleted 
         }
 
-    def get_proposal_from_advisor(self, advisor_id, trial_no, 
-                                total_trials, concurrent_trial_nos=[]):
+    def get_proposal_from_advisor(self, advisor_id, worker_id, trial_no, 
+                                    total_trials, concurrent_trial_nos=[]):
 
         advisor = self._get_advisor(advisor_id)
         if advisor is None:
             raise InvalidAdvisorError()
 
-        proposal = advisor.propose(trial_no, total_trials, concurrent_trial_nos)
-        logger.info('[ID: "{}"] Proposing {} for trial #{} with concurrent trials {}...'
-                    .format(advisor_id, proposal.to_jsonable(), trial_no, concurrent_trial_nos))
+        proposal = advisor.propose(worker_id, trial_no, total_trials, concurrent_trial_nos)
+        logger.info('[ID: "{}"][Worker: "{}"] Proposing {} for trial #{} with concurrent trials {}...'
+                    .format(advisor_id, worker_id, proposal.to_jsonable(), trial_no, concurrent_trial_nos))
         return proposal
 
     def feedback(self, advisor_id, score, proposal):

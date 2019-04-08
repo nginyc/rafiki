@@ -10,19 +10,21 @@ from rafiki.advisor import AdvisorType
 from examples.models.image_classification.TfEnas import TfEnas
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
 
-def run_enas(client, gpus, full=True):
+def run_enas(client, gpus, train_strategy, full=True):
     app_id = gen_id()
-    num_eval_trials = 60 if not full else 300
-    batch_size = 2 if not full else 10
+    num_eval_trials = 30
+    enas_batch_size = 1 
     period = num_eval_trials + 1
     num_final_train_trials = 1
-    trial_count = period * 10 + num_final_train_trials if not full else period * 150 + num_final_train_trials
+    trial_count = period * 20 + num_final_train_trials if not full else period * 150 + num_final_train_trials
     app = 'cifar_10_enas_{}'.format(app_id)
     model_name = 'TfEnas_{}'.format(app_id)
 
     print('Creating advisor...')
     knob_config = TfEnas.get_knob_config()
-    advisor_config = { 'num_eval_trials': num_eval_trials, 'batch_size': batch_size }
+    advisor_config = { 'num_eval_trials': num_eval_trials, 
+                        'batch_size': enas_batch_size, 
+                        'train_strategy': train_strategy }
     advisor = client.create_advisor(knob_config, advisor_type=AdvisorType.ENAS, advisor_config=advisor_config)
     pprint.pprint(advisor)
     advisor_id = advisor['id']
@@ -51,7 +53,8 @@ def run_enas(client, gpus, full=True):
             models={
                 model_name: {
                     'advisor_id': advisor_id,
-                    'knobs': { 'num_layers': 2, 'early_stop_num_layers': 0 } if not full else {}
+                    'knobs': { 'num_layers': 2, 'trial_epochs': 30, 
+                                'early_stop_num_layers': 0 } if not full else {}
                 }
             }
         )
@@ -72,6 +75,7 @@ if __name__ == '__main__':
     parser.add_argument('--advisor_port', type=int, default=os.environ.get('ADVISOR_EXT_PORT'), help='Port for Rafiki Advisor on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
+    parser.add_argument('--train_strategy', type=str, default='ORIGINAL_LOCAL', help='ENAS train strategy')
     (args, _) = parser.parse_known_args()
 
     # Initialize client
@@ -79,4 +83,4 @@ if __name__ == '__main__':
     client.login(email=args.email, password=args.password)
 
     # Run ENAS
-    run_enas(client, args.gpus, full=args.full)
+    run_enas(client, args.gpus, args.train_strategy, full=args.full)

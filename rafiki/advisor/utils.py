@@ -83,7 +83,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         _print_header('Trial #{} (ID: "{}")'.format(i, trial_id))
 
         # Get proposal from advisor, overriding knobs from args & trial config
-        proposal = advisor.propose(i, total_trials)
+        proposal = advisor.propose('localhost', i, total_trials)
         assert proposal.is_valid
         knobs = { **proposal.knobs, **knobs_from_args } 
         print('Advisor proposed knobs:', knobs)

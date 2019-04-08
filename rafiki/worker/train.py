@@ -235,7 +235,8 @@ class TrainWorker(object):
 
             # Request proposal from advisor
             logger.info('Requesting for proposal from advisor...')
-            proposal = self._client.get_proposal_from_advisor(advisor_id, trial_no, total_trials, concurrent_trial_nos)
+            proposal = self._client.get_proposal_from_advisor(advisor_id, self._worker_id, 
+                                                            trial_no, total_trials, concurrent_trial_nos)
 
             if not proposal.is_valid:
                 # Trial is still invalid
