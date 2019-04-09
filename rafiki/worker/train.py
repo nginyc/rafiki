@@ -262,6 +262,7 @@ class TrainWorker(object):
         new_completed_trials = self._job_monitor.retrieve_new_completed_trials()
         for x in new_completed_trials:
             if x.out_param_id is not None:
+                logger.info('Added params "{}" to monitor...'.format(x.out_param_id))
                 self._params_monitor.add_params(x.out_param_id, x.score, 
                                             x.datetime_started, x.worker_id)
         
@@ -272,7 +273,7 @@ class TrainWorker(object):
         params = {}
         if param_id is not None:
             params = self._param_store.retrieve_params(job_info.sub_train_job_id, param_id)
-            logger.info('Retrieved {} params'.format(len(params)))
+            logger.info('Retrieved params "{}" of length {} from monitor'.format(param_id, len(params)))
 
         return (params, param_id)
 
@@ -285,7 +286,7 @@ class TrainWorker(object):
 
         logger.info('Storing params...')
         trial_param_id = self._param_store.store_params(sub_train_job_id, trial_params, trial_id)
-        logger.info('Stored params of ID "{}"'.format(trial_param_id))
+        logger.info('Stored params "{}"'.format(trial_param_id))
 
         return trial_param_id
 
@@ -405,7 +406,7 @@ class _SubTrainJobMonitor():
                 if x.status == TrialStatus.COMPLETED and x.no not in self._seen_completed_trial_nos:
                     self._seen_completed_trial_nos.add(x.no)
                     logger.info('Observed trial #{} completed'.format(x.no))
-                    trial = _CompletedTrial(x.id, x.no, x.datetime_started, x.out_param_id, x.score, x.score)
+                    trial = _CompletedTrial(x.id, x.no, x.datetime_started, x.out_param_id, x.score, x.worker_id)
                     self._new_completed_trials.append(trial)
             
             # Advance consecutive completed trial num

@@ -1304,7 +1304,7 @@ class TimedRepeatCondition():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--enas_batch_size', type=int, default=1, help='Batch size for ENAS controller')
-    parser.add_argument('--enas_train_strategy', type=str, default='ORIGINAL', help='Train strategy for ENAS controller')
+    parser.add_argument('--enas_train_strategy', type=str, default='ORIGINAL_LOCAL', help='Train strategy for ENAS controller')
     parser.add_argument('--num_eval_trials', type=int, default=30, help='No. of evaluation trials in a cycle of train-eval in ENAS')
     parser.add_argument('--train_once', action='store_true', help='Whether to just train 1 (fixed) architecture')
     parser.add_argument('--do_final_train', action='store_true', help='Whether to train the final best architecture')
