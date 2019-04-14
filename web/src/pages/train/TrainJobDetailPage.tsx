@@ -78,6 +78,7 @@ class TrainJobDetailPage extends React.Component<Props> {
 
           // @ts-ignore
           const dur = moment.duration(trial.datetime_stopped - trial.datetime_started);
+          // TODO: Don't show sum of trial durations, but actual duration
           totalDuration = totalDuration.add(dur);
         }
 

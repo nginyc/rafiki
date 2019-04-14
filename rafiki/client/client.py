@@ -413,6 +413,7 @@ class Client(object):
         data = self._get('/trials/{}/logs'.format(trial_id))
         return data
 
+    # TODO: Fix method
     def get_trial_parameters(self, trial_id):
         '''
         Gets parameters of the model associated with the trial.

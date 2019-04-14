@@ -13,7 +13,7 @@ from rafiki.advisor import tune_model
 
 _Model = namedtuple('_Model', ['images_ph', 'classes_ph', 'is_train_ph', 'step', 'probs', 'acc', 'loss',
                                 'train_op', 'init_op', 'summary_op', 
-                                'shared_var_phs', 'shared_vars_assign_op'])
+                                'var_phs', 'vars_assign_op'])
 class TfAllCnnModelC(BaseModel):
     '''
     Model C in https://arxiv.org/pdf/1412.6806.pdf
@@ -64,7 +64,7 @@ class TfAllCnnModelC(BaseModel):
         # TODO
         pass
 
-    def save_parameters(self, params_dir):
+    def dump_parameters(self, params_dir):
         # Save model parameters
         model_file_path = os.path.join(params_dir, 'model')
         with self._graph.as_default():
@@ -134,12 +134,12 @@ class TfAllCnnModelC(BaseModel):
         # Build feed dict for op for loading shared params
         # For each param, use current value of param in session if not in shared vars
         var_feeddict = {
-            m.shared_var_phs[tf_var.name]: shared_vars[tf_var.name] 
+            m.var_phs[tf_var.name]: shared_vars[tf_var.name] 
             if tf_var.name in shared_vars else values[i]
             for (i, tf_var) in enumerate(shared_tf_vars)
         }
         
-        self._sess.run(m.shared_vars_assign_op, feed_dict=var_feeddict)
+        self._sess.run(m.vars_assign_op, feed_dict=var_feeddict)
 
     def _train_model(self, train_images, train_classes, 
                     train_val_images, train_val_classes, monitored_values):
@@ -244,7 +244,7 @@ class TfAllCnnModelC(BaseModel):
 
             # Allow loading of shared parameters
             shared_tf_vars = self._get_shared_tf_vars()
-            (shared_var_phs, shared_vars_assign_op) = self._add_vars_assign_op(shared_tf_vars)
+            (var_phs, vars_assign_op) = self._add_vars_assign_op(shared_tf_vars)
 
             # Add saver
             tf_vars = tf.global_variables()
@@ -254,7 +254,7 @@ class TfAllCnnModelC(BaseModel):
             sess = self._make_session()
 
             model = _Model(images_ph, classes_ph, is_train_ph, step, probs, acc, 
-                            loss, train_op, init_op, summary_op, shared_var_phs, shared_vars_assign_op)
+                            loss, train_op, init_op, summary_op, var_phs, vars_assign_op)
 
         return (model, graph, sess, saver, monitored_values)
 

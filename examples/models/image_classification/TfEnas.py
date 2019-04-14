@@ -104,7 +104,7 @@ class TfEnas(BaseModel):
         self._train_params = None
         self._knobs = self._process_knobs(knobs, train_strategy)
 
-    def train(self, dataset_uri, ):
+    def train(self, dataset_uri):
         knobs = self._knobs
         init_params_dir = self._knobs['init_params_dir']
 
