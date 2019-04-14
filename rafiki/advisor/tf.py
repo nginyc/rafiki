@@ -236,10 +236,11 @@ class EnasAdvisorListModel():
         self._batch_scores = [] # A running batch of corresponding scores for feedback
 
         with self._graph.as_default():
-            (self._item_logits, self._out_item_idxs, 
-                self._train_op, self._losses, self._rewards,
-                self._item_idxs_ph, self._scores_ph) = self._build_model(self._knob)
-            self._start_session()
+            with tf.device('/cpu:0'):
+                (self._item_logits, self._out_item_idxs, 
+                    self._train_op, self._losses, self._rewards,
+                    self._item_idxs_ph, self._scores_ph) = self._build_model(self._knob)
+                self._start_session()
 
     def propose(self):
         items = self._predict_with_model()
