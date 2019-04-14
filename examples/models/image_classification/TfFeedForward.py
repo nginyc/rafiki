@@ -114,7 +114,7 @@ class TfFeedForward(BaseModel):
     def destroy(self):
         self._sess.close()
 
-    def save_parameters(self, params_dir):
+    def dump_parameters(self, params_dir):
         # Save pre-processing params
         train_params_file_path = os.path.join(params_dir, 'train_params.json')
         with open(train_params_file_path, 'w') as f:

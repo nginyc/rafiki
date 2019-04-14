@@ -17,6 +17,8 @@ We assume development or deployment in a MacOS or Linux environment.
 
 2. Clone the project at https://github.com/nginyc/rafiki
 
+# TODO: Add user to Docker group
+
 3. Setup Rafiki's complete stack with the init script:
 
     .. code-block:: shell
