@@ -10,13 +10,13 @@ from rafiki.utils.auth import make_superadmin_client
 from rafiki.client import Client
 from rafiki.constants import BudgetType, TrainJobStatus, TrialStatus, ServiceStatus
 from rafiki.meta_store import MetaStore, DuplicateTrialNoError
-from rafiki.advisor import ParamsMonitor, Proposal, ParamsType, TrainStrategy
+from rafiki.advisor import Proposal, ParamsType, TrainStrategy, EvalStrategy
 from rafiki.model import BaseModel, load_model_class, serialize_knob_config, logger as model_logger
 from rafiki.param_store import ParamStore
 
 logger = logging.getLogger(__name__)
 
-INVALID_TRIAL_SLEEP_SECS = 10
+INVALID_TRIAL_SLEEP_SECS = 3
 NO_NEXT_TRIAL_SLEEP_SECS = 5 * 60
 
 class InvalidWorkerError(Exception): pass
@@ -30,11 +30,11 @@ class TrainWorker(object):
         self._job_monitor = _SubTrainJobMonitor(service_id, meta_store)
         self._params_root_dir = os.path.join(os.environ['WORKDIR_PATH'], os.environ['PARAMS_DIR_PATH'])
         self._worker_id = container_id
-        self._param_store = param_store or ParamStore(redis_host=os.environ['REDIS_HOST'],
-                                                        redis_port=os.environ['REDIS_PORT'])
-        self._params_monitor = ParamsMonitor()
+        self._redis_host = os.environ['REDIS_HOST']
+        self._redis_port = os.environ['REDIS_PORT']
         self._client = make_superadmin_client()
         self._trial_id = None
+        self._params_store: ParamStore = None
 
     def start(self):
         self._job_monitor.start()
@@ -43,6 +43,10 @@ class TrainWorker(object):
 
         self._client.send_event('sub_train_job_worker_started', sub_train_job_id=sub_train_job_id)
         logger.info('Worker is for sub train job of ID "{}"'.format(sub_train_job_id))
+
+        # Create params store
+        self._params_store = ParamStore(session_id=sub_train_job_id, worker_id=self._worker_id, 
+                                        redis_host=self._redis_host, redis_port=self._redis_port)
 
         # Load model class from bytes
         logger.info('Loading model class...')
@@ -77,12 +81,12 @@ class TrainWorker(object):
                 # Wait for a proposal from advisor for trial
                 proposal = self._wait_for_proposal(advisor_id, trial_no, job_info)
 
-                # Generate params for trial
-                (params, param_id) = self._retrieve_params(job_info, proposal.params_type) 
+                # Retrieve params for trial
+                params = self._params_store.retrieve_params(proposal.params_type)
 
                 # Train & evaluate model for trial
                 logger.info('Running trial...')
-                self._job_monitor.mark_trial_as_running(self._trial_id, proposal, param_id)
+                self._job_monitor.mark_trial_as_running(self._trial_id, proposal)
                 (score, trial_params, params_dir) = \
                     self._train_and_evaluate_model(job_info, clazz, proposal, params)
 
@@ -90,10 +94,11 @@ class TrainWorker(object):
                 self._feedback(advisor_id, score, proposal)
 
                 # Store output params of trial
-                trial_param_id = self._store_params(job_info, self._trial_id, trial_params)
+                if trial_params is not None:
+                    self._params_store.store_params(trial_params, score)
 
                 # Mark trial as completed
-                self._job_monitor.mark_trial_as_completed(self._trial_id, score, params_dir, trial_param_id)
+                self._job_monitor.mark_trial_as_completed(self._trial_id, score, params_dir)
                 
             except Exception as e:
                 logger.error('Error while running trial:')
@@ -111,9 +116,9 @@ class TrainWorker(object):
             logger.info('Running model class teardown...')
             clazz.teardown()
 
-        # Train job must have finished, delete advisor & params
+        # Train job must have finished, delete advisor & clear all params
         self._maybe_delete_advisor(advisor_id, job_info)
-        self._clear_params(job_info)
+        self._params_store.clear_all_params()
             
     def stop(self):
         job_info = self._job_monitor.job_info
@@ -158,8 +163,9 @@ class TrainWorker(object):
 
         # Load model
         model_inst = clazz(train_strategy=proposal.train_strategy,
+                            eval_strategy=proposal.eval_strategy,
                             **proposal.knobs)
-        if len(params) > 0:
+        if params is not None:
             logger.info('Loading params for model...')
             model_inst.load_parameters(params)
 
@@ -174,7 +180,7 @@ class TrainWorker(object):
 
         # Evaluate model
         score = None
-        if proposal.should_evaluate:
+        if proposal.eval_strategy != EvalStrategy.NONE:
             logger.info('Evaluating model...')
             score = model_inst.evaluate(val_dataset_uri)
             logger.info('Trial score: {}'.format(score))
@@ -254,42 +260,6 @@ class TrainWorker(object):
         logger.info('Using proposal {}'.format(proposal.to_jsonable()))
         return proposal
 
-    # Retrieves params for a trial
-    def _retrieve_params(self, job_info: _JobInfo, params_type: ParamsType):
-        worker_id = self._worker_id
-
-        # Update params monitor
-        new_completed_trials = self._job_monitor.retrieve_new_completed_trials()
-        for x in new_completed_trials:
-            if x.out_param_id is not None:
-                logger.info('Added params "{}" to monitor...'.format(x.out_param_id))
-                self._params_monitor.add_params(x.out_param_id, x.score, 
-                                            x.datetime_started, x.worker_id)
-        
-        # Get exact params
-        param_id = self._params_monitor.get_params(params_type, worker_id)
-
-        # Load actual params from store
-        params = {}
-        if param_id is not None:
-            params = self._param_store.retrieve_params(job_info.sub_train_job_id, param_id)
-            logger.info('Retrieved params "{}" of length {} from monitor'.format(param_id, len(params)))
-
-        return (params, param_id)
-
-    # Retrieves params for a trial
-    def _store_params(self, job_info: _JobInfo, trial_id: str, trial_params: dict):
-        sub_train_job_id = job_info.sub_train_job_id
-
-        if trial_params is None:
-            return
-
-        logger.info('Storing params...')
-        trial_param_id = self._param_store.store_params(sub_train_job_id, trial_params, trial_id)
-        logger.info('Stored params "{}"'.format(trial_param_id))
-
-        return trial_param_id
-
     # Feedback result of trial to advisor, if score exists
     def _feedback(self, advisor_id, score, proposal: Proposal):
         if score is None:
@@ -335,14 +305,6 @@ class TrainWorker(object):
             logger.warning('Error while deleting advisor:')
             logger.warning(traceback.format_exc())
 
-    def _clear_params(self, job_info: _JobInfo):
-        sub_train_job_id = job_info.sub_train_job_id
-        self._param_store.clear_params(sub_train_job_id)
-
-
-_CompletedTrial = namedtuple('_CompletedTrial', ['id', 'no', 'datetime_started', 
-                                                'out_param_id', 'score', 'worker_id'])
-
 class _SubTrainJobMonitor():
     '''
     Monitors & updates the status & trials of a sub train job for a given service ID.
@@ -354,7 +316,6 @@ class _SubTrainJobMonitor():
     _num_consec_completed_trials = 0
     _num_done_trials = 0
     _concurrent_trial_nos = []
-    _new_completed_trials = []
     _total_trials = None
 
     def __init__(self, service_id: str, meta_store: MetaStore):
@@ -364,7 +325,7 @@ class _SubTrainJobMonitor():
     def start(self):
         service_id = self._service_id
 
-        logger.info('Reading job info from store...')
+        logger.info('Reading job info from meta store...')
         with self._meta_store:
             worker = self._meta_store.get_sub_train_job_worker(service_id)
             if worker is None:
@@ -391,7 +352,6 @@ class _SubTrainJobMonitor():
     def sync_trials(self):
         sub_train_job_id = self.job_info.sub_train_job_id
 
-        logger.info('Pulling new trials from store...')
         with self._meta_store:
             new_db_trials  = self._meta_store.get_trials_of_sub_train_job(sub_train_job_id, 
                                                                         min_trial_no=(self._num_consec_completed_trials + 1))
@@ -405,20 +365,15 @@ class _SubTrainJobMonitor():
 
                 if x.status == TrialStatus.COMPLETED and x.no not in self._seen_completed_trial_nos:
                     self._seen_completed_trial_nos.add(x.no)
-                    logger.info('Observed trial #{} completed'.format(x.no))
-                    trial = _CompletedTrial(x.id, x.no, x.datetime_started, x.out_param_id, x.score, x.worker_id)
-                    self._new_completed_trials.append(trial)
             
             # Advance consecutive completed trial num
             while (self._num_consec_completed_trials + 1) in self._seen_completed_trial_nos:
                 self._num_consec_completed_trials += 1 
+
             self._num_done_trials = num_done_trials
             self._concurrent_trial_nos = concurrent_trial_nos
 
-    def retrieve_new_completed_trials(self):
-        trials = self._new_completed_trials
-        self._new_completed_trials = []
-        return trials
+        logger.info('Observed up to trial #{} completed'.format(self._num_consec_completed_trials))
 
     # Returns the progress of sub train job as (<next trial no>, <total trials>, <list of concurrently running trial nos>)
     # Returns <next trial no> as None if budget is reached
@@ -435,11 +390,13 @@ class _SubTrainJobMonitor():
 
         try:
             with self._meta_store:
-                logger.info('Creating new trial in store...')
                 trial = self._meta_store.create_trial(sub_train_job_id, no, model_id, worker_id)
                 self._meta_store.commit()
-                logger.info('Created trial #{} of ID "{}" in store'.format(no, trial.id))
-                return trial.id
+                trial_id = trial.id
+
+            logger.info('Created trial #{} of ID "{}" in store'.format(no, trial_id))
+            return trial_id
+
         except DuplicateTrialNoError:
             logger.info('Avoided creating duplicate trial #{} in store!'.format(no))
             return None
@@ -450,17 +407,17 @@ class _SubTrainJobMonitor():
             trial = self._meta_store.get_trial(trial_id)
             self._meta_store.mark_trial_as_errored(trial)
     
-    def mark_trial_as_running(self, trial_id, proposal, param_id):
+    def mark_trial_as_running(self, trial_id, proposal):
         logger.info('Marking trial as running in store...')
         with self._meta_store:
             trial = self._meta_store.get_trial(trial_id)
-            self._meta_store.mark_trial_as_running(trial, proposal.to_jsonable(), param_id)
+            self._meta_store.mark_trial_as_running(trial, proposal.to_jsonable())
 
-    def mark_trial_as_completed(self, trial_id, score, params_dir, out_param_id):
+    def mark_trial_as_completed(self, trial_id, score, params_dir):
         logger.info('Marking trial as completed in store...')
         with self._meta_store:
             trial = self._meta_store.get_trial(trial_id)
-            self._meta_store.mark_trial_as_completed(trial, score, params_dir, out_param_id)
+            self._meta_store.mark_trial_as_completed(trial, score, params_dir)
 
     def mark_trial_as_terminated(self, trial_id):
         logger.info('Marking trial as terminated in store...')

@@ -61,9 +61,8 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         advisor = make_advisor(knob_config)
     print('Using advisor "{}"...'.format(advisor.__class__))
 
-    # Configure shared params monitor & store
+    # Create params store
     param_store = ParamStore()
-    params_monitor = ParamsMonitor()
     
     # Variables to track over trials
     best_model_score = 0
@@ -71,7 +70,6 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     best_model_test_score = None
     best_model_knobs = None
     best_model_params_dir = None
-    session_id = str(uuid.uuid4()) # Session ID for params store
 
     # Setup model class
     print('Running model class setup...')
@@ -90,18 +88,14 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         print('Advisor proposed params:', proposal.params_type.name)
         print('Advisor proposed train strategy:', proposal.train_strategy.name)
 
-        # Retrieve shared params from store
-        param_id = params_monitor.get_params(proposal.params_type)
-        params = {}
-        if param_id is not None:
-            print('Retrieving params of ID "{}"...'.format(param_id))
-            params = param_store.retrieve_params(session_id, param_id)
+        # Retrieve params from store
+        params = param_store.retrieve_params(proposal.params_type)
 
         # Load model
         model_inst = py_model_class(train_strategy=proposal.train_strategy, 
                                     eval_strategy=proposal.eval_strategy,
                                     **knobs)
-        if len(params) > 0:
+        if params is not None:
             print('Loading params for model...')
             model_inst.load_parameters(params)
 
@@ -155,12 +149,10 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
             print('Giving feedback to advisor...')
             advisor.feedback(score, proposal)
 
-        # Update params monitor & store
+        # Update params store
         if trial_params:
             print('Storing trial\'s params...')
-            trial_param_id = param_store.store_params(session_id, trial_params, trial_id)
-            params_monitor.add_params(trial_param_id, score)
-            print('Stored params of ID "{}"'.format(trial_param_id))
+            param_store.store_params(trial_params, score)
     
     # Declare best model
     _info('Best trial #{} has knobs {} with score of {}'.format(best_trial_no, best_model_knobs, best_model_score))
@@ -240,77 +232,6 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
     _info('The model definition is valid!')
 
     return model_inst
-
-_Params = namedtuple('_Param', ('param_id', 'score', 'time'))
-
-class ParamsMonitor():
-    '''
-    Monitors params across trials and maps a shared params policy to the exact params to use for trial
-    '''
-    _worker_to_best_params: Dict[str, _Params] = {}
-    _worker_to_recent_params: Dict[str, _Params] = {}
-
-    def add_params(self, param_id: str, score: float = None, 
-                    time: datetime = None, worker_id: str = None):
-        score = score or 0
-        time = time or datetime.now()
-        params = _Params(param_id, score, time)
-
-        # Update best params for worker
-        if worker_id not in self._worker_to_best_params or \
-            score > self._worker_to_best_params[worker_id].score:
-            self._worker_to_best_params[worker_id] = params
-        
-        # Update recent params for worker
-        if worker_id not in self._worker_to_recent_params or \
-            time > self._worker_to_recent_params[worker_id].time:
-            self._worker_to_recent_params[worker_id] = params
-
-    def get_params(self, params: ParamsType, worker_id: str = None) -> Union[str, None]:
-        if params == ParamsType.NONE:
-            return None
-        elif params == ParamsType.LOCAL_RECENT:
-            return self._get_local_recent_params(worker_id)
-        elif params == ParamsType.LOCAL_BEST:
-            return self._get_local_best_params(worker_id)
-        elif params == ParamsType.GLOBAL_RECENT:
-            return self._get_global_recent_params()
-        elif params == ParamsType.GLOBAL_BEST:
-            return self._get_global_best_params()
-        else:
-            raise ValueError('No such shared params type: "{}"'.format(params))
-    
-    def _get_local_recent_params(self, worker_id):
-        if worker_id not in self._worker_to_recent_params:
-            return None
-        
-        params = self._worker_to_recent_params[worker_id]
-        return params.param_id
-
-    def _get_local_best_params(self, worker_id):
-        if worker_id not in self._worker_to_best_params:
-            return None
-        
-        params = self._worker_to_best_params[worker_id]
-        return params.param_id
-
-    def _get_global_recent_params(self):
-        recent_params = [(params.time, params) for params in self._worker_to_recent_params.values()]
-        if len(recent_params) == 0:
-            return None
-
-        recent_params.sort()
-        (_, params) = recent_params[-1]
-        return params.param_id
-
-    def _get_global_best_params(self):
-        best_params = [(params.score, params) for params in self._worker_to_best_params.values()]
-        if len(best_params) == 0:
-            return None
-
-        best_params.sort()
-        (_, params) = best_params[-1]
-        return params.param_id
 
 def _maybe_read_knobs_from_args(knob_config, args):
     parser = argparse.ArgumentParser()

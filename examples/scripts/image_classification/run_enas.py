@@ -12,11 +12,11 @@ from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
 
 def run_enas(client, gpus, train_strategy, full=True):
     app_id = gen_id()
-    num_eval_trials = 30
-    enas_batch_size = 1 
+    num_eval_trials = 300
+    enas_batch_size = 10 
     period = num_eval_trials + 1
     num_final_train_trials = 1
-    trial_count = period * 20 + num_final_train_trials if not full else period * 150 + num_final_train_trials
+    trial_count = period * 10 + num_final_train_trials if not full else period * 150 + num_final_train_trials
     app = 'cifar_10_enas_{}'.format(app_id)
     model_name = 'TfEnas_{}'.format(app_id)
 
@@ -62,8 +62,11 @@ def run_enas(client, gpus, train_strategy, full=True):
         wait_until_train_job_has_stopped(client, app, timeout=None)
 
     finally:
+        print('Stopping train job...')
+        pprint.pprint(client.stop_train_job(app))
+
         print('Deleting advisor...')
-        client.delete_advisor(advisor_id)
+        pprint.pprint(client.delete_advisor(advisor_id))
 
 
 if __name__ == '__main__':

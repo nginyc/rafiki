@@ -453,10 +453,9 @@ class MetaStore(object):
 
         return trials
 
-    def mark_trial_as_running(self, trial, proposal, param_id):
+    def mark_trial_as_running(self, trial, proposal):
         trial.status = TrialStatus.RUNNING
         trial.proposal = proposal
-        trial.param_id = param_id
         trial.datetime_updated = datetime.utcnow()
         self._session.add(trial)
         return trial
@@ -468,11 +467,10 @@ class MetaStore(object):
         self._session.add(trial)
         return trial
 
-    def mark_trial_as_completed(self, trial, score, params_dir, out_param_id):
+    def mark_trial_as_completed(self, trial, score, params_dir):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
         trial.params_dir = params_dir
-        trial.out_param_id = out_param_id
         trial.datetime_stopped = datetime.utcnow()
         trial.datetime_updated = datetime.utcnow()
         self._session.add(trial)

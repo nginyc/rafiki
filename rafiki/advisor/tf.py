@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 class EnasTrainStrategy(Enum):
     ORIGINAL = 'ORIGINAL' # Cycle between 1 train - X evals, always use GLOBAL_RECENT 
     ISOLATED = 'ISOLATED' # Perform original ENAS locally at each worker, always use LOCAL_RECENT
-    EPSILON_TRAIN = 'EPSILON_TRAIN' # Probability p of training, where p decreases exponentially, always use LOCAL_RECENT
 
 class EnasAdvisor(BaseAdvisor):
     '''
@@ -37,7 +36,7 @@ class EnasAdvisor(BaseAdvisor):
         return True
         
     def __init__(self, knob_config, train_strategy=EnasTrainStrategy.ISOLATED, 
-                batch_size=1, num_eval_trials=30, do_final_train=True):
+                batch_size=10, num_eval_trials=300, do_final_train=True):
         (self._fixed_knobs, knob_config) = _extract_fixed_knobs(knob_config)
         self._batch_size = batch_size
         self._num_eval_trials = num_eval_trials
@@ -49,8 +48,6 @@ class EnasAdvisor(BaseAdvisor):
 
         if self._train_strategy == EnasTrainStrategy.ORIGINAL:
             self._get_trial_type = self._get_trial_type_original
-        elif self._train_strategy == EnasTrainStrategy.EPSILON_TRAIN:
-            self._get_trial_type = self._get_trial_type_epsilon_train
         elif self._train_strategy == EnasTrainStrategy.ISOLATED:
             self._get_trial_type = self._get_trial_type_isolated
         else:
@@ -129,26 +126,6 @@ class EnasAdvisor(BaseAdvisor):
 
         return list_knob_models
 
-    def _get_trial_type_epsilon_train(self, worker_id, trial_no, total_trials, concurrent_trial_nos):
-        num_final_train_trials = 1 if self._do_final_train else 0
-        t = trial_no
-        t_div = total_trials
-        e = math.exp(-31 * (t - 1) / t_div) # e ^ (-31x) => 1 -> 0 exponential decay
-        print(e)
-
-        # Check if final train trial
-        if trial_no > total_trials - num_final_train_trials:
-            if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
-                return None
-
-            return (ParamsType.NONE, 'FINAL_TRAIN')
-                
-        # Train with decreasing probability
-        if np.random.random() < e:
-            return (ParamsType.GLOBAL_RECENT, 'TRAIN')
-        else:
-            return (ParamsType.GLOBAL_RECENT, 'EVAL')
-
     def _get_trial_type_original(self, worker_id, trial_no, total_trials, concurrent_trial_nos):
         num_final_train_trials = 1 if self._do_final_train else 0
         num_eval_trials = self._num_eval_trials
@@ -160,7 +137,7 @@ class EnasAdvisor(BaseAdvisor):
         # Check if final train trial
         if trial_no > total_trials - num_final_train_trials:
             if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
-                return None
+                return (None, None)
 
             return (ParamsType.NONE, 'FINAL_TRAIN')
 
@@ -172,7 +149,7 @@ class EnasAdvisor(BaseAdvisor):
         if is_train_trial:
             # For a "train" trial, wait until previous trials to finish
             if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
-                return None
+                return (None, None)
             
             return (ParamsType.GLOBAL_RECENT, 'TRAIN')
         else:
@@ -182,7 +159,7 @@ class EnasAdvisor(BaseAdvisor):
             # Corresponding head trial for minibatch
             minibatch_head_trial_no = train_trial_no + (trial_no - train_trial_no - 1) // E * E + 1 
             if self._if_preceding_trials_are_running(minibatch_head_trial_no, concurrent_trial_nos):
-                return None
+                return (None, None)
 
             return (ParamsType.GLOBAL_RECENT, 'EVAL')
 
@@ -198,7 +175,7 @@ class EnasAdvisor(BaseAdvisor):
         # Check if final train trial
         if trial_no > total_trials - num_final_train_trials:
             if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
-                return None
+                return (None, None)
 
             return (ParamsType.NONE, 'FINAL_TRAIN')
 
