@@ -13,6 +13,8 @@ from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
 def run_enas(client, gpus, train_strategy, num_cycles, enas_batch_size, num_eval_per_cycle, full=True):
     app_id = gen_id()
     num_cycles = 10 if not full else num_cycles
+    period = num_eval_per_cycle + 1
+    num_final_train_trials = 1
     trial_count = period * num_cycles + num_final_train_trials
     app = 'cifar_10_enas_{}'.format(app_id)
     model_name = 'TfEnas_{}'.format(app_id)
