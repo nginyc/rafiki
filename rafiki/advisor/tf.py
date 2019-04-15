@@ -8,13 +8,13 @@ from collections import defaultdict
 
 from rafiki.model import ListKnob, CategoricalKnob, FixedKnob
 
-from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, ParamsType, TrainStrategy
+from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, ParamsType, TrainStrategy, EvalStrategy
 
 logger = logging.getLogger(__name__)
 
 class EnasTrainStrategy(Enum):
     ORIGINAL = 'ORIGINAL' # Cycle between 1 train - X evals, always use GLOBAL_RECENT 
-    ORIGINAL_LOCAL = 'ORIGINAL_LOCAL' # Perform original ENAS locally at each worker, always use LOCAL_RECENT
+    ISOLATED = 'ISOLATED' # Perform original ENAS locally at each worker, always use LOCAL_RECENT
     EPSILON_TRAIN = 'EPSILON_TRAIN' # Probability p of training, where p decreases exponentially, always use LOCAL_RECENT
 
 class EnasAdvisor(BaseAdvisor):
@@ -36,7 +36,7 @@ class EnasAdvisor(BaseAdvisor):
 
         return True
         
-    def __init__(self, knob_config, train_strategy=EnasTrainStrategy.ORIGINAL_LOCAL, 
+    def __init__(self, knob_config, train_strategy=EnasTrainStrategy.ISOLATED, 
                 batch_size=1, num_eval_trials=30, do_final_train=True):
         (self._fixed_knobs, knob_config) = _extract_fixed_knobs(knob_config)
         self._batch_size = batch_size
@@ -51,8 +51,8 @@ class EnasAdvisor(BaseAdvisor):
             self._get_trial_type = self._get_trial_type_original
         elif self._train_strategy == EnasTrainStrategy.EPSILON_TRAIN:
             self._get_trial_type = self._get_trial_type_epsilon_train
-        elif self._train_strategy == EnasTrainStrategy.ORIGINAL_LOCAL:
-            self._get_trial_type = self._get_trial_type_original_local
+        elif self._train_strategy == EnasTrainStrategy.ISOLATED:
+            self._get_trial_type = self._get_trial_type_isolated
         else:
             raise NotImplementedError()
 
@@ -70,14 +70,14 @@ class EnasAdvisor(BaseAdvisor):
             return Proposal(knobs, 
                             params_type=params_type, 
                             train_strategy=TrainStrategy.STOP_EARLY, 
-                            should_evaluate=False,
+                            eval_strategy=EvalStrategy.NONE,
                             should_save_to_disk=False)
         elif trial_type == 'EVAL':
             knobs = self._propose_knobs()
             return Proposal(knobs,
                             params_type=params_type, 
                             train_strategy=TrainStrategy.NONE, 
-                            should_evaluate=True,
+                            eval_strategy=EvalStrategy.STOP_EARLY,
                             should_save_to_disk=False)
         elif trial_type == 'FINAL_TRAIN':
             # Do standard model training from scratch with recent best knobs
@@ -85,7 +85,6 @@ class EnasAdvisor(BaseAdvisor):
             return Proposal(knobs, 
                             params_type=params_type,
                             train_strategy=TrainStrategy.STANDARD,
-                            should_evaluate=True,
                             should_save_to_disk=True)
 
     def feedback(self, score, proposal):
@@ -187,7 +186,7 @@ class EnasAdvisor(BaseAdvisor):
 
             return (ParamsType.GLOBAL_RECENT, 'EVAL')
 
-    def _get_trial_type_original_local(self, worker_id, trial_no, total_trials, concurrent_trial_nos):
+    def _get_trial_type_isolated(self, worker_id, trial_no, total_trials, concurrent_trial_nos):
         num_final_train_trials = 1 if self._do_final_train else 0
         num_eval_trials = self._num_eval_trials
         T = num_eval_trials + 1 # Period
@@ -227,7 +226,7 @@ def _extract_fixed_knobs(knob_config):
     return (fixed_knobs, knob_config)
 
 class EnasAdvisorListModel():
-    def __init__(self, knob, batch_size, ):
+    def __init__(self, knob, batch_size):
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
         self._knob = knob
@@ -236,11 +235,10 @@ class EnasAdvisorListModel():
         self._batch_scores = [] # A running batch of corresponding scores for feedback
 
         with self._graph.as_default():
-            with tf.device('/cpu:0'):
-                (self._item_logits, self._out_item_idxs, 
-                    self._train_op, self._losses, self._rewards,
-                    self._item_idxs_ph, self._scores_ph) = self._build_model(self._knob)
-                self._start_session()
+            (self._item_logits, self._out_item_idxs, 
+                self._train_op, self._losses, self._rewards,
+                self._item_idxs_ph, self._scores_ph) = self._build_model(self._knob)
+            self._start_session()
 
     def propose(self):
         items = self._predict_with_model()

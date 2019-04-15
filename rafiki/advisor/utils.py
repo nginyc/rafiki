@@ -17,7 +17,7 @@ from rafiki.constants import TaskType, ModelDependency
 from rafiki.param_store import ParamStore
 from rafiki.predictor import ensemble_predictions
 
-from .advisor import make_advisor, BaseAdvisor, ParamsType, TrainStrategy
+from .advisor import make_advisor, BaseAdvisor, ParamsType, TrainStrategy, EvalStrategy
 
 class InvalidModelClassException(Exception): pass
 
@@ -99,6 +99,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
 
         # Load model
         model_inst = py_model_class(train_strategy=proposal.train_strategy, 
+                                    eval_strategy=proposal.eval_strategy,
                                     **knobs)
         if len(params) > 0:
             print('Loading params for model...')
@@ -115,7 +116,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
 
         # Evaluate model
         score = None
-        if proposal.should_evaluate:
+        if proposal.eval_strategy != EvalStrategy.NONE:
             print('Evaluating model...')
             score = model_inst.evaluate(val_dataset_uri)
             if not isinstance(score, float):

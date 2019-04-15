@@ -10,7 +10,7 @@ from collections import namedtuple
 import numpy as np
 import argparse
 
-from rafiki.advisor import tune_model, make_advisor, TrainStrategy, AdvisorType
+from rafiki.advisor import tune_model, make_advisor, TrainStrategy, EvalStrategy, AdvisorType
 from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
                             FixedKnob, ListKnob
 
@@ -75,6 +75,8 @@ class TfEnas(BaseModel):
             'cutout_size': FixedKnob(0),
             'grad_clip_norm': FixedKnob(0),
             'use_aux_head': FixedKnob(False),
+            'use_dynamic_arch': FixedKnob(False),
+            'use_quick_eval': FixedKnob(False),
             'summaries_dir': FixedKnob(''), # Directory to save summaries & runtime metadata to
             'init_params_dir': FixedKnob(''), # Params directory to resume training from
 
@@ -95,14 +97,14 @@ class TfEnas(BaseModel):
             TfEnas._model_memo.sess.close()
             TfEnas._model_memo = None
 
-    def __init__(self, train_strategy, **knobs):
+    def __init__(self, train_strategy, eval_strategy, **knobs):
         self._model = None
         self._graph = None
         self._sess = None
         self._saver = None
         self._monitored_values = None
         self._train_params = None
-        self._knobs = self._process_knobs(knobs, train_strategy)
+        self._knobs = self._process_knobs(knobs, train_strategy, eval_strategy)
 
     def train(self, dataset_uri):
         knobs = self._knobs
@@ -262,7 +264,7 @@ class TfEnas(BaseModel):
 
         # If arch is dynamic, knobs can only differ by `cell_archs`
         # Otherwise, knobs must be the same
-        ignored_knobs = []
+        ignored_knobs = ['use_quick_eval']
         if use_dynamic_arch:
             ignored_knobs.append('cell_archs')
         
@@ -277,11 +279,11 @@ class TfEnas(BaseModel):
     # Private methods
     ####################################
 
-    def _process_knobs(self, knobs, train_strategy):
-        knobs['use_dynamic_arch'] = False
+    def _process_knobs(self, knobs, train_strategy, eval_strategy):
+
         if train_strategy in [TrainStrategy.STOP_EARLY, TrainStrategy.NONE]:
             knobs = {
-            **knobs,
+                **knobs,
                 'use_dynamic_arch': True,
                 'trial_epochs': knobs['early_stop_trial_epochs'],
                 'num_layers': knobs['early_stop_num_layers'],
@@ -290,6 +292,12 @@ class TfEnas(BaseModel):
                 'sgdr_alpha': knobs['early_stop_sgdr_alpha'],
                 'drop_path_keep_prob': knobs['early_stop_drop_path_keep_prob'],
                 'drop_path_decay_epochs': knobs['early_stop_drop_path_decay_epochs'],
+            }
+
+        if eval_strategy in [EvalStrategy.STOP_EARLY]:
+            knobs = {
+                **knobs,
+                'use_quick_eval': True
             }
         
         return knobs
@@ -666,9 +674,11 @@ class TfEnas(BaseModel):
             utils.logger.log(epoch=epoch, mean_acc=mean_acc)
 
     def _evaluate_model(self, images, classes, dataset_uri=None, **knobs):
+        use_quick_eval = self._knobs['use_quick_eval'] # Whether to do eval quickly
+        batch_size = self._knobs['batch_size']
         m = self._model
-        N = len(images)
-      
+        N = batch_size if use_quick_eval else len(images)
+
         self._maybe_feed_dataset_to_model(images, classes, dataset_uri=dataset_uri)
 
         corrects = []
@@ -1304,7 +1314,7 @@ class TimedRepeatCondition():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--enas_batch_size', type=int, default=1, help='Batch size for ENAS controller')
-    parser.add_argument('--enas_train_strategy', type=str, default='ORIGINAL_LOCAL', help='Train strategy for ENAS controller')
+    parser.add_argument('--enas_train_strategy', type=str, default='ISOLATED', help='Train strategy for ENAS controller')
     parser.add_argument('--num_eval_trials', type=int, default=30, help='No. of evaluation trials in a cycle of train-eval in ENAS')
     parser.add_argument('--train_once', action='store_true', help='Whether to just train 1 (fixed) architecture')
     parser.add_argument('--do_final_train', action='store_true', help='Whether to train the final best architecture')

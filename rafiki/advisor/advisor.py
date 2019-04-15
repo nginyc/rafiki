@@ -54,26 +54,32 @@ class TrainStrategy(Enum):
     STOP_EARLY = 'STOP_EARLY' # Model should stop as early as possible
     NONE = 'NONE' # Model would not be trained
 
+class EvalStrategy(Enum):
+    STANDARD = 'STANDARD' # Model should be evaluated fully with validation dataset
+    STOP_EARLY = 'STOP_EARLY' # Model should be evaluated quickly
+    NONE = 'NONE' # Model should not be evaluated
+
 class Proposal():
     def __init__(self, 
                 knobs: Dict[str, any], 
                 params_type: ParamsType = ParamsType.NONE, # Parameters to use for this trial
                 is_valid = True, # If a trial is invalid, the worker will sleep for a while before trying again
                 train_strategy: TrainStrategy = TrainStrategy.STANDARD, # How should the model train
-                should_evaluate = True, # Whether this trial should be evaluated
+                eval_strategy: EvalStrategy = EvalStrategy.STANDARD, # How should the model be evaluated
                 should_save_to_disk = True): # Whether this trial's trained model should be saved to disk
         self.knobs = knobs
         self.params_type = ParamsType(params_type)
         self.is_valid = is_valid
         self.train_strategy = TrainStrategy(train_strategy)
-        self.should_evaluate = should_evaluate
+        self.eval_strategy = EvalStrategy(eval_strategy)
         self.should_save_to_disk = should_save_to_disk
 
     def to_jsonable(self):
         return {
             **self.__dict__,
             'params_type': self.params_type.value,
-            'train_strategy': self.train_strategy.value
+            'train_strategy': self.train_strategy.value,
+            'eval_strategy': self.eval_strategy.value
         }
 
     @staticmethod
