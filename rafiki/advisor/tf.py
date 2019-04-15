@@ -36,10 +36,10 @@ class EnasAdvisor(BaseAdvisor):
         return True
         
     def __init__(self, knob_config, train_strategy=EnasTrainStrategy.ISOLATED, 
-                batch_size=10, num_eval_trials=300, do_final_train=True):
+                batch_size=10, num_eval_per_cycle=300, do_final_train=True):
         (self._fixed_knobs, knob_config) = _extract_fixed_knobs(knob_config)
         self._batch_size = batch_size
-        self._num_eval_trials = num_eval_trials
+        self._num_eval_per_cycle = num_eval_per_cycle
         self._list_knob_models = self._build_models(knob_config, batch_size)
         self._recent_feedback = [] # [(score, proposal)]
         self._do_final_train = do_final_train
@@ -128,9 +128,9 @@ class EnasAdvisor(BaseAdvisor):
 
     def _get_trial_type_original(self, worker_id, trial_no, total_trials, concurrent_trial_nos):
         num_final_train_trials = 1 if self._do_final_train else 0
-        num_eval_trials = self._num_eval_trials
+        num_eval_per_cycle = self._num_eval_per_cycle
         E = self._batch_size
-        T = num_eval_trials + 1 # Period
+        T = num_eval_per_cycle + 1 # Period
 
         # Schedule: |--<train + eval>---||--<final train>--|
 
@@ -165,8 +165,8 @@ class EnasAdvisor(BaseAdvisor):
 
     def _get_trial_type_isolated(self, worker_id, trial_no, total_trials, concurrent_trial_nos):
         num_final_train_trials = 1 if self._do_final_train else 0
-        num_eval_trials = self._num_eval_trials
-        T = num_eval_trials + 1 # Period
+        num_eval_per_cycle = self._num_eval_per_cycle
+        T = num_eval_per_cycle + 1 # Period
         trial_nos = self._worker_to_trial_nos[worker_id]
         local_trial_no = len(trial_nos) + 1
 

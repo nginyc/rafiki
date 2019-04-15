@@ -10,19 +10,16 @@ from rafiki.advisor import AdvisorType
 from examples.models.image_classification.TfEnas import TfEnas
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
 
-def run_enas(client, gpus, train_strategy, full=True):
+def run_enas(client, gpus, train_strategy, num_cycles, enas_batch_size, num_eval_per_cycle, full=True):
     app_id = gen_id()
-    num_eval_trials = 300
-    enas_batch_size = 10 
-    period = num_eval_trials + 1
-    num_final_train_trials = 1
-    trial_count = period * 10 + num_final_train_trials if not full else period * 150 + num_final_train_trials
+    num_cycles = 10 if not full else num_cycles
+    trial_count = period * num_cycles + num_final_train_trials
     app = 'cifar_10_enas_{}'.format(app_id)
     model_name = 'TfEnas_{}'.format(app_id)
 
     print('Creating advisor...')
     knob_config = TfEnas.get_knob_config()
-    advisor_config = { 'num_eval_trials': num_eval_trials, 
+    advisor_config = { 'num_eval_per_cycle': num_eval_per_cycle, 
                         'batch_size': enas_batch_size, 
                         'train_strategy': train_strategy }
     advisor = client.create_advisor(knob_config, advisor_type=AdvisorType.ENAS, advisor_config=advisor_config)
@@ -72,13 +69,16 @@ def run_enas(client, gpus, train_strategy, full=True):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--full', action='store_true', help='Whether to run ENAS in its full duration/capacity')
+    parser.add_argument('--enas_batch_size', type=int, default=10, help='Batch size for ENAS controller')
+    parser.add_argument('--train_strategy', type=str, default='ISOLATED', help='Train strategy for ENAS controller')
+    parser.add_argument('--num_eval_per_cycle', type=int, default=300, help='No. of evaluation trials in a cycle of train-eval in ENAS')
+    parser.add_argument('--num_cycles', type=int, default=150, help='No. of cycles of train-eval in ENAS')
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
     parser.add_argument('--host', type=str, default=os.environ.get('RAFIKI_ADDR'), help='Host of Rafiki instance')
     parser.add_argument('--admin_port', type=int, default=os.environ.get('ADMIN_EXT_PORT'), help='Port for Rafiki Admin on host')
     parser.add_argument('--advisor_port', type=int, default=os.environ.get('ADVISOR_EXT_PORT'), help='Port for Rafiki Advisor on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
-    parser.add_argument('--train_strategy', type=str, default='ISOLATED', help='ENAS train strategy')
     (args, _) = parser.parse_known_args()
 
     # Initialize client
@@ -86,4 +86,5 @@ if __name__ == '__main__':
     client.login(email=args.email, password=args.password)
 
     # Run ENAS
-    run_enas(client, args.gpus, args.train_strategy, full=args.full)
+    run_enas(client, args.gpus, args.train_strategy, args.num_cycles, args.enas_batch_size, 
+            args.num_eval_per_cycle, full=args.full)

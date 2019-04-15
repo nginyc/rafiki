@@ -57,7 +57,7 @@ class TfEnas(BaseModel):
             'use_cell_arch_type': FixedKnob(''), # '' | 'ENAS' | 'NASNET-A',
             'max_image_size': FixedKnob(32),
             'trial_epochs': FixedKnob(310), # Total no. of epochs during a standard train
-            'batch_size': FixedKnob(64),
+            'batch_size': FixedKnob(128),
             'learning_rate': FixedKnob(0.05), 
             'initial_block_ch': FixedKnob(36),
             'stem_ch_mul': FixedKnob(3),
@@ -1314,22 +1314,23 @@ class TimedRepeatCondition():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--enas_batch_size', type=int, default=10, help='Batch size for ENAS controller')
-    parser.add_argument('--enas_train_strategy', type=str, default='ISOLATED', help='Train strategy for ENAS controller')
-    parser.add_argument('--num_eval_trials', type=int, default=300, help='No. of evaluation trials in a cycle of train-eval in ENAS')
+    parser.add_argument('--train_strategy', type=str, default='ISOLATED', help='Train strategy for ENAS controller')
+    parser.add_argument('--num_eval_per_cycle', type=int, default=300, help='No. of evaluation trials in a cycle of train-eval in ENAS')
+    parser.add_argument('--num_cycles', type=int, default=150, help='No. of cycles of train-eval in ENAS')
     parser.add_argument('--train_once', action='store_true', help='Whether to just train 1 (fixed) architecture')
     parser.add_argument('--do_final_train', action='store_true', help='Whether to train the final best architecture')
     (args, _) = parser.parse_known_args()
 
     if not args.train_once:
         num_final_train_trials = 1 if args.do_final_train else 0
-        period = args.num_eval_trials + 1
-        trial_count = period * 150 + num_final_train_trials
+        period = args.num_eval_per_cycle + 1
+        trial_count = period * args.num_cycles + num_final_train_trials
     else:
         trial_count = 1
 
-    advisor_config = { 'num_eval_trials': args.num_eval_trials, 
+    advisor_config = { 'num_eval_per_cycle': args.num_eval_per_cycle, 
                         'batch_size': args.enas_batch_size, 
-                        'train_strategy': args.enas_train_strategy,
+                        'train_strategy': args.train_strategy,
                         'do_final_train': args.do_final_train }
     knob_config = TfEnas.get_knob_config()
     advisor = make_advisor(knob_config, advisor_type=AdvisorType.ENAS, **advisor_config)
