@@ -58,8 +58,11 @@ def train_densenet(client, gpus, full, param_policy):
         wait_until_train_job_has_stopped(client, app, timeout=None)
 
     finally:
+        print('Stopping train job...')
+        pprint.pprint(client.stop_train_job(app))
+
         print('Deleting advisor...')
-        client.delete_advisor(advisor_id)
+        pprint.pprint(client.delete_advisor(advisor_id))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
