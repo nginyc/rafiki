@@ -17,7 +17,7 @@ def load(train_images_url, train_labels_url, test_images_url, test_labels_url, l
         out_train_dataset_path, out_val_dataset_path, out_test_dataset_path, 
         out_meta_csv_path, validation_split, limit=None):
     '''
-        Loads and converts an image dataset of the MNIST format to the DatasetType `IMAGE_FILES`.
+        Loads and converts an image dataset of the MNIST format for IMAGE_CLASSIFICATION.
         Refer to http://yann.lecun.com/exdb/mnist/ for the MNIST dataset format for.
 
         :param str train_images_url: URL to download the training set images stored in the MNIST format
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     # Read args
     parser = argparse.ArgumentParser()
     parser.add_argument('--limit', type=int, default=None)
-    parser.add_argument('--validation_split', type=float, default=0.05)
+    parser.add_argument('--validation_split', type=float, default=0.1)
     args = parser.parse_args()
 
     # Loads the official Fashion MNIST dataset as `IMAGE_FILES` DatasetType
