@@ -129,9 +129,7 @@ def get_trials_of_train_job(auth, app, app_version):
 
         with admin:
             return jsonify(admin.get_best_trials_of_train_job(
-                app, 
-                app_version=int(app_version),
-                **params
+                app, app_version=int(app_version), **params
             ))
     
     # Return all trials by train job

@@ -8,7 +8,7 @@ import * as _ from 'lodash';
 
 import { AppUtils } from '../../App';
 import { AppRoute } from '../../app/AppNavigator';
-import { Trial } from '../../../client/RafikiClient';
+import { Trial, TrainJob } from '../../../client/RafikiClient';
 import { PlotOption, PlotSeries } from '../../app/PlotManager';
 
 interface Props {
@@ -21,9 +21,11 @@ interface Props {
 class TrainJobDetailPage extends React.Component<Props> {
   state: {
     trials: Trial[] | null,
+    trainJob: TrainJob | null,
     modelDescriptions: ModelDescription[]
   } = {
     trials: null,
+    trainJob: null,
     modelDescriptions: []
   }
 
@@ -58,6 +60,7 @@ class TrainJobDetailPage extends React.Component<Props> {
     const { appUtils: { rafikiClient, showError }, app, appVersion } = this.props;
     try {
       const trials = await rafikiClient.getTrialsOfTrainJob(app, appVersion);
+      const trainJob = await rafikiClient.getTrainJob(app, appVersion);
       const modelDescriptions = [];
       const trialsByModels = _.groupBy(trials, x => x.model_name);
       for (const model of Object.keys(trialsByModels)) {
@@ -91,7 +94,7 @@ class TrainJobDetailPage extends React.Component<Props> {
         };
         modelDescriptions.push(desc);
       }
-      this.setState({ trials, modelDescriptions });
+      this.setState({ trials, trainJob, modelDescriptions });
     } catch (error) {
       showError(error, 'Failed to retrieve trials for train job');
     }
@@ -184,9 +187,54 @@ class TrainJobDetailPage extends React.Component<Props> {
     )
   }
 
+  renderDetails() {
+    const { classes } = this.props;
+    const { trainJob } = this.state;
+
+    return (
+      <React.Fragment>
+        <Typography gutterBottom variant="h3">Details</Typography>
+        <Paper className={classes.detailsPaper}>
+          <Table padding="dense">
+            <TableBody>
+              <TableRow>
+                <TableCell>ID</TableCell>
+                <TableCell>{trainJob.id}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Status</TableCell>
+                <TableCell>{trainJob.status}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Started at</TableCell>
+                <TableCell>{moment(trainJob.datetime_started).format('llll')}</TableCell>
+              </TableRow>
+              {
+                trainJob.datetime_stopped &&
+                <React.Fragment>
+                  <TableRow>
+                    <TableCell>Stopped at</TableCell>
+                    <TableCell>{moment(trainJob.datetime_stopped).format('llll')}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Duration</TableCell>
+                    <TableCell>{
+                      // @ts-ignore
+                      moment.duration(trainJob.datetime_stopped - trainJob.datetime_started).asMinutes()
+                    } min</TableCell>
+                  </TableRow>
+                </React.Fragment> 
+              }
+            </TableBody>
+          </Table>
+        </Paper>
+      </React.Fragment>
+    );
+  }
+
   render() {
     const { classes, app, appVersion } = this.props;
-    const { trials, modelDescriptions } = this.state;
+    const { trials, trainJob, modelDescriptions } = this.state;
 
     return (
       <React.Fragment>
@@ -194,6 +242,14 @@ class TrainJobDetailPage extends React.Component<Props> {
           Train Job 
           <span className={classes.headerSub}>{`(${app} V${appVersion})`}</span>
         </Typography>
+        {
+          trainJob &&
+          this.renderDetails()
+        }
+        {
+          trainJob && trials &&
+          <Divider className={classes.divider} />
+        }
         {
           trials &&
           <React.Fragment>
@@ -208,7 +264,7 @@ class TrainJobDetailPage extends React.Component<Props> {
           </React.Fragment>
         }
         {
-          !trials &&
+          (!trainJob || !trials) &&
           <CircularProgress />
         }
       </React.Fragment>

@@ -343,12 +343,12 @@ class Admin(object):
         # TODO: Fix
         return None
 
-    def get_trials_of_train_job(self, app, app_version=-1):
+    def get_trials_of_train_job(self, app, app_version=-1, limit=1000, offset=0):
         train_job = self._meta_store.get_train_job_by_app_version(app, app_version=app_version)
         if train_job is None:
             raise InvalidTrainJobError()
 
-        trials = self._meta_store.get_trials_of_train_job(train_job.id)
+        trials = self._meta_store.get_trials_of_train_job(train_job.id, limit=limit, offset=offset)
         trials_models = [self._meta_store.get_model(x.model_id) for x in trials]
         
         return [

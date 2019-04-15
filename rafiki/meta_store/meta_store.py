@@ -434,11 +434,12 @@ class MetaStore(object):
 
         return trials
 
-    def get_trials_of_train_job(self, train_job_id):
+    def get_trials_of_train_job(self, train_job_id, limit=1000, offset=0):
         trials = self._session.query(Trial) \
             .join(SubTrainJob, Trial.sub_train_job_id == SubTrainJob.id) \
             .filter(SubTrainJob.train_job_id == train_job_id) \
-            .order_by(Trial.datetime_stopped.desc(), Trial.datetime_started.desc()).all()
+            .order_by(Trial.datetime_stopped.desc(), Trial.datetime_started.desc()) \
+            .offset(offset).limit(limit).all()
 
         return trials
 
