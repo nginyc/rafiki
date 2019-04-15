@@ -71,7 +71,7 @@ export default class RafikiClient {
   */
   async getTrainJob(app: string, appVersion: number = -1) {
     const data = await this._get(`/train_jobs/${app}/${appVersion}`);
-    const trainJob = <TrainJob>data;
+    const trainJob = this._toTrainJob(data);
     return trainJob;
   }
 
