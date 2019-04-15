@@ -18,7 +18,7 @@ from rafiki.model import utils
 def load(dataset_url, label_to_name, out_train_dataset_path, out_val_dataset_path, 
         out_test_dataset_path, out_meta_csv_path, validation_split, limit=None):
     '''
-        Loads and converts an image dataset of the CIFAR-10 format to the DatasetType `IMAGE_FILES`.
+        Loads and converts an image dataset of the CIFAR-10 format for IMAGE_CLASSIFICATION.
         Refer to https://www.cs.toronto.edu/~kriz/cifar.html for the CIFAR-10 dataset format for.
 
         :param str dataset_url: URL to download the Python version of the dataset
@@ -146,13 +146,11 @@ def _cifar_images_to_images(cifar_images):
     return images
 
 if __name__ == '__main__':
-    # Read args
     parser = argparse.ArgumentParser()
     parser.add_argument('--limit', type=int, default=None)
-    parser.add_argument('--validation_split', type=float, default=0.05)
+    parser.add_argument('--validation_split', type=float, default=0.1)
     args = parser.parse_args()
 
-    # Loads the official CIFAR-10 dataset as `IMAGE_FILES` DatasetType
     load(
         dataset_url='https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
         label_to_name={
