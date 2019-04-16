@@ -83,7 +83,7 @@ class SkoptAdvisor(BaseAdvisor):
         # Ask skopt
         point = self._optimizer.ask()
         knobs = { 
-            name: value 
+            name: _simplify_value(value) 
             for (name, value) 
             in zip(self._dimensions.keys(), point) 
         }
@@ -181,9 +181,17 @@ def _knob_to_dimension(knob):
     else:
         raise UnsupportedKnobError(knob.__class__)
 
-def _unzeroify(self, value):
+def _unzeroify(value):
     if value == 0:
         return 1e-9
+
+    return value
+
+def _simplify_value(value):
+    if isinstance(value, (np.int64)):
+        return int(value) 
+
+    return value
 
 def _extract_fixed_knobs(knob_config):
     fixed_knobs = { name: knob.value for (name, knob) in knob_config.items() if isinstance(knob, FixedKnob) }

@@ -82,7 +82,9 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
 
         # Get proposal from advisor, overriding knobs from args & trial config
         proposal = advisor.propose('localhost', i, total_trials)
+        _assert_jsonable(proposal.to_jsonable())
         assert proposal.is_valid
+        
         proposal.knobs = { **proposal.knobs, **knobs_from_args } 
         print('Advisor proposed knobs:', proposal.knobs)
         print('Advisor proposed params:', proposal.params_type.name)
@@ -226,12 +228,8 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
 
     py_model_class.teardown()
 
-    try:
-        for prediction in predictions:
-            json.dumps(prediction)
-    except Exception:
-        traceback.print_stack()
-        raise InvalidModelClassException('Each `prediction` should be JSON serializable')
+    for prediction in predictions:
+        _assert_jsonable(prediction, InvalidModelClassException('Each `prediction` should be JSON serializable'))
 
     # Ensembling predictions in predictor
     predictions = ensemble_predictions([predictions], task)
@@ -322,6 +320,14 @@ def _check_knob_config(knob_config):
     # Try serializing and deserialize knob config
     knob_config_bytes = serialize_knob_config(knob_config)
     knob_config = deserialize_knob_config(knob_config_bytes)
+
+
+def _assert_jsonable(jsonable, exception=None):
+    try:
+        json.dumps(jsonable)
+    except Exception as e:
+        traceback.print_stack()
+        raise exception or e 
 
 def _info(msg):
     msg_color = '\033[94m'
