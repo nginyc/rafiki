@@ -346,7 +346,7 @@ class _SubTrainJobMonitor():
             self.job_info = _JobInfo(sub_train_job.id, sub_train_job.config,
                                 train_job.train_dataset_uri, train_job.val_dataset_uri,
                                 model.id, model.model_file_bytes, model.model_class)
-            self._total_trials = train_job.budget.get(BudgetType.MODEL_TRIAL_COUNT, 2)
+            self._total_trials = train_job.budget.get(BudgetType.MODEL_TRIAL_COUNT, 0)
 
     # Pulls new trials from store and updates internal record of trials & new trials
     def sync_trials(self):

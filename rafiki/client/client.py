@@ -266,7 +266,7 @@ class Client(object):
     # Train Jobs
     ####################################
     
-    def create_train_job(self, app, task, train_dataset_uri, val_dataset_uri, budget, 
+    def create_train_job(self, app, task, train_dataset_uri, val_dataset_uri, budget={}, 
                         models=None):
         '''
         Creates and starts a train job on Rafiki. 
@@ -299,6 +299,13 @@ class Client(object):
         ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported
         =====================       =====================
         '''
+
+        # Have defaults for budget
+        budget = {
+            BudgetType.GPU_COUNT: 1,
+            BudgetType.MODEL_TRIAL_COUNT: 25,
+            **budget
+        }
 
         data = self._post('/train_jobs', json={
             'app': app,
