@@ -68,7 +68,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     best_model_score = 0
     best_trial_no = 0 
     best_model_test_score = None
-    best_model_knobs = None
+    best_proposal = None
     best_model_params_dir = None
 
     # Setup model class
@@ -83,10 +83,11 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         # Get proposal from advisor, overriding knobs from args & trial config
         proposal = advisor.propose('localhost', i, total_trials)
         assert proposal.is_valid
-        knobs = { **proposal.knobs, **knobs_from_args } 
-        print('Advisor proposed knobs:', knobs)
+        proposal.knobs = { **proposal.knobs, **knobs_from_args } 
+        print('Advisor proposed knobs:', proposal.knobs)
         print('Advisor proposed params:', proposal.params_type.name)
         print('Advisor proposed train strategy:', proposal.train_strategy.name)
+        print('Advisor proposed eval strategy:', proposal.eval_strategy.name)
 
         # Retrieve params from store
         params = param_store.retrieve_params(proposal.params_type)
@@ -94,7 +95,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         # Load model
         model_inst = py_model_class(train_strategy=proposal.train_strategy, 
                                     eval_strategy=proposal.eval_strategy,
-                                    **knobs)
+                                    **proposal.knobs)
         if params is not None:
             print('Loading params for model...')
             model_inst.load_parameters(params)
@@ -135,7 +136,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
                     _info('Model saved to {}'.format(params_dir))
 
                 best_model_params_dir = params_dir
-                best_model_knobs = knobs
+                best_proposal = proposal
                 best_model_score = score
                 best_trial_no = i
                         
@@ -155,7 +156,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
             param_store.store_params(trial_params, score)
     
     # Declare best model
-    _info('Best trial #{} has knobs {} with score of {}'.format(best_trial_no, best_model_knobs, best_model_score))
+    _info('Best trial #{} has knobs {} with score of {}'.format(best_trial_no, best_proposal.knobs, best_model_score))
     if best_model_test_score is not None:
         _info('...with test score of {}'.format(best_model_test_score))
     if best_model_params_dir is not None:
@@ -169,11 +170,11 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     duration = time.time() - start_time
     print('Tuning took a total of {}s'.format(duration))
 
-    return (best_model_knobs, best_model_test_score, best_model_params_dir)
+    return (best_proposal, best_model_test_score, best_model_params_dir)
 
-# TODO: Fix method
+# TODO: Fix method, more thorough testing of model API
 def test_model_class(model_file_path: str, model_class: str, task: str, dependencies: Dict[str, str],
-                    train_dataset_uri: str, val_dataset_uri: str, enable_gpu: bool = False, queries: list = []):
+                    train_dataset_uri: str, val_dataset_uri: str, enable_gpu: bool = True, queries: list = []):
     '''
     Tests whether a model class is properly defined by running a full train-inference flow.
     The model instance's methods will be called in an order similar to that in Rafiki.
@@ -184,9 +185,8 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
     :param dict[str, str] dependencies: Model's dependencies
     :param str train_dataset_uri: URI of the train dataset for testing the training of model
     :param str val_dataset_uri: URI of the validation dataset for testing the evaluation of model
-    :param bool enable_gpu: Whether to enable GPU during model training
+    :param bool enable_gpu: Whether to enable GPU for model testing
     :param list[any] queries: List of queries for testing predictions with the trained model
-    :type knobs: dict[str, any]
     :returns: The trained model
     '''
     _print_header('Installing & checking model dependencies...')
@@ -207,15 +207,24 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
     py_model_class = load_model_class(model_file_bytes, model_class, temp_mod_name=model_class)
     _check_model_class(py_model_class)
 
-    (best_knobs, best_model_params_dir) = tune_model(py_model_class, train_dataset_uri, val_dataset_uri, total_trials=2)
+    # Simulation of training
+    (proposal, _, params_dir) = tune_model(py_model_class, train_dataset_uri, val_dataset_uri, total_trials=2)
+   
+    # Simulation of serving
+    py_model_class.setup()
 
-    _print_header('Checking loading of parameters of model...')
-    model_inst = py_model_class(**best_knobs)
-    model_inst.load_parameters(best_model_params_dir)
+    _print_header('Checking loading of parameters from disk...')
+    model_inst = py_model_class(train_strategy=proposal.train_strategy, 
+                                eval_strategy=proposal.eval_strategy,
+                                **proposal.knobs)
+    model_inst.load_parameters_from_disk(params_dir)
 
-    _print_header('Checking predictions with model...')
-    print('Using queries: {}'.format(queries))
-    predictions = model_inst.predict(queries)
+    if len(queries) > 0:
+        _print_header('Checking predictions...')
+        print('Using queries: {}'.format(queries))
+        predictions = model_inst.predict(queries)
+
+    py_model_class.teardown()
 
     try:
         for prediction in predictions:

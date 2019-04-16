@@ -5,9 +5,9 @@ import os
 import base64
 import numpy as np
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, CategoricalKnob, utils
+from rafiki.model import BaseModel, IntegerKnob, CategoricalKnob, utils
 from rafiki.constants import TaskType, ModelDependency
+from rafiki.advisor import test_model_class
 
 class SkDt(BaseModel):
     '''
@@ -23,7 +23,6 @@ class SkDt(BaseModel):
         }
 
     def __init__(self, **knobs):
-        super().__init__(**knobs)
         self.__dict__.update(knobs)
         self._clf = self._build_classifier(self.max_depth, self.criterion, self.splitter)
        
@@ -55,34 +54,37 @@ class SkDt(BaseModel):
         probs = self._clf.predict_proba(X)
         return probs.tolist()
 
-    def destroy(self):
-        pass
-
-    def dump_parameters(self):
+    def save_parameters_to_disk(self, params_dir):
         params = {}
 
-        # Save model parameters
+        # Put model parameters
         clf_bytes = pickle.dumps(self._clf)
         clf_base64 = base64.b64encode(clf_bytes).decode('utf-8')
         params['clf_base64'] = clf_base64
 
-        # Save image size
+        # Put image size
         params['image_size'] = self._image_size
-        
-        return params
 
-    def load_parameters(self, params):
-        # Load model parameters
-        clf_base64 = params.get('clf_base64', None)
-        if clf_base64 is None:
-            raise InvalidModelParamsException()
+        # Save params to disk
+        train_params_file_path = os.path.join(params_dir, 'params.json')
+        with open(train_params_file_path, 'w') as f:
+            f.write(json.dumps(params))
         
-        clf_bytes = base64.b64decode(params['clf_base64'].encode('utf-8'))
+    def load_parameters_from_disk(self, params_dir):
+        # Load params from disk
+        train_params_file_path = os.path.join(params_dir, 'params.json')
+        with open(train_params_file_path, 'r') as f:
+            json_str = f.read()
+            params = json.loads(json_str)
+
+        # Load model parameters
+        clf_base64 = params['clf_base64']
+        clf_bytes = base64.b64decode(clf_base64.encode('utf-8'))
+        self._clf = pickle.loads(clf_bytes)
 
         # Load image size
         self._image_size = params['image_size']
 
-        self._clf = pickle.loads(clf_bytes)
 
     def _prepare_X(self, images):
         return [np.asarray(image).flatten() for image in images]

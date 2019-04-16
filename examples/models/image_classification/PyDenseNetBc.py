@@ -15,8 +15,9 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import torchvision.transforms as transforms
 from collections import OrderedDict
 
+from rafiki.constants import TaskType, ModelDependency
 from rafiki.model import BaseModel, utils, FixedKnob, FloatKnob, CategoricalKnob
-from rafiki.advisor import tune_model, make_advisor, AdvisorType, TrainStrategy
+from rafiki.advisor import tune_model, make_advisor, AdvisorType, TrainStrategy, test_model_class
 
 _Model = namedtuple('_Model', ['net', 'step'])
 
@@ -56,12 +57,13 @@ class PyDenseNetBc(BaseModel):
 
     def evaluate(self, dataset_uri):
         dataset = self._load_val_dataset(dataset_uri, self._train_params)
-        acc = self._evaluate(dataset)
+        (_, acc) = self._predict(dataset)
         return acc
 
     def predict(self, queries):
-        # TODO
-        pass
+        dataset = self._load_predict_dataset(queries, self._train_params)
+        (probs, _) = self._predict(dataset)
+        return probs
 
     def save_parameters_to_disk(self, params_dir):
         # Save state dict of net
@@ -131,7 +133,7 @@ class PyDenseNetBc(BaseModel):
     # Private methods
     ####################################
 
-    def _evaluate(self, dataset):
+    def _predict(self, dataset):
         batch_size = self._knobs['batch_size']
         N = len(dataset)
         net = self._model.net
@@ -140,16 +142,20 @@ class PyDenseNetBc(BaseModel):
         net.eval()
         [net] = self._set_device([net])
 
+        corrects = 0
+        probs = []
         with torch.no_grad():
-            # Train for epoch
-            corrects = 0
             for (batch_images, batch_classes) in dataloader: 
                 [batch_images, batch_classes] = self._set_device([batch_images, batch_classes])
-                probs = net(batch_images)
-                preds = probs.max(1)[1]
-                corrects += sum(preds.eq(batch_classes).cpu().numpy())
+                batch_probs = net(batch_images)
+                probs.extend(batch_probs.cpu().tolist())
+                batch_preds = batch_probs.max(1)[1]
+                corrects += sum(batch_preds.eq(batch_classes).cpu().numpy())
         
-            return corrects / N
+        probs = self._softmax(probs)
+        acc = corrects / N
+
+        return (probs, acc)
     
     def _build_model(self):
         drop_rate = self._knobs['drop_rate']
@@ -294,6 +300,16 @@ class PyDenseNetBc(BaseModel):
                                     norm_mean, norm_std, is_train=False)
         return val_dataset
 
+    def _load_predict_dataset(self, images, train_params):
+        image_size = train_params['image_size']
+        norm_mean = train_params['norm_mean']
+        norm_std = train_params['norm_std']
+
+        images = utils.dataset.transform_images(images, image_size=image_size, mode='RGB')
+        classes = [0 for _ in range(len(images))]
+        dataset = ImageDataset(images, classes, image_size, norm_mean, norm_std, is_train=False)
+        return dataset
+
     def _get_optimizer(self, net, trial_epochs):
         lr = self._knobs['lr']
         lr_decay = self._knobs['lr_decay']
@@ -317,6 +333,12 @@ class PyDenseNetBc(BaseModel):
             return [x.cuda() for x in tensors]
         else:            
             return tensors
+
+    def _softmax(self, nums):
+        nums_exp = np.exp(nums)
+        sums = np.sum(nums_exp, axis=1)
+        nums = (nums_exp.transpose() / sums).transpose()
+        return nums.tolist()
 
 #####################################################################################
 # Implementation of DenseNet
@@ -560,20 +582,62 @@ class EarlyStopCondition():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--test', action='store_true', help='Whether to test the model class instead')
     parser.add_argument('--param_policy', type=str, default='EXP_GREEDY', 
                     help='Param policy for advisor') 
     (args, _) = parser.parse_known_args()
 
-    knob_config = PyDenseNetBc.get_knob_config()
-    advisor = make_advisor(knob_config, advisor_type=AdvisorType.SKOPT, 
-                            param_policy=args.param_policy)
+    if args.test:
+        test_model_class(
+            model_file_path=__file__,
+            model_class='PyDenseNetBc',
+            task=TaskType.IMAGE_CLASSIFICATION,
+            dependencies={ 
+                ModelDependency.TORCH: '1.0.1',
+                ModelDependency.TORCHVISION: '0.2.2'
+            },
+            train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
+            val_dataset_uri='data/fashion_mnist_for_image_classification_val.zip',
+            queries=[
+                [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 7, 0, 37, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 27, 84, 11, 0, 0, 0, 0, 0, 0, 119, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 88, 143, 110, 0, 0, 0, 0, 22, 93, 106, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 53, 129, 120, 147, 175, 157, 166, 135, 154, 168, 140, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 11, 137, 130, 128, 160, 176, 159, 167, 178, 149, 151, 144, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 0, 3, 0, 0, 115, 114, 106, 137, 168, 153, 156, 165, 167, 143, 157, 158, 11, 0], 
+                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 89, 139, 90, 94, 153, 149, 131, 151, 169, 172, 143, 159, 169, 48, 0], 
+                [0, 0, 0, 0, 0, 0, 2, 4, 1, 0, 0, 0, 98, 136, 110, 109, 110, 162, 135, 144, 149, 159, 167, 144, 158, 169, 119, 0], 
+                [0, 0, 2, 2, 1, 2, 0, 0, 0, 0, 26, 108, 117, 99, 111, 117, 136, 156, 134, 154, 154, 156, 160, 141, 147, 156, 178, 0], 
+                [3, 0, 0, 0, 0, 0, 0, 21, 53, 92, 117, 111, 103, 115, 129, 134, 143, 154, 165, 170, 154, 151, 154, 143, 138, 150, 165, 43], 
+                [0, 0, 23, 54, 65, 76, 85, 118, 128, 123, 111, 113, 118, 127, 125, 139, 133, 136, 160, 140, 155, 161, 144, 155, 172, 161, 189, 62], 
+                [0, 68, 94, 90, 111, 114, 111, 114, 115, 127, 135, 136, 143, 126, 127, 151, 154, 143, 148, 125, 162, 162, 144, 138, 153, 162, 196, 58], 
+                [70, 169, 129, 104, 98, 100, 94, 97, 98, 102, 108, 106, 119, 120, 129, 149, 156, 167, 190, 190, 196, 198, 198, 187, 197, 189, 184, 36], 
+                [16, 126, 171, 188, 188, 184, 171, 153, 135, 120, 126, 127, 146, 185, 195, 209, 208, 255, 209, 177, 245, 252, 251, 251, 247, 220, 206, 49], 
+                [0, 0, 0, 12, 67, 106, 164, 185, 199, 210, 211, 210, 208, 190, 150, 82, 8, 0, 0, 0, 178, 208, 188, 175, 162, 158, 151, 11], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+            ]
+        )
 
-    tune_model(
-        PyDenseNetBc, 
-        train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-        val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-        test_dataset_uri='data/cifar_10_for_image_classification_test.zip',
-        total_trials=100,
-        advisor=advisor
-    )
-
+    else:
+        knob_config = PyDenseNetBc.get_knob_config()
+        advisor = make_advisor(knob_config, advisor_type=AdvisorType.SKOPT, param_policy=args.param_policy)
+        tune_model(
+            PyDenseNetBc, 
+            train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
+            val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
+            test_dataset_uri='data/cifar_10_for_image_classification_test.zip',
+            total_trials=100,
+            advisor=advisor
+        )
