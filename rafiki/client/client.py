@@ -303,7 +303,7 @@ class Client(object):
         # Have defaults for budget
         budget = {
             BudgetType.GPU_COUNT: 1,
-            BudgetType.MODEL_TRIAL_COUNT: 25,
+            BudgetType.MODEL_TRIAL_COUNT: 20,
             **budget
         }
 
