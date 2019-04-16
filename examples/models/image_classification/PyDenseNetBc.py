@@ -84,7 +84,10 @@ class PyDenseNetBc(BaseModel):
 
         # Load state dict of net
         model_file_path = os.path.join(params_dir, 'model.pt')
-        net_state_dict = torch.load(model_file_path)
+        if torch.cuda.is_available():
+            net_state_dict = torch.load(model_file_path)
+        else:
+            net_state_dict = torch.load(model_file_path, map_location=lambda storage, location: storage)
 
         # Build model & load its state dict
         self._model = self._build_model()
