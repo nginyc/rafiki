@@ -655,7 +655,8 @@ class TfEnas(BaseModel):
         
         self._maybe_feed_dataset_to_model(images, classes, dataset_uri=dataset_uri, is_train=True)
 
-        # Define plots for monitored values
+        # Define plots
+        utils.logger.define_plot('Train accuracy over Epochs', ['mean_acc'], 'epoch')
         for (name, _) in self._monitored_values.items():
             utils.logger.define_plot('"{}" Over Time'.format(name), [name])
 
