@@ -3,9 +3,9 @@ import argparse
 import pprint
 
 from rafiki.client import Client
-from rafiki.config import SUPERADMIN_EMAIL
 from rafiki.constants import BudgetType, TaskType, ModelDependency
 from rafiki.advisor import AdvisorType
+from rafiki.config import SUPERADMIN_EMAIL
 
 from examples.models.image_classification.TfEnas import TfEnas
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
@@ -76,15 +76,13 @@ if __name__ == '__main__':
     parser.add_argument('--num_eval_per_cycle', type=int, default=300, help='No. of evaluation trials in a cycle of train-eval in ENAS')
     parser.add_argument('--num_cycles', type=int, default=150, help='No. of cycles of train-eval in ENAS')
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
-    parser.add_argument('--host', type=str, default=os.environ.get('RAFIKI_ADDR'), help='Host of Rafiki instance')
-    parser.add_argument('--admin_port', type=int, default=os.environ.get('ADMIN_EXT_PORT'), help='Port for Rafiki Admin on host')
-    parser.add_argument('--advisor_port', type=int, default=os.environ.get('ADVISOR_EXT_PORT'), help='Port for Rafiki Advisor on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
+        
     (args, _) = parser.parse_known_args()
 
     # Initialize client
-    client = Client(admin_host=args.host, admin_port=args.admin_port, advisor_host=args.host, advisor_port=args.advisor_port)
+    client = Client()
     client.login(email=args.email, password=args.password)
 
     # Run ENAS

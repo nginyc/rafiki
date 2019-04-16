@@ -23,8 +23,11 @@ class Client(object):
     :param str advisor_host: Host of Rafiki Advisor
     :param int advisor_port: Port of Rafiki Advisor
     '''
-    def __init__(self, admin_host='localhost', admin_port=3000,
-                    advisor_host='localhost', advisor_port=3002):
+    def __init__(self, admin_host=os.environ.get('RAFIKI_ADDR', 'localhost'),
+                    admin_port=os.environ.get('ADMIN_EXT_PORT', 3000),
+                    advisor_host=os.environ.get('RAFIKI_ADDR', 'localhost'),
+                    advisor_port=os.environ.get('ADVISOR_EXT_PORT', 3002)):
+
         self._admin_host = admin_host
         self._admin_port = admin_port
         self._advisor_host = advisor_host
