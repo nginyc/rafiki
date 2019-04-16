@@ -217,10 +217,14 @@ class TfEnas(BaseModel):
     def _maybe_load_tf_vars(self, params):
         # If same TF vars has been loaded in previous trial, don't bother loading again
         vars_id = params['vars_id']
+        
         if TfEnas._loaded_tf_vars_id_memo == vars_id:
-            pass # Skipping loading of vars
-        else:
-            self._load_tf_vars(params)
+            return  # Skipping loading of vars
+
+        self._load_tf_vars(params)
+
+        # Memo ID
+        TfEnas._loaded_tf_vars_id_memo = vars_id
 
     def _maybe_feed_dataset_to_model(self, images, classes=None, dataset_uri=None, is_train=False):
         memo = TfEnas._loaded_train_dataset_memo if is_train else TfEnas._loaded_pred_dataset_memo
@@ -390,6 +394,8 @@ class TfEnas(BaseModel):
 
     def _load_tf_vars(self, params):
         m = self._model
+
+        utils.logger.log('Loading TF vars...')
 
         tf_vars = tf.global_variables()
         values = self._sess.run(tf_vars) # Get current values for vars
