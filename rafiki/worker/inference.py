@@ -12,6 +12,7 @@ from rafiki.utils.auth import make_superadmin_client
 from rafiki.model import load_model_class
 from rafiki.meta_store import MetaStore
 from rafiki.cache import Cache
+from rafiki.advisor import Proposal
 from rafiki.config import INFERENCE_WORKER_SLEEP, INFERENCE_WORKER_PREDICT_BATCH_SIZE
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ class InvalidWorkerError(Exception): pass
 
 _SubInferenceJob = namedtuple('_SubInferenceJob', ['id'])
 _InferenceJob = namedtuple('_InferenceJob', ['id'])
-_Trial = namedtuple('_Trial', ['knobs', 'params_dir']) 
+_Trial = namedtuple('_Trial', ['proposal', 'params_dir']) 
 _Model = namedtuple('_Model', ['id', 'model_file_bytes', 'model_class']) 
 
 class InferenceWorker(object):
@@ -79,6 +80,8 @@ class InferenceWorker(object):
         self._client.send_event('sub_inference_job_worker_stopped', sub_inference_job_id=self._sub_inference_job_id)
 
     def _load_model(self, trial: _Trial, model: _Model):
+        proposal = trial.proposal
+
         logger.info('Loading model class...')
         clazz = load_model_class(model.model_file_bytes, model.model_class)
 
@@ -86,8 +89,11 @@ class InferenceWorker(object):
         clazz.setup()
 
         logger.info('Loading trained model...')
-        model_inst = clazz(**trial.knobs)
-        model_inst.load_parameters(trial.params_dir)
+        model_inst = clazz(train_strategy=proposal.train_strategy,
+                            eval_strategy=proposal.eval_strategy,
+                            **proposal.knobs)
+                    
+        model_inst.load_parameters_from_disk(trial.params_dir)
 
         return model_inst
 
@@ -114,9 +120,12 @@ class InferenceWorker(object):
             if model is None:
                 raise InvalidWorkerError('No such model with ID "{}"'.format(trial.model_id))
 
+
+            proposal = Proposal.from_jsonable(trial.proposal)
+
             return (
                 _SubInferenceJob(sub_inference_job.id),
                 _InferenceJob(inference_job.id),
-                _Trial(trial.knobs, trial.params_dir),
+                _Trial(proposal, trial.params_dir),
                 _Model(model.id, model.model_file_bytes, model.model_class)
             )
