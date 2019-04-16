@@ -3,7 +3,7 @@ import jwt
 from functools import wraps
 
 from rafiki.constants import UserType
-from rafiki.config import APP_SECRET, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
+from rafiki.config import APP_SECRET, SUPERADMIN_EMAIL
 
 class UnauthorizedError(Exception): pass
 class InvalidAuthorizationHeaderError(Exception): pass
@@ -54,13 +54,13 @@ def extract_token_from_header(header):
 
 def make_superadmin_client():
     from rafiki.client import Client
-    admin_host = os.environ.get('ADMIN_HOST', 'localhost')
-    admin_port = os.environ.get('ADMIN_PORT', 3000)
-    advisor_host = os.environ.get('ADVISOR_HOST', 'localhost')
-    advisor_port = os.environ.get('ADVISOR_PORT', 3002)
+    admin_host = os.environ['ADMIN_HOST']
+    admin_port = os.environ['ADMIN_PORT']
+    advisor_host = os.environ['ADVISOR_HOST']
+    advisor_port = os.environ['ADVISOR_PORT']
     client = Client(admin_host=admin_host, 
                     admin_port=admin_port, 
                     advisor_host=advisor_host,
                     advisor_port=advisor_port)
-    client.login(email=SUPERADMIN_EMAIL, password=SUPERADMIN_PASSWORD)
+    client.login(email=SUPERADMIN_EMAIL, password=os.environ['SUPERADMIN_PASSWORD'])
     return client

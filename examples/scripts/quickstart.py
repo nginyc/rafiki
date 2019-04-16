@@ -6,7 +6,7 @@ import traceback
 import os
 
 from rafiki.client import Client
-from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
+from rafiki.config import SUPERADMIN_EMAIL
 from rafiki.constants import TaskType, UserType, BudgetType, \
                                 InferenceJobStatus, ModelDependency, ModelAccessRight
 
@@ -46,30 +46,24 @@ def make_predictions(client, predictor_host, queries):
     return predictions
 
 
-def quickstart(client, enable_gpu):
+def quickstart(client):
     task = TaskType.IMAGE_CLASSIFICATION
 
     # Randomly generate app & model names to avoid naming conflicts
     app_id = gen_id()
     app = 'image_classification_app_{}'.format(app_id)
-    tf_model_name = 'TfFeedForward_{}'.format(app_id)
     sk_model_name = 'SkDt_{}'.format(app_id)
 
-    print('Adding models "{}" and "{}" to Rafiki...'.format(tf_model_name, sk_model_name)) 
-    client.create_model(tf_model_name, task, 'examples/models/image_classification/TfFeedForward.py', 
-                        'TfFeedForward', dependencies={ ModelDependency.TENSORFLOW: '1.12.0' })
+    print('Adding model "{}" to Rafiki...'.format(sk_model_name)) 
     client.create_model(sk_model_name, task, 'examples/models/image_classification/SkDt.py', 
                         'SkDt', dependencies={ ModelDependency.SCIKIT_LEARN: '0.20.0' })
                         
     print('Creating train job for app "{}" on Rafiki...'.format(app)) 
-    budget = {
-        BudgetType.MODEL_TRIAL_COUNT: 2,
-        BudgetType.ENABLE_GPU: 1 if enable_gpu else 0
-    }
     train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true'
     val_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_val.zip?raw=true'
     train_job = client.create_train_job(app, task, train_dataset_uri, val_dataset_uri, 
-                                        budget, models=[tf_model_name, sk_model_name])
+                                        budget={ BudgetType.GPU_COUNT: 0, BudgetType.MODEL_TRIAL_COUNT: 5 },
+                                        models={ sk_model_name: {} })
     pprint.pprint(train_job)
 
     print('Waiting for train job to complete...')
@@ -127,20 +121,18 @@ def quickstart(client, enable_gpu):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--enable_gpu', action='store_true', help='Whether to use GPU')
     parser.add_argument('--host', type=str, default='localhost', help='Host of Rafiki instance')
-    parser.add_argument('--admin_port', type=int, default=3000, help='Port for Rafiki Admin on host')
-    parser.add_argument('--admin_web_port', type=int, default=3001, help='Port for Rafiki Admin Web on host')
+    parser.add_argument('--admin_web_port', type=int, default=os.environ.get('ADMIN_WEB_EXT_PORT', 3001), help='Port for Rafiki Admin Web on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
-    parser.add_argument('--password', type=str, default=SUPERADMIN_PASSWORD, help='Password of user')
+    parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
     (args, _) = parser.parse_known_args()
 
     # Initialize client
-    client = Client(admin_host=args.host, admin_port=args.admin_port)
+    client = Client()
     client.login(email=args.email, password=args.password)
     admin_web_url = 'http://{}:{}'.format(args.host, args.admin_web_port)
     print('During training, you can view the status of the train job at {}'.format(admin_web_url))
     print('Login with email "{}" and password "{}"'.format(args.email, args.password)) 
     
     # Run quickstart
-    quickstart(client, args.enable_gpu)
+    quickstart(client)
