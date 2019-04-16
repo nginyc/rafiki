@@ -16,7 +16,7 @@ from rafiki.param_store import ParamStore
 
 logger = logging.getLogger(__name__)
 
-INVALID_TRIAL_SLEEP_SECS = 1
+INVALID_TRIAL_SLEEP_SECS = 0.1
 NO_NEXT_TRIAL_SLEEP_SECS = 5 * 60
 
 class InvalidWorkerError(Exception): pass

@@ -21,7 +21,7 @@ class InvalidParamsError(Exception): pass
     
 REDIS_NAMESPACE = 'PARAMS'
 REDIS_LOCK_EXPIRE_SECONDS = 60
-REDIS_LOCK_WAIT_SLEEP_SECONDS = 1 
+REDIS_LOCK_WAIT_SLEEP_SECONDS = 0.1
 
 _ParamMeta = namedtuple('_ParamMeta', ('param_id', 'score', 'time'))
 
