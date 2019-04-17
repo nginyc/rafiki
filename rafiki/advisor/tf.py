@@ -86,15 +86,15 @@ class EnasAdvisor(BaseAdvisor):
                             eval_strategy=EvalStrategy.STANDARD,
                             should_save_to_disk=True)
         elif trial_type == 'FINAL_TRAIN':
-            # Do standard model training from scratch with recent best knobs
-            knobs = self._propose_best_recent_knobs()
+            # Do standard model training from scratch with final knobs
+            knobs = self._propose_final_knobs()
             return Proposal(knobs, 
                             params_type=params_type,
                             train_strategy=TrainStrategy.STANDARD,
                             should_save_to_disk=True)
 
     def feedback(self, score, proposal: Proposal):
-        knob = proposal.knobs
+        knobs = proposal.knobs
 
         if proposal.eval_strategy == EvalStrategy.STANDARD:
             # Keep track of final evals' scores
@@ -104,14 +104,14 @@ class EnasAdvisor(BaseAdvisor):
             knob_value = knobs[name]
             list_knob_model.feedback(knob_value, score)
 
-    def _propose_best_recent_knobs(self):
-        recent_feedback = self._recent_feedback
-        # If hasn't collected feedback, propose from model
-        if len(recent_feedback) == 0:
+    def _propose_final_knobs(self):
+        # If hasn't collected final evals, propose from model
+        if len(self._final_evals) == 0:
             return self._propose_knobs()
 
-        # Otherwise, determine best recent proposal and use it
-        (score, proposal) = sorted(recent_feedback)[-1]
+        # Otherwise, determine best final eval and use it
+        self._final_evals.sort()
+        (_, proposal) = self._final_evals.pop()
 
         return proposal.knobs
 
@@ -223,13 +223,6 @@ class EnasAdvisor(BaseAdvisor):
         else:
             return (ParamsType.LOCAL_RECENT, 'EVAL')
 
-    def _if_final_train(self, trial_no, total_trials):
-        num_final_trains = 1 if self._do_final_train else 0
-        return trial_no > total_trials - num_final_trains
-    
-    def _if_final_eval(self, trial_no, total_trials):
-        return 
-        
     def _if_preceding_trials_are_running(self, trial_no, concurrent_trial_nos):
         if len(concurrent_trial_nos) == 0:
             return False
