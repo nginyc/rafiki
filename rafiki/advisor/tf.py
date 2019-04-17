@@ -223,22 +223,6 @@ class EnasAdvisor(BaseAdvisor):
         else:
             return (ParamsType.LOCAL_RECENT, 'EVAL')
 
-    def _check_final_train_or_eval(self, trial_no, total_trials, concurrent_trial_nos):
-
-        
-
-        
-
-        # Check if final train trial
-        if 
-            return 'FINAL_TRAIN'
-
-        # Check if final eval trial
-        if trial_no > total_trials - num_final_trains - num_final_evals:
-            return 'FINAL_EVAL'
-        
-        return None
-
     def _if_final_train(self, trial_no, total_trials):
         num_final_trains = 1 if self._do_final_train else 0
         return trial_no > total_trials - num_final_trains
