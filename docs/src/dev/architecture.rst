@@ -24,7 +24,7 @@ There are 4 user roles:
 System Components
 --------------------------------------------------------------------
 
-.. figure:: ../images/container-diagram.jpg
+.. figure:: ../images/container-diagram.png
     :align: center
     :width: 1200px
 
@@ -39,7 +39,7 @@ These components make up Rafiki's static stack.
 - *Admin Web* is a HTTP server that serves a Web UI for Admin
 - *Client* is a client-side Python SDK for sending requests to Admin
 - *Advisor* is a HTTP server that generates proposals of knobs during training
-- *Database* is Rafiki's main store for user, train job, inference job, model templates, and trained model data, including model parameters
+- *Metadata Store* is Rafiki's main store for user, train job, inference job, model templates, and trained model data, including model parameters
 - *Cache* is Rafiki's temporary store for queries & predictions during inference
 
 Dynamic Components of Rafiki
