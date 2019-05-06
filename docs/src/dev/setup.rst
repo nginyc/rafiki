@@ -17,9 +17,9 @@ We assume development or deployment in a MacOS or Linux environment.
 
 2. Install Python 3.6 (`Ubuntu <http://ubuntuhandbook.org/index.php/2017/07/install-python-3-6-1-in-ubuntu-16-04-lts/>`__, `MacOS <https://www.python.org/downloads/mac-osx/>`__)
 
-3. Clone the project at https://github.com/nginyc/rafiki
+3. Clone the project at https://github.com/nginyc/rafiki (e.g. with `Git <https://git-scm.com/downloads>`__)
 
-4. Setup Rafiki's complete stack with the init script:
+4. Setup Rafiki's complete stack with the setup script:
 
     .. code-block:: shell
 

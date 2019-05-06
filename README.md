@@ -12,13 +12,15 @@ Prerequisites: MacOS or Linux environment
 
 2. Install Python 3.6 ([Ubuntu](http://ubuntuhandbook.org/index.php/2017/07/install-python-3-6-1-in-ubuntu-16-04-lts/), [MacOS](https://www.python.org/downloads/mac-osx/))
 
-3. Setup Rafiki's complete stack with the init script:
+3. Clone this project (e.g. with [Git](https://git-scm.com/downloads>))
+
+4. Setup Rafiki's complete stack with the setup script:
 
     ```sh
     bash scripts/start.sh
     ```
 
-4. To destroy Rafiki's complete stack:
+To destroy Rafiki's complete stack:
 
     ```sh
     bash scripts/stop.sh
