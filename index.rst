@@ -38,8 +38,7 @@ Check out :ref:`quick-setup` to deploy/develop Rafiki on your machine, and/or :r
 
 Issues
 ------------------------------------------------------------------
-Report the issues at [JIRA](https://issues.apache.org/jira/browse/SINGA) or [Github](https://github.com/nginyc/rafiki/issues)
-
+Report any issues at `Apache SINGA's JIRA <https://issues.apache.org/jira/browse/SINGA>`_ or `Rafiki's Github Issues <https://github.com/nginyc/rafiki/issues>`_.
 
 
 Acknowledgements

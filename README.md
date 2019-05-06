@@ -29,7 +29,7 @@ More instructions are available in [Rafiki's Developer Guide](https://nginyc.git
 
 ## Issues
 
-Report the issues at [JIRA](https://issues.apache.org/jira/browse/SINGA) or [Github](https://github.com/nginyc/rafiki/issues)
+Report any issues at [Apache SINGA's JIRA](https://issues.apache.org/jira/browse/SINGA) or [Rafiki's Github Issues](https://github.com/nginyc/rafiki/issues)
 
 
 ## Acknowledgements
