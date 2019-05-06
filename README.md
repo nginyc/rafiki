@@ -8,9 +8,9 @@ Read Rafiki's full documentation at https://nginyc.github.io/rafiki/docs/latest
 
 Prerequisites: MacOS or Linux environment
 
-1. Install Docker 18
+1. Install Docker 18 ([Ubuntu](https://docs.docker.com/install/linux/docker-ce/ubuntu/), [MacOS](https://docs.docker.com/docker-for-mac/install/))
 
-2. Install Python 3.6
+2. Install Python 3.6 ([Ubuntu](http://ubuntuhandbook.org/index.php/2017/07/install-python-3-6-1-in-ubuntu-16-04-lts/), [MacOS](https://www.python.org/downloads/mac-osx/))
 
 3. Setup Rafiki's complete stack with the init script:
 
