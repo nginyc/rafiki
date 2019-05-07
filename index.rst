@@ -32,9 +32,9 @@ For *Model Developers*, they can:
 
 - Contribute to Rafiki's pool of model templates
 
+
+
 Check out :ref:`quick-setup` to deploy/develop Rafiki on your machine, and/or :ref:`quick-start` to use a deployed instance of Rafiki.
-
-
 
 Issues
 ------------------------------------------------------------------
