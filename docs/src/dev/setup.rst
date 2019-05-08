@@ -102,8 +102,8 @@ over ports 3000 and 3001 (by default), assuming incoming connections to these po
 Reading Rafiki's logs
 --------------------------------------------------------------------
 
-By default, you can read logs of Rafiki Admin, Rafiki Advisor & any of Rafiki's services
-in `./logs` directory at the root of the project's directory of the master node. 
+By default, you can read logs of Rafiki Admin, Rafiki Advisor & any of Rafiki's workers
+in ``./logs`` directory at the root of the project's directory of the master node. 
 
 
 Troubleshooting
