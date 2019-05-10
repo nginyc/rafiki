@@ -61,7 +61,7 @@ title "Starting Rafiki's Admin Web..."
 ensure_stable "Rafiki's Admin Web"
 
 title "Installing any dependencies..."
-bash $FILE_DIR/install_client.sh
+pip install -r ./rafiki/client/requirements.txt
 
 echo "To use Rafiki, use Rafiki Client in the Python CLI"
 echo "A quickstart is available at https://nginyc.github.io/rafiki/docs/latest/docs/src/user/quickstart.html"

@@ -76,8 +76,8 @@ To start testing your model, first run the following:
 
     .. code-block:: shell
 
-        pip install -r rafiki/model/requirements.txt
         source .env.sh
+        pip install -r rafiki/model/requirements.txt
 
 
 Example: Testing Models for ``IMAGE_CLASSIFICATION``
