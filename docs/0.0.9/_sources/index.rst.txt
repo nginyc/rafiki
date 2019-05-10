@@ -32,7 +32,13 @@ For *Model Developers*, they can:
 
 - Contribute to Rafiki's pool of model templates
 
+
+
 Check out :ref:`quick-setup` to deploy/develop Rafiki on your machine, and/or :ref:`quick-start` to use a deployed instance of Rafiki.
+
+Issues
+------------------------------------------------------------------
+Report any issues at `Apache SINGA's JIRA <https://issues.apache.org/jira/browse/SINGA>`_ or `Rafiki's Github Issues <https://github.com/nginyc/rafiki/issues>`_.
 
 
 Acknowledgements

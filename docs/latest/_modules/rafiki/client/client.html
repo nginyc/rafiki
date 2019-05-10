@@ -422,7 +422,7 @@
 <span class="sd">        :param str train_dataset_uri: URI of the train dataset in a format specified by the task</span>
 <span class="sd">        :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task</span>
 <span class="sd">        :param str budget: Budget for each model</span>
-<span class="sd">        :param str[] models: list of model names to use for train job</span>
+<span class="sd">        :param str[] models: List of model names to use for train job</span>
 <span class="sd">        :returns: Created train job as dictionary</span>
 <span class="sd">        :rtype: dict[str, any]</span>
 
@@ -732,6 +732,19 @@
         <span class="k">return</span> <span class="n">data</span></div>
 
     <span class="c1">####################################</span>
+    <span class="c1"># Administrative Actions</span>
+    <span class="c1">####################################</span>
+
+<div class="viewcode-block" id="Client.stop_all_jobs"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.stop_all_jobs">[docs]</a>    <span class="k">def</span> <span class="nf">stop_all_jobs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Stops all train and inference jobs on Rafiki. </span>
+
+<span class="sd">        Only admins can call this.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/actions/stop_all_jobs&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+    <span class="c1">####################################</span>
     <span class="c1"># Private</span>
     <span class="c1">####################################</span>
 
@@ -812,7 +825,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
 
     </p>
   </div>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Architecture &mdash; Rafiki  documentation</title>
+  <title>Rafiki’s Architecture &mdash; Rafiki  documentation</title>
   
 
   
@@ -87,13 +87,11 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Developer Guide</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="setup.html">Setup &amp; Configuration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="development.html">Development</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Architecture</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#user-roles">User Roles</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#system-components">System Components</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#static-components-of-rafiki">Static Components of Rafiki</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#dynamic-components-of-rafiki">Dynamic Components of Rafiki</a></li>
-</ul>
-</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Rafiki’s Architecture</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#static-stack-of-rafiki">Static Stack of Rafiki</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dynamic-stack-of-rafiki">Dynamic Stack of Rafiki</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#container-orchestration-strategy">Container Orchestration Strategy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#distributed-file-system-strategy">Distributed File System Strategy</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="folder-structure.html">Folder Structure</a></li>
@@ -147,7 +145,7 @@
         
           <li><a href="index.html">Developer Guide</a> &raquo;</li>
         
-      <li>Architecture</li>
+      <li>Rafiki’s Architecture</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -166,63 +164,49 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="architecture">
-<span id="id1"></span><h1><a class="toc-backref" href="#id4">Architecture</a><a class="headerlink" href="#architecture" title="Permalink to this headline">¶</a></h1>
-<div class="contents topic" id="table-of-contents">
-<p class="topic-title first">Table of Contents</p>
-<ul class="simple">
-<li><a class="reference internal" href="#architecture" id="id4">Architecture</a><ul>
-<li><a class="reference internal" href="#user-roles" id="id5">User Roles</a></li>
-<li><a class="reference internal" href="#system-components" id="id6">System Components</a><ul>
-<li><a class="reference internal" href="#static-components-of-rafiki" id="id7">Static Components of Rafiki</a></li>
-<li><a class="reference internal" href="#dynamic-components-of-rafiki" id="id8">Dynamic Components of Rafiki</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
+  <div class="section" id="rafiki-s-architecture">
+<span id="architecture"></span><h1>Rafiki’s Architecture<a class="headerlink" href="#rafiki-s-architecture" title="Permalink to this headline">¶</a></h1>
+<p>Rafiki’s system architecture consists of 3 static components, 2 central databases, 3 types of dynamic components, and 1 client-side SDK,
+which can be illustrated with a 3-layer architecture diagram.</p>
+<div class="figure align-center" id="id1">
+<a class="reference internal image-reference" href="../../../_images/container-diagram.png"><img alt="../../../_images/container-diagram.png" src="../../../_images/container-diagram.png" style="width: 1200px;" /></a>
+<p class="caption"><span class="caption-text">Architecture of Rafiki</span></p>
 </div>
-<div class="section" id="user-roles">
-<h2><a class="toc-backref" href="#id5">User Roles</a><a class="headerlink" href="#user-roles" title="Permalink to this headline">¶</a></h2>
-<div class="figure align-center" id="id2">
-<a class="reference internal image-reference" href="../../../_images/system-context-diagram.jpg"><img alt="../../../_images/system-context-diagram.jpg" src="../../../_images/system-context-diagram.jpg" style="width: 500px;" /></a>
-<p class="caption"><span class="caption-text">System Context Diagram for Rafiki</span></p>
+<div class="section" id="static-stack-of-rafiki">
+<h2>Static Stack of Rafiki<a class="headerlink" href="#static-stack-of-rafiki" title="Permalink to this headline">¶</a></h2>
+<p>Rafiki’s static stack consists of the following:</p>
+<blockquote>
+<div><p><em>Rafiki Admin</em> (<em>Python/Flask</em>) is the centrepiece of Rafiki. It is a multi-threaded HTTP server which presents a unified REST API over HTTP that fully administrates the Rafiki instance. When users send requests to Rafiki Admin, it handles these requests by accordingly modifying Rafiki’s Metadata Store or deploying/stopping the dynamic components of Rafiki’s stack (i.e. workers for model training &amp; serving).</p>
+<p><em>Rafiki Metadata Store</em> (<em>PostgreSQL</em>) is Rafiki’s centralized, persistent database for user metadata, job metadata, worker metadata and model templates.</p>
+<p><em>Rafiki Advisor</em> (<em>Python/Flask</em>) is Rafiki’s advisor as described in the earlier sections. It is a single-threaded HTTP server. It accepts new advisory sessions from multiple Rafiki Train Workers, generates proposals of Knobs for them, and receives feedback for completed Trials in a Train Job.</p>
+<p><em>Rafiki Cache</em> (<em>Redis</em>) is Rafiki’s temporary in-memory store for the implementation of fast asynchronous cross-worker communication, in a way that decouples senders from receivers. It synchronizes the back-and-forth of queries &amp; predictions between multiple Rafiki Inference Workers and a single Rafiki Predictor for an Inference Job.</p>
+<p><em>Rafiki Web Admin</em> (<em>NodeJS/ExpressJS</em>) is a HTTP server that serves Rafiki’s web front-end to users, allowing Application Developers to survey their jobs on a friendly web GUI.</p>
+<p><em>Rafiki Client</em> (<em>Python</em>) is Rafiki’s client-side Python SDK to simplify communication with Admin.</p>
+</div></blockquote>
 </div>
-<p>There are 4 user roles:</p>
-<ul class="simple">
-<li><em>Rafiki Admin</em> manages users</li>
-<li><em>Model Developer</em> manages model templates</li>
-<li><em>App Developer</em> manages train &amp; inference jobs</li>
-<li><em>App User</em> makes queries to deployed models</li>
-</ul>
+<div class="section" id="dynamic-stack-of-rafiki">
+<h2>Dynamic Stack of Rafiki<a class="headerlink" href="#dynamic-stack-of-rafiki" title="Permalink to this headline">¶</a></h2>
+<p>On the other hand, Rafiki’s dynamic stack consists of a dynamic pool of workers.
+Internally within Rafiki’s architecture, Admin adopts master-slave relationships with these workers, managing the deployment and termination of these workers in real-time depending on Train Job and Inference Job requests, as well as the stream of events it receives from its workers.
+When a worker is deployed, it is configured with the identifier for an associated job, and once it starts running, it would first initialize itself by pulling the job’s metadata from Metadata Store before starting on its task.</p>
+<p>The types of workers are as follows:</p>
+<blockquote>
+<div><p><em>Rafiki Train Workers</em> (<em>Python</em>) train models for Train Jobs by conducting Trials. In a single Train Job, there could be multiple Train Workers concurrently training models.</p>
+<p><em>Rafiki Predictors</em> (<em>Python/Flask</em>) are multi-threaded HTTP servers that receive queries from Application Users and respond with predictions as part of an Inference Job. It does this through  producer-consumer relationships with multiple Rafiki Inference Workers. If necessary, it performs model ensembling on predictions received from different workers.</p>
+<p><em>Rafiki Inference Workers</em> (<em>Python</em>) serve models for Inference Jobs. In a single Inference Job, there could be multiple Inference Workers concurrently making predictions for a single batch of queries.</p>
+</div></blockquote>
 </div>
-<div class="section" id="system-components">
-<h2><a class="toc-backref" href="#id6">System Components</a><a class="headerlink" href="#system-components" title="Permalink to this headline">¶</a></h2>
-<div class="figure align-center" id="id3">
-<a class="reference internal image-reference" href="../../../_images/container-diagram.jpg"><img alt="../../../_images/container-diagram.jpg" src="../../../_images/container-diagram.jpg" style="width: 1200px;" /></a>
-<p class="caption"><span class="caption-text">Container Diagram for Rafiki</span></p>
+<div class="section" id="container-orchestration-strategy">
+<h2>Container Orchestration Strategy<a class="headerlink" href="#container-orchestration-strategy" title="Permalink to this headline">¶</a></h2>
+<p>All of Rafiki’s components’ environment and configuration has been fully specified as a replicable, portable Docker image publicly available as Dockerfiles and on <a class="reference external" href="https://hub.docker.com/u/rafikiai">Rafiki’s own Docker Hub account</a>.</p>
+<p>When an instance of Rafiki is deployed on the master node, a <a class="reference external" href="https://docs.docker.com/engine/swarm/key-concepts/">Docker Swarm</a> is initialized and all of Rafiki’s components run within a single <a class="reference external" href="https://docs.docker.com/network/overlay/">Docker routing-mesh overlay network</a>.
+Subsequently, Rafiki can be horizontally scaled by adding more worker nodes to the Docker Swarm. Dynamically-deployed workers run as <a class="reference external" href="https://docs.docker.com/engine/swarm/services/">Docker Swarm Services</a>
+and are placed in a resource-aware manner.</p>
 </div>
-<div class="section" id="static-components-of-rafiki">
-<h3><a class="toc-backref" href="#id7">Static Components of Rafiki</a><a class="headerlink" href="#static-components-of-rafiki" title="Permalink to this headline">¶</a></h3>
-<p>These components make up Rafiki’s static stack.</p>
-<ul class="simple">
-<li><em>Admin</em> is a HTTP server that handles requests from users, and accordingly updates Rafiki’s database or deploys components (e.g workers, predictors) based on these requests</li>
-<li><em>Admin Web</em> is a HTTP server that serves a Web UI for Admin</li>
-<li><em>Client</em> is a client-side Python SDK for sending requests to Admin</li>
-<li><em>Advisor</em> is a HTTP server that generates proposals of knobs during training</li>
-<li><em>Database</em> is Rafiki’s main store for user, train job, inference job, model templates, and trained model data, including model parameters</li>
-<li><em>Cache</em> is Rafiki’s temporary store for queries &amp; predictions during inference</li>
-</ul>
-</div>
-<div class="section" id="dynamic-components-of-rafiki">
-<h3><a class="toc-backref" href="#id8">Dynamic Components of Rafiki</a><a class="headerlink" href="#dynamic-components-of-rafiki" title="Permalink to this headline">¶</a></h3>
-<p>These components are dynamically deployed or stopped by Admin depending on the statuses of train or inference jobs.</p>
-<ul class="simple">
-<li>Each <em>Train Worker</em> is a Python program that trains models associated with a train job,</li>
-<li>Each <em>Inference Worker</em> is a Python program that makes batch predictions with trained models associated with an inference job</li>
-<li>Each <em>Predictor</em> is a HTTP server that receives queries from users and responds with predictions, associated with an inference job</li>
-</ul>
-</div>
+<div class="section" id="distributed-file-system-strategy">
+<h2>Distributed File System Strategy<a class="headerlink" href="#distributed-file-system-strategy" title="Permalink to this headline">¶</a></h2>
+<p>All components depend on a shared file system across multiple nodes, powered by <em>Network File System</em> (<em>NFS</em>).
+Each component written in Python continually writes logs to this shared file system.</p>
 </div>
 </div>
 
@@ -246,7 +230,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
 
     </p>
   </div>

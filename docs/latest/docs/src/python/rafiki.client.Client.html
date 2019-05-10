@@ -319,7 +319,7 @@ the train job will train models associated with the task</li>
 <li><strong>train_dataset_uri</strong> (<em>str</em>) – URI of the train dataset in a format specified by the task</li>
 <li><strong>test_dataset_uri</strong> (<em>str</em>) – URI of the test (development) dataset in a format specified by the task</li>
 <li><strong>budget</strong> (<em>str</em>) – Budget for each model</li>
-<li><strong>models</strong> (<em>str</em><em>[</em><em>]</em>) – list of model names to use for train job</li>
+<li><strong>models</strong> (<em>str</em><em>[</em><em>]</em>) – List of model names to use for train job</li>
 </ul>
 </td>
 </tr>
@@ -840,6 +840,13 @@ Model developers can create and list models.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="rafiki.client.Client.stop_all_jobs">
+<code class="descname">stop_all_jobs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.stop_all_jobs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.stop_all_jobs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stops all train and inference jobs on Rafiki.</p>
+<p>Only admins can call this.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="rafiki.client.Client.stop_inference_job">
 <code class="descname">stop_inference_job</code><span class="sig-paren">(</span><em>app</em>, <em>app_version=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rafiki/client/client.html#Client.stop_inference_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.stop_inference_job" title="Permalink to this definition">¶</a></dt>
 <dd><p>Stops the inference job identified by an app and an app version.</p>
@@ -912,7 +919,7 @@ Otherwise, the train job should stop by itself when its budget is reached.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
 
     </p>
   </div>

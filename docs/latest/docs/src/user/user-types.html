@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Using Rafiki’s Admin Web &mdash; Rafiki  documentation</title>
+  <title>Users of Rafiki &mdash; Rafiki  documentation</title>
   
 
   
@@ -28,8 +28,8 @@
   <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="next" title="Creating Models" href="creating-models.html" />
-    <link rel="prev" title="Users of Rafiki" href="user-types.html" /> 
+    <link rel="next" title="Using Rafiki’s Admin Web" href="using-admin-web.html" />
+    <link rel="prev" title="Quick Start (Admins)" href="quickstart-admins.html" /> 
 
   
   <script src="../../../_static/js/modernizr.min.js"></script>
@@ -89,12 +89,8 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html">Quick Start (Application Developers)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html">Quick Start (Application Users)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html">Quick Start (Admins)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="user-types.html">Users of Rafiki</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Using Rafiki’s Admin Web</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#logging-in">Logging In</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#viewing-train-jobs">Viewing Train Jobs</a></li>
-</ul>
-</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Users of Rafiki</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using-admin-web.html">Using Rafiki’s Admin Web</a></li>
 <li class="toctree-l2"><a class="reference internal" href="creating-models.html">Creating Models</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tasks.html">Supported Tasks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="datasets.html">Supported Dataset Types</a></li>
@@ -149,13 +145,13 @@
         
           <li><a href="index.html">User Guide</a> &raquo;</li>
         
-      <li>Using Rafiki’s Admin Web</li>
+      <li>Users of Rafiki</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../../../_sources/docs/src/user/using-admin-web.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../../../_sources/docs/src/user/user-types.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -168,42 +164,27 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="using-rafiki-s-admin-web">
-<span id="using-admin-web"></span><h1><a class="toc-backref" href="#id4">Using Rafiki’s Admin Web</a><a class="headerlink" href="#using-rafiki-s-admin-web" title="Permalink to this headline">¶</a></h1>
-<div class="contents topic" id="table-of-contents">
-<p class="topic-title first">Table of Contents</p>
-<ul class="simple">
-<li><a class="reference internal" href="#using-rafiki-s-admin-web" id="id4">Using Rafiki’s Admin Web</a><ul>
-<li><a class="reference internal" href="#logging-in" id="id5">Logging In</a></li>
-<li><a class="reference internal" href="#viewing-train-jobs" id="id6">Viewing Train Jobs</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<p>Rafiki Admin Web is accessible at <code class="docutils literal notranslate"><span class="pre">&lt;rafiki_host&gt;:&lt;admin_web_port&gt;</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">127.0.0.1:3001</span></code> by default).</p>
-<div class="section" id="logging-in">
-<h2><a class="toc-backref" href="#id5">Logging In</a><a class="headerlink" href="#logging-in" title="Permalink to this headline">¶</a></h2>
-<p>Log in with the same credentials for Rafiki Admin.</p>
-</div>
-<div class="section" id="viewing-train-jobs">
-<h2><a class="toc-backref" href="#id6">Viewing Train Jobs</a><a class="headerlink" href="#viewing-train-jobs" title="Permalink to this headline">¶</a></h2>
-<p>Currently, you are able to view the statuses of the train jobs you have launched on Rafiki:</p>
+  <div class="section" id="users-of-rafiki">
+<span id="user-types"></span><h1>Users of Rafiki<a class="headerlink" href="#users-of-rafiki" title="Permalink to this headline">¶</a></h1>
 <div class="figure align-center" id="id1">
-<a class="reference internal image-reference" href="../../../_images/train-job-page.png"><img alt="../../../_images/train-job-page.png" src="../../../_images/train-job-page.png" style="width: 1200px;" /></a>
-<p class="caption"><span class="caption-text">Sample of a Train Job page</span></p>
+<a class="reference internal image-reference" href="../../../_images/system-context-diagram.jpg"><img alt="../../../_images/system-context-diagram.jpg" src="../../../_images/system-context-diagram.jpg" style="width: 500px;" /></a>
+<p class="caption"><span class="caption-text">Users of Rafiki</span></p>
 </div>
-<p>For each train job, you can view the statuses of each trial, including the knobs that has been
-generated for the trial, its training duration, its score, and plots &amp; messages logged during
-model training:</p>
-<div class="figure align-center" id="id2">
-<a class="reference internal image-reference" href="../../../_images/trial-page.png"><img alt="../../../_images/trial-page.png" src="../../../_images/trial-page.png" style="width: 1200px;" /></a>
-<p class="caption"><span class="caption-text">Sample of a Trial page (details section)</span></p>
-</div>
-<div class="figure align-center" id="id3">
-<a class="reference internal image-reference" href="../../../_images/trial-page-plots.png"><img alt="../../../_images/trial-page-plots.png" src="../../../_images/trial-page-plots.png" style="width: 1200px;" /></a>
-<p class="caption"><span class="caption-text">Sample of a Trial page (plots section)</span></p>
-</div>
-</div>
+<p>There are 4 types of users on Rafiki:</p>
+<blockquote>
+<div><p><em>Application Developers</em> create, manage, monitor and stop model training and serving jobs on Rafiki.
+They are the primary users of Rafiki - they upload their datasets onto Rafiki and create model training jobs that train on these datasets.
+After model training, they trigger the deployment of these trained ML models as a web service that Application Users interact with.
+While their model training and serving jobs are running, they administer these jobs and monitor their progress.</p>
+<p><em>Application Users</em> send queries to trained models exposed as a web service on Rafiki, receiving predictions back.
+Not to be confused with Application Developers, these users may be developers that are looking to conveniently integrate ML predictions into their mobile, web or desktop applications.
+These application users have consumer-provider relationships with the aforementioned ML application developers, having delegated the work of training and deploying ML models to them.</p>
+<p><em>Model Developers</em> create, update and delete model templates to form Rafiki’s dynamic repository of ML model templates.
+These users are key external contributors to Rafiki, and represent the main source of up-to-date ML expertise on Rafiki,
+playing a crucial role in consistently expanding and diversifying Rafiki’s underlying set of ML model templates for a variety of ML tasks.
+Coupled with Rafiki’s modern ML model tuning framework on Rafiki, these contributions heavily dictate the ML performance that Rafiki provides to Application Developers.</p>
+<p><em>Rafiki Admins</em> create, update and remove users on Rafiki. They regulate access of the other types of users to a running instance of Rafiki.</p>
+</div></blockquote>
 </div>
 
 
@@ -214,10 +195,10 @@ model training:</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="creating-models.html" class="btn btn-neutral float-right" title="Creating Models" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="using-admin-web.html" class="btn btn-neutral float-right" title="Using Rafiki’s Admin Web" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="user-types.html" class="btn btn-neutral" title="Users of Rafiki" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="quickstart-admins.html" class="btn btn-neutral" title="Quick Start (Admins)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
