@@ -60,6 +60,9 @@ title "Starting Rafiki's Admin Web..."
 (bash $FILE_DIR/start_admin_web.sh &> $LOG_FILEPATH) &
 ensure_stable "Rafiki's Admin Web"
 
+title "Installing any dependencies..."
+bash $FILE_DIR/install_client.sh
+
 echo "To use Rafiki, use Rafiki Client in the Python CLI"
 echo "A quickstart is available at https://nginyc.github.io/rafiki/docs/latest/docs/src/user/quickstart.html"
 echo "To configure Rafiki, refer to Rafiki's developer docs at https://nginyc.github.io/rafiki/docs/latest/docs/src/dev/setup.html"
