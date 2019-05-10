@@ -31,7 +31,7 @@ Folder Structure
 
     - `db/`
 
-        Code for Rafiki's *Database* as an abstract data access layer
+        Code for Rafiki's *Metadata Store* as an abstract data access layer
 
     - `cache/`
 

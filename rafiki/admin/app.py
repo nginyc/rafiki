@@ -298,6 +298,23 @@ def get_models(auth):
         with admin:
             return jsonify(admin.get_models(auth['user_id'], **params))
 
+####################################
+# Administrative Actions
+####################################
+
+@app.route('/actions/stop_all_jobs', methods=['POST'])
+@auth([UserType.ADMIN])
+def stop_all_jobs(auth):
+    admin = get_admin()
+
+    with admin:
+        train_jobs = admin.stop_all_train_jobs()
+        inference_jobs = admin.stop_all_inference_jobs()
+        return jsonify({
+            'train_jobs': train_jobs,
+            'inference_jobs': inference_jobs
+        })
+    
 # Handle uncaught exceptions with a server error & the error's stack trace (for development)
 @app.errorhandler(Exception)
 def handle_error(error):

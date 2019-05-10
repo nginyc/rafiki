@@ -1,3 +1,10 @@
+# Mount whole project folder with code for dev for shorter iterations
+if [ $APP_MODE = "DEV" ]; then
+  VOLUME_MOUNTS="-v $PWD:$DOCKER_WORKDIR_PATH"
+else
+  VOLUME_MOUNTS="-v $LOGS_WORKDIR_PATH:$LOGS_DOCKER_WORKDIR_PATH -v $DATA_WORKDIR_PATH:$DATA_DOCKER_WORKDIR_PATH"
+fi
+
 docker run --rm --name $ADMIN_HOST \
   --network $DOCKER_NETWORK \
   -e POSTGRES_HOST=$POSTGRES_HOST \
@@ -22,7 +29,6 @@ docker run --rm --name $ADMIN_HOST \
   -e DATA_DOCKER_WORKDIR_PATH=$DATA_DOCKER_WORKDIR_PATH \
   -e DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  -v $LOGS_WORKDIR_PATH:$LOGS_DOCKER_WORKDIR_PATH \
-  -v $DATA_WORKDIR_PATH:$DATA_DOCKER_WORKDIR_PATH \
+  $VOLUME_MOUNTS \
   -p $ADMIN_EXT_PORT:$ADMIN_PORT \
   $RAFIKI_IMAGE_ADMIN:$RAFIKI_VERSION

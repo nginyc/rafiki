@@ -15,7 +15,6 @@ from torch.utils.data.dataset import Dataset
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
                         IntegerKnob, FloatKnob, CategoricalKnob, logger, dataset_utils
 from rafiki.constants import TaskType, ModelDependency
-from rafiki.config import APP_MODE
 
 class PyBiLstm(BaseModel):
     '''
@@ -24,7 +23,7 @@ class PyBiLstm(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': IntegerKnob(10, 50 if APP_MODE != 'DEV' else 10),
+            'epochs': FixedKnob(10),
             'word_embed_dims': IntegerKnob(16, 128),
             'word_rnn_hidden_size': IntegerKnob(16, 128),
             'word_dropout': FloatKnob(1e-3, 2e-1, is_exp=True),

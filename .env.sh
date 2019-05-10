@@ -10,6 +10,7 @@ export POSTGRES_EXT_PORT=5433
 export REDIS_EXT_PORT=6380
 export DATA_WORKDIR_PATH=$PWD/data # Shares a data folder with containers
 export LOGS_WORKDIR_PATH=$PWD/logs # Shares a folder with containers that stores components' logs
+export APP_MODE=DEV # DEV or PROD
 
 # Internal credentials for Rafiki's components
 export POSTGRES_USER=rafiki

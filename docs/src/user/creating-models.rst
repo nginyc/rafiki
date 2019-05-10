@@ -100,7 +100,7 @@ Example: Testing Models for ``IMAGE_CLASSIFICATION``
     .. code-block:: shell
 
         python examples/models/image_classification/SkDt.py
-        python examples/models/image_classification/TfSingleHiddenLayer.py
+        python examples/models/image_classification/TfFeedForward.py
 
 
 Example: Testing Models for ``POS_TAGGING``

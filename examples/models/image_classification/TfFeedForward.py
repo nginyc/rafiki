@@ -7,7 +7,6 @@ import tempfile
 import numpy as np
 import base64
 
-from rafiki.config import APP_MODE
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
                         IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, dataset_utils, logger
 from rafiki.constants import TaskType, ModelDependency
@@ -20,8 +19,8 @@ class TfFeedForward(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': IntegerKnob(3, 10 if APP_MODE != 'DEV' else 3),
-            'hidden_layer_count': IntegerKnob(1, 8 if APP_MODE != 'DEV' else 2),
+            'epochs': FixedKnob(3),
+            'hidden_layer_count': IntegerKnob(1, 2),
             'hidden_layer_units': IntegerKnob(2, 128),
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
