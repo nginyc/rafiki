@@ -3,7 +3,7 @@ const packageJson = require('./package.json');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
 
 module.exports = {
-  mode: 'development',
+  mode: 'production',
   devtool: 'source-map',
   entry: {
     app: [
@@ -19,11 +19,7 @@ module.exports = {
     publicPath: __dirname + '/dist'
   },
   plugins: [
-    new CleanWebpackPlugin(['dist']),
-    new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify('development'),
-      'process.env.VERSION': JSON.stringify(packageJson.version)
-    })
+    new CleanWebpackPlugin(['dist'])
   ],
   module: {
     rules: [
@@ -53,9 +49,5 @@ module.exports = {
   externals: {
     "react": "React",
     "react-dom": "ReactDOM"
-  },  
-  devServer: {
-    publicPath: '/dist/',
-    historyApiFallback: true
   }
 };

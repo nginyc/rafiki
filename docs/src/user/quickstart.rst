@@ -5,14 +5,19 @@ Quick Start
 
 .. contents:: Table of Contents
 
-This guide assumes you have deployed your an empty instance of Rafiki and you want to try a *full* train-inference flow as the *Super Admin*, 
-including adding of models, submitting a train job and submitting a inference job to Rafiki.
+This guide assumes you have deployed your own empty instance of Rafiki and you want to try a *full* train-inference flow as the *Super Admin*, 
+including adding of models, submitting model training & serving jobs, and making predictions on Rafiki.
+
 
 .. note::
 
-    - If you're a *Model Developer* just looking to contribute models to a running instance of Rafiki, refer to :ref:`quickstart-model-developers`
-    - If you're an *Application Developer* just looking to train and deploy models on a running instance of Rafiki, refer to :ref:`quickstart-app-developers`
-    - If you're an *Application User* just looking to make predictions to deployed models on a running instance of Rafiki, refer to :ref:`quickstart-app-users`
+    - For *Model Developers* just looking to contribute models, refer to :ref:`quickstart-model-developers`
+    - For *Application Developers* just looking to train and deploy models, refer to :ref:`quickstart-app-developers`
+    - For *Application Users* just looking to make predictions, refer to :ref:`quickstart-app-users`
+
+.. note::
+
+    Refer to :ref:`user-types` to understand more about the different types of users on Rafiki.
 
 The sequence of examples below submits the `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference. 
 Alternatively, after installing the Rafiki Client's dependencies, you can refer and run the scripted version of this quickstart 
@@ -21,6 +26,7 @@ Alternatively, after installing the Rafiki Client's dependencies, you can refer 
 .. note::
 
     If you haven't set up Rafiki on your local machine, refer to :ref:`quick-setup` before continuing.
+
 
 To learn more about what you can do on Rafiki, explore the methods of :class:`rafiki.client.Client`.
 
