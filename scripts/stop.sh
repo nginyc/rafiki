@@ -13,7 +13,7 @@ title()
 }
 
 title "Stopping any existing jobs..."
-python scripts/stop_all_jobs.py
+python3.6 scripts/stop_all_jobs.py
 
 title "Stopping Rafiki's DB..."
 docker rm -f $POSTGRES_HOST || echo "Failed to stop Rafiki's DB"
