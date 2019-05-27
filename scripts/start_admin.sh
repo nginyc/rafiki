@@ -1,3 +1,5 @@
+LOG_FILE_PATH=$PWD/logs/start_admin.log
+
 # Mount whole project folder with code for dev for shorter iterations
 if [ $APP_MODE = "DEV" ]; then
   VOLUME_MOUNTS="-v $PWD:$DOCKER_WORKDIR_PATH"
@@ -5,7 +7,11 @@ else
   VOLUME_MOUNTS="-v $LOGS_WORKDIR_PATH:$LOGS_DOCKER_WORKDIR_PATH -v $DATA_WORKDIR_PATH:$DATA_DOCKER_WORKDIR_PATH"
 fi
 
-docker run --rm --name $ADMIN_HOST \
+source ./scripts/utils.sh
+
+title "Starting Rafiki's Admin..."
+
+(docker run --rm --name $ADMIN_HOST \
   --network $DOCKER_NETWORK \
   -e POSTGRES_HOST=$POSTGRES_HOST \
   -e POSTGRES_PORT=$POSTGRES_PORT \
@@ -31,4 +37,7 @@ docker run --rm --name $ADMIN_HOST \
   -v /var/run/docker.sock:/var/run/docker.sock \
   $VOLUME_MOUNTS \
   -p $ADMIN_EXT_PORT:$ADMIN_PORT \
-  $RAFIKI_IMAGE_ADMIN:$RAFIKI_VERSION
+  $RAFIKI_IMAGE_ADMIN:$RAFIKI_VERSION \
+  &> $LOG_FILE_PATH) &
+
+ensure_stable "Rafiki's Admin" $LOG_FILE_PATH
