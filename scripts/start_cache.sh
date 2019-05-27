@@ -9,4 +9,4 @@ title "Starting Rafiki's Cache..."
   $IMAGE_REDIS \
   &> $LOG_FILE_PATH) &
 
-ensure_stable "Rafiki's Cache" $LOG_FILE_PATH
+ensure_stable "Rafiki's Cache" $LOG_FILE_PATH 10

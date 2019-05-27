@@ -8,7 +8,7 @@ title "Stopping any existing jobs..."
 python3.6 ./scripts/stop_all_jobs.py
 
 title "Dumping database..." 
-bash ./scripts/save_db.sh
+bash ./scripts/save_db.sh || exit 1
 
 title "Stopping Rafiki's DB..."
 docker rm -f $POSTGRES_HOST || echo "Failed to stop Rafiki's DB"

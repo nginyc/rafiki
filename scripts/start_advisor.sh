@@ -21,4 +21,4 @@ title "Starting Rafiki's Advisor..."
   $RAFIKI_IMAGE_ADVISOR:$RAFIKI_VERSION \
   &> $LOG_FILE_PATH) &
 
-ensure_stable "Rafiki's Advisor" $LOG_FILE_PATH
+ensure_stable "Rafiki's Advisor" $LOG_FILE_PATH 10

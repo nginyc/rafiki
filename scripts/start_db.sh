@@ -12,7 +12,7 @@ title "Starting Rafiki's DB..."
   $IMAGE_POSTGRES \
   &> $LOG_FILE_PATH) &
 
-ensure_stable "Rafiki's DB" $LOG_FILE_PATH
+ensure_stable "Rafiki's DB" $LOG_FILE_PATH 20
 
 echo "Creating Rafiki's PostgreSQL database & user..."
 docker exec $POSTGRES_HOST psql -U postgres -c "CREATE DATABASE $POSTGRES_DB"

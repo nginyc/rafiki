@@ -11,16 +11,18 @@ title()
 # Ensure docker container is stable
 ensure_stable()
 {
-    echo "Waiting for 10s for $1 to stablize..."
-    sleep 10
+    LOG_FILE_PATH=$2
+    SLEEP_TIME=$3
+    echo "Waiting for ${SLEEP_TIME}s for $1 to stabilize..."
+    sleep $SLEEP_TIME
     if ps -p $! > /dev/null
     then
         echo "$1 is running"
     else
         echo "Error running $1"
-        if ! [ -z "$2" ]
+        if ! [ -z "$LOG_FILE_PATH" ]
         then
-            echo "Check the logs at $2"
+            echo "Check the logs at $LOG_FILE_PATH"
         fi
         exit 1
     fi
