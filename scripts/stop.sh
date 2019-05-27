@@ -1,19 +1,16 @@
-source ./.env.sh
-
 LOG_FILEPATH=$PWD/logs/stop.log
+FILE_DIR=$(dirname "$0")
 
-# Echo title with border
-title() 
-{
-    title="| $1 |"
-    edge=$(echo "$title" | sed 's/./-/g')
-    echo "$edge"
-    echo "$title"
-    echo "$edge"
-}
+source ./scripts/utils.sh
+
+# Read from shell configuration file
+source ./.env.sh
 
 title "Stopping any existing jobs..."
 python3.6 scripts/stop_all_jobs.py
+
+title "Dumping database..." 
+bash $FILE_DIR/save_db.sh
 
 title "Stopping Rafiki's DB..."
 docker rm -f $POSTGRES_HOST || echo "Failed to stop Rafiki's DB"

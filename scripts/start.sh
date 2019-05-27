@@ -1,18 +1,10 @@
-# Read from shell configuration file
-source ./.env.sh
-
 LOG_FILEPATH=$PWD/logs/start.log
 FILE_DIR=$(dirname "$0")
 
-# Echo title with border
-title() 
-{
-    title="| $1 |"
-    edge=$(echo "$title" | sed 's/./-/g')
-    echo "$edge"
-    echo "$title"
-    echo "$edge"
-}
+source ./scripts/utils.sh
+
+# Read from shell configuration file
+source ./.env.sh
 
 ensure_stable()
 {
@@ -43,6 +35,9 @@ bash $FILE_DIR/pull_images.sh
 title "Starting Rafiki's DB..."
 (bash $FILE_DIR/start_db.sh &> $LOG_FILEPATH) &
 ensure_stable "Rafiki's DB"
+
+title "Maybe loading from database dump..." 
+bash $FILE_DIR/load_db.sh
 
 title "Starting Rafiki's Cache..."
 (bash $FILE_DIR/start_cache.sh &> $LOG_FILEPATH) &
