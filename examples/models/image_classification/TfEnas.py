@@ -656,6 +656,7 @@ class TfEnas(BaseModel):
         self._maybe_feed_dataset_to_model(images, classes, dataset_uri=dataset_uri, is_train=True)
 
         # Define plots
+        # TODO: Investigate bug where plots for acc and loss are always 1 and 0
         utils.logger.define_plot('Train accuracy over Epochs', ['mean_acc'], 'epoch')
         for (name, _) in self._monitored_values.items():
             utils.logger.define_plot('"{}" Over Time'.format(name), [name])
