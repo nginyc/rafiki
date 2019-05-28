@@ -514,7 +514,7 @@ class TfEnas(BaseModel):
 
             # Add dropout if training
             if is_train:
-                X = tf.nn.dropout(X, rate=(1 - dropout_keep_prob))
+                X = tf.nn.dropout(X,  dropout_keep_prob)
 
             # Compute logits from X
             with tf.variable_scope('fully_connected'):

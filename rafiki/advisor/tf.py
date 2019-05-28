@@ -458,7 +458,7 @@ class EnasListKnobAdvisor():
     ####################################
 
     def _sample_from_logits(self, logits):
-        idx = tf.random.categorical(tf.reshape(logits, (1, -1)), 1)[0][0]
+        idx = tf.multinomial(tf.reshape(logits, (1, -1)), 1)[0][0]
         return idx
 
     def _count_model_parameters(self):
