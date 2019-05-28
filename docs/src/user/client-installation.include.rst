@@ -2,9 +2,9 @@
 
 2. Clone the project at https://github.com/nginyc/rafiki (e.g. with `Git <https://git-scm.com/downloads>`__)
 
-3. Within the project's root folder, install Rafiki Client's Python dependencies by running:
+3. Within the project's root folder, install Rafiki's client-side Python dependencies by running:
 
     ::
 
-        pip3.6 install -r ./rafiki/client/requirements.txt
+        pip3.6 install -r ./rafiki/requirements.txt
 
