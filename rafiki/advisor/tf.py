@@ -131,7 +131,7 @@ class EnasAdvisor(BaseAdvisor):
         list_knob_models = {}
         for (name, list_knob) in list_knobs:
             with tf.variable_scope(name):
-                list_knob_models[name] = EnasAdvisorListModel(list_knob, batch_size)
+                list_knob_models[name] = EnasListKnobAdvisor(list_knob, batch_size)
 
         return list_knob_models
 
@@ -231,11 +231,11 @@ class EnasAdvisor(BaseAdvisor):
         return min_trial_no < trial_no
 
 def _extract_fixed_knobs(knob_config):
-    fixed_knobs = { name: knob.value for (name, knob) in knob_config.items() if isinstance(knob, FixedKnob) }
+    fixed_knobs = { name: knob.value.value for (name, knob) in knob_config.items() if isinstance(knob, FixedKnob) }
     knob_config = { name: knob for (name, knob) in knob_config.items() if not isinstance(knob, FixedKnob) }
     return (fixed_knobs, knob_config)
 
-class EnasAdvisorListModel():
+class EnasListKnobAdvisor():
     def __init__(self, knob, batch_size):
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
@@ -271,14 +271,14 @@ class EnasAdvisorListModel():
 
         with self._graph.as_default():
             item_idxs_real = self._sess.run(out_item_idxs)
-            items = [item_knob.values[idx] for (item_knob, idx) in zip(item_knobs, item_idxs_real)]
+            items = [item_knob.values[idx].value for (item_knob, idx) in zip(item_knobs, item_idxs_real)]
             return items
 
     def _train_model(self, batch_items, batch_scores):
         item_knobs = self._knob.items
 
         # Convert item values to indexes
-        batch_item_idxs = [[item_knob.values.index(item) for (item_knob, item) in zip(item_knobs, items)] for items in batch_items]
+        batch_item_idxs = [[[x.value for x in item_knob.values].index(value) for (item_knob, value) in zip(item_knobs, items)] for items in batch_items]
 
         logger.info('Training controller...')
 
@@ -298,22 +298,39 @@ class EnasAdvisorListModel():
         self._sess.run(tf.global_variables_initializer())
 
     def _build_model(self, knob):
+        assert isinstance(knob, ListKnob)
+
         batch_size = self._batch_size
         N = len(knob) # Length of list
 
-        # List of counts corresponding to the no. of values for each list item
-        Ks = [len(item_knob.values) for item_knob in knob.items]
+        # Convert each item value to its value representation (for embeddings)
+        (value_reps_by_item, K) = self._convert_values_to_reps(knob)
 
         # Placeholders for item indexes and associated score
         item_idxs_ph = tf.placeholder(dtype=tf.int32, shape=(batch_size, N))
         scores_ph = tf.placeholder(dtype=tf.float32, shape=(batch_size,))
 
-        (item_logits, out_item_idxs) = self._forward(Ks)
+        (item_logits, out_item_idxs) = self._forward(value_reps_by_item, K)
         (train_op, losses, rewards) = self._make_train_op(item_logits, item_idxs_ph, scores_ph)
 
         model_params_count = self._count_model_parameters()
 
         return (item_logits, out_item_idxs, train_op, losses, rewards, item_idxs_ph, scores_ph)
+
+    # Convert each item value to its value representation
+    def _convert_values_to_reps(self, knob):
+        knob_value_to_rep = {}
+        max_rep = 0
+        for item_knob in knob.items:
+            for knob_value in item_knob.values:
+                if knob_value in knob_value_to_rep:
+                    continue
+
+                knob_value_to_rep[knob_value] = max_rep
+                max_rep += 1
+
+        value_reps_by_item = [[knob_value_to_rep[x] for x in item_knob.values] for item_knob in knob.items]
+        return (value_reps_by_item, len(knob_value_to_rep))
       
     def _make_train_op(self, item_logits, item_idxs, scores):
         batch_size = self._batch_size
@@ -354,8 +371,9 @@ class EnasAdvisorListModel():
         
         return (train_op, losses, rewards)
 
-    def _forward(self, Ks):
-        N = len(Ks) # Length of list
+    def _forward(self, reps_by_item, K):
+        # ``K`` = <no. of unique item value reps>
+        N = len(reps_by_item) # Length of list
         H = 32 # Number of units in LSTM
         lstm_num_layers = 2
         temperature = 0
@@ -367,35 +385,40 @@ class EnasAdvisorListModel():
         # Initial embedding passed to LSTM
         initial_embed = self._make_var('item_embed_initial', (1, H))
 
+        # Embedding for item values
+        embeds = self._make_var('item_value_embeds', (K, H)) 
+
         # TODO: Add attention
         
         out_item_idxs = []
         item_logits = []
         lstm_states = [None]
         item_embeds = [initial_embed]
+
         for i in range(N):
-            K = Ks[i] # No of categories for output
+            L = len(reps_by_item[i]) # No. of candidate values for item
+            reps = tf.stack(reps_by_item[i])
 
             with tf.variable_scope('item_{}'.format(i)):
                 # Run input through LSTM to get output
                 (X, lstm_state) = self._apply_lstm(item_embeds[-1], lstm, H, prev_state=lstm_states[-1])
                 lstm_states.append(lstm_state)
 
-                # Add fully connected layer and transform to `K` channels
-                logits = self._add_fully_connected(X, (1, H), K)
+                # Add fully connected layer and transform to ``L`` channels
+                logits = self._add_fully_connected(X, (1, H), L)
                 logits = self._add_temperature(logits, temperature)
                 logits = self._add_tanh_constant(logits, tanh_constant)
                 item_logits.append(logits)
                 
-                # Draw and save item index from probability distribution by `X`
+                # Draw and save item index from probability distribution from logits
                 item_idx = self._sample_from_logits(logits)
                 out_item_idxs.append(item_idx)
 
                 # If not the final item
                 if i < N - 1:
-                    # Run item index through embedding lookup
-                    embeds = self._make_var('W_embeds', (K, H)) 
-                    item_embed = tf.reshape(tf.nn.embedding_lookup(embeds, item_idx), (1, -1))
+                    # Run item value rep through embedding lookup
+                    rep = reps[item_idx]
+                    item_embed = tf.reshape(tf.nn.embedding_lookup(embeds, rep), (1, -1))
                     item_embeds.append(item_embed)
 
         return (item_logits, out_item_idxs)
@@ -435,7 +458,7 @@ class EnasAdvisorListModel():
     ####################################
 
     def _sample_from_logits(self, logits):
-        idx = tf.multinomial(tf.reshape(logits, (1, -1)), 1)[0][0]
+        idx = tf.random.categorical(tf.reshape(logits, (1, -1)), 1)[0][0]
         return idx
 
     def _count_model_parameters(self):

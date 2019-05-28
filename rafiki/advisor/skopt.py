@@ -22,7 +22,7 @@ class SkoptAdvisor(BaseAdvisor):
     '''   
     @staticmethod
     def is_compatible(knob_config):
-        # Supports CategoricalKnob, FixedKnob, IntegerKnob and FloatKnob
+        # Supports only CategoricalKnob, FixedKnob, IntegerKnob and FloatKnob
         for (name, knob) in knob_config.items():
             if not isinstance(knob, (CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob)):
                 return False
@@ -64,10 +64,10 @@ class SkoptAdvisor(BaseAdvisor):
         self._optimizer.tell(point, -score)
 
     def _make_optimizer(self, dimensions):
-        n_random_starts = 10
+        n_initial_points = 10
         return Optimizer(
             list(dimensions.values()),
-            n_random_starts=n_random_starts,
+            n_initial_points=n_initial_points,
             base_estimator='gp'
         )
 
@@ -167,7 +167,7 @@ class SkoptAdvisor(BaseAdvisor):
 
 def _knob_to_dimension(knob):
     if isinstance(knob, CategoricalKnob):
-        return Categorical(knob.values)
+        return Categorical([x.value for x in knob.values])
     elif isinstance(knob, IntegerKnob):
         return Integer(knob.value_min, knob.value_max)
     elif isinstance(knob, FloatKnob):
@@ -194,6 +194,6 @@ def _simplify_value(value):
     return value
 
 def _extract_fixed_knobs(knob_config):
-    fixed_knobs = { name: knob.value for (name, knob) in knob_config.items() if isinstance(knob, FixedKnob) }
+    fixed_knobs = { name: knob.value.value for (name, knob) in knob_config.items() if isinstance(knob, FixedKnob) }
     knob_config = { name: knob for (name, knob) in knob_config.items() if not isinstance(knob, FixedKnob) }
     return (fixed_knobs, knob_config)

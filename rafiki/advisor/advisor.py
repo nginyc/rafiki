@@ -150,9 +150,9 @@ class RandomAdvisor(BaseAdvisor):
             return knob.value_min + int(u * (knob.value_max - knob.value_min + 1))
         elif isinstance(knob, CategoricalKnob):
             i = int(u * len(knob.values))
-            return knob.values[i]
+            return knob.values[i].value
         elif isinstance(knob, FixedKnob):
-            return knob.value
+            return knob.value.value
         elif isinstance(knob, ListKnob):
             return [self._propose_knob(knob.items[i]) for i in range(len(knob))]
         else:

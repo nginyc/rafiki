@@ -12,7 +12,7 @@ import argparse
 
 from rafiki.advisor import tune_model, make_advisor, TrainStrategy, EvalStrategy, AdvisorType
 from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
-                            FixedKnob, ListKnob
+                            FixedKnob, ListKnob, KnobValue
 
 _Model = namedtuple('_Model', ['train_dataset_init_op', 'pred_dataset_init_op', 'train_op', 'summary_op',  
                                 'pred_probs', 'pred_corrects', 'train_corrects', 'step', 'vars_assign_op', 'ph', 'var_phs'])
@@ -40,20 +40,8 @@ class TfEnas(BaseModel):
 
     @staticmethod
     def get_knob_config():
-        def cell_arch_item(i):
-            b = (i % (CELL_NUM_BLOCKS * 4)) // 4    # Block no
-            idx = i % 4                             # Item index within block
-            if_op = idx in [1, 3]                   # Op or input?
-
-            if if_op:
-                # List of ops
-                return CategoricalKnob(OPS)
-            else:
-                # List of input indices for block
-                return CategoricalKnob(list(range(b + 2)))
-
         return {
-            'cell_archs': ListKnob(2 * CELL_NUM_BLOCKS * 4, lambda i: cell_arch_item(i)),
+            'cell_archs': TfEnas.make_arch_knob(),
             'use_cell_arch_type': FixedKnob(''), # '' | 'ENAS' | 'NASNET-A',
             'max_image_size': FixedKnob(32),
             'trial_epochs': FixedKnob(310), # Total no. of epochs during a standard train
@@ -90,6 +78,35 @@ class TfEnas(BaseModel):
             'early_stop_drop_path_decay_epochs': FixedKnob(150)
         }
 
+    @staticmethod
+    def make_arch_knob():
+        # Make knob values for ops
+        # Operations across blocks are considered identical for the purposes of architecture search
+        # E.g. operation "conv3x3" with op code 0 has the same meaning across blocks 
+        op_knob_values = [KnobValue(i) for i in OPS]
+
+        # Build list of knobs for ``cell_archs``
+        cell_archs_knobs = []
+        for c in range(2): # 1 for normal cell, 1 for reduction cell
+            
+            # Make knob values for inputs
+            # Input indices across blocks in the same cell are considered identical for the purposes of architecture search
+            # E.g. input from block 0 with index 2 has the same meaning across blocks in the same cell 
+            input_knob_values = [KnobValue(i) for i in range(CELL_NUM_BLOCKS + 2)]
+
+            # For each block
+            for b in range(CELL_NUM_BLOCKS): 
+                # Input 1 (only can take input from prev prev cell, prev cell, or one of prev blocks)
+                input_1_knob = CategoricalKnob(input_knob_values[:(b + 2)])
+                op_1_knob = CategoricalKnob(op_knob_values)
+
+                # Input 2 (same)
+                input_2_knob =  CategoricalKnob(input_knob_values[:(b + 2)])
+                op_2_knob =  CategoricalKnob(op_knob_values)
+
+                cell_archs_knobs.extend([input_1_knob, op_1_knob, input_2_knob, op_2_knob]) 
+            
+        return ListKnob(cell_archs_knobs)
     
     @staticmethod
     def teardown():
@@ -497,7 +514,7 @@ class TfEnas(BaseModel):
 
             # Add dropout if training
             if is_train:
-                X = tf.nn.dropout(X, dropout_keep_prob)
+                X = tf.nn.dropout(X, rate=(1 - dropout_keep_prob))
 
             # Compute logits from X
             with tf.variable_scope('fully_connected'):
