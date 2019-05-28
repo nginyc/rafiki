@@ -41,3 +41,6 @@ params/*
 # Pytest
 .coverage*
 .pytest_cache/
+
+# SQL dump files
+*.sql

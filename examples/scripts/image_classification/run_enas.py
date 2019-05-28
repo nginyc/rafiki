@@ -10,18 +10,21 @@ from rafiki.config import SUPERADMIN_EMAIL
 from examples.models.image_classification.TfEnas import TfEnas
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
 
-def run_enas(client, gpus, train_strategy, num_cycles, enas_batch_size, num_eval_per_cycle, full=True):
+def run_enas(client, gpus, train_strategy, num_cycles, enas_batch_size, 
+            num_eval_per_cycle, num_final_evals, full=True):
+
     app_id = gen_id()
     num_cycles = 10 if not full else num_cycles
     period = num_eval_per_cycle + 1
     num_final_train_trials = 1
-    trial_count = period * num_cycles + num_final_train_trials
+    trial_count = period * num_cycles + num_final_evals + num_final_train_trials
     app = 'cifar_10_enas_{}'.format(app_id)
     model_name = 'TfEnas_{}'.format(app_id)
 
     print('Creating advisor...')
     knob_config = TfEnas.get_knob_config()
     advisor_config = { 'num_eval_per_cycle': num_eval_per_cycle, 
+                        'num_final_evals': num_final_evals,
                         'batch_size': enas_batch_size, 
                         'train_strategy': train_strategy }
     advisor = client.create_advisor(knob_config, advisor_type=AdvisorType.ENAS, advisor_config=advisor_config)
@@ -74,6 +77,7 @@ if __name__ == '__main__':
     parser.add_argument('--enas_batch_size', type=int, default=10, help='Batch size for ENAS controller')
     parser.add_argument('--train_strategy', type=str, default='ISOLATED', help='Train strategy for ENAS controller')
     parser.add_argument('--num_eval_per_cycle', type=int, default=300, help='No. of evaluation trials in a cycle of train-eval in ENAS')
+    parser.add_argument('--num_final_evals', type=int, default=10, help='No. of final evaluations for ENAS')
     parser.add_argument('--num_cycles', type=int, default=150, help='No. of cycles of train-eval in ENAS')
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
@@ -87,4 +91,4 @@ if __name__ == '__main__':
 
     # Run ENAS
     run_enas(client, args.gpus, args.train_strategy, args.num_cycles, args.enas_batch_size, 
-            args.num_eval_per_cycle, full=args.full)
+            args.num_eval_per_cycle, args.num_final_evals, full=args.full)

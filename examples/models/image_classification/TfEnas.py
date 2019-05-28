@@ -1323,8 +1323,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--enas_batch_size', type=int, default=10, help='Batch size for ENAS controller')
     parser.add_argument('--train_strategy', type=str, default='ISOLATED', help='Train strategy for ENAS controller')
-    parser.add_argument('--num_eval_per_cycle', type=int, default=300, help='No. of evaluation trials in a cycle of train-eval in ENAS')
+    parser.add_argument('--num_eval_per_cycle', type=int, default=300, help='No. of evaluations in a cycle of train-eval in ENAS')
     parser.add_argument('--num_cycles', type=int, default=150, help='No. of cycles of train-eval in ENAS')
+    parser.add_argument('--num_final_evals', type=int, default=10, help='No. of final evaluations for ENAS')
     parser.add_argument('--train_once', action='store_true', help='Whether to just train 1 (fixed) architecture')
     parser.add_argument('--do_final_train', action='store_true', help='Whether to train the final best architecture')
     (args, _) = parser.parse_known_args()
@@ -1332,11 +1333,12 @@ if __name__ == '__main__':
     if not args.train_once:
         num_final_train_trials = 1 if args.do_final_train else 0
         period = args.num_eval_per_cycle + 1
-        trial_count = period * args.num_cycles + num_final_train_trials
+        trial_count = period * args.num_cycles + args.num_final_evals + num_final_train_trials
     else:
         trial_count = 1
 
     advisor_config = { 'num_eval_per_cycle': args.num_eval_per_cycle, 
+                        'num_final_evals': args.num_final_evals,
                         'batch_size': args.enas_batch_size, 
                         'train_strategy': args.train_strategy,
                         'do_final_train': args.do_final_train }

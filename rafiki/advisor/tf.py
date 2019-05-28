@@ -36,12 +36,14 @@ class EnasAdvisor(BaseAdvisor):
         return True
         
     def __init__(self, knob_config, train_strategy=EnasTrainStrategy.ISOLATED, 
-                batch_size=10, num_eval_per_cycle=300, do_final_train=True):
+                batch_size=10, num_eval_per_cycle=300, num_final_evals=10, 
+                do_final_train=True):
         (self._fixed_knobs, knob_config) = _extract_fixed_knobs(knob_config)
         self._batch_size = batch_size
         self._num_eval_per_cycle = num_eval_per_cycle
+        self._num_final_evals = num_final_evals
         self._list_knob_models = self._build_models(knob_config, batch_size)
-        self._recent_feedback = [] # [(score, proposal)]
+        self._final_evals = [] # [(score, proposal)]
         self._do_final_train = do_final_train
         self._worker_to_trial_nos = defaultdict(list) # { <worker_id>: [<trial no>]}
         self._train_strategy = EnasTrainStrategy(train_strategy)
@@ -76,33 +78,40 @@ class EnasAdvisor(BaseAdvisor):
                             train_strategy=TrainStrategy.NONE, 
                             eval_strategy=EvalStrategy.STOP_EARLY,
                             should_save_to_disk=False)
+        elif trial_type == 'FINAL_EVAL':
+            knobs = self._propose_knobs()
+            return Proposal(knobs,
+                            params_type=params_type, 
+                            train_strategy=TrainStrategy.NONE, 
+                            eval_strategy=EvalStrategy.STANDARD,
+                            should_save_to_disk=True)
         elif trial_type == 'FINAL_TRAIN':
-            # Do standard model training from scratch with recent best knobs
-            knobs = self._propose_best_recent_knobs()
+            # Do standard model training from scratch with final knobs
+            knobs = self._propose_final_knobs()
             return Proposal(knobs, 
                             params_type=params_type,
                             train_strategy=TrainStrategy.STANDARD,
                             should_save_to_disk=True)
 
-    def feedback(self, score, proposal):
-        num_sample_trials = 10
+    def feedback(self, score, proposal: Proposal):
         knobs = proposal.knobs
-        
-        # Keep track of last X trials' knobs & scores (for final train trials)
-        self._recent_feedback = [(score, proposal), *self._recent_feedback[:(num_sample_trials - 1)]]
+
+        if proposal.eval_strategy == EvalStrategy.STANDARD:
+            # Keep track of final evals' scores
+            self._final_evals.append((score, proposal))
 
         for (name, list_knob_model) in self._list_knob_models.items():
             knob_value = knobs[name]
             list_knob_model.feedback(knob_value, score)
 
-    def _propose_best_recent_knobs(self):
-        recent_feedback = self._recent_feedback
-        # If hasn't collected feedback, propose from model
-        if len(recent_feedback) == 0:
+    def _propose_final_knobs(self):
+        # If hasn't collected final evals, propose from model
+        if len(self._final_evals) == 0:
             return self._propose_knobs()
 
-        # Otherwise, determine best recent proposal and use it
-        (score, proposal) = sorted(recent_feedback)[-1]
+        # Otherwise, determine best final eval and use it
+        self._final_evals.sort()
+        (_, proposal) = self._final_evals.pop()
 
         return proposal.knobs
 
@@ -127,69 +136,93 @@ class EnasAdvisor(BaseAdvisor):
         return list_knob_models
 
     def _get_trial_type_original(self, worker_id, trial_no, total_trials, concurrent_trial_nos):
-        num_final_train_trials = 1 if self._do_final_train else 0
+        num_final_trains = 1 if self._do_final_train else 0
+        num_final_evals = self._num_final_evals
         num_eval_per_cycle = self._num_eval_per_cycle
         E = self._batch_size
         T = num_eval_per_cycle + 1 # Period
 
-        # Schedule: |--<train + eval>---||--<final train>--|
+        # Schedule: |--<train & eval cycles>---||--<final evals> ---||--<final train>--|
+        # Final trains & evals can be parallelized
+        
+        is_final_train = trial_no > total_trials - num_final_trains
+        final_train_preceding_trial_no = total_trials - num_final_trains + 1 
 
-        # Check if final train trial
-        if trial_no > total_trials - num_final_train_trials:
-            if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
-                return (None, None)
+        is_final_eval = trial_no > total_trials - num_final_trains - num_final_evals
+        final_eval_preceding_trial_no = total_trials - num_final_trains - num_final_evals + 1 
 
-            return (ParamsType.NONE, 'FINAL_TRAIN')
-
-        # Otherwise, it is in the <train + eval> phase
+        # If not final eval or train, it is in the <train + eval> phase
         # Every (X + 1) trials, only train 1 epoch for the first trial
         # The other X trials is for training the controller
-        is_train_trial = ((trial_no - 1) % T == 0)
+        # For a "train" trial, wait until previous trials to finish
+        # Within a batch, "eval" trials can be done in parallel
+        # But must wait for the previous "eval" batch to finish
+        is_train = ((trial_no - 1) % T == 0)
+        train_trial_no = ((trial_no - 1) // T) * T + 1 # Corresponding train trial
+        minibatch_head_trial_no = train_trial_no + (trial_no - train_trial_no - 1) // E * E + 1  # Corresponding head trial for minibatch
+        train_preceding_trial_no = train_trial_no
+        eval_preceding_trial_no = minibatch_head_trial_no
 
-        if is_train_trial:
-            # For a "train" trial, wait until previous trials to finish
-            if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
+        if is_final_train:
+            if self._if_preceding_trials_are_running(final_train_preceding_trial_no, concurrent_trial_nos):
+                return (None, None)
+            return (ParamsType.NONE, 'FINAL_TRAIN')
+        
+        if is_final_eval:
+            if self._if_preceding_trials_are_running(final_eval_preceding_trial_no, concurrent_trial_nos):
+                return (None, None)
+            return (ParamsType.GLOBAL_RECENT, 'FINAL_EVAL')
+
+        if is_train:
+            if self._if_preceding_trials_are_running(train_preceding_trial_no, concurrent_trial_nos):
                 return (None, None)
             
             return (ParamsType.GLOBAL_RECENT, 'TRAIN')
-        else:
-            # Within a batch, "eval" trials can be done in parallel
-            # But must wait for the previous "eval" batch to finish
-            train_trial_no = ((trial_no - 1) // T) * T + 1 # Corresponding train trial
-            # Corresponding head trial for minibatch
-            minibatch_head_trial_no = train_trial_no + (trial_no - train_trial_no - 1) // E * E + 1 
-            if self._if_preceding_trials_are_running(minibatch_head_trial_no, concurrent_trial_nos):
+        else:            
+            if self._if_preceding_trials_are_running(eval_preceding_trial_no, concurrent_trial_nos):
                 return (None, None)
 
             return (ParamsType.GLOBAL_RECENT, 'EVAL')
 
     def _get_trial_type_isolated(self, worker_id, trial_no, total_trials, concurrent_trial_nos):
-        num_final_train_trials = 1 if self._do_final_train else 0
+        num_final_trains = 1 if self._do_final_train else 0
+        num_final_evals = self._num_final_evals
         num_eval_per_cycle = self._num_eval_per_cycle
         T = num_eval_per_cycle + 1 # Period
         trial_nos = self._worker_to_trial_nos[worker_id]
         local_trial_no = len(trial_nos) + 1
 
-        # Schedule: |--<train + eval>---||--<final train>--|
+        # Schedule: |--<train & eval cycles>---||--<final evals> ---||--<final train>--|
+        # Final trains & evals can be parallelized
+        
+        is_final_train = trial_no > total_trials - num_final_trains
+        final_train_preceding_trial_no = total_trials - num_final_trains + 1 
 
-        # Check if final train trial
-        if trial_no > total_trials - num_final_train_trials:
-            if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
-                return (None, None)
+        is_final_eval = trial_no > total_trials - num_final_trains - num_final_evals
+        final_eval_preceding_trial_no = total_trials - num_final_trains - num_final_evals + 1 
 
-            return (ParamsType.NONE, 'FINAL_TRAIN')
-
-        # Otherwise, it is in the <train + eval> phase
+        # If not final eval or train, it is in the <train + eval> phase
         # Every (X + 1) trials, only train 1 epoch for the first trial
         # The other X trials is for training the controller
         # Use *local* trial no to determine this
         # Since trials on each worker are executed relatively sequentially, no need to check validity
         is_train_trial = ((local_trial_no - 1) % T == 0)
+
+        if is_final_train:
+            if self._if_preceding_trials_are_running(final_train_preceding_trial_no, concurrent_trial_nos):
+                return (None, None)
+            return (ParamsType.NONE, 'FINAL_TRAIN')
+        
+        if is_final_eval:
+            if self._if_preceding_trials_are_running(final_eval_preceding_trial_no, concurrent_trial_nos):
+                return (None, None)
+            return (ParamsType.LOCAL_RECENT, 'FINAL_EVAL')
+        
         if is_train_trial:
             return (ParamsType.LOCAL_RECENT, 'TRAIN')
         else:
             return (ParamsType.LOCAL_RECENT, 'EVAL')
-        
+
     def _if_preceding_trials_are_running(self, trial_no, concurrent_trial_nos):
         if len(concurrent_trial_nos) == 0:
             return False
