@@ -16,11 +16,7 @@ class KnobValue():
     Wrapper for a discrete value of type ``int``, ``float``, ``bool``, ``str``, ``list``.
     '''
     def __init__(self, value: any):
-        if not isinstance(value, KnobValue):
-            (self._value, self._dtype) = self._parse_value(value)
-        else:
-            self._dtype = value.dtype
-            self._value = value.value
+        (self._value, self._dtype) = self._parse_value(value)
 
     @property
     def value(self):
@@ -70,7 +66,7 @@ class CategoricalKnob(BaseKnob):
 
     @staticmethod
     def _validate_values(values):
-        values = [KnobValue(x) for x in values]
+        values = [KnobValue(x) if not isinstance(x, KnobValue) else x for x in values]
 
         if len(values) == 0:
             raise ValueError('Length of `values` should at least 1')
@@ -88,7 +84,7 @@ class FixedKnob(BaseKnob):
     Essentially, this represents a knob type that does not require tuning.
     '''
     def __init__(self, value):
-        self._value = KnobValue(value)
+        self._value = KnobValue(value) if not isinstance(value, KnobValue) else value
         self._value_type = self._value.dtype
 
     @property
