@@ -31,11 +31,11 @@ Folder Structure
 
     - `meta_store/`
 
-        Code for Rafiki's *MetaStore* as an abstract data access layer
+        Code for Rafiki's *MetaData Store* as an abstract data access layer
     
     - `param_store/`
 
-        Code for Rafiki's *ParamStore* as an abstract data access layer
+        Code for Rafiki's *Param Store* as an abstract data access layer
 
     - `cache/`
 

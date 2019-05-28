@@ -1,15 +1,7 @@
 # Read from shell configuration file
 source ./.env.sh
 
-# Echo title with border
-title() 
-{
-    title="| $1 |"
-    edge=$(echo "$title" | sed 's/./-/g')
-    echo "$edge"
-    echo "$title"
-    echo "$edge"
-}
+source ./scripts/utils.sh
 
 # Build Rafiki's images
 

@@ -1,53 +1,63 @@
 .. _`architecture`:
 
-Architecture
+Rafiki's Architecture
 ====================================================================
 
-.. contents:: Table of Contents
+Rafiki’s system architecture consists of 3 static components, 2 central databases, 3 types of dynamic components, and 1 client-side SDK, 
+which can be illustrated with a 3-layer architecture diagram.
 
-User Roles
---------------------------------------------------------------------
-
-.. figure:: ../images/system-context-diagram.jpg
-    :align: center
-    :width: 500px
-    
-    System Context Diagram for Rafiki
-
-There are 4 user roles:
-
-- *Rafiki Admin* manages users
-- *Model Developer* manages model templates
-- *App Developer* manages train & inference jobs
-- *App User* makes queries to deployed models
-
-System Components
---------------------------------------------------------------------
-
-.. figure:: ../images/container-diagram.jpg
+.. figure:: ../images/container-diagram.png
     :align: center
     :width: 1200px
 
-    Container Diagram for Rafiki
+    Architecture of Rafiki
 
-Static Components of Rafiki
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-These components make up Rafiki's static stack.
+Static Stack of Rafiki
+---------------------------------------------------------------------
 
-- *Admin* is a HTTP server that handles requests from users, and accordingly updates Rafiki's database or deploys components (e.g workers, predictors) based on these requests
-- *Admin Web* is a HTTP server that serves a Web UI for Admin
-- *Client* is a client-side Python SDK for sending requests to Admin
-- *Advisor* is a HTTP server that generates proposals of knobs during training
-- *Database* is Rafiki's metadata store for user, train job, inference job, model templates, and trained model data
-- *Cache* is Rafiki's temporary store for queries & predictions during inference
+Rafiki’s static stack consists of the following:
 
-Dynamic Components of Rafiki
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    *Rafiki Admin* (*Python/Flask*) is the centrepiece of Rafiki. It is a multi-threaded HTTP server which presents a unified REST API over HTTP that fully administrates the Rafiki instance. When users send requests to Rafiki Admin, it handles these requests by accordingly modifying Rafiki’s Metadata Store or deploying/stopping the dynamic components of Rafiki’s stack (i.e. workers for model training & serving).
 
-These components are dynamically deployed or stopped by Admin depending on the statuses of train or inference jobs.
+    *Rafiki Metadata Store* (*PostgreSQL*) is Rafiki’s centralized, persistent database for user metadata, job metadata, worker metadata and model templates. 
 
-- Each *Train Worker* is a Python program that trains models associated with a train job,
-- Each *Inference Worker* is a Python program that makes batch predictions with trained models associated with an inference job
-- Each *Predictor* is a HTTP server that receives queries from users and responds with predictions, associated with an inference job
+    *Rafiki Advisor* (*Python/Flask*) is Rafiki’s advisor as described in the earlier sections. It is a single-threaded HTTP server. It accepts new advisory sessions from multiple Rafiki Train Workers, generates proposals of Knobs for them, and receives feedback for completed Trials in a Train Job. 
 
+    *Rafiki Cache* (*Redis*) is Rafiki’s temporary in-memory store for the implementation of fast asynchronous cross-worker communication, in a way that decouples senders from receivers. It synchronizes the back-and-forth of queries & predictions between multiple Rafiki Inference Workers and a single Rafiki Predictor for an Inference Job.
+
+    *Rafiki Web Admin* (*NodeJS/ExpressJS*) is a HTTP server that serves Rafiki’s web front-end to users, allowing Application Developers to survey their jobs on a friendly web GUI. 
+
+    *Rafiki Client* (*Python*) is Rafiki’s client-side Python SDK to simplify communication with Admin.
+
+
+Dynamic Stack of Rafiki
+---------------------------------------------------------------------
+
+On the other hand, Rafiki’s dynamic stack consists of a dynamic pool of workers. 
+Internally within Rafiki’s architecture, Admin adopts master-slave relationships with these workers, managing the deployment and termination of these workers in real-time depending on Train Job and Inference Job requests, as well as the stream of events it receives from its workers. 
+When a worker is deployed, it is configured with the identifier for an associated job, and once it starts running, it would first initialize itself by pulling the job’s metadata from Metadata Store before starting on its task.
+
+The types of workers are as follows:
+
+    *Rafiki Train Workers* (*Python*) train models for Train Jobs by conducting Trials. In a single Train Job, there could be multiple Train Workers concurrently training models.
+    
+    *Rafiki Predictors* (*Python/Flask*) are multi-threaded HTTP servers that receive queries from Application Users and respond with predictions as part of an Inference Job. It does this through  producer-consumer relationships with multiple Rafiki Inference Workers. If necessary, it performs model ensembling on predictions received from different workers.
+    
+    *Rafiki Inference Workers* (*Python*) serve models for Inference Jobs. In a single Inference Job, there could be multiple Inference Workers concurrently making predictions for a single batch of queries.
+
+
+Container Orchestration Strategy
+---------------------------------------------------------------------
+
+All of Rafiki's components' environment and configuration has been fully specified as a replicable, portable Docker image publicly available as Dockerfiles and on `Rafiki’s own Docker Hub account <https://hub.docker.com/u/rafikiai>`__.
+
+When an instance of Rafiki is deployed on the master node, a `Docker Swarm <https://docs.docker.com/engine/swarm/key-concepts/>`__ is initialized and all of Rafiki's components run within a single `Docker routing-mesh overlay network <https://docs.docker.com/network/overlay/>`__.
+Subsequently, Rafiki can be horizontally scaled by adding more worker nodes to the Docker Swarm. Dynamically-deployed workers run as `Docker Swarm Services <https://docs.docker.com/engine/swarm/services/>`__
+and are placed in a resource-aware manner.
+
+
+Distributed File System Strategy
+---------------------------------------------------------------------
+All components depend on a shared file system across multiple nodes, powered by *Network File System* (*NFS*). 
+Each component written in Python continually writes logs to this shared file system.

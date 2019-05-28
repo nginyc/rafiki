@@ -15,6 +15,7 @@ export POSTGRES_EXT_PORT=5433
 export REDIS_EXT_PORT=6380
 export HOST_WORKDIR_PATH=$PWD
 export APP_MODE=DEV # DEV or PROD
+export POSTGRES_DUMP_FILE_PATH=$PWD/db_dump.sql # PostgreSQL database dump file
 
 # Internal credentials for Rafiki's components
 export POSTGRES_USER=rafiki
@@ -52,3 +53,7 @@ export IMAGE_REDIS=redis:5.0.3-alpine3.8
 # Utility configuration
 export PYTHONPATH=$PWD # Ensures that `rafiki` module can be imported at project root
 export PYTHONUNBUFFERED=1 # Ensures logs from Python appear instantly 
+
+# Set alias for correct PIP & python
+alias pip='pip3.6'
+alias python='python3.6'
