@@ -6,6 +6,7 @@ import uuid
 import time
 import logging
 from collections import namedtuple
+import msgpack
 from datetime import datetime
 import sys
 from enum import Enum
@@ -302,17 +303,17 @@ class ParamStore(object):
     def _push_params_to_redis(self, param_id: str, params: Params):
         logger.info('Pushing params: "{}"...'.format(param_id))
         param_name = self._get_redis_name('param:{}'.format(param_id))
-        params_str = self._serialize_params(params)
-        self._redis.set(param_name, params_str)
+        params_bytes = self._serialize_params(params)
+        self._redis.set(param_name, params_bytes)
 
     def _pull_params_from_redis(self, param_id: str) -> Params:
         logger.info('Pulling params: "{}"...'.format(param_id))
         param_name = self._get_redis_name('param:{}'.format(param_id))
-        params_str = self._get_from_redis(param_name)
-        if params_str is None:
+        params_bytes = self._get_from_redis(param_name, value_type=bytes)
+        if params_bytes is None:
             return None
             
-        params = self._deserialize_params(params_str)
+        params = self._deserialize_params(params_bytes)
         return params
 
     def _make_redis_client(self, host, port):
@@ -367,18 +368,19 @@ class ParamStore(object):
 
     def _serialize_params(self, params):
         # Convert numpy arrays to lists
-        params_for_json = { 
+        params_simple = { 
             name: value.tolist() if isinstance(value, np.ndarray) else value
             for (name, value) in params.items() 
         }
 
-        # Convert to JSON
-        params_str = json.dumps(params_for_json)
-        return params_str
+        # Serialize as `msgpack`
+        params_bytes = msgpack.packb(params_simple)
+        return params_bytes
 
-    def _deserialize_params(self, params_str):
-        # Convert from JSON
-        params = json.loads(params_str)
+    def _deserialize_params(self, params_bytes):
+        # Deserialize as `msgpack`
+        params = msgpack.unpackb(params_bytes)
+        params = { k.decode(): v for (k, v) in params.items() }
 
         # Convert lists or numbers to numpy arrays
         for (name, value) in params.items():

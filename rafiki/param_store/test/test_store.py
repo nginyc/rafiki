@@ -83,7 +83,7 @@ def are_params_equal(params_1, params_2):
     
     for (k, v) in params_1.items():
         if isinstance(v, np.ndarray):
-            if not np.array_equal(v, params_2[k]):
+            if not np.array_equal(v, params_2.get(k)):
                 return False
         else:
             if v != params_2[k]:
