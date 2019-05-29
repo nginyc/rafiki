@@ -40,6 +40,9 @@ class RedisMock():
         return self.data.keys()
     
     def delete(self, *keys):
+        if len(keys) == 0:
+            raise ValueError('Need at least 1 key to delete')
+
         for key in keys:
             del self.data[key]
 

@@ -4,8 +4,7 @@ from datetime import datetime, timedelta
 import redis
 
 from rafiki.test.utils import global_setup, mock_redis
-from rafiki.advisor import ParamsType
-from rafiki.param_store import ParamStore
+from rafiki.param_store import ParamStore, ParamsType
 
 class TestStore():    
     

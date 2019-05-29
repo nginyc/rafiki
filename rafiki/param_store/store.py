@@ -252,7 +252,8 @@ class ParamStore(object):
                 self._push_params_to_redis(param_id, params)
         
         # Delete params to delete
-        self._delete_params_from_redis(*to_delete)
+        if len(to_delete) > 0:
+            self._delete_params_from_redis(*to_delete)
 
         # Push updated metadata to Redis
         self._push_metadata_to_redis(params_shared)
