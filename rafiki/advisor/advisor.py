@@ -7,6 +7,7 @@ from enum import Enum
 
 from rafiki.model import BaseKnob, IntegerKnob, CategoricalKnob, FloatKnob, \
                 FixedKnob, ListKnob
+from rafiki.param_store import ParamsType
 
 class UnsupportedKnobConfigError(Exception): pass
 class UnsupportedKnobError(Exception): pass
@@ -41,13 +42,6 @@ def _get_advisor_class_from_type(advisor_type):
         return SkoptAdvisor
     elif advisor_type == AdvisorType.RANDOM:
         return RandomAdvisor
-
-class ParamsType(Enum):
-    LOCAL_RECENT = 'LOCAL_RECENT'
-    LOCAL_BEST = 'LOCAL_BEST'
-    GLOBAL_RECENT = 'GLOBAL_RECENT'
-    GLOBAL_BEST = 'GLOBAL_BEST'
-    NONE = 'NONE'
 
 class TrainStrategy(Enum):
     STANDARD = 'STANDARD' # Model should train to its maximum potential

@@ -14,10 +14,10 @@ from typing import Union, Dict, Type
 from rafiki.model import BaseModel, BaseKnob, serialize_knob_config, deserialize_knob_config, \
                         parse_model_install_command, load_model_class
 from rafiki.constants import TaskType, ModelDependency
-from rafiki.param_store import ParamStore
+from rafiki.param_store import ParamStore, ParamsType
 from rafiki.predictor import ensemble_predictions
 
-from .advisor import make_advisor, BaseAdvisor, ParamsType, TrainStrategy, EvalStrategy
+from .advisor import make_advisor, BaseAdvisor,  TrainStrategy, EvalStrategy
 
 class InvalidModelClassException(Exception): pass
 

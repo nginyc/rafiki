@@ -1,1 +1,1 @@
-from .store import ParamStore
+from .store import ParamStore, ParamsType

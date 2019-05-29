@@ -13,8 +13,11 @@ class Cache():
         self._tail = None # Tail of linked list
         self._key_to_node = {} # { <key>: <node> }
 
-    def __len__(self) -> int:
+    def __len__(self):
         return len(self._key_to_node)
+
+    def __contains__(self, item):
+        return item in self._key_to_node
 
     @property
     def size(self) -> int:

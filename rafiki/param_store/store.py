@@ -5,19 +5,25 @@ from typing import Dict
 import uuid
 import time
 import logging
-from itertools import chain
 from collections import namedtuple
 from datetime import datetime
 import sys
+from enum import Enum
 
 from rafiki.model import Params
-from rafiki.advisor import ParamsType
 
 from .cache import Cache
 
 logger = logging.getLogger(__name__)
 
 class InvalidParamsError(Exception): pass
+
+class ParamsType(Enum):
+    LOCAL_RECENT = 'LOCAL_RECENT'
+    LOCAL_BEST = 'LOCAL_BEST'
+    GLOBAL_RECENT = 'GLOBAL_RECENT'
+    GLOBAL_BEST = 'GLOBAL_BEST'
+    NONE = 'NONE'
     
 REDIS_NAMESPACE = 'PARAMS'
 REDIS_LOCK_EXPIRE_SECONDS = 60
@@ -26,27 +32,25 @@ REDIS_LOCK_WAIT_SLEEP_SECONDS = 0.1
 _ParamMeta = namedtuple('_ParamMeta', ('param_id', 'score', 'time'))
 
 class ParamStore(object):
-    _worker_to_best: Dict[str, _ParamMeta] = {}
-    _worker_to_recent: Dict[str, _ParamMeta] = {}
-
     '''
         Internally, organises data into these Redis namespaces:
 
         <session_id>:lock                | 0-1 lock for this session, 1 for acquired                
         <session_id>:param:<param_id>    | Params by ID
-        <session_id>:meta                | Aggregate of all the required metadata: 
-                                            { worker_to_best: { worker_id: { score, time, param_id } }, 
-                                            worker_to_recent: { worker_id: { score, time, param_id } } }            
+        <session_id>:meta                | Aggregate of all global metadata: 
+                                            { params:   { GLOBAL_BEST:     { score, time, param_id }, 
+                                                        { GLOBAL_RECENT:   { score, time, param_id }   }            
     '''
     
     '''
-    Store API that retrieves and stores parameters for a session & a worker, backed an in-memory cache and Redis (optional).
+    Store API that retrieves and stores parameters for a session & a worker, backed by an in-memory cache and Redis for cross-worker sharing (optional).
 
     :param str session_id: Session ID associated with the parameters
     :param str worker_id: Worker ID associated with the parameters
     '''
     def __init__(self, session_id='local', worker_id='local', cache_size=4, redis_host=None, redis_port=6379):
         self._uid = str(uuid.uuid4()) # Process identifier for distributed locking
+        self._params: Dict[str, _ParamMeta] = {} # Stores params metadata
         self._sid = session_id
         self._worker_id = worker_id
         self._redis = self._make_redis_client(redis_host, redis_port) if redis_host is not None else None
@@ -71,25 +75,15 @@ class ParamStore(object):
         try:
             # With redis, sync in-memory metadata with Redis'
             if self._redis:
-                (self._worker_to_best, self._worker_to_recent) = self._pull_metadata_from_redis()
+                self._pull_from_redis()
 
-            (param_ids_to_delete, param_meta) = self._update_metadata(score, time)
-            
-            if self._redis:
-                if len(param_ids_to_delete) > 0:
-                    # Delete outdated params from Redis
-                    self._delete_params_from_redis(*param_ids_to_delete)
-                
-                if param_meta:
-                    # Store input params on Redis
-                    self._push_params_to_redis(param_meta.param_id, params)
-                
-                # Update metadata
-                self._push_metadata_to_redis(self._worker_to_best, self._worker_to_recent)
-
+            param_meta = self._update_params_meta(score, time)
             if param_meta:
                 # Store input params in in-memory cache
                 self._params_cache.put(param_meta.param_id, params)
+
+            if self._redis:
+                self._push_to_redis()
 
         finally:
             # Release lock
@@ -111,7 +105,7 @@ class ParamStore(object):
         try:
             # With redis, sync in-memory metadata with Redis'
             if self._redis:
-                (self._worker_to_best, self._worker_to_recent) = self._pull_metadata_from_redis()
+                self._pull_from_redis()
 
             # Get param id to fetch
             param_id = self._get_params_by_type(params_type)
@@ -153,37 +147,35 @@ class ParamStore(object):
     # Policies for params storage
     ####################################
 
-    # Given input params with score & time, update metadata
-    def _update_metadata(self, score: float, time: datetime):
-        worker_id = self._worker_id
-
-        # Record original param IDs
-        og_param_ids = set([x.param_id for x in chain(self._worker_to_best.values(), self._worker_to_recent.values())])
-
+    # Given input params with score & time, update params metadata
+    # Returns param meta for the input params, None if params meta is not to be stored
+    def _update_params_meta(self, score: float, time: datetime):
         score = score or 0
         time = time or datetime.now()
         param_id = str(uuid.uuid4()) # Give it an ID
         param_meta = _ParamMeta(param_id, score, time)
+        
+        # Update local recent params
+        prev_meta = self._params.get('LOCAL_RECENT')
+        if prev_meta is None or time >= prev_meta.time:
+            self._params['LOCAL_RECENT'] = param_meta
 
-        # Maintain best params
-        prev_best_meta = self._worker_to_best.get(worker_id)
-        if prev_best_meta is None or score > prev_best_meta.score:
-            self._worker_to_best[worker_id] = param_meta
+        # Update local best params
+        prev_meta = self._params.get('LOCAL_BEST')
+        if prev_meta is None or score >= prev_meta.score:
+            self._params['LOCAL_BEST'] = param_meta
 
-        # Maintain recent params
-        prev_recent_meta = self._worker_to_recent.get(worker_id)
-        if prev_recent_meta is None or time > prev_recent_meta.time:
-            self._worker_to_recent[worker_id] = param_meta
+        # Update global recent params
+        prev_meta = self._params.get('GLOBAL_RECENT')
+        if prev_meta is None or time >= prev_meta.time:
+            self._params['GLOBAL_RECENT'] = param_meta
 
-        to_delete = [] # List of param IDs to be deleted
+        # Update global best params
+        prev_meta = self._params.get('GLOBAL_BEST')
+        if prev_meta is None or score >= prev_meta.score:
+            self._params['GLOBAL_BEST'] = param_meta
 
-        # If any original param IDs are gone, to delete them
-        # If input param ID was added, to store it
-        new_param_ids = set([x.param_id for x in chain(self._worker_to_best.values(), self._worker_to_recent.values())])
-        to_store = param_id in new_param_ids
-        to_delete = [x for x in og_param_ids if x not in new_param_ids]
-
-        return (to_delete, param_meta if to_store else None)
+        return param_meta
 
     def _get_params_by_type(self, params_type: ParamsType) -> str:
         if params_type == ParamsType.NONE:
@@ -200,76 +192,97 @@ class ParamStore(object):
             raise InvalidParamsError('No such params type: "{}"'.format(params_type))
 
     def _get_local_recent_params(self):
-        worker_id = self._worker_id
-        if worker_id not in self._worker_to_recent:
+        param_meta = self._params.get('LOCAL_RECENT')
+        if param_meta is None:
             return None
-        
-        params = self._worker_to_recent[worker_id]
-        return params.param_id
+
+        return param_meta.param_id
 
     def _get_local_best_params(self):
-        worker_id = self._worker_id
-        if worker_id not in self._worker_to_best:
+        param_meta = self._params.get('LOCAL_BEST')
+        if param_meta is None:
             return None
         
-        params = self._worker_to_best[worker_id]
-        return params.param_id
+        return param_meta.param_id
 
     def _get_global_recent_params(self):
-        recent_params = [(params.time, params) for params in self._worker_to_recent.values()]
-        if len(recent_params) == 0:
+        param_meta = self._params.get('GLOBAL_RECENT')
+        if param_meta is None:
             return None
 
-        recent_params.sort()
-        (_, params) = recent_params[-1]
-        return params.param_id
+        return param_meta.param_id
 
     def _get_global_best_params(self):
-        best_params = [(params.score, params) for params in self._worker_to_best.values()]
-        if len(best_params) == 0:
+        param_meta = self._params.get('GLOBAL_BEST')
+        if param_meta is None:
             return None
 
-        best_params.sort()
-        (_, params) = best_params[-1]
-        return params.param_id
+        return param_meta.param_id
 
     ####################################
     # Redis communication
     ####################################
 
-    def _pull_metadata_from_redis(self):  
+    # Pulls metadata from Redis, updating local metadata
+    def _pull_from_redis(self):
+        redis_params = self._pull_metadata_from_redis()
+
+        # Merge with local params meta
+        for (param_type, param_meta) in redis_params.items():
+            self._params[param_type] = param_meta
+        
+    # Pushes metadata & selected params to Redis, deletes outdated params on Redis
+    def _push_to_redis(self):        
+        params_to_push = ['GLOBAL_BEST', 'GLOBAL_RECENT']
+
+        # Extract params meta to share
+        params_shared = { param_type: param_meta for (param_type, param_meta) in self._params.items() if param_type in params_to_push }
+        
+        # Compare new against old params, and determine which params to push and delete from Redis 
+        redis_params = self._pull_metadata_from_redis()
+        og_param_ids = set([x.param_id for x in redis_params.values()])
+        new_param_ids = set([x.param_id for x in params_shared.values()])
+        to_add = [x for x in new_param_ids if x not in og_param_ids]
+        to_delete = [x for x in og_param_ids if x not in new_param_ids]
+
+        # For each param to add, push it
+        for param_id in to_add:
+            params = self._params_cache.get(param_id)
+            if params:
+                self._push_params_to_redis(param_id, params)
+        
+        # Delete params to delete
+        self._delete_params_from_redis(*to_delete)
+
+        # Push updated metadata to Redis
+        self._push_metadata_to_redis(params_shared)
+    
+    def _push_metadata_to_redis(self, params):
         meta_name = self._get_redis_name('meta')
-        metadata_str = self._get_from_redis(meta_name)
-
-        worker_to_best = {}
-        worker_to_recent = {}
-        if metadata_str is not None:
-            metadata = json.loads(metadata_str)
-            logger.info('Pulled metadata from Redis: {}'.format(metadata))
-            worker_to_best = { worker_id: self._jsonable_to_param_meta(jsonable) 
-                            for (worker_id, jsonable) in metadata['worker_to_best'].items() }
-            worker_to_recent = { worker_id: self._jsonable_to_param_meta(jsonable) 
-                            for (worker_id, jsonable) in metadata['worker_to_recent'].items() }
-
-        return (worker_to_best, worker_to_recent) 
-
-    def _push_metadata_to_redis(self, worker_to_best, worker_to_recent):        
-        meta_name = self._get_redis_name('meta')
-
-        worker_to_best = { worker_id: self._param_meta_to_jsonable(meta) 
-                        for (worker_id, meta) in worker_to_best.items() }
-        worker_to_recent = { worker_id: self._param_meta_to_jsonable(meta) 
-                        for (worker_id, meta) in worker_to_recent.items() }
-
+        redis_params = { param_type: self._param_meta_to_jsonable(param_meta) for (param_type, param_meta) in params.items() }
         metadata = {
-            'worker_to_best': worker_to_best,
-            'worker_to_recent': worker_to_recent
+            'params': redis_params
         }
-
         logger.info('Pushing metadata to Redis: {}...'.format(metadata))
 
         metadata_str = json.dumps(metadata)
         self._redis.set(meta_name, metadata_str)
+
+    def _pull_metadata_from_redis(self):
+        meta_name = self._get_redis_name('meta')
+        metadata_str = self._get_from_redis(meta_name)
+
+        # Pull metadata from redis
+        if metadata_str is not None:
+            metadata = json.loads(metadata_str)
+            logger.info('Pulled metadata from Redis: {}'.format(metadata))
+
+            # For each param stored on Redis, update its metadata
+            params = metadata.get('params', {})
+            params = { param_type: self._jsonable_to_param_meta(jsonable) for (param_type, jsonable) in params.items() }
+            return params
+
+        return {}
 
     def _delete_params_from_redis(self, *param_ids):
         logger.info('Deleting params: {}...'.format(param_ids))

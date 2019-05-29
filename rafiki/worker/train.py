@@ -10,9 +10,9 @@ from rafiki.utils.auth import make_superadmin_client
 from rafiki.client import Client
 from rafiki.constants import BudgetType, TrainJobStatus, TrialStatus, ServiceStatus
 from rafiki.meta_store import MetaStore, DuplicateTrialNoError
-from rafiki.advisor import Proposal, ParamsType, TrainStrategy, EvalStrategy
+from rafiki.advisor import Proposal, TrainStrategy, EvalStrategy
 from rafiki.model import BaseModel, load_model_class, serialize_knob_config, logger as model_logger
-from rafiki.param_store import ParamStore
+from rafiki.param_store import ParamStore, ParamsType
 
 logger = logging.getLogger(__name__)
 

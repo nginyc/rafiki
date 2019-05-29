@@ -36,7 +36,7 @@ class RedisMock():
         return not is_set
 
     def keys(self, patt):
-        # TODO: Do more accuracte implementation based on pattern
+        # TODO: Do more accurate implementation based on pattern
         return self.data.keys()
     
     def delete(self, *keys):

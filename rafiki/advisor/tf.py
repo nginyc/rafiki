@@ -7,8 +7,9 @@ import logging
 from collections import defaultdict
 
 from rafiki.model import ListKnob, CategoricalKnob, FixedKnob
+from rafiki.param_store import ParamsType
 
-from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, ParamsType, TrainStrategy, EvalStrategy
+from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, TrainStrategy, EvalStrategy
 
 logger = logging.getLogger(__name__)
 

@@ -6,8 +6,9 @@ import math
 import numpy as np
 
 from rafiki.model import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob
+from rafiki.param_store import ParamsType
 
-from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, ParamsType, TrainStrategy
+from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, TrainStrategy
 
 class ParamPolicy(Enum):
     NONE = 'NONE'
