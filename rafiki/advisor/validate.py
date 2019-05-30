@@ -17,7 +17,7 @@ from rafiki.constants import TaskType, ModelDependency
 from rafiki.param_store import ParamStore, ParamsType
 from rafiki.predictor import ensemble_predictions
 
-from .advisor import make_advisor, BaseAdvisor,  TrainStrategy, EvalStrategy
+from .advisor import make_advisor, BaseAdvisor
 
 class InvalidModelClassException(Exception): pass
 
@@ -88,23 +88,21 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         proposal.knobs = { **proposal.knobs, **knobs_from_args } 
         print('Advisor proposed knobs:', proposal.knobs)
         print('Advisor proposed params:', proposal.params_type.name)
-        print('Advisor proposed train strategy:', proposal.train_strategy.name)
-        print('Advisor proposed eval strategy:', proposal.eval_strategy.name)
+        print('Advisor proposed whether to train:', proposal.should_train)
+        print('Advisor proposed whether to evaluate:', proposal.should_eval)
 
         # Retrieve params from store
         params = param_store.retrieve_params(proposal.params_type)
 
         # Load model
-        model_inst = py_model_class(train_strategy=proposal.train_strategy, 
-                                    eval_strategy=proposal.eval_strategy,
-                                    **proposal.knobs)
+        model_inst = py_model_class(**proposal.knobs)
         if params is not None:
             print('Loading params for model...')
             model_inst.load_parameters(params)
 
         # Train model
         trial_params = None
-        if proposal.train_strategy != TrainStrategy.NONE:
+        if proposal.should_train:
             print('Training model...')
             model_inst.train(train_dataset_uri)
             trial_params = model_inst.dump_parameters() or None
@@ -113,7 +111,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
 
         # Evaluate model
         score = None
-        if proposal.eval_strategy != EvalStrategy.NONE:
+        if proposal.should_eval:
             print('Evaluating model...')
             score = model_inst.evaluate(val_dataset_uri)
             if not isinstance(score, float):
@@ -216,9 +214,7 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
     py_model_class.setup()
 
     _print_header('Checking loading of parameters from disk...')
-    model_inst = py_model_class(train_strategy=proposal.train_strategy, 
-                                eval_strategy=proposal.eval_strategy,
-                                **proposal.knobs)
+    model_inst = py_model_class(**proposal.knobs)
     model_inst.load_parameters_from_disk(params_dir)
 
     if len(queries) > 0:
