@@ -98,25 +98,10 @@ class BaseModel(abc.ABC):
         '''
         raise NotImplementedError()
 
-    @abc.abstractmethod
-    def save_parameters_to_disk(self, params_dir: str):
-        '''
-        Saves the parameters of this model to a directory.
-        This will be called only when model is *trained*.
-        '''
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def load_parameters_from_disk(self, params_dir: str):
-        '''
-        Loads the parameters of this model from a directory.
-        The model will be considered *trained* subsequently.
-        '''
-        raise NotImplementedError()
-
     def dump_parameters(self) -> Union[None, Params]:
         '''
-        Returns a dictionary of model parameters to share with future trials, after the model has been *trained*.
+        Returns a dictionary of model parameters for persistence and to share with future trials, 
+        after the model has been *trained*.
         :returns: { <param_name>: <param_value> }
         :rtype: Union[None, Params]
         '''
@@ -124,7 +109,7 @@ class BaseModel(abc.ABC):
 
     def load_parameters(self, params: Params):
         '''
-        Loads the parameters of this model that has been shared from previous trials.
+        Loads the parameters of this model that has been persisted, or has been shared from previous trials.
         The model will be considered *trained* subsequently.
         :param Params params: { <param_name>: <param_value> }
         '''

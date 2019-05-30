@@ -87,7 +87,7 @@ class TrainWorker(object):
                 # Train & evaluate model for trial
                 logger.info('Running trial...')
                 self._job_monitor.mark_trial_as_running(self._trial_id, proposal)
-                (score, trial_params, params_dir) = \
+                (score, trial_params, params_file_path) = \
                     self._train_and_evaluate_model(job_info, clazz, proposal, params)
 
                 # Give feedback based on result of trial
@@ -98,7 +98,7 @@ class TrainWorker(object):
                     self._params_store.store_params(trial_params, score)
 
                 # Mark trial as completed
-                self._job_monitor.mark_trial_as_completed(self._trial_id, score, params_dir)
+                self._job_monitor.mark_trial_as_completed(self._trial_id, score, params_file_path)
                 
             except Exception as e:
                 logger.error('Error while running trial:')
@@ -172,9 +172,8 @@ class TrainWorker(object):
         if proposal.should_train:
             logger.info('Training model...')
             model_inst.train(train_dataset_uri)
-            trial_params = model_inst.dump_parameters() or None
-            if trial_params:
-                logger.info('Trial produced {} parameters'.format(len(trial_params)))
+            trial_params = model_inst.dump_parameters()
+            logger.info('Trial produced {} parameters'.format(len(trial_params)))
 
         # Evaluate model
         score = None
@@ -184,15 +183,17 @@ class TrainWorker(object):
             logger.info('Trial score: {}'.format(score))
 
         # Save model
-        params_dir = None
+        params_file_path = None
         if proposal.should_save_to_disk:
             logger.info('Saving trained model to disk...')
-            params_dir = os.path.join(self._params_root_dir, self._trial_id)
-            if not os.path.exists(params_dir):
-                os.mkdir(params_dir)
-            model_inst.save_parameters_to_disk(params_dir)
+            if trial_params is None:
+                trial_params = model_inst.dump_parameters()
+            params_bytes = ParamStore.serialize_params(trial_params)
+            params_file_path = os.path.join(self._params_root_dir, '{}.model'.format(self._trial_id))
+            with open(params_file_path, 'wb') as f:
+                f.write(params_bytes)
 
-        return (score, trial_params, params_dir)
+        return (score, trial_params, params_file_path)
 
     def _create_trial(self):
         trial_no = None
@@ -411,11 +412,11 @@ class _SubTrainJobMonitor():
             trial = self._meta_store.get_trial(trial_id)
             self._meta_store.mark_trial_as_running(trial, proposal.to_jsonable())
 
-    def mark_trial_as_completed(self, trial_id, score, params_dir):
+    def mark_trial_as_completed(self, trial_id, score, params_file_path):
         logger.info('Marking trial as completed in store...')
         with self._meta_store:
             trial = self._meta_store.get_trial(trial_id)
-            self._meta_store.mark_trial_as_completed(trial, score, params_dir)
+            self._meta_store.mark_trial_as_completed(trial, score, params_file_path)
 
     def mark_trial_as_terminated(self, trial_id):
         logger.info('Marking trial as terminated in store...')

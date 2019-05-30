@@ -158,33 +158,6 @@ class TfEnas(BaseModel):
             probs = self._predict_with_model(images, **self._knobs)
         return probs.tolist()
 
-    def save_parameters_to_disk(self, params_dir):
-        # Save model parameters
-        model_file_path = os.path.join(params_dir, 'model')
-        with self._graph.as_default():
-            self._saver.save(self._sess, model_file_path)
-
-        # Save pre-processing params
-        train_params_file_path = os.path.join(params_dir, 'train_params.json')
-        with open(train_params_file_path, 'w') as f:
-            f.write(json.dumps(self._train_params))
-
-    def load_parameters_from_disk(self, params_dir):
-        # Load pre-processing params
-        train_params_file_path = os.path.join(params_dir, 'train_params.json')
-        with open(train_params_file_path, 'r') as f:
-            json_str = f.read()
-            self._train_params = json.loads(json_str)
-
-        # Build model
-        (self._model, self._graph, self._sess, 
-            self._saver, self._monitored_values) = self._maybe_build_model(**self._knobs)
-
-        # Load model parameters
-        with self._graph.as_default():
-            model_file_path = os.path.join(params_dir, 'model')
-            self._saver.restore(self._sess, model_file_path)
-
     def dump_parameters(self):
         params = {}
 

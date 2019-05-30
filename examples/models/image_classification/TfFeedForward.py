@@ -7,8 +7,8 @@ import tempfile
 import numpy as np
 import base64
 
-from rafiki.advisor import IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob
-from rafiki.model import BaseModel, test_model_class, utils
+from rafiki.advisor import test_model_class
+from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob
 from rafiki.constants import TaskType, ModelDependency
 
 class TfFeedForward(BaseModel):
@@ -114,30 +114,46 @@ class TfFeedForward(BaseModel):
     def destroy(self):
         self._sess.close()
 
-    def dump_parameters(self, params_dir):
-        # Save pre-processing params
-        train_params_file_path = os.path.join(params_dir, 'train_params.json')
-        with open(train_params_file_path, 'w') as f:
-            f.write(json.dumps(self._train_params))
+    def dump_parameters(self):
+        params = {}
 
-        # Save model
-        model_file_path = os.path.join(params_dir, 'model.h5')
-        with self._graph.as_default():
-            with self._sess.as_default():
-                self._model.save(model_file_path)
+        # Add train params
+        params['train_params'] = json.dumps(self._train_params)
 
-    def load_parameters(self, params_dir):
-        # Load pre-processing params
-        train_params_file_path = os.path.join(params_dir, 'train_params.json')
-        with open(train_params_file_path, 'r') as f:
-            json_str = f.read()
-            self._train_params = json.loads(json_str)
+        # Save model parameters
+        with tempfile.NamedTemporaryFile() as tmp:
+            # Save whole model to temp h5 file
+            with self._graph.as_default():
+                with self._sess.as_default():
+                    self._model.save(tmp.name)
+        
+            # Read from temp h5 file & encode it to base64 string
+            with open(tmp.name, 'rb') as f:
+                h5_model_bytes = f.read()
 
-        # Load model
-        model_file_path = os.path.join(params_dir, 'model.h5')
-        with self._graph.as_default():
-            with self._sess.as_default():
-                self._model = keras.models.load_model(model_file_path)
+            params['h5_model_base64'] = base64.b64encode(h5_model_bytes).decode('utf-8')
+
+        return params
+
+    def load_parameters(self, params):
+        # Load model parameters
+        h5_model_base64 = params.get('h5_model_base64', None)
+        if h5_model_base64 is None:
+            raise InvalidModelParamsException()
+
+        with tempfile.NamedTemporaryFile() as tmp:
+            # Convert back to bytes & write to temp file
+            h5_model_bytes = base64.b64decode(h5_model_base64.encode('utf-8'))
+            with open(tmp.name, 'wb') as f:
+                f.write(h5_model_bytes)
+
+            # Load model from temp file
+            with self._graph.as_default():
+                with self._sess.as_default():
+                    self._model = keras.models.load_model(tmp.name)
+        
+        # Add train params
+        self._train_params = json.loads(params['train_params'])
 
     def _on_train_epoch_end(self, epoch, logs):
         loss = logs['loss']

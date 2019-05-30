@@ -33,6 +33,31 @@ REDIS_LOCK_WAIT_SLEEP_SECONDS = 0.1
 _ParamMeta = namedtuple('_ParamMeta', ('param_id', 'score', 'time'))
 
 class ParamStore(object):
+    
+    @staticmethod
+    def serialize_params(params):
+        # Convert numpy arrays to lists
+        params_simple = { 
+            name: value.tolist() if isinstance(value, np.ndarray) else value
+            for (name, value) in params.items() 
+        }
+
+        # Serialize as `msgpack`
+        params_bytes = msgpack.packb(params_simple, use_bin_type=True)
+        return params_bytes
+
+    @staticmethod
+    def deserialize_params(params_bytes):
+        # Deserialize as `msgpack`
+        params = msgpack.unpackb(params_bytes, raw=False)
+
+        # Convert lists or numbers to numpy arrays
+        for (name, value) in params.items():
+            if isinstance(value, (list, int, float)):
+                params[name] = np.asarray(value)
+        
+        return params
+
     '''
         Internally, organises data into these Redis namespaces:
 
@@ -303,7 +328,7 @@ class ParamStore(object):
     def _push_params_to_redis(self, param_id: str, params: Params):
         logger.info('Pushing params: "{}"...'.format(param_id))
         param_name = self._get_redis_name('param:{}'.format(param_id))
-        params_bytes = self._serialize_params(params)
+        params_bytes = self.serialize_params(params)
         self._redis.set(param_name, params_bytes)
 
     def _pull_params_from_redis(self, param_id: str) -> Params:
@@ -313,7 +338,7 @@ class ParamStore(object):
         if params_bytes is None:
             return None
             
-        params = self._deserialize_params(params_bytes)
+        params = self.deserialize_params(params_bytes)
         return params
 
     def _make_redis_client(self, host, port):
@@ -365,29 +390,6 @@ class ParamStore(object):
         jsonable['time'] = datetime.strptime(jsonable['time'], '%Y-%m-%d %H:%M:%S.%f')
         param_meta = _ParamMeta(**jsonable)
         return param_meta
-
-    def _serialize_params(self, params):
-        # Convert numpy arrays to lists
-        params_simple = { 
-            name: value.tolist() if isinstance(value, np.ndarray) else value
-            for (name, value) in params.items() 
-        }
-
-        # Serialize as `msgpack`
-        params_bytes = msgpack.packb(params_simple)
-        return params_bytes
-
-    def _deserialize_params(self, params_bytes):
-        # Deserialize as `msgpack`
-        params = msgpack.unpackb(params_bytes)
-        params = { k.decode(): v for (k, v) in params.items() }
-
-        # Convert lists or numbers to numpy arrays
-        for (name, value) in params.items():
-            if isinstance(value, (list, int, float)):
-                params[name] = np.asarray(value)
-        
-        return params
 
     def _get_redis_name(self, suffix):
         return '{}:{}:{}'.format(REDIS_NAMESPACE, self._sid, suffix)

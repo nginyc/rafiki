@@ -21,7 +21,7 @@ class InvalidWorkerError(Exception): pass
 
 _SubInferenceJob = namedtuple('_SubInferenceJob', ['id'])
 _InferenceJob = namedtuple('_InferenceJob', ['id'])
-_Trial = namedtuple('_Trial', ['proposal', 'params_dir']) 
+_Trial = namedtuple('_Trial', ['proposal', 'params_file_path']) 
 _Model = namedtuple('_Model', ['id', 'model_file_bytes', 'model_class']) 
 
 class InferenceWorker(object):
@@ -91,7 +91,10 @@ class InferenceWorker(object):
         logger.info('Loading trained model...')
         model_inst = clazz(**proposal.knobs)
                     
-        model_inst.load_parameters_from_disk(trial.params_dir)
+        with open(trial.params_file_path, 'rb') as f:
+            params_bytes = f.read()
+        params = ParamStore.deserialize_params(params_bytes)
+        model_inst.load_parameters(params)
 
         return model_inst
 
@@ -111,7 +114,7 @@ class InferenceWorker(object):
                 raise InvalidWorkerError('No such inference job with ID "{}"'.format(sub_inference_job.inference_job_id))
 
             trial = self._meta_store.get_trial(sub_inference_job.trial_id)
-            if trial is None or trial.params_dir is None: # Must have model saved
+            if trial is None or trial.params_file_path is None: # Must have model saved
                 raise InvalidWorkerError('No such trial with ID "{}"'.format(sub_inference_job.trial_id))
             
             model = self._meta_store.get_model(trial.model_id)
@@ -124,6 +127,6 @@ class InferenceWorker(object):
             return (
                 _SubInferenceJob(sub_inference_job.id),
                 _InferenceJob(inference_job.id),
-                _Trial(proposal, trial.params_dir),
+                _Trial(proposal, trial.params_file_path),
                 _Model(model.id, model.model_file_bytes, model.model_class)
             )

@@ -54,7 +54,7 @@ class SkDt(BaseModel):
         probs = self._clf.predict_proba(X)
         return probs.tolist()
 
-    def save_parameters_to_disk(self, params_dir):
+    def dump_parameters(self):
         params = {}
 
         # Put model parameters
@@ -65,18 +65,9 @@ class SkDt(BaseModel):
         # Put image size
         params['image_size'] = self._image_size
 
-        # Save params to disk
-        train_params_file_path = os.path.join(params_dir, 'params.json')
-        with open(train_params_file_path, 'w') as f:
-            f.write(json.dumps(params))
-        
-    def load_parameters_from_disk(self, params_dir):
-        # Load params from disk
-        train_params_file_path = os.path.join(params_dir, 'params.json')
-        with open(train_params_file_path, 'r') as f:
-            json_str = f.read()
-            params = json.loads(json_str)
+        return params
 
+    def load_parameters(self, params):
         # Load model parameters
         clf_base64 = params['clf_base64']
         clf_bytes = base64.b64decode(clf_base64.encode('utf-8'))
@@ -84,7 +75,6 @@ class SkDt(BaseModel):
 
         # Load image size
         self._image_size = params['image_size']
-
 
     def _prepare_X(self, images):
         return [np.asarray(image).flatten() for image in images]

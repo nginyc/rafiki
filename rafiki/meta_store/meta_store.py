@@ -428,7 +428,7 @@ class MetaStore(object):
             .join(SubTrainJob, Trial.sub_train_job_id == SubTrainJob.id) \
             .filter(SubTrainJob.train_job_id == train_job_id) \
             .filter(Trial.status == TrialStatus.COMPLETED) \
-            .filter(Trial.params_dir != None) \
+            .filter(Trial.params_file_path != None) \
             .order_by(Trial.score.desc()) \
             .limit(max_count).all()
 
@@ -468,10 +468,10 @@ class MetaStore(object):
         self._session.add(trial)
         return trial
 
-    def mark_trial_as_completed(self, trial, score, params_dir):
+    def mark_trial_as_completed(self, trial, score, params_file_path):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
-        trial.params_dir = params_dir
+        trial.params_file_path = params_file_path
         trial.datetime_stopped = datetime.utcnow()
         trial.datetime_updated = datetime.utcnow()
         self._session.add(trial)

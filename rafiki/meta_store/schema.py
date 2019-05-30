@@ -116,7 +116,7 @@ class Trial(Base):
     datetime_updated = Column(DateTime, nullable=False, default=generate_datetime)
     status = Column(String, nullable=False, default=TrialStatus.PENDING)
     worker_id = Column(String, nullable=False)
-    params_dir = Column(String, default=None)
+    params_file_path = Column(String, default=None)
     score = Column(Float, default=None)
     proposal = Column(JSON, default=None)
     datetime_stopped = Column(DateTime, default=None)

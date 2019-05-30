@@ -67,34 +67,6 @@ class PyDenseNetBc(BaseModel):
         (probs, _) = self._predict(dataset)
         return probs
 
-    def save_parameters_to_disk(self, params_dir):
-        # Save state dict of net
-        model_file_path = os.path.join(params_dir, 'model.pt')
-        torch.save(self._model.net.state_dict(), model_file_path)
-
-        # Save pre-processing params
-        train_params_file_path = os.path.join(params_dir, 'train_params.json')
-        with open(train_params_file_path, 'w') as f:
-            f.write(json.dumps(self._train_params))
-
-    def load_parameters_from_disk(self, params_dir):
-        # Load pre-processing params
-        train_params_file_path = os.path.join(params_dir, 'train_params.json')
-        with open(train_params_file_path, 'r') as f:
-            json_str = f.read()
-            self._train_params = json.loads(json_str)
-
-        # Load state dict of net
-        model_file_path = os.path.join(params_dir, 'model.pt')
-        if torch.cuda.is_available():
-            net_state_dict = torch.load(model_file_path)
-        else:
-            net_state_dict = torch.load(model_file_path, map_location=lambda storage, location: storage)
-
-        # Build model & load its state dict
-        self._model = self._build_model()
-        self._model.net.load_state_dict(net_state_dict)
-
     def dump_parameters(self):
         (net, step) = self._model
 

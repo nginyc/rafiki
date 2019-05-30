@@ -69,7 +69,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     best_trial_no = 0 
     best_model_test_score = None
     best_proposal = None
-    best_model_params_dir = None
+    best_model_params_file_path = None
 
     # Setup model class
     print('Running model class setup...')
@@ -105,7 +105,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
         if proposal.should_train:
             print('Training model...')
             model_inst.train(train_dataset_uri)
-            trial_params = model_inst.dump_parameters() or None
+            trial_params = model_inst.dump_parameters()
             if trial_params:
                 print('Model produced {} params'.format(len(trial_params)))
 
@@ -126,16 +126,19 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
                 _info('Best model so far! Beats previous best of score {}!'.format(best_model_score))
                        
                 # Save best model
-                params_dir = None
+                params_file_path = None
                 if proposal.should_save_to_disk:
                     print('Saving trained model to disk...')
-                    params_dir = os.path.join(params_root_dir, trial_id + '/')
-                    if not os.path.exists(params_dir):
-                        os.mkdir(params_dir)
-                    model_inst.save_parameters_to_disk(params_dir)
-                    _info('Model saved to {}'.format(params_dir))
+                    if trial_params is None:
+                        trial_params = model_inst.dump_parameters()
 
-                best_model_params_dir = params_dir
+                    params_bytes = ParamStore.serialize_params(trial_params)
+                    params_file_path = os.path.join(params_root_dir, '{}.model'.format(trial_id))
+                    with open(params_file_path, 'wb') as f:
+                        f.write(params_bytes)
+                    _info('Model saved to {}'.format(params_file_path))
+
+                best_model_params_file_path = params_file_path
                 best_proposal = proposal
                 best_model_score = score
                 best_trial_no = i
@@ -159,8 +162,8 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     _info('Best trial #{} has knobs {} with score of {}'.format(best_trial_no, best_proposal.knobs, best_model_score))
     if best_model_test_score is not None:
         _info('...with test score of {}'.format(best_model_test_score))
-    if best_model_params_dir is not None:
-        _info('...saved at {}'.format(best_model_params_dir)) 
+    if best_model_params_file_path is not None:
+        _info('...saved at {}'.format(best_model_params_file_path)) 
         
     # Teardown model class
     print('Running model class teardown...')
@@ -170,11 +173,11 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_uri: str, val_data
     duration = time.time() - start_time
     print('Tuning took a total of {}s'.format(duration))
 
-    return (best_proposal, best_model_test_score, best_model_params_dir)
+    return (best_proposal, best_model_test_score, best_model_params_file_path)
 
 # TODO: Fix method, more thorough testing of model API
 def test_model_class(model_file_path: str, model_class: str, task: str, dependencies: Dict[str, str],
-                    train_dataset_uri: str, val_dataset_uri: str, enable_gpu: bool = True, queries: list = []):
+                    train_dataset_uri: str, val_dataset_uri: str, enable_gpu: bool = False, queries: list = []):
     '''
     Tests whether a model class is properly defined by running a full train-inference flow.
     The model instance's methods will be called in an order similar to that in Rafiki.
@@ -208,14 +211,17 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
     _check_model_class(py_model_class)
 
     # Simulation of training
-    (proposal, _, params_dir) = tune_model(py_model_class, train_dataset_uri, val_dataset_uri, total_trials=2)
+    (proposal, _, params_file_path) = tune_model(py_model_class, train_dataset_uri, val_dataset_uri, total_trials=2)
    
     # Simulation of serving
     py_model_class.setup()
 
     _print_header('Checking loading of parameters from disk...')
     model_inst = py_model_class(**proposal.knobs)
-    model_inst.load_parameters_from_disk(params_dir)
+    with open(params_file_path, 'rb') as f:
+        params_bytes = f.read()
+    params = ParamStore.deserialize_params(params_bytes)
+    model_inst.load_parameters(params)
 
     if len(queries) > 0:
         _print_header('Checking predictions...')
@@ -316,7 +322,6 @@ def _check_knob_config(knob_config):
     # Try serializing and deserialize knob config
     knob_config_bytes = serialize_knob_config(knob_config)
     knob_config = deserialize_knob_config(knob_config_bytes)
-
 
 def _assert_jsonable(jsonable, exception=None):
     try:
