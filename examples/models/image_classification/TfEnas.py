@@ -10,9 +10,9 @@ from collections import namedtuple
 import numpy as np
 import argparse
 
-from rafiki.advisor import tune_model, make_advisor, TrainStrategy, EvalStrategy, AdvisorType
+from rafiki.advisor import tune_model, make_advisor, AdvisorType
 from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
-                            FixedKnob, ListKnob, KnobValue
+                            FixedKnob, ListKnob, KnobValue, PolicyKnob
 
 _Model = namedtuple('_Model', ['train_dataset_init_op', 'pred_dataset_init_op', 'train_op', 'summary_op',  
                                 'pred_probs', 'pred_corrects', 'train_corrects', 'step', 'vars_assign_op', 'ph', 'var_phs'])
@@ -64,18 +64,21 @@ class TfEnas(BaseModel):
             'grad_clip_norm': FixedKnob(0),
             'use_aux_head': FixedKnob(False),
             'use_dynamic_arch': FixedKnob(False),
-            'use_quick_eval': FixedKnob(False),
             'summaries_dir': FixedKnob(''), # Directory to save summaries & runtime metadata to
             'init_params_dir': FixedKnob(''), # Params directory to resume training from
 
-            # Early stop settings
+            # Affects whether training is shortened by reducing no. of epochs & no. of layers
+            'quick_train': PolicyKnob('QUICK_TRAIN'), 
             'early_stop_trial_epochs': FixedKnob(1),
             'early_stop_num_layers': FixedKnob(6), 
             'early_stop_initial_block_ch': FixedKnob(20), 
             'early_stop_dropout_keep_prob': FixedKnob(0.9),
             'early_stop_sgdr_alpha': FixedKnob(0.01),
             'early_stop_drop_path_keep_prob': FixedKnob(0.9),
-            'early_stop_drop_path_decay_epochs': FixedKnob(150)
+            'early_stop_drop_path_decay_epochs': FixedKnob(150),
+
+            # Affects whether evaluation happens only a subset of the dataset
+            'quick_eval': PolicyKnob('QUICK_EVAL')
         }
 
     @staticmethod
@@ -114,14 +117,14 @@ class TfEnas(BaseModel):
             TfEnas._model_memo.sess.close()
             TfEnas._model_memo = None
 
-    def __init__(self, train_strategy, eval_strategy, **knobs):
+    def __init__(self, **knobs):
         self._model = None
         self._graph = None
         self._sess = None
         self._saver = None
         self._monitored_values = None
         self._train_params = None
-        self._knobs = self._process_knobs(knobs, train_strategy, eval_strategy)
+        self._knobs = self._process_knobs(knobs)
 
     def train(self, dataset_uri):
         knobs = self._knobs
@@ -285,7 +288,7 @@ class TfEnas(BaseModel):
 
         # If arch is dynamic, knobs can only differ by `cell_archs`
         # Otherwise, knobs must be the same
-        ignored_knobs = ['use_quick_eval']
+        ignored_knobs = ['quick_train', 'quick_eval']
         if use_dynamic_arch:
             ignored_knobs.append('cell_archs')
         
@@ -300,9 +303,9 @@ class TfEnas(BaseModel):
     # Private methods
     ####################################
 
-    def _process_knobs(self, knobs, train_strategy, eval_strategy):
-
-        if train_strategy in [TrainStrategy.STOP_EARLY, TrainStrategy.NONE]:
+    def _process_knobs(self, knobs):
+        # Activates shortened train & eval mode
+        if knobs['quick_train'] or knobs['quick_eval']:
             knobs = {
                 **knobs,
                 'use_dynamic_arch': True,
@@ -315,12 +318,6 @@ class TfEnas(BaseModel):
                 'drop_path_decay_epochs': knobs['early_stop_drop_path_decay_epochs'],
             }
 
-        if eval_strategy in [EvalStrategy.STOP_EARLY]:
-            knobs = {
-                **knobs,
-                'use_quick_eval': True
-            }
-        
         return knobs
 
     def _load_dataset(self, dataset_uri, train_params=None, **knobs):
@@ -699,10 +696,9 @@ class TfEnas(BaseModel):
             utils.logger.log(epoch=epoch, mean_acc=mean_acc)
 
     def _evaluate_model(self, images, classes, dataset_uri=None, **knobs):
-        use_quick_eval = self._knobs['use_quick_eval'] # Whether to do eval quickly
         batch_size = self._knobs['batch_size']
         m = self._model
-        N = batch_size if use_quick_eval else len(images)
+        N = batch_size if self._knobs['quick_eval'] else len(images)
 
         self._maybe_feed_dataset_to_model(images, classes, dataset_uri=dataset_uri)
 

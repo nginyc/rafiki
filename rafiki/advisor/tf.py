@@ -6,10 +6,10 @@ import math
 import logging
 from collections import defaultdict
 
-from rafiki.model import ListKnob, CategoricalKnob, FixedKnob
+from rafiki.model import ListKnob, CategoricalKnob, FixedKnob, PolicyKnob
 from rafiki.param_store import ParamsType
 
-from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, TrainStrategy, EvalStrategy
+from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal
 
 logger = logging.getLogger(__name__)
 
@@ -25,36 +25,43 @@ class EnasAdvisor(BaseAdvisor):
     '''
     @staticmethod
     def is_compatible(knob_config):
-        # Supports only ListKnob of CategoricalKnobs, and FixedKnob
+        # Supports only ListKnob of CategoricalKnobs, FixedKnob, and PolicyKnob
         for knob in knob_config.values():
             if isinstance(knob, ListKnob):
                 for knob in knob.items:
                     if not isinstance(knob, CategoricalKnob):
                         return False
-            elif not isinstance(knob, FixedKnob):
+            elif not isinstance(knob, (FixedKnob, PolicyKnob)):
                 return False
+
+        # Prompt user that ENAS prefers having certain policies
+        policies = [x.policy for (name, x) in knob_config.items() if isinstance(x, PolicyKnob)]
+        if 'QUICK_TRAIN' not in policies or 'QUICK_EVAL' not in policies:
+            print('To speed up ENAS, having `QUICK_TRAIN` and `QUICK_EVAL` policies is preferred.')
 
         return True
         
     def __init__(self, knob_config, train_strategy=EnasTrainStrategy.ISOLATED, 
                 batch_size=10, num_eval_per_cycle=300, num_final_evals=10, 
                 do_final_train=True):
-        (self._fixed_knobs, knob_config) = _extract_fixed_knobs(knob_config)
         self._batch_size = batch_size
         self._num_eval_per_cycle = num_eval_per_cycle
         self._num_final_evals = num_final_evals
-        self._list_knob_models = self._build_models(knob_config, batch_size)
-        self._final_evals = [] # [(score, proposal)]
+        self._evals = [] # [(score, proposal)]
         self._do_final_train = do_final_train
         self._worker_to_trial_nos = defaultdict(list) # { <worker_id>: [<trial no>]}
         self._train_strategy = EnasTrainStrategy(train_strategy)
-
+        
         if self._train_strategy == EnasTrainStrategy.ORIGINAL:
             self._get_trial_type = self._get_trial_type_original
         elif self._train_strategy == EnasTrainStrategy.ISOLATED:
             self._get_trial_type = self._get_trial_type_isolated
         else:
             raise NotImplementedError()
+
+        (self._fixed_knob_config, knob_config) = self.extract_knob_type(knob_config, FixedKnob)
+        (self._policy_knob_config, knob_config) = self.extract_knob_type(knob_config, PolicyKnob)
+        self._list_knob_models = self._build_models(knob_config, batch_size)
 
     def propose(self, worker_id, trial_no, total_trials, concurrent_trial_nos=[]):
         (params_type, trial_type) = self._get_trial_type(worker_id, trial_no, total_trials, concurrent_trial_nos)
@@ -66,63 +73,61 @@ class EnasAdvisor(BaseAdvisor):
         self._worker_to_trial_nos[worker_id].append(trial_no)
 
         if trial_type == 'TRAIN':
-            knobs = self._propose_knobs()
+            knobs = self._propose_knobs(['QUICK_TRAIN'])
             return Proposal(knobs, 
                             params_type=params_type, 
-                            train_strategy=TrainStrategy.STOP_EARLY, 
-                            eval_strategy=EvalStrategy.NONE,
+                            should_eval=False,
                             should_save_to_disk=False)
         elif trial_type == 'EVAL':
-            knobs = self._propose_knobs()
+            knobs = self._propose_knobs(['QUICK_EVAL'])
             return Proposal(knobs,
                             params_type=params_type, 
-                            train_strategy=TrainStrategy.NONE, 
-                            eval_strategy=EvalStrategy.STOP_EARLY,
+                            should_train=False, 
                             should_save_to_disk=False)
         elif trial_type == 'FINAL_EVAL':
             knobs = self._propose_knobs()
             return Proposal(knobs,
                             params_type=params_type, 
-                            train_strategy=TrainStrategy.NONE, 
-                            eval_strategy=EvalStrategy.STANDARD,
+                            should_train=False, 
                             should_save_to_disk=True)
         elif trial_type == 'FINAL_TRAIN':
             # Do standard model training from scratch with final knobs
             knobs = self._propose_final_knobs()
             return Proposal(knobs, 
                             params_type=params_type,
-                            train_strategy=TrainStrategy.STANDARD,
                             should_save_to_disk=True)
 
     def feedback(self, score, proposal: Proposal):
         knobs = proposal.knobs
+        num_final_evals = self._num_final_evals
 
-        if proposal.eval_strategy == EvalStrategy.STANDARD:
-            # Keep track of final evals' scores
-            self._final_evals.append((score, proposal))
+        # Keep track of last X evals' scores
+        self._evals = [*self._evals[:(num_final_evals-1)], (score, proposal)]
 
         for (name, list_knob_model) in self._list_knob_models.items():
             knob_value = knobs[name]
             list_knob_model.feedback(knob_value, score)
 
     def _propose_final_knobs(self):
-        # If hasn't collected final evals, propose from model
-        if len(self._final_evals) == 0:
+        # If hasn't collected any evals, propose from model
+        if len(self._evals) == 0:
             return self._propose_knobs()
 
-        # Otherwise, determine best final eval and use it
-        self._final_evals.sort()
-        (_, proposal) = self._final_evals.pop()
+        # Otherwise, determine best eval and use it
+        self._evals.sort()
+        (_, proposal) = self._evals.pop()
 
         return proposal.knobs
 
-    def _propose_knobs(self):
+    def _propose_knobs(self, policies=[]):
         knobs = {}
         for (name, list_knob_model) in self._list_knob_models.items():
             knobs[name] = list_knob_model.propose()
 
-        # Add fixed knobs
-        knobs = { **self._fixed_knobs, **knobs }
+        # Add fixed & policy knobs
+        knobs = self.merge_fixed_knobs(knobs, self._fixed_knob_config)
+        knobs = self.merge_policy_knobs(knobs, self._policy_knob_config, policies)
+        
         return knobs
 
     def _build_models(self, knob_config, batch_size):
@@ -230,11 +235,6 @@ class EnasAdvisor(BaseAdvisor):
 
         min_trial_no = min(concurrent_trial_nos)
         return min_trial_no < trial_no
-
-def _extract_fixed_knobs(knob_config):
-    fixed_knobs = { name: knob.value.value for (name, knob) in knob_config.items() if isinstance(knob, FixedKnob) }
-    knob_config = { name: knob for (name, knob) in knob_config.items() if not isinstance(knob, FixedKnob) }
-    return (fixed_knobs, knob_config)
 
 class EnasListKnobAdvisor():
     def __init__(self, knob, batch_size):

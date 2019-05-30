@@ -16,8 +16,8 @@ import torchvision.transforms as transforms
 from collections import OrderedDict
 
 from rafiki.constants import TaskType, ModelDependency
-from rafiki.model import BaseModel, utils, FixedKnob, FloatKnob, CategoricalKnob
-from rafiki.advisor import tune_model, make_advisor, AdvisorType, TrainStrategy, test_model_class
+from rafiki.model import BaseModel, utils, FixedKnob, FloatKnob, CategoricalKnob, PolicyKnob
+from rafiki.advisor import tune_model, make_advisor, AdvisorType, test_model_class
 
 _Model = namedtuple('_Model', ['net', 'step'])
 
@@ -28,10 +28,9 @@ class PyDenseNetBc(BaseModel):
     Credits to https://github.com/gpleiss/efficient_densenet_pytorch
     '''
 
-    def __init__(self, train_strategy, **knobs):
+    def __init__(self, **knobs):
         self._knobs = knobs
         self._model = None
-        self._train_strategy = train_strategy
 
     @staticmethod
     def get_knob_config():
@@ -44,6 +43,9 @@ class PyDenseNetBc(BaseModel):
             'batch_size': CategoricalKnob([32, 64, 128]),
             'drop_rate': FloatKnob(0, 0.4),
             'max_image_size': FixedKnob(32),
+
+            # Affects whether training is shortened by using early stopping
+            'quick_train': PolicyKnob('QUICK_TRAIN'), 
             'early_stop_trial_epochs': FixedKnob(200),
             'early_stop_train_val_samples': FixedKnob(1024),
             'early_stop_patience_epochs': FixedKnob(5)
@@ -172,17 +174,13 @@ class PyDenseNetBc(BaseModel):
         return _Model(net, 0)
 
     def _train_model(self, model, train_dataset, train_val_dataset):
-        train_strategy = self._train_strategy
         trial_epochs = self._knobs['trial_epochs']
         early_stop_trial_epochs = self._knobs['early_stop_trial_epochs']
         batch_size = self._knobs['batch_size']
         early_stop_patience = self._knobs['early_stop_patience_epochs']
+        quick_train = self._knobs['quick_train']
+        num_epochs = early_stop_trial_epochs if quick_train else trial_epochs
         (net, step) = model
-
-        # Determine no. of epochs
-        num_epochs = trial_epochs
-        if train_strategy == TrainStrategy.STOP_EARLY:
-            num_epochs = early_stop_trial_epochs
 
         # Define plots
         utils.logger.define_plot('Losses over Epoch', ['train_loss', 'train_val_loss'], x_axis='epoch')
@@ -252,12 +250,10 @@ class PyDenseNetBc(BaseModel):
     def _load_train_dataset(self, dataset_uri):
         early_stop_train_val_samples = self._knobs['early_stop_train_val_samples']
         max_image_size = self._knobs['max_image_size']
-        train_strategy = self._train_strategy
+        quick_train = self._knobs['quick_train']
 
         # Allocate train val only if early stopping
-        train_val_samples = 0
-        if train_strategy == TrainStrategy.STOP_EARLY:
-            train_val_samples = early_stop_train_val_samples
+        train_val_samples = early_stop_train_val_samples if quick_train else 0
 
         utils.logger.log('Loading train dataset...')
 
@@ -586,6 +582,7 @@ class EarlyStopCondition():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--test', action='store_true', help='Whether to test the model class instead')
+    parser.add_argument('--total_trials', type=int, default=100, help='No. of trials to tune model over')
     parser.add_argument('--param_policy', type=str, default='EXP_GREEDY', 
                     help='Param policy for advisor') 
     (args, _) = parser.parse_known_args()
@@ -641,6 +638,6 @@ if __name__ == '__main__':
             train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
             val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
             test_dataset_uri='data/cifar_10_for_image_classification_test.zip',
-            total_trials=100,
+            total_trials=args.total_trials,
             advisor=advisor
         )

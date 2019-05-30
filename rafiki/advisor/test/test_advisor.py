@@ -1,7 +1,7 @@
 import pytest
 import json
 
-from rafiki.model import IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, ListKnob, KnobValue
+from rafiki.model import IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, ListKnob, KnobValue, PolicyKnob
 from rafiki.test.utils import global_setup
 from rafiki.advisor.skopt import SkoptAdvisor
 from rafiki.advisor.advisor import RandomAdvisor
@@ -16,7 +16,8 @@ class TestAdvisor():
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
             'criterion': CategoricalKnob(['gini', 'entropy']),
-            'image_size': FixedKnob(32)
+            'image_size': FixedKnob(32),
+            'quick_train': PolicyKnob('QUICK_TRAIN')
         }
     
     # Knob config for architecture search
@@ -32,7 +33,9 @@ class TestAdvisor():
                 CategoricalKnob(input_knob_values), # Input 2
                 CategoricalKnob(op_knob_values) # Op on input 2
             ]),
-            'image_size': FixedKnob(32)
+            'image_size': FixedKnob(32),
+            'quick_train': PolicyKnob('QUICK_TRAIN'), 
+            'quick_eval': PolicyKnob('QUICK_EVAL')
         }
 
     # Knob config for hyperparameter + architecture search
@@ -52,7 +55,9 @@ class TestAdvisor():
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
             'criterion': CategoricalKnob(['gini', 'entropy']),
-            'image_size': FixedKnob(32)
+            'image_size': FixedKnob(32),
+            'quick_train': PolicyKnob('QUICK_TRAIN'), 
+            'quick_eval': PolicyKnob('QUICK_EVAL')
         }
 
     def test_skopt_advisor(self, knob_config_hyp_search):
@@ -114,6 +119,7 @@ class TestAdvisor():
         assert knobs.get('batch_size') in [16, 32, 64, 128]
         assert knobs.get('criterion') in ['gini', 'entropy']
         assert knobs.get('image_size') == 32
+        assert knobs['quick_train'] in [True, False]
 
     def _check_knobs_for_arch_search(self, knobs):
         arch = knobs.get('arch')
@@ -123,6 +129,8 @@ class TestAdvisor():
         assert arch[2] in [0, 1]
         assert arch[3] in ['identity', 'conv1x1', 'conv3x3']
         assert knobs.get('image_size') == 32
+        assert knobs['quick_train'] in [True, False]
+        assert knobs['quick_eval'] in [True, False]
 
     def _check_knobs_for_hyp_arch_search(self, knobs):
         arch = knobs.get('arch')
@@ -136,3 +144,5 @@ class TestAdvisor():
         assert knobs.get('batch_size') in [16, 32, 64, 128]
         assert knobs.get('criterion') in ['gini', 'entropy']
         assert knobs.get('image_size') == 32
+        assert knobs['quick_train'] in [True, False]
+        assert knobs['quick_eval'] in [True, False]

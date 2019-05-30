@@ -7,6 +7,8 @@ class BaseKnob(abc.ABC):
     '''
     The base class for a knob type.
     '''
+
+    # Data type of a realized value of this knob
     @property
     def value_type(self) -> type:
         raise NotImplementedError()
@@ -94,6 +96,36 @@ class FixedKnob(BaseKnob):
     @property
     def value(self):
         return self._value
+
+POLICIES = ['QUICK_TRAIN', 'QUICK_EVAL']
+
+class PolicyKnob(BaseKnob):
+    '''
+    Knob type representing whether a certain policy should be activated, as a boolean.
+    E.g. the `QUICK_TRAIN` policy knob decides whether the model should stop model training early, or not. 
+    Offering the ability to activate different policies can optimize hyperparameter search for your model. 
+    Activation of all policies default to false.
+
+    =====================       =====================
+    **Policy**                  **Installation Command**
+    ---------------------       ---------------------        
+    ``QUICK_TRAIN``             Whether model should stop training early in `train()`, e.g. with use of early stopping or reduced no. of epochs
+    ``QUICK_EVAL``              Whether model should stop evaluation early in `evaluate()`, e.g. by evaluating on only a subset of the validation dataset
+    =====================       =====================
+    
+    '''
+    def __init__(self, policy):
+        if policy not in POLICIES:
+            raise ValueError('Policy type must be one of {}'.format(POLICIES))
+        self._policy = policy
+    
+    @property
+    def value_type(self):
+        return bool
+
+    @property
+    def policy(self):
+        return self._policy
 
 
 class IntegerKnob(BaseKnob):

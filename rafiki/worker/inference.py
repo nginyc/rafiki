@@ -89,9 +89,7 @@ class InferenceWorker(object):
         clazz.setup()
 
         logger.info('Loading trained model...')
-        model_inst = clazz(train_strategy=proposal.train_strategy,
-                            eval_strategy=proposal.eval_strategy,
-                            **proposal.knobs)
+        model_inst = clazz(**proposal.knobs)
                     
         model_inst.load_parameters_from_disk(trial.params_dir)
 

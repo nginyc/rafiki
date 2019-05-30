@@ -5,10 +5,10 @@ from enum import Enum
 import math
 import numpy as np
 
-from rafiki.model import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob
+from rafiki.model import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob, PolicyKnob
 from rafiki.param_store import ParamsType
 
-from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, TrainStrategy
+from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal
 
 class ParamPolicy(Enum):
     NONE = 'NONE'
@@ -25,13 +25,19 @@ class SkoptAdvisor(BaseAdvisor):
     def is_compatible(knob_config):
         # Supports only CategoricalKnob, FixedKnob, IntegerKnob and FloatKnob
         for (name, knob) in knob_config.items():
-            if not isinstance(knob, (CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob)):
+            if not isinstance(knob, (CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob, PolicyKnob)):
                 return False
+
+        # Prompt user that Skopt search prefers having certain policies
+        policies = [x.policy for (name, x) in knob_config.items() if isinstance(x, PolicyKnob)]
+        if 'QUICK_TRAIN' not in policies:
+            print('To speed up hyperparameter search with Skopt, having `QUICK_TRAIN` policy is preferred.')
 
         return True
 
     def __init__(self, knob_config, param_policy=ParamPolicy.EXP_GREEDY):
-        (self._fixed_knobs, knob_config) = _extract_fixed_knobs(knob_config)
+        (self._fixed_knob_config, knob_config) = self.extract_knob_type(knob_config, FixedKnob)
+        (self._policy_knob_config, knob_config) = self.extract_knob_type(knob_config, PolicyKnob)
         self._dimensions = self._get_dimensions(knob_config)
         self._optimizer = self._make_optimizer(self._dimensions)
         self._param_policy = ParamPolicy(param_policy)
@@ -44,15 +50,11 @@ class SkoptAdvisor(BaseAdvisor):
             return Proposal({}, is_valid=False)
         elif trial_type == 'SEARCH':
             param = self._propose_param(trial_no, total_trials)
-            knobs = self._propose_knobs()
-            return Proposal(knobs, 
-                            train_strategy=TrainStrategy.STOP_EARLY,
-                            params_type=param)
+            knobs = self._propose_knobs(['QUICK_TRAIN'])
+            return Proposal(knobs, params_type=param)
         elif trial_type == 'FINAL_TRAIN':
             knobs = self._propose_best_recent_knobs()
-            return Proposal(knobs,
-                            train_strategy=TrainStrategy.STANDARD,
-                            params_type=ParamsType.NONE)
+            return Proposal(knobs, params_type=ParamsType.NONE)
 
     def feedback(self, score, proposal):
         num_sample_trials = 10
@@ -80,7 +82,7 @@ class SkoptAdvisor(BaseAdvisor):
         })
         return dimensions
 
-    def _propose_knobs(self):
+    def _propose_knobs(self, policies=[]):
         # Ask skopt
         point = self._optimizer.ask()
         knobs = { 
@@ -89,20 +91,26 @@ class SkoptAdvisor(BaseAdvisor):
             in zip(self._dimensions.keys(), point) 
         }
 
-        # Add fixed knobs
-        knobs = { **self._fixed_knobs, **knobs }
+        # Add fixed & policy knobs
+        knobs = self.merge_fixed_knobs(knobs, self._fixed_knob_config)
+        knobs = self.merge_policy_knobs(knobs, self._policy_knob_config, policies)
+
         return knobs
 
-    def _propose_best_recent_knobs(self):
+    def _propose_best_recent_knobs(self, policies=[]):
         recent_feedback = self._recent_feedback
         # If hasn't collected feedback, propose from model
         if len(recent_feedback) == 0:
-            return self._propose_knobs()
+            return self._propose_knobs(policies)
 
         # Otherwise, determine best recent proposal and use it
         (score, proposal) = sorted(recent_feedback)[-1]
+        knobs = proposal.knobs
 
-        return proposal.knobs
+        # Add policy knobs
+        knobs = self.merge_policy_knobs(knobs, self._policy_knob_config, policies)
+
+        return knobs
 
     def _propose_param(self, trial_no, total_trials):
         policy = self._param_policy
@@ -193,8 +201,3 @@ def _simplify_value(value):
         return int(value) 
 
     return value
-
-def _extract_fixed_knobs(knob_config):
-    fixed_knobs = { name: knob.value.value for (name, knob) in knob_config.items() if isinstance(knob, FixedKnob) }
-    knob_config = { name: knob for (name, knob) in knob_config.items() if not isinstance(knob, FixedKnob) }
-    return (fixed_knobs, knob_config)

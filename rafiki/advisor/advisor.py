@@ -6,7 +6,7 @@ from typing import Union, Dict, List, Tuple
 from enum import Enum
 
 from rafiki.model import BaseKnob, IntegerKnob, CategoricalKnob, FloatKnob, \
-                FixedKnob, ListKnob
+                FixedKnob, ListKnob, PolicyKnob
 from rafiki.param_store import ParamsType
 
 class UnsupportedKnobConfigError(Exception): pass
@@ -43,37 +43,25 @@ def _get_advisor_class_from_type(advisor_type):
     elif advisor_type == AdvisorType.RANDOM:
         return RandomAdvisor
 
-class TrainStrategy(Enum):
-    STANDARD = 'STANDARD' # Model should train to its maximum potential
-    STOP_EARLY = 'STOP_EARLY' # Model should stop as early as possible
-    NONE = 'NONE' # Model would not be trained
-
-class EvalStrategy(Enum):
-    STANDARD = 'STANDARD' # Model should be evaluated fully with validation dataset
-    STOP_EARLY = 'STOP_EARLY' # Model should be evaluated quickly
-    NONE = 'NONE' # Model should not be evaluated
-
 class Proposal():
     def __init__(self, 
                 knobs: Dict[str, any], 
                 params_type: ParamsType = ParamsType.NONE, # Parameters to use for this trial
                 is_valid = True, # If a trial is invalid, the worker will sleep for a while before trying again
-                train_strategy: TrainStrategy = TrainStrategy.STANDARD, # How should the model train
-                eval_strategy: EvalStrategy = EvalStrategy.STANDARD, # How should the model be evaluated
+                should_train = True, # Whether the model should be trained
+                should_eval = True, # Whether the model should be evaluated
                 should_save_to_disk = True): # Whether this trial's trained model should be saved to disk
         self.knobs = knobs
         self.params_type = ParamsType(params_type)
         self.is_valid = is_valid
-        self.train_strategy = TrainStrategy(train_strategy)
-        self.eval_strategy = EvalStrategy(eval_strategy)
+        self.should_train = should_train
+        self.should_eval = should_eval
         self.should_save_to_disk = should_save_to_disk
 
     def to_jsonable(self):
         return {
             **self.__dict__,
             'params_type': self.params_type.value,
-            'train_strategy': self.train_strategy.value,
-            'eval_strategy': self.eval_strategy.value
         }
 
     @staticmethod
@@ -94,7 +82,6 @@ class BaseAdvisor(abc.ABC):
         raise NotImplementedError()
 
     # TODO: Advisor to read train job progress from DB directly instead of being told by workers 
-    # TODO: Accomodate worker-sensitive proposals
     @abc.abstractmethod
     def propose(self, worker_id: str, trial_no: int, total_trials: int, 
                 concurrent_trial_nos: List[int] = []) -> Proposal:
@@ -109,6 +96,24 @@ class BaseAdvisor(abc.ABC):
     @abc.abstractmethod
     def feedback(self, score: float, proposal: Proposal):
         raise NotImplementedError()
+
+    # Helps extraction of a certain type of knob from knob config
+    @staticmethod
+    def extract_knob_type(knob_config, knob_type):
+        sub_knob_config = { name: knob for (name, knob) in knob_config.items() if isinstance(knob, knob_type) }
+        knob_config = { name: knob for (name, knob) in knob_config.items() if not isinstance(knob, knob_type) }
+        return (sub_knob_config, knob_config)
+
+    # Merge fixed knobs into `knobs`
+    @staticmethod
+    def merge_fixed_knobs(knobs, fixed_knob_config):
+        return { **knobs, **{ name: x.value.value for (name, x) in fixed_knob_config.items() } }
+
+    # Merge policy knobs into `knobs`, activating `policies`
+    @staticmethod
+    def merge_policy_knobs(knobs, policy_knob_config, policies=[]):
+        policy_knobs = { name: (True if x.policy in policies else False) for (name, x) in policy_knob_config.items() }
+        return { **knobs, **policy_knobs } 
 
 class RandomAdvisor(BaseAdvisor):
     '''
@@ -149,6 +154,8 @@ class RandomAdvisor(BaseAdvisor):
             return knob.value.value
         elif isinstance(knob, ListKnob):
             return [self._propose_knob(knob.items[i]) for i in range(len(knob))]
+        elif isinstance(knob, PolicyKnob):
+            return False
         else:
             raise UnsupportedKnobError(knob.__class__)
 

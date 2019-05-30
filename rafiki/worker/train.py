@@ -10,7 +10,7 @@ from rafiki.utils.auth import make_superadmin_client
 from rafiki.client import Client
 from rafiki.constants import BudgetType, TrainJobStatus, TrialStatus, ServiceStatus
 from rafiki.meta_store import MetaStore, DuplicateTrialNoError
-from rafiki.advisor import Proposal, TrainStrategy, EvalStrategy
+from rafiki.advisor import Proposal
 from rafiki.model import BaseModel, load_model_class, serialize_knob_config, logger as model_logger
 from rafiki.param_store import ParamStore, ParamsType
 
@@ -162,16 +162,14 @@ class TrainWorker(object):
         val_dataset_uri = job_info.val_dataset_uri
 
         # Load model
-        model_inst = clazz(train_strategy=proposal.train_strategy,
-                            eval_strategy=proposal.eval_strategy,
-                            **proposal.knobs)
+        model_inst = clazz(**proposal.knobs)
         if params is not None:
             logger.info('Loading params for model...')
             model_inst.load_parameters(params)
 
         # Train model
         trial_params = None
-        if proposal.train_strategy != TrainStrategy.NONE:
+        if proposal.should_train:
             logger.info('Training model...')
             model_inst.train(train_dataset_uri)
             trial_params = model_inst.dump_parameters() or None
@@ -180,7 +178,7 @@ class TrainWorker(object):
 
         # Evaluate model
         score = None
-        if proposal.eval_strategy != EvalStrategy.NONE:
+        if proposal.should_eval:
             logger.info('Evaluating model...')
             score = model_inst.evaluate(val_dataset_uri)
             logger.info('Trial score: {}'.format(score))
