@@ -63,19 +63,20 @@ class TfEnas(BaseModel):
             'cutout_size': FixedKnob(0),
             'grad_clip_norm': FixedKnob(0),
             'use_aux_head': FixedKnob(False),
-            'use_dynamic_arch': FixedKnob(False),
             'summaries_dir': FixedKnob(''), # Directory to save summaries & runtime metadata to
-            'init_params_dir': FixedKnob(''), # Params directory to resume training from
 
-            # Affects whether training is shortened by reducing no. of epochs & no. of layers
+            # Affects whether model constructed is a scaled-down version with fewer layers
+            'downscale': PolicyKnob('DOWNSCALE'), 
+            'enas_num_layers': FixedKnob(6), 
+            'enas_initial_block_ch': FixedKnob(20), 
+            'enas_dropout_keep_prob': FixedKnob(0.9),
+            'enas_sgdr_alpha': FixedKnob(0.01),
+            'enas_drop_path_keep_prob': FixedKnob(0.9),
+            'enas_drop_path_decay_epochs': FixedKnob(150),
+
+            # Affects whether training is shortened by reducing no. of epochs
             'quick_train': PolicyKnob('QUICK_TRAIN'), 
-            'early_stop_trial_epochs': FixedKnob(1),
-            'early_stop_num_layers': FixedKnob(6), 
-            'early_stop_initial_block_ch': FixedKnob(20), 
-            'early_stop_dropout_keep_prob': FixedKnob(0.9),
-            'early_stop_sgdr_alpha': FixedKnob(0.01),
-            'early_stop_drop_path_keep_prob': FixedKnob(0.9),
-            'early_stop_drop_path_decay_epochs': FixedKnob(150),
+            'enas_trial_epochs': FixedKnob(1),
 
             # Affects whether evaluation happens only a subset of the dataset
             'quick_eval': PolicyKnob('QUICK_EVAL')
@@ -128,17 +129,11 @@ class TfEnas(BaseModel):
 
     def train(self, dataset_uri):
         knobs = self._knobs
-        init_params_dir = self._knobs['init_params_dir']
 
         (images, classes, self._train_params) = self._maybe_load_dataset(dataset_uri, **knobs)
-
-        # Maybe load from init params dir
-        if init_params_dir:
-            utils.logger.log('Loading parameters from "{}"...'.format(init_params_dir))
-            self.load_parameters_from_disk(init_params_dir)
         
-        # Else, build model
-        elif self._model is None:
+        # Build model
+        if self._model is None:
             (self._model, self._graph, self._sess, self._saver, 
                 self._monitored_values) = self._maybe_build_model(**knobs)
         
@@ -234,7 +229,7 @@ class TfEnas(BaseModel):
         
     def _maybe_build_model(self, **knobs):
         train_params = self._train_params
-        use_dynamic_arch = knobs['use_dynamic_arch']
+        use_dynamic_arch = knobs['downscale']
 
         # Use memoized model when possible
         if not self._if_model_same(TfEnas._model_memo, knobs, train_params, use_dynamic_arch):
@@ -259,9 +254,9 @@ class TfEnas(BaseModel):
         if (train_params, use_dynamic_arch) != (model_memo.train_params, model_memo.use_dynamic_arch):
             return False
 
-        # If arch is dynamic, knobs can only differ by `cell_archs`
-        # Otherwise, knobs must be the same
-        ignored_knobs = ['quick_train', 'quick_eval']
+        # Knobs must be the same except for some that doesn't affect model construction
+        # If arch is dynamic, knobs can differ by `cell_archs`
+        ignored_knobs = ['quick_train', 'quick_eval', 'downscale', 'trial_epochs']
         if use_dynamic_arch:
             ignored_knobs.append('cell_archs')
         
@@ -277,18 +272,23 @@ class TfEnas(BaseModel):
     ####################################
 
     def _process_knobs(self, knobs):
-        # Activates shortened train & eval mode
-        if knobs['quick_train'] or knobs['quick_eval']:
+        # Activates dynamic architecture with fewer layers 
+        if knobs['downscale']:
             knobs = {
                 **knobs,
-                'use_dynamic_arch': True,
-                'trial_epochs': knobs['early_stop_trial_epochs'],
-                'num_layers': knobs['early_stop_num_layers'],
-                'initial_block_ch': knobs['early_stop_initial_block_ch'],
-                'dropout_keep_prob': knobs['early_stop_dropout_keep_prob'],
-                'sgdr_alpha': knobs['early_stop_sgdr_alpha'],
-                'drop_path_keep_prob': knobs['early_stop_drop_path_keep_prob'],
-                'drop_path_decay_epochs': knobs['early_stop_drop_path_decay_epochs'],
+                'num_layers': knobs['enas_num_layers'],
+                'initial_block_ch': knobs['enas_initial_block_ch'],
+                'dropout_keep_prob': knobs['enas_dropout_keep_prob'],
+                'sgdr_alpha': knobs['enas_sgdr_alpha'],
+                'drop_path_keep_prob': knobs['enas_drop_path_keep_prob'],
+                'drop_path_decay_epochs': knobs['enas_drop_path_decay_epochs'],
+            }
+
+        # Activates mode where training finishes with fewer epochs
+        if knobs['quick_train']:
+            knobs = {
+                **knobs,
+                'trial_epochs': knobs['enas_trial_epochs'] 
             }
 
         return knobs
@@ -315,7 +315,7 @@ class TfEnas(BaseModel):
         return (images, classes, train_params)
 
     def _build_model(self, **knobs):
-        use_dynamic_arch = knobs['use_dynamic_arch']
+        use_dynamic_arch = knobs['downscale']
 
         # Create graph
         graph = tf.Graph()
@@ -418,7 +418,7 @@ class TfEnas(BaseModel):
         w = self._train_params['image_size'] # Initial input width
         h = self._train_params['image_size'] # Initial input height
         dropout_keep_prob = knobs['dropout_keep_prob']
-        use_dynamic_arch = knobs['use_dynamic_arch']
+        use_dynamic_arch = knobs['downscale']
         L = knobs['num_layers'] # Total number of layers
         initial_block_ch = knobs['initial_block_ch'] # Initial no. of channels for operations in block
         stem_ch_mul = knobs['stem_ch_mul'] # No. of channels for stem convolution as multiple of initial block channels

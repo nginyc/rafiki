@@ -97,7 +97,7 @@ class FixedKnob(BaseKnob):
     def value(self):
         return self._value
 
-POLICIES = ['QUICK_TRAIN', 'QUICK_EVAL']
+POLICIES = ['QUICK_TRAIN', 'QUICK_EVAL', 'DOWNSCALE']
 
 class PolicyKnob(BaseKnob):
     '''
@@ -107,10 +107,11 @@ class PolicyKnob(BaseKnob):
     Activation of all policies default to false.
 
     =====================       =====================
-    **Policy**                  **Installation Command**
+    **Policy**                  Description
     ---------------------       ---------------------        
     ``QUICK_TRAIN``             Whether model should stop training early in `train()`, e.g. with use of early stopping or reduced no. of epochs
     ``QUICK_EVAL``              Whether model should stop evaluation early in `evaluate()`, e.g. by evaluating on only a subset of the validation dataset
+    ``DOWNSCALE``               Whether a smaller version of the model should be constructed e.g. with fewer layers
     =====================       =====================
     
     '''

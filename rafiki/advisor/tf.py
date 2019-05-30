@@ -36,8 +36,8 @@ class EnasAdvisor(BaseAdvisor):
 
         # Prompt user that ENAS prefers having certain policies
         policies = [x.policy for (name, x) in knob_config.items() if isinstance(x, PolicyKnob)]
-        if 'QUICK_TRAIN' not in policies or 'QUICK_EVAL' not in policies:
-            print('To speed up ENAS, having `QUICK_TRAIN` and `QUICK_EVAL` policies is preferred.')
+        if not all([(x in policies) for x in ['QUICK_TRAIN', 'QUICK_EVAL', 'DOWNSCALE']]):
+            print('To speed up ENAS, `QUICK_TRAIN`, `QUICK_EVAL` & `DOWNSCALE` policies are preferred.')
 
         return True
         
@@ -73,19 +73,19 @@ class EnasAdvisor(BaseAdvisor):
         self._worker_to_trial_nos[worker_id].append(trial_no)
 
         if trial_type == 'TRAIN':
-            knobs = self._propose_knobs(['QUICK_TRAIN'])
+            knobs = self._propose_knobs(['DOWNSCALE', 'QUICK_TRAIN'])
             return Proposal(knobs, 
                             params_type=params_type, 
                             should_eval=False,
                             should_save_to_disk=False)
         elif trial_type == 'EVAL':
-            knobs = self._propose_knobs(['QUICK_EVAL'])
+            knobs = self._propose_knobs(['DOWNSCALE', 'QUICK_EVAL'])
             return Proposal(knobs,
                             params_type=params_type, 
                             should_train=False, 
                             should_save_to_disk=False)
         elif trial_type == 'FINAL_EVAL':
-            knobs = self._propose_knobs()
+            knobs = self._propose_knobs(['DOWNSCALE'])
             return Proposal(knobs,
                             params_type=params_type, 
                             should_train=False, 
@@ -108,16 +108,20 @@ class EnasAdvisor(BaseAdvisor):
             knob_value = knobs[name]
             list_knob_model.feedback(knob_value, score)
 
-    def _propose_final_knobs(self):
+    def _propose_final_knobs(self, policies=[]):
         # If hasn't collected any evals, propose from model
         if len(self._evals) == 0:
-            return self._propose_knobs()
+            return self._propose_knobs(policies)
 
         # Otherwise, determine best eval and use it
-        self._evals.sort()
+        self._evals = sorted(self._evals, key=lambda x: x[0])
         (_, proposal) = self._evals.pop()
+        knobs = proposal.knobs
 
-        return proposal.knobs
+        # Add policy knobs
+        knobs = self.merge_policy_knobs(knobs, self._policy_knob_config, policies)
+
+        return knobs
 
     def _propose_knobs(self, policies=[]):
         knobs = {}
