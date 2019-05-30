@@ -1313,11 +1313,11 @@ if __name__ == '__main__':
     parser.add_argument('--num_cycles', type=int, default=150, help='No. of cycles of train-eval in ENAS')
     parser.add_argument('--num_final_evals', type=int, default=10, help='No. of final evaluations for ENAS')
     parser.add_argument('--train_once', action='store_true', help='Whether to just train 1 (fixed) architecture')
-    parser.add_argument('--do_final_train', action='store_true', help='Whether to train the final best architecture')
+    parser.add_argument('--omit_final_train', action='store_true', help='Whether to omit training the final best architecture')
     (args, _) = parser.parse_known_args()
 
     if not args.train_once:
-        num_final_train_trials = 1 if args.do_final_train else 0
+        num_final_train_trials = 0 if args.omit_final_train else 1
         period = args.num_eval_per_cycle + 1
         trial_count = period * args.num_cycles + args.num_final_evals + num_final_train_trials
     else:
@@ -1327,7 +1327,7 @@ if __name__ == '__main__':
                         'num_final_evals': args.num_final_evals,
                         'batch_size': args.enas_batch_size, 
                         'train_strategy': args.train_strategy,
-                        'do_final_train': args.do_final_train }
+                        'do_final_train': not args.omit_final_train }
     knob_config = TfEnas.get_knob_config()
     advisor = make_advisor(knob_config, advisor_type=AdvisorType.ENAS, **advisor_config)
 
