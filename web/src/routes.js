@@ -1,8 +1,9 @@
 // @material-ui/icons
 import Dashboard from "@material-ui/icons/Dashboard";
 
-// core components/views for Admin layout
+/* // core components/views for Admin layout
 import DashboardPage from "views/Dashboard/Dashboard.jsx";
+*/
 
 import Jobs from "./views/Jobs/Jobs";
 import TrainJobs from "views/Jobs/TrainJobs.jsx"
@@ -25,14 +26,14 @@ const dashboardRoutes = [
     component: NewDatasets,
     layout: "/admin"
   }, 
-  {
+ /* {
     path: "/datasets/details",
     name: "Datasets Details",
     rtlName: "قائمة الجدول",
     icon: "playlist_add",
     component: DashboardPage,
     layout: "/admin"
-  },
+  }, */
   {
     path: "/datasets",
     name: "Datasets",
