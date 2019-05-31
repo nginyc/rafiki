@@ -46,7 +46,7 @@ def make_predictions(client, predictor_host, queries):
     return predictions
 
 
-def quickstart(client):
+def quickstart(client, gpus):
     task = TaskType.IMAGE_CLASSIFICATION
 
     # Randomly generate app & model names to avoid naming conflicts
@@ -62,7 +62,7 @@ def quickstart(client):
     train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true'
     val_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_val.zip?raw=true'
     train_job = client.create_train_job(app, task, train_dataset_uri, val_dataset_uri, 
-                                        budget={ BudgetType.GPU_COUNT: 0, BudgetType.MODEL_TRIAL_COUNT: 5 },
+                                        budget={ BudgetType.GPU_COUNT: gpus, BudgetType.MODEL_TRIAL_COUNT: 5 },
                                         models={ sk_model_name: {} })
     pprint.pprint(train_job)
 
@@ -125,6 +125,7 @@ if __name__ == '__main__':
     parser.add_argument('--admin_web_port', type=int, default=os.environ.get('ADMIN_WEB_EXT_PORT', 3001), help='Port for Rafiki Admin Web on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
+    parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
     (args, _) = parser.parse_known_args()
 
     # Initialize client
@@ -135,4 +136,4 @@ if __name__ == '__main__':
     print('Login with email "{}" and password "{}"'.format(args.email, args.password)) 
     
     # Run quickstart
-    quickstart(client)
+    quickstart(client, args.gpus)
