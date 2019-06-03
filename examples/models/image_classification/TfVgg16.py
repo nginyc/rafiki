@@ -9,7 +9,7 @@ import abc
 from urllib.parse import urlparse, parse_qs 
 
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, FloatKnob, CategoricalKnob, dataset_utils
+                        IntegerKnob, FloatKnob, CategoricalKnob, FixedKnob, dataset_utils
 from rafiki.constants import TaskType, ModelDependency
 
 class TfVgg16(BaseModel):
@@ -139,6 +139,7 @@ if __name__ == '__main__':
         },
         train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
         test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
+        enable_gpu=True,
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

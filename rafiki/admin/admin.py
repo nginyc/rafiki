@@ -343,7 +343,10 @@ class Admin(object):
         if trial is None:
             raise InvalidTrialError()
 
-        return trial.parameters
+        with open(trial.params_file_path, 'rb') as f:
+            parameters = f.read()
+
+        return parameters
 
     ####################################
     # Inference Job

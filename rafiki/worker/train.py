@@ -27,6 +27,7 @@ class TrainWorker(object):
         self._db = db
         self._trial_id = None
         self._client = self._make_client()
+        self._params_root_dir = os.environ['PARAMS_DOCKER_WORKDIR_PATH']
 
     def start(self):
         logger.info('Starting train worker for service of ID "{}"...' \
@@ -91,14 +92,14 @@ class TrainWorker(object):
                         trial = self._db.get_trial(self._trial_id)
                         self._db.add_trial_log(trial, log_line, log_lvl)
 
-                (score, parameters) = self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
+                (score, params_file_path) = self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
                                                                     test_dataset_uri, handle_log)
                 logger.info('Trial score: {}'.format(score))
                 
                 with self._db:
                     logger.info('Marking trial as complete in DB...')
                     trial = self._db.get_trial(self._trial_id)
-                    self._db.mark_trial_as_complete(trial, score, parameters)
+                    self._db.mark_trial_as_complete(trial, score, params_file_path)
 
                 self._trial_id = None
 
@@ -165,9 +166,13 @@ class TrainWorker(object):
         # Dump and pickle model parameters
         parameters = model_inst.dump_parameters()
         parameters = pickle.dumps(parameters)
+        params_file_path = os.path.join(self._params_root_dir, '{}.model'.format(self._trial_id))
+        with open(params_file_path, 'wb') as f:
+            f.write(parameters)
+
         model_inst.destroy()
 
-        return (score, parameters)
+        return (score, params_file_path)
 
     # Gets proposal of a set of knob values from advisor
     def _get_proposal_from_advisor(self, advisor_id):

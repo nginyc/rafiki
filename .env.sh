@@ -1,7 +1,7 @@
 # Core external configuration for Rafiki
 export DOCKER_NETWORK=rafiki
 export DOCKER_SWARM_ADVERTISE_ADDR=127.0.0.1
-export RAFIKI_VERSION=0.0.9
+export RAFIKI_VERSION=0.0.10
 export RAFIKI_ADDR=127.0.0.1
 export ADMIN_EXT_PORT=3000
 export ADMIN_WEB_EXT_PORT=3001
@@ -9,6 +9,7 @@ export ADVISOR_EXT_PORT=3002
 export POSTGRES_EXT_PORT=5433
 export REDIS_EXT_PORT=6380
 export DATA_WORKDIR_PATH=$PWD/data # Shares a data folder with containers
+export PARAMS_WORKDIR_PATH=$PWD/params # Shares a params folde with containers
 export LOGS_WORKDIR_PATH=$PWD/logs # Shares a folder with containers that stores components' logs
 export APP_MODE=DEV # DEV or PROD
 
@@ -30,6 +31,7 @@ export PREDICTOR_PORT=3003
 export ADMIN_WEB_HOST=rafiki_admin_web
 export DATA_DOCKER_WORKDIR_PATH=/root/rafiki/data
 export LOGS_DOCKER_WORKDIR_PATH=/root/rafiki/logs
+export PARAMS_DOCKER_WORKDIR_PATH=/root/rafiki/params
 export DOCKER_WORKDIR_PATH=/root/rafiki
 export CONDA_ENVIORNMENT=rafiki
 
@@ -46,7 +48,3 @@ export IMAGE_REDIS=redis:5.0.3-alpine3.8
 
 # Utility configuration
 export PYTHONPATH=$PWD # Ensures that `rafiki` module can be imported at project root
-
-# Set alias for correct PIP & python
-alias pip='pip3.6'
-alias python='python3.6'

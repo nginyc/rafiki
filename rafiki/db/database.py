@@ -422,11 +422,11 @@ class Database(object):
         self._session.add(trial)
         return trial
 
-    def mark_trial_as_complete(self, trial, score, parameters):
+    def mark_trial_as_complete(self, trial, score, params_file_path):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
         trial.datetime_stopped = datetime.datetime.utcnow()
-        trial.parameters = parameters
+        trial.params_file_path = params_file_path
         self._session.add(trial)
         return trial
 
