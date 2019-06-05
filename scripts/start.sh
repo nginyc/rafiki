@@ -36,7 +36,7 @@ bash $FILE_DIR/create_docker_swarm.sh
 # Pull images from Docker Hub
 
 title "Pulling images for Rafiki from Docker Hub..."
-bash $FILE_DIR/pull_images.sh
+bash $FILE_DIR/pull_images.sh || exit 1
 
 # Start whole Rafiki stack
 
