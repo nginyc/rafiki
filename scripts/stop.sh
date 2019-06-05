@@ -8,7 +8,17 @@ title "Stopping any existing jobs..."
 python3.6 ./scripts/stop_all_jobs.py
 
 title "Dumping database..." 
-bash ./scripts/save_db.sh || exit 1
+bash ./scripts/save_db.sh
+
+# If database dump previously failed, prompt whether to continue script
+if [ $? -ne 0 ]
+then
+    read -p "Failed to dump database. Continue? (y/n) " ok
+    if [ $ok = "n" ]
+    then
+        exit 1
+    fi
+fi
 
 title "Stopping Rafiki's DB..."
 docker rm -f $POSTGRES_HOST || echo "Failed to stop Rafiki's DB"
