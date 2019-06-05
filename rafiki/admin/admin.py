@@ -42,7 +42,7 @@ class Admin(object):
 
     def seed(self):
         with self._db:
-            self._seed_users()
+            self._seed_superadmin()
 
     ####################################
     # Users
@@ -65,10 +65,12 @@ class Admin(object):
     def create_user(self, email, password, user_type):
         user = self._create_user(email, password, user_type)
         return {
-            'id': user.id
+            'id': user.id,
+            'email': user.email,
+            'user_type': user.user_type
         }
 
-    def create_users(self, csv_file_bytes):
+    def create_users_with_csv(self, csv_file_bytes):
         temp_csv_file = '{}.csv'.format(str(uuid.uuid4()))
 
         # Temporarily save the csv file to disk
@@ -580,8 +582,8 @@ class Admin(object):
     # Private / Users
     ####################################
 
-    def _seed_users(self):
-        logger.info('Seeding users...')
+    def _seed_superadmin(self):
+        logger.info('Seeding superadmin...')
 
         # Seed superadmin
         try:

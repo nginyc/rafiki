@@ -5,7 +5,7 @@ from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 
 def seed_users(client):
-    users = client.create_users('examples/seeds/users.csv')
+    users = client.create_users_with_csv('examples/scripts/users.csv')
     pprint.pprint(users)
 
 if __name__ == '__main__':
