@@ -44,9 +44,17 @@ class Database(object):
         self._session.add(user)
         return user
 
+    def delete_users(self, users):
+        for user in users:
+            self._session.delete(user)
+
     def get_user_by_email(self, email):
         user = self._session.query(User).filter(User.email == email).first()
         return user
+
+    def get_users(self):
+        users = self._session.query(User).all()
+        return users
 
     ####################################
     # Train Jobs

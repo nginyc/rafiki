@@ -82,9 +82,17 @@ class Admin(object):
             reader = csv.DictReader(f)
             reader.fieldnames = [name.lower() for name in reader.fieldnames]
             for row in reader:
-                user = self._create_user(row['email'], row['password'], row['user_type'])
-                users.append(user)
+                email = row['email']
+                password = row['password']
+                user_type = row['user_type']
+                try:
+                    user = self._create_user(email, password, user_type)
+                    users.append(user)
+                except Exception as e:
+                    logger.info('Failed to create user `{}` due to {}'.format(email, e))
+
         os.remove(temp_csv_file)
+
         return [
             {
                 'id': user.id,
@@ -93,6 +101,42 @@ class Admin(object):
             }
             for user in users
         ]
+
+    def get_user_by_email(self, email):
+        user = self._db.get_user_by_email(email)
+        if user is None:
+            return None
+
+        return {
+            'id': user.id,
+            'email': user.email,
+            'user_type': user.user_type
+        }
+
+    def get_users(self):
+        users = self._db.get_users()
+        return [
+            {
+                'id': user.id,
+                'email': user.email,
+                'user_type': user.user_type
+            }
+            for user in users
+        ]
+
+    def delete_user(self, email):
+        user = self._db.get_user_by_email(email)
+        if user is None:
+            raise InvalidUserError()
+
+        self._db.delete_users([user])
+        self._db.commit()
+        
+        return {
+            'id': user.id,
+            'email': user.email,
+            'user_type': user.user_type
+        }
 
     ####################################
     # Train Job

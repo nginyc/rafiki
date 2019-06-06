@@ -80,7 +80,8 @@ class Client(object):
         '''
         Creates a Rafiki user. 
         
-        Only admins can manage users.
+        Only admins can create users (except for admins).
+        Only superadmins can create admins.
 
         :param str email: The new user's email
         :param str password: The new user's password
@@ -100,10 +101,11 @@ class Client(object):
     def create_users_with_csv(self, csv_file_path):
         '''
         Creates multiple Rafiki users with a CSV file.
+        If user creation fails for a row (e.g. because the user's email already exists), the row will be skipped.
 
         :param str csv_file_path: Path to a single csv file containing users to seed
 
-        :returns: Created users as list of dictionaries
+        :returns: Created users as list of dictionaries. 
         :rtype: dict[str, any][]
         '''
 
@@ -117,6 +119,35 @@ class Client(object):
                 'csv_file_bytes': csv_file_bytes
             }
         )
+        return data
+
+    def get_users(self):
+        '''
+        Lists all Rafiki users.
+        
+        Only admins can list all users.
+
+        :returns: List of users
+        :rtype: dict[str, any][]
+        '''
+        data = self._get('/users')
+        return data
+
+    def delete_user(self, email):
+        '''
+        Deletes a Rafiki user. 
+        
+        Only admins can delete users (except for admins).
+        Only superadmins can delete admins.
+
+        :param str email: The user's email
+
+        :returns: Deleted user as dictionary
+        :rtype: dict[str, any]
+        '''
+        data = self._delete('/users', json={
+            'email': email
+        })
         return data
 
     ####################################
