@@ -1,3 +1,5 @@
+source ./scripts/utils.sh
+
 pull_image()
 {
     if [[ ! -z $(docker images -q $1) ]]
@@ -8,6 +10,7 @@ pull_image()
     fi
 }
 
+title "Pulling images..."
 echo "Pulling images required by Rafiki from Docker Hub..."
 pull_image $IMAGE_POSTGRES
 pull_image $IMAGE_REDIS

@@ -8,9 +8,10 @@ export ADMIN_WEB_EXT_PORT=3001
 export ADVISOR_EXT_PORT=3002
 export POSTGRES_EXT_PORT=5433
 export REDIS_EXT_PORT=6380
-export DATA_WORKDIR_PATH=$PWD/data # Shares a data folder with containers
-export LOGS_WORKDIR_PATH=$PWD/logs # Shares a folder with containers that stores components' logs
+export DATA_WORKDIR_PATH=$PWD/data # Folder shared with containers that contains datasets
+export LOGS_WORKDIR_PATH=$PWD/logs # Folder shared with containers that stores components' logs
 export APP_MODE=DEV # DEV or PROD
+export POSTGRES_DUMP_FILE_PATH=$PWD/db_dump.sql # PostgreSQL database dump file
 
 # Internal credentials for Rafiki's components
 export POSTGRES_USER=rafiki
