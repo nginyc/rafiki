@@ -16,6 +16,7 @@ from .services_manager import ServicesManager
 
 logger = logging.getLogger(__name__)
 
+class InvalidUserTypeError(Exception): pass
 class UserExistsError(Exception): pass
 class InvalidUserError(Exception): pass
 class InvalidPasswordError(Exception): pass
@@ -652,6 +653,9 @@ class Admin(object):
 
         if user is not None:
             raise UserExistsError()
+        
+        if user_type not in [UserType.SUPERADMIN, UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER]:
+            raise InvalidUserTypeError()
 
         user = self._db.create_user(email, password_hash, user_type)
         self._db.commit()
