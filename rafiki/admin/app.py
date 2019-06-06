@@ -64,11 +64,15 @@ def delete_user(auth):
 
     with admin:
         user = admin.get_user_by_email(params['email'])
-
+        
         if user is not None:
             # Only superadmins can delete admins
             if auth['user_type'] != UserType.SUPERADMIN and \
                     user['user_type'] in [UserType.ADMIN, UserType.SUPERADMIN]:
+                raise UnauthorizedError()
+
+            # Cannot delete yourself
+            if auth['user_id'] == user['id']:
                 raise UnauthorizedError()
         
         return jsonify(admin.delete_user(**params))
