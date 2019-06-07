@@ -507,7 +507,7 @@ class Admin(object):
     def create_model(self, user_id, name, task, model_file_bytes, 
                     model_class, docker_image=None, dependencies={}, 
                     access_right=ModelAccessRight.PRIVATE):
-        
+
         model = self._db.create_model(
             user_id=user_id,
             name=name,
@@ -526,7 +526,20 @@ class Admin(object):
             'name': model.name 
         }
 
-    def get_model(self, user_id, name):
+    def delete_model(self, model_id):
+        model = self._db.get_model(model_id)
+        if model is None:
+            raise InvalidModelError()
+
+        self._db.delete_models([model])
+        
+        return {
+            'id': model.id,
+            'user_id': model.user_id,
+            'name': model.name 
+        }
+
+    def get_model_by_name(self, user_id, name):
         model = self._db.get_model_by_name(user_id, name)
         if model is None:
             raise InvalidModelError()
@@ -543,8 +556,25 @@ class Admin(object):
             'access_right': model.access_right
         }
 
-    def get_model_file(self, user_id, name):
-        model = self._db.get_model_by_name(user_id, name)
+    def get_model(self, model_id):
+        model = self._db.get_model(model_id)
+        if model is None:
+            raise InvalidModelError()
+
+        return {
+            'id': model.id,
+            'user_id': model.user_id,
+            'name': model.name,
+            'task': model.task,
+            'model_class': model.model_class,
+            'datetime_created': model.datetime_created,
+            'docker_image': model.docker_image,
+            'dependencies': model.dependencies,
+            'access_right': model.access_right
+        }
+
+    def get_model_file(self, model_id):
+        model = self._db.get_model(model_id)
         if model is None:
             raise InvalidModelError()
 

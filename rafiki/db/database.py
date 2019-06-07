@@ -336,7 +336,8 @@ class Database(object):
         return model
 
     def delete_models(self, models):
-        self._session.delete(models)
+        for model in models:
+            self._session.delete(model)
 
     def get_available_models(self, user_id, task=None):
         # Get public models or user's own models

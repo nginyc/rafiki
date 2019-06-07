@@ -206,7 +206,10 @@ class Client(object):
         :rtype: dict[str, any]
         '''
         user_id = user_id or self._user['id']
-        data = self._get('/models/{}/{}'.format(user_id, name))
+        data = self._get('/models', params={
+            'user_id': user_id,
+            'name': name
+        })
         return data
     
     def download_model_file(self, name, out_model_file_path, user_id=None):
@@ -222,8 +225,8 @@ class Client(object):
         :returns: Details of model as dictionary
         :rtype: dict[str, any]
         '''
-        user_id = user_id or self._user['id']
-        model_file_bytes = self._get('/models/{}/{}/model_file'.format(user_id, name))
+        model = self.get_model(name, user_id) # Get model ID
+        model_file_bytes = self._get('/models/{}/model_file'.format(model['id']))
 
         with open(out_model_file_path, 'wb') as f:
             f.write(model_file_bytes)
@@ -252,6 +255,21 @@ class Client(object):
         data = self._get('/models/available', params={
             'task': task
         })
+        return data
+
+    def delete_model(self, name, user_id=None):
+        '''
+        Deletes a single model, identified by user & name.
+
+        Model developers can only delete their own models.
+
+        :param str name: Name of model
+        :param str user_id: User ID of owner of model, defaults to current user's
+        :returns: Deleted model
+        :rtype: dict[str, any]
+        '''
+        model = self.get_model(name, user_id) # Get model ID
+        data = self._delete('/models/{}'.format(model['id']))
         return data
 
     ####################################
