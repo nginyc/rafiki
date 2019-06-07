@@ -5,7 +5,7 @@ import traceback
 import json
 
 from rafiki.constants import UserType
-from rafiki.utils.auth import generate_token, decode_token, auth
+from rafiki.utils.auth import generate_token, decode_token, auth, UnauthorizedError
 
 from .admin import Admin
 
@@ -261,42 +261,45 @@ def create_model(auth):
     with admin:
         return jsonify(admin.create_model(auth['user_id'], **params))
 
-@app.route('/models/<name>/model_file', methods=['GET'])
+@app.route('/models/available', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_model_file(auth, name):
+def get_available_models(auth):
+    admin = get_admin()
+    params = get_request_params()
+    with admin:
+        return jsonify(admin.get_available_models(auth['user_id'], **params))
+
+@app.route('/models/<user_id>/<name>', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def get_model(auth, user_id, name):
     admin = get_admin()
     params = get_request_params()
 
+    # Non-admins cannot access others' models
+    if auth['user_type'] in [UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER]:
+        if auth['user_id'] != user_id:
+            raise UnauthorizedError()  
+
     with admin:
-        model_file = admin.get_model_file(auth['user_id'], name, **params)
+        return jsonify(admin.get_model(user_id, name, **params))
+
+@app.route('/models/<user_id>/<name>/model_file', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def get_model_file(auth, user_id, name):
+    admin = get_admin()
+    params = get_request_params()
+
+    # Non-admins cannot access others' models
+    if auth['user_type'] in [UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER]:
+        if auth['user_id'] != user_id:
+            raise UnauthorizedError()  
+
+    with admin:
+        model_file = admin.get_model_file(user_id, name, **params)
 
     res = make_response(model_file)
     res.headers.set('Content-Type', 'application/octet-stream')
     return res
-
-@app.route('/models/<name>', methods=['GET'])
-@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_model(auth, name):
-    admin = get_admin()
-    params = get_request_params()
-    with admin:
-        return jsonify(admin.get_model(auth['user_id'], name, **params))
-
-@app.route('/models', methods=['GET'])
-@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_models(auth):
-    admin = get_admin()
-    params = get_request_params()
-
-    # Return models by task
-    if params.get('task') is not None:
-        with admin:
-            return jsonify(admin.get_models_of_task(auth['user_id'], **params))
-    
-    # Return all models
-    else:
-        with admin:
-            return jsonify(admin.get_models(auth['user_id'], **params))
 
 ####################################
 # Administrative Actions

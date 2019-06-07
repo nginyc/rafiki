@@ -130,7 +130,7 @@ class Client(object):
 
         Only admins & model developers can manage models.
 
-        :param str name: Name of the model, must be unique on Rafiki
+        :param str name: Name of the model, which must be unique across all models added by the current user 
         :param str task: Task associated with the model, where the model must adhere to the specification of the task
         :param str model_file_path: Path to a single Python file that contains the definition for the model class
         :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
@@ -146,7 +146,7 @@ class Client(object):
         If the Python file imports any external Python modules, you should list it in ``dependencies`` or create a custom
         ``docker_image``. 
 
-        If a model's ``access_right`` is set to ``PUBLIC``, all other users have access to the model for training
+        If a model's ``access_right`` is set to ``PUBLIC``, this model will be publicly available to all other users on Rafiki for training
         and inference. By default, a model's access is ``PRIVATE``.
 
         ``dependencies`` should be a dictionary of ``{ <dependency_name>: <dependency_version> }``, where 
@@ -194,66 +194,64 @@ class Client(object):
         )
         return data
 
-    def get_model(self, name):
+    def get_model(self, name, user_id=None):
         '''
-        Retrieves details of a single model.
+        Retrieves details of a single model, identified by user & name.
+
+        Model developers can only view their own models.
 
         :param str name: Name of model
+        :param str user_id: User ID of owner of model, defaults to current user's
         :returns: Details of model as dictionary
         :rtype: dict[str, any]
         '''
-        data = self._get('/models/{}'.format(name))
+        user_id = user_id or self._user['id']
+        data = self._get('/models/{}/{}'.format(user_id, name))
         return data
-
-    def get_models(self):
+    
+    def download_model_file(self, name, out_model_file_path, user_id=None):
         '''
-        Lists all models on Rafiki.
+        Downloads the Python model class file for the Rafiki model identified by user & name.
+        Defaults to the current user's model.
 
-        :param str access_right: Model access right.
-        :returns: Details of models as list of dictionaries
-        :rtype: dict[str, any][]
-        '''
-        data = self._get('/models')
-        return data
-
-    def get_models_of_task(self, task):
-        '''
-        Lists all models associated to a task on Rafiki.
-
-        :param str task: Task name
-        :returns: Details of models as list of dictionaries
-        :rtype: dict[str, any][]
-        '''
-        data = self._get('/models', params={
-            'task': task
-        })
-        return data
-
-    def download_model_file(self, name, model_file_path):
-        '''
-        Downloads the Python script containing the model's class to the local filesystem.
+        Model developers can only download their own models.
 
         :param str name: Name of model
-        :param str model_file_path: Absolute/relative path to save the Python script to
+        :param str user_id: User ID of owner of model, defaults to current user's
+        :param str out_model_file_path: Absolute/relative path to save model class file to
         :returns: Details of model as dictionary
         :rtype: dict[str, any]
         '''
-        model_file_bytes = self._get('/models/{}/model_file'.format(name))
+        user_id = user_id or self._user['id']
+        model_file_bytes = self._get('/models/{}/{}/model_file'.format(user_id, name))
 
-        with open(model_file_path, 'wb') as f:
+        with open(out_model_file_path, 'wb') as f:
             f.write(model_file_bytes)
 
         data = self.get_model(name)
         dependencies = data.get('dependencies')
         model_class = data.get('model_class')
 
-        print('Model file downloaded to "{}"!'.format(os.path.join(os.getcwd(), model_file_path)))
+        print('Model file downloaded to "{}"!'.format(os.path.join(os.getcwd(), out_model_file_path)))
         
         if dependencies:
             print('You\'ll need to install the following model dependencies locally: {}'.format(dependencies))
 
         print('From the file, import the model class `{}`.'.format(model_class))
 
+        return data
+
+    def get_available_models(self, task=None):
+        '''
+        Lists all Rafiki models available to the current user, optionally filtering by task.
+
+        :param str task: Task name
+        :returns: Available models as list of dictionaries
+        :rtype: dict[str, any][]
+        '''
+        data = self._get('/models/available', params={
+            'task': task
+        })
         return data
 
     ####################################

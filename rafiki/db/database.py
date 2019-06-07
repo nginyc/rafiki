@@ -1,6 +1,6 @@
 import datetime
 import os
-from sqlalchemy import create_engine, distinct
+from sqlalchemy import create_engine, distinct, or_
 from sqlalchemy.orm import sessionmaker
 
 from rafiki.constants import TrainJobStatus, \
@@ -11,6 +11,7 @@ from .schema import Base, TrainJob, SubTrainJob, TrainJobWorker, \
     TrialLog
 
 class InvalidModelAccessRightError(Exception): pass
+class DuplicateModelNameError(Exception): pass
 
 class Database(object):
     def __init__(self, 
@@ -334,26 +335,21 @@ class Database(object):
         self._session.add(model)
         return model
 
-    def get_models_of_task(self, user_id, task):
-        task_models = self._session.query(Model) \
-            .filter(Model.task == task) \
-            .all()
+    def delete_models(self, models):
+        self._session.delete(models)
 
-        public_models = self._filter_public_models(task_models)
-        private_models = self._filter_private_models(task_models, user_id)
-        models = public_models + private_models
+    def get_available_models(self, user_id, task=None):
+        # Get public models or user's own models
+        query = self._session.query(Model) \
+            .filter(or_(Model.access_right == ModelAccessRight.PUBLIC, Model.user_id == user_id))
+        if task is not None:
+            query = query.filter(Model.task == task)
+        models = query.all()
         return models
 
-    def get_models(self, user_id):
-        all_models = self._session.query(Model).all()
-
-        public_models = self._filter_public_models(all_models)
-        private_models = self._filter_private_models(all_models, user_id)
-        models = public_models + private_models
-        return models
-
-    def get_model_by_name(self, name):
+    def get_model_by_name(self, user_id, name):
         model = self._session.query(Model) \
+            .filter(Model.user_id == user_id) \
             .filter(Model.name == name).first()
         
         return model
@@ -465,7 +461,7 @@ class Database(object):
 
     def commit(self):
         try:
-        self._session.commit()
+            self._session.commit()
         except Exception as e:
             # Check if error is due to duplicate model name
             if 'model_name_user_id_key' in str(e):
@@ -495,10 +491,3 @@ class Database(object):
 
     def _define_tables(self):
         Base.metadata.create_all(bind=self._engine)
-
-    def _filter_public_models(self, models):
-        return list(filter(lambda model: model.access_right == ModelAccessRight.PUBLIC, models))
-    
-    def _filter_private_models(self, models, user_id):
-        return list(filter(lambda model: model.access_right == ModelAccessRight.PRIVATE and \
-                            model.user_id == user_id, models))
