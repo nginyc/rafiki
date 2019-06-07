@@ -208,8 +208,7 @@ class Client(object):
     
     def download_model_file(self, model_id, out_model_file_path):
         '''
-        Downloads the Python model class file for the Rafiki model identified by user & name.
-        Defaults to the current user's model.
+        Downloads the Python model class file for the Rafiki model.
 
         Model developers can only download their own models.
 
@@ -251,9 +250,8 @@ class Client(object):
 
     def delete_model(self, model_id):
         '''
-        Deletes a single model.
+        Deletes a single model. Models that have been used in train jobs cannot be deleted.
 
-        Models that have been used in train jobs cannot be deleted.
         Model developers can only delete their own models.
 
         :param str model_id: ID of model
