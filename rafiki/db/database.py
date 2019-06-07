@@ -10,6 +10,8 @@ from .schema import Base, TrainJob, SubTrainJob, TrainJobWorker, \
     InferenceJob, Trial, Model, User, Service, InferenceJobWorker, \
     TrialLog
 
+class InvalidModelAccessRightError(Exception): pass
+
 class Database(object):
     def __init__(self, 
         host=os.environ.get('POSTGRES_HOST', 'localhost'), 
@@ -316,6 +318,9 @@ class Database(object):
 
     def create_model(self, user_id, name, task, model_file_bytes, 
                     model_class, docker_image, dependencies, access_right):
+        
+        self._validate_model_access_right(access_right)
+
         model = Model(
             user_id=user_id,
             name=name,
@@ -356,6 +361,10 @@ class Database(object):
     def get_model(self, id):
         model = self._session.query(Model).get(id)
         return model
+
+    def _validate_model_access_right(self, access_right):
+        if access_right not in [ModelAccessRight.PUBLIC, ModelAccessRight.PRIVATE]:
+            raise InvalidModelAccessRightError()
 
     ####################################
     # Trials
