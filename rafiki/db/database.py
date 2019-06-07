@@ -464,7 +464,15 @@ class Database(object):
         self.disconnect()
 
     def commit(self):
+        try:
         self._session.commit()
+        except Exception as e:
+            # Check if error is due to duplicate model name
+            if 'model_name_user_id_key' in str(e):
+                self._session.rollback()
+                raise DuplicateModelNameError()
+            else:
+                raise e
 
     # Ensures that future database queries load fresh data from underlying database
     def expire(self):
