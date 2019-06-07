@@ -1,6 +1,6 @@
 import os
 import traceback
-import datetime
+from datetime import datetime
 import json
 import logging
 
@@ -106,7 +106,7 @@ class ModelLogger():
 
     def _log(self, log_type, log_dict={}):
         log_dict['type'] = log_type
-        log_dict['time'] = datetime.datetime.now().strftime(MODEL_LOG_DATETIME_FORMAT)
+        log_dict['time'] = datetime.now().strftime(MODEL_LOG_DATETIME_FORMAT)
         log_line = json.dumps(log_dict)
         self._logger.info(log_line)
 

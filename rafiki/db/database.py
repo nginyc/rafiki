@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import os
 from sqlalchemy import create_engine, distinct
 from sqlalchemy.orm import sessionmaker
@@ -150,7 +150,7 @@ class Database(object):
 
     def mark_sub_train_job_as_stopped(self, sub_train_job):
         sub_train_job.status = TrainJobStatus.STOPPED
-        sub_train_job.datetime_stopped = datetime.datetime.utcnow()
+        sub_train_job.datetime_stopped = datetime.utcnow()
         self._session.add(sub_train_job)
         return sub_train_job
 
@@ -221,13 +221,13 @@ class Database(object):
 
     def mark_inference_job_as_stopped(self, inference_job):
         inference_job.status = InferenceJobStatus.STOPPED
-        inference_job.datetime_stopped = datetime.datetime.utcnow()
+        inference_job.datetime_stopped = datetime.utcnow()
         self._session.add(inference_job)
         return inference_job
 
     def mark_inference_job_as_errored(self, inference_job):
         inference_job.status = InferenceJobStatus.ERRORED
-        inference_job.datetime_stopped = datetime.datetime.utcnow()
+        inference_job.datetime_stopped = datetime.utcnow()
         self._session.add(inference_job)
         return inference_job
 
@@ -302,12 +302,12 @@ class Database(object):
 
     def mark_service_as_errored(self, service):
         service.status = ServiceStatus.ERRORED
-        service.datetime_stopped = datetime.datetime.utcnow()
+        service.datetime_stopped = datetime.utcnow()
         self._session.add(service)
 
     def mark_service_as_stopped(self, service):
         service.status = ServiceStatus.STOPPED
-        service.datetime_stopped = datetime.datetime.utcnow()
+        service.datetime_stopped = datetime.utcnow()
         self._session.add(service)
 
     def get_service(self, service_id):
@@ -433,14 +433,14 @@ class Database(object):
 
     def mark_trial_as_errored(self, trial):
         trial.status = TrialStatus.ERRORED
-        trial.datetime_stopped = datetime.datetime.utcnow()
+        trial.datetime_stopped = datetime.utcnow()
         self._session.add(trial)
         return trial
 
     def mark_trial_as_complete(self, trial, score, parameters):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
-        trial.datetime_stopped = datetime.datetime.utcnow()
+        trial.datetime_stopped = datetime.utcnow()
         trial.parameters = parameters
         self._session.add(trial)
         return trial
@@ -452,7 +452,7 @@ class Database(object):
 
     def mark_trial_as_terminated(self, trial):
         trial.status = TrialStatus.TERMINATED
-        trial.datetime_stopped = datetime.datetime.utcnow()
+        trial.datetime_stopped = datetime.utcnow()
         self._session.add(trial)
         return trial
 
