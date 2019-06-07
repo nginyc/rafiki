@@ -16,6 +16,7 @@ from .services_manager import ServicesManager
 logger = logging.getLogger(__name__)
 
 class UserExistsError(Exception): pass
+class UserAlreadyBannedError(Exception): pass
 class InvalidUserError(Exception): pass
 class InvalidPasswordError(Exception): pass
 class InvalidRunningInferenceJobError(Exception): pass
@@ -99,13 +100,16 @@ class Admin(object):
         user = self._db.get_user_by_email(email)
         if user is None:
             raise InvalidUserError()
+        if user.banned_date is not None:
+            raise UserAlreadyBannedError()
 
         self._db.ban_user(user)
         
         return {
             'id': user.id,
             'email': user.email,
-            'user_type': user.user_type
+            'user_type': user.user_type,
+            'banned_date': user.banned_date
         }
 
     ####################################
