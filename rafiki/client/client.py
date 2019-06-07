@@ -36,6 +36,8 @@ class Client(object):
         App developers can create, list and stop train and inference jobs, as well as list models.
         Model developers can create and list models.
 
+        The login session (the session token) expires in 1 hour.
+
         :param str email: User's email
         :param str password: User's password
 
@@ -133,16 +135,17 @@ class Client(object):
         data = self._get('/users')
         return data
 
-    def delete_user(self, email):
+    def ban_user(self, email):
         '''
-        Deletes a Rafiki user. 
+        Bans a Rafiki user, disallowing logins.
         
-        Only admins can delete users (except for admins).
-        Only superadmins can delete admins.
+        This action is irrevisible.
+        Only admins can ban users (except for admins).
+        Only superadmins can ban admins.
 
         :param str email: The user's email
 
-        :returns: Deleted user as dictionary
+        :returns: Banned user as dictionary
         :rtype: dict[str, any]
         '''
         data = self._delete('/users', json={

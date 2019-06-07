@@ -47,9 +47,9 @@ class Database(object):
         self._session.add(user)
         return user
 
-    def delete_users(self, users):
-        for user in users:
-            self._session.delete(user)
+    def ban_user(self, user):
+        user.banned_date = datetime.utcnow()
+        self._session.add(user)
 
     def get_user_by_email(self, email):
         user = self._session.query(User).filter(User.email == email).first()
