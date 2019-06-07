@@ -653,13 +653,15 @@ class Admin(object):
 
         if user is not None:
             raise UserExistsError()
-        
-        if user_type not in [UserType.SUPERADMIN, UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER]:
-            raise InvalidUserTypeError()
 
+        self._validate_user_type(user_type)
         user = self._db.create_user(email, password_hash, user_type)
         self._db.commit()
         return user
+
+    def _validate_user_type(self, user_type):
+        if user_type not in [UserType.SUPERADMIN, UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER]:
+            raise InvalidUserTypeError()
 
     ####################################
     # Private / Train Job
