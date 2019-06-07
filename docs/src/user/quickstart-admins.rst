@@ -91,14 +91,14 @@ Example:
 .. seealso:: :meth:`rafiki.client.Client.get_users`
 
 
-Deleting a user
+Banning a user
 --------------------------------------------------------------------
 
 Example:
 
     .. code-block:: python
 
-        client.delete_user('app_developer@rafiki')
+        client.ban_user('app_developer@rafiki')
     
 
-.. seealso:: :meth:`rafiki.client.Client.delete_user`
+.. seealso:: :meth:`rafiki.client.Client.ban_user`

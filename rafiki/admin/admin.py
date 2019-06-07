@@ -16,7 +16,6 @@ from .services_manager import ServicesManager
 
 logger = logging.getLogger(__name__)
 
-class InvalidUserTypeError(Exception): pass
 class UserExistsError(Exception): pass
 class InvalidUserError(Exception): pass
 class InvalidPasswordError(Exception): pass
@@ -60,7 +59,9 @@ class Admin(object):
 
         return {
             'id': user.id,
-            'user_type': user.user_type
+            'email': user.email,
+            'user_type': user.user_type,
+            'banned_date': user.banned_date
         }
 
     def create_user(self, email, password, user_type):
@@ -103,17 +104,6 @@ class Admin(object):
             for user in users
         ]
 
-    def get_user_by_email(self, email):
-        user = self._db.get_user_by_email(email)
-        if user is None:
-            return None
-
-        return {
-            'id': user.id,
-            'email': user.email,
-            'user_type': user.user_type
-        }
-
     def get_users(self):
         users = self._db.get_users()
         return [
@@ -125,13 +115,12 @@ class Admin(object):
             for user in users
         ]
 
-    def delete_user(self, email):
+    def ban_user(self, email):
         user = self._db.get_user_by_email(email)
         if user is None:
             raise InvalidUserError()
 
-        self._db.delete_users([user])
-        self._db.commit()
+        self._db.ban_user(user)
         
         return {
             'id': user.id,
@@ -653,9 +642,6 @@ class Admin(object):
 
         if user is not None:
             raise UserExistsError()
-        
-        if user_type not in [UserType.SUPERADMIN, UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER]:
-            raise InvalidUserTypeError()
 
         user = self._db.create_user(email, password_hash, user_type)
         self._db.commit()

@@ -3,6 +3,7 @@ from flask_cors import CORS
 import os
 import traceback
 import json
+from datetime import datetime
 
 from rafiki.constants import UserType
 from rafiki.utils.auth import generate_token, decode_token, auth, UnauthorizedError
@@ -58,7 +59,7 @@ def get_users(auth):
 
 @app.route('/users', methods=['DELETE'])
 @auth([UserType.ADMIN])
-def delete_user(auth):
+def ban_user(auth):
     admin = get_admin()
     params = get_request_params()
 
@@ -66,16 +67,16 @@ def delete_user(auth):
         user = admin.get_user_by_email(params['email'])
         
         if user is not None:
-            # Only superadmins can delete admins
+            # Only superadmins can ban admins
             if auth['user_type'] != UserType.SUPERADMIN and \
                     user['user_type'] in [UserType.ADMIN, UserType.SUPERADMIN]:
                 raise UnauthorizedError()
 
-            # Cannot delete yourself
+            # Cannot ban yourself
             if auth['user_id'] == user['id']:
                 raise UnauthorizedError()
         
-        return jsonify(admin.delete_user(**params))
+        return jsonify(admin.ban_user(**params))
 
 @app.route('/tokens', methods=['POST'])
 def generate_user_token():
@@ -86,12 +87,11 @@ def generate_user_token():
     with admin:
         user = admin.authenticate_user(**params)
 
-    auth = {
-        'user_id': user['id'],
-        'user_type': user['user_type']
-    }
+    # User cannot be banned
+    if user.get('banned_date') is not None and datetime.now() > user.get('banned_date'):
+        raise UnauthorizedError('User is banned')
     
-    token = generate_token(auth)
+    token = generate_token(user)
 
     return jsonify({
         'user_id': user['id'],
