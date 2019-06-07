@@ -253,6 +253,7 @@ class Client(object):
         '''
         Deletes a single model.
 
+        Models that have been used in train jobs cannot be deleted.
         Model developers can only delete their own models.
 
         :param str model_id: ID of model

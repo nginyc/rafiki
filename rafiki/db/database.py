@@ -12,6 +12,7 @@ from .schema import Base, TrainJob, SubTrainJob, TrainJobWorker, \
 
 class InvalidModelAccessRightError(Exception): pass
 class DuplicateModelNameError(Exception): pass
+class ModelUsedError(Exception): pass
 
 class Database(object):
     def __init__(self, 
@@ -335,9 +336,15 @@ class Database(object):
         self._session.add(model)
         return model
 
-    def delete_models(self, models):
-        for model in models:
-            self._session.delete(model)
+    def delete_model(self, model):
+        # Ensure that model has no referencing jobs
+        sub_train_job = self._session.query(SubTrainJob) \
+            .filter(SubTrainJob.model_id == model.id).first()
+
+        if sub_train_job is not None:
+            raise ModelUsedError()
+
+        self._session.delete(model)
 
     def get_available_models(self, user_id, task=None):
         # Get public models or user's own models

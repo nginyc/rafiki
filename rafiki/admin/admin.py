@@ -515,7 +515,7 @@ class Admin(object):
         if model is None:
             raise InvalidModelError()
 
-        self._db.delete_models([model])
+        self._db.delete_model(model)
         
         return {
             'id': model.id,
