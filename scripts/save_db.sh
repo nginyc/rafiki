@@ -7,9 +7,8 @@ then
     if [ $ok = "n" ] 
     then 
         echo "Not dumping database!" 
-        exit 1 
+    else
+        echo "Dumping database to $DUMP_FILE..." 
+        docker exec $POSTGRES_HOST pg_dump -U postgres --if-exists --clean $POSTGRES_DB > $DUMP_FILE
     fi
 fi
-
-echo "Dumping database to $DUMP_FILE..." 
-docker exec $POSTGRES_HOST pg_dump -U postgres --if-exists --clean $POSTGRES_DB > $DUMP_FILE

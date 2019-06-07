@@ -20,6 +20,7 @@ ensure_stable()
         echo "$1 is running"
     else
         echo "Error running $1"
+        echo "Maybe $1 hasn't previously been stopped - try running `scripts/stop.sh`?"
         if ! [ -z "$LOG_FILE_PATH" ]
         then
             echo "Check the logs at $LOG_FILE_PATH"
