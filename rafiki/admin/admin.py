@@ -3,7 +3,6 @@ import logging
 import traceback
 import bcrypt
 import uuid
-import csv
 
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType, InferenceJobStatus, \
@@ -72,48 +71,29 @@ class Admin(object):
             'user_type': user.user_type
         }
 
-    def create_users_with_csv(self, csv_file_bytes):
-        temp_csv_file = '{}.csv'.format(str(uuid.uuid4()))
-
-        # Temporarily save the csv file to disk
-        with open(temp_csv_file, 'wb') as f:
-            f.write(csv_file_bytes)
-
-        users = []
-        with open(temp_csv_file, 'rt', encoding='utf-8-sig') as f:
-            reader = csv.DictReader(f)
-            reader.fieldnames = [name.lower() for name in reader.fieldnames]
-            for row in reader:
-                email = row['email']
-                password = row['password']
-                user_type = row['user_type']
-                try:
-                    user = self._create_user(email, password, user_type)
-                    users.append(user)
-                except Exception as e:
-                    logger.info('Failed to create user `{}` due to {}'.format(email, e))
-
-        os.remove(temp_csv_file)
-
-        return [
-            {
-                'id': user.id,
-                'email': user.email,
-                'user_type': user.user_type
-            }
-            for user in users
-        ]
-
     def get_users(self):
         users = self._db.get_users()
         return [
             {
                 'id': user.id,
                 'email': user.email,
-                'user_type': user.user_type
+                'user_type': user.user_type,
+                'banned_date': user.banned_date
             }
             for user in users
         ]
+
+    def get_user_by_email(self, email):
+        user = self._db.get_user_by_email(email)
+        if user is None:
+            return None
+
+        return {
+            'id': user.id,
+            'email': user.email,
+            'user_type': user.user_type,
+            'banned_date': user.banned_date
+        }
 
     def ban_user(self, email):
         user = self._db.get_user_by_email(email)

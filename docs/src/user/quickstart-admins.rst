@@ -40,6 +40,18 @@ Examples:
     .. code-block:: python
 
         client.create_user(
+            email='admin@rafiki',
+            password='rafiki',
+            user_type='ADMIN'
+        )
+        
+        client.create_user(
+            email='model_developer@rafiki',
+            password='rafiki',
+            user_type='MODEL_DEVELOPER'
+        )
+
+        client.create_user(
             email='app_developer@rafiki',
             password='rafiki',
             user_type='APP_DEVELOPER'
@@ -47,19 +59,6 @@ Examples:
 
 
 .. seealso:: :meth:`rafiki.client.Client.create_user`
-
-
-Creating multiple users with a CSV file
---------------------------------------------------------------------
-
-Example:
-
-    .. code-block:: python
-
-        client.create_users_with_csv('examples/scripts/users.csv')
-
-
-.. seealso:: :meth:`rafiki.client.Client.create_users_with_csv`
 
 
 Listing all users

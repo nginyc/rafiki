@@ -100,29 +100,6 @@ class Client(object):
         })
         return data
 
-    def create_users_with_csv(self, csv_file_path):
-        '''
-        Creates multiple Rafiki users with a CSV file.
-        If user creation fails for a row (e.g. because the user's email already exists), the row will be skipped.
-
-        :param str csv_file_path: Path to a single csv file containing users to seed
-
-        :returns: Created users as list of dictionaries. 
-        :rtype: dict[str, any][]
-        '''
-
-        f = open(csv_file_path, 'rb')
-        csv_file_bytes = f.read()
-        f.close()
-
-        data = self._post(
-            '/users/csv', 
-            files={
-                'csv_file_bytes': csv_file_bytes
-            }
-        )
-        return data
-
     def get_users(self):
         '''
         Lists all Rafiki users.

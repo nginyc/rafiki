@@ -21,19 +21,6 @@ def index():
 # Users
 ####################################
 
-@app.route('/users/csv', methods=['POST'])
-@auth([UserType.ADMIN])
-def create_users_with_csv(auth):
-    admin = get_admin()
-    params = get_request_params()
-
-    # Expect csv file as bytes
-    csv_file_bytes = request.files['csv_file_bytes'].read()
-    params['csv_file_bytes'] = csv_file_bytes
-
-    with admin:
-        return jsonify(admin.create_users_with_csv(**params))
-
 @app.route('/users', methods=['POST'])
 @auth([UserType.ADMIN])
 def create_user(auth):

@@ -1,12 +1,23 @@
 import pprint
 import os
+import csv
 
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 
 def seed_users(client, csv_file_path):
-    users = client.create_users_with_csv(csv_file_path)
-    pprint.pprint(users)
+    with open(csv_file_path, 'rt', encoding='utf-8-sig') as f:
+        reader = csv.DictReader(f)
+        reader.fieldnames = [name.lower() for name in reader.fieldnames]
+        for row in reader:
+            email = row['email']
+            password = row['password']
+            user_type = row['user_type']
+            try:
+                client.create_user(email, password, user_type)
+            except Exception as e:
+                print('Failed to create user `{}` due to:'.format(email))
+                print(e)
 
 if __name__ == '__main__':
     rafiki_host = os.environ.get('RAFIKI_HOST', 'localhost')
