@@ -3,12 +3,14 @@ import os
 from sqlalchemy import create_engine, distinct
 from sqlalchemy.orm import sessionmaker
 
-from rafiki.constants import TrainJobStatus, \
+from rafiki.constants import TrainJobStatus, UserType, \
     TrialStatus, ServiceStatus, InferenceJobStatus, ModelAccessRight
 
 from .schema import Base, TrainJob, SubTrainJob, TrainJobWorker, \
     InferenceJob, Trial, Model, User, Service, InferenceJobWorker, \
     TrialLog
+
+class InvalidUserTypeError(Exception): pass
 
 class Database(object):
     def __init__(self, 
@@ -36,6 +38,7 @@ class Database(object):
     ####################################
 
     def create_user(self, email, password_hash, user_type):
+        self._validate_user_type(user_type)
         user = User(
             email=email,
             password_hash=password_hash,
@@ -55,6 +58,10 @@ class Database(object):
     def get_users(self):
         users = self._session.query(User).all()
         return users
+
+    def _validate_user_type(self, user_type):
+        if user_type not in [UserType.SUPERADMIN, UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER]:
+            raise InvalidUserTypeError()
 
     ####################################
     # Train Jobs
