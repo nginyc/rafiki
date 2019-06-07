@@ -1,3 +1,6 @@
+source ./scripts/utils.sh
+
+title "Creating Docker swarm for Rafiki..."
 docker swarm leave $1
 docker swarm init --advertise-addr $DOCKER_SWARM_ADVERTISE_ADDR \
     || >&2 echo "Failed to init Docker swarm - continuing..."
