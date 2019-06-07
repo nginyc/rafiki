@@ -96,39 +96,23 @@ class Admin(object):
     ####################################
 
     def create_train_job(self, user_id, app, task, train_dataset_uri, 
-                        test_dataset_uri, budget, models=None):
+                        test_dataset_uri, budget, model_ids):
         
+        # Ensure at least 1 model
+        if len(model_ids) == 0:
+            raise NoModelsForTrainJobError()
+
         # Compute auto-incremented app version
         train_jobs = self._db.get_train_jobs_of_app(app)
         app_version = max([x.app_version for x in train_jobs], default=0) + 1
 
         # Get models available to user
-        avail_models = self._db.get_available_models(user_id, task)
-        
-        # Auto populate models with all available models if not specified
-        if models is None:
-            model_ids = [x.id for x in avail_models]
-        else:
-            # Ensure all specified models are available
-            model_ids = []
-            for model in models:
-                own_model = next((x for x in avail_models if x.name == model and x.user_id == user_id), None)
-                public_model = next((x for x in avail_models if x.name == model and x.user_id != user_id), None)
+        avail_model_ids = [x.id for x in self._db.get_available_models(user_id, task)]
 
-                # Use own model first, then use public model
-                model_id = None
-                if own_model is not None:
-                    model_id = own_model.id
-                elif public_model is not None:
-                    model_id = public_model.id
-                else:
-                    raise InvalidModelError('No available mode of name: "{}"'.format(model))
-
-                model_ids.append(model_id)
-
-        # Ensure at least 1 model
-        if len(model_ids) == 0:
-            raise NoModelsForTrainJobError()
+        # Ensure all specified models are available
+        for model_id in model_ids:
+            if model_id not in avail_model_ids:
+                raise InvalidModelError('No model of ID "{}" is available'.format(model_id))
 
         train_job = self._db.create_train_job(
             user_id=user_id,

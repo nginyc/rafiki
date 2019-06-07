@@ -6,8 +6,7 @@ import os
 
 from rafiki.constants import BudgetType, ModelAccessRight
 
-class RafikiConnectionError(ConnectionError):
-    pass
+class RafikiConnectionError(ConnectionError): pass
 
 class Client(object):
 
@@ -194,44 +193,37 @@ class Client(object):
         )
         return data
 
-    def get_model(self, name, user_id=None):
+    def get_model(self, model_id):
         '''
-        Retrieves details of a single model, identified by user & name.
+        Retrieves details of a single model.
 
         Model developers can only view their own models.
 
-        :param str name: Name of model
-        :param str user_id: User ID of owner of model, defaults to current user's
+        :param str model_id: ID of model
         :returns: Details of model as dictionary
         :rtype: dict[str, any]
         '''
-        user_id = user_id or self._user['id']
-        data = self._get('/models', params={
-            'user_id': user_id,
-            'name': name
-        })
+        data = self._get('/models/{}'.format(model_id))
         return data
     
-    def download_model_file(self, name, out_model_file_path, user_id=None):
+    def download_model_file(self, model_id, out_model_file_path):
         '''
         Downloads the Python model class file for the Rafiki model identified by user & name.
         Defaults to the current user's model.
 
         Model developers can only download their own models.
 
-        :param str name: Name of model
-        :param str user_id: User ID of owner of model, defaults to current user's
+        :param str model_id: ID of model
         :param str out_model_file_path: Absolute/relative path to save model class file to
         :returns: Details of model as dictionary
         :rtype: dict[str, any]
         '''
-        model = self.get_model(name, user_id) # Get model ID
-        model_file_bytes = self._get('/models/{}/model_file'.format(model['id']))
+        model_file_bytes = self._get('/models/{}/model_file'.format(model_id))
 
         with open(out_model_file_path, 'wb') as f:
             f.write(model_file_bytes)
 
-        data = self.get_model(name)
+        data = self.get_model(model_id)
         dependencies = data.get('dependencies')
         model_class = data.get('model_class')
 
@@ -257,19 +249,17 @@ class Client(object):
         })
         return data
 
-    def delete_model(self, name, user_id=None):
+    def delete_model(self, model_id):
         '''
-        Deletes a single model, identified by user & name.
+        Deletes a single model.
 
         Model developers can only delete their own models.
 
-        :param str name: Name of model
-        :param str user_id: User ID of owner of model, defaults to current user's
+        :param str model_id: ID of model
         :returns: Deleted model
         :rtype: dict[str, any]
         '''
-        model = self.get_model(name, user_id) # Get model ID
-        data = self._delete('/models/{}'.format(model['id']))
+        data = self._delete('/models/{}'.format(model_id))
         return data
 
     ####################################
@@ -289,7 +279,7 @@ class Client(object):
         :param str train_dataset_uri: URI of the train dataset in a format specified by the task
         :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task
         :param str budget: Budget for each model
-        :param str[] models: List of model names to use for train job
+        :param str[] models: List of IDs of model to use for train job. Defaults to all available models
         :returns: Created train job as dictionary
         :rtype: dict[str, any]
 
@@ -308,6 +298,10 @@ class Client(object):
         ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported
         =====================       =====================
         '''
+        # Default to all available models
+        if models is None: 
+            avail_models = self.get_available_models(task)
+            models = [x['id'] for x in avail_models]
 
         data = self._post('/train_jobs', json={
             'app': app,
@@ -315,7 +309,7 @@ class Client(object):
             'train_dataset_uri': train_dataset_uri,
             'test_dataset_uri': test_dataset_uri,
             'budget': budget,
-            'models': models
+            'model_ids': models
         })
         return data
 

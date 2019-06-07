@@ -269,19 +269,20 @@ def get_available_models(auth):
     with admin:
         return jsonify(admin.get_available_models(auth['user_id'], **params))
 
-@app.route('/models', methods=['GET'])
+@app.route('/models/<model_id>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_model_by_name(auth):
+def get_model(auth, model_id):
     admin = get_admin()
     params = get_request_params()
 
     with admin:
         # Non-admins cannot access others' models
         if auth['user_type'] in [UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER]:
-            if 'user_id' in params and auth['user_id'] != params['user_id']:
+            model = admin.get_model(model_id)
+            if auth['user_id'] != model['user_id']:
                 raise UnauthorizedError()  
                 
-        return jsonify(admin.get_model_by_name(**params))
+        return jsonify(admin.get_model(model_id, **params))
 
 @app.route('/models/<model_id>', methods=['DELETE'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER])
