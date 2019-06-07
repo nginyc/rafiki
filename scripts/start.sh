@@ -1,64 +1,21 @@
+source ./scripts/utils.sh
+
 # Read from shell configuration file
 source ./.env.sh
 
-LOG_FILEPATH=$PWD/logs/start.log
-FILE_DIR=$(dirname "$0")
-
-# Echo title with border
-title() 
-{
-    title="| $1 |"
-    edge=$(echo "$title" | sed 's/./-/g')
-    echo "$edge"
-    echo "$title"
-    echo "$edge"
-}
-
-ensure_stable()
-{
-    echo "Waiting for 10s for $1 to stablize..."
-    sleep 10
-    if ps -p $! > /dev/null
-    then
-        echo "$1 is running"
-    else
-        echo "Error running $1"
-        echo "Check the logs at $LOG_FILEPATH"
-        exit 1
-    fi
-}
-
 # Create Docker swarm for Rafiki
-
-title "Creating Docker swarm for Rafiki..."
-bash $FILE_DIR/create_docker_swarm.sh
+bash ./scripts/create_docker_swarm.sh
 
 # Pull images from Docker Hub
-
-title "Pulling images for Rafiki from Docker Hub..."
-bash $FILE_DIR/pull_images.sh || exit 1
+bash ./scripts/pull_images.sh || exit 1
 
 # Start whole Rafiki stack
-
-title "Starting Rafiki's DB..."
-(bash $FILE_DIR/start_db.sh &> $LOG_FILEPATH) &
-ensure_stable "Rafiki's DB"
-
-title "Starting Rafiki's Cache..."
-(bash $FILE_DIR/start_cache.sh &> $LOG_FILEPATH) &
-ensure_stable "Rafiki's Cache"
-
-title "Starting Rafiki's Admin..."
-(bash $FILE_DIR/start_admin.sh &> $LOG_FILEPATH) &
-ensure_stable "Rafiki's Admin"
-
-title "Starting Rafiki's Advisor..."
-(bash $FILE_DIR/start_advisor.sh &> $LOG_FILEPATH) &
-ensure_stable "Rafiki's Advisor"
-
-title "Starting Rafiki's Admin Web..."
-(bash $FILE_DIR/start_admin_web.sh &> $LOG_FILEPATH) &
-ensure_stable "Rafiki's Admin Web"
+bash ./scripts/start_db.sh || exit 1
+bash ./scripts/load_db.sh || exit 1
+bash ./scripts/start_cache.sh || exit 1
+bash ./scripts/start_admin.sh || exit 1
+bash ./scripts/start_advisor.sh || exit 1
+bash ./scripts/start_admin_web.sh || exit 1
 
 title "Installing any dependencies..."
 pip install -r ./rafiki/client/requirements.txt
