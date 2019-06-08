@@ -288,8 +288,8 @@ class Client(object):
         =====================       =====================
         **Budget Type**             **Description**
         ---------------------       ---------------------        
-        ``MODEL_TRIAL_COUNT``       Target number of trials to run
-        ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported
+        ``MODEL_TRIAL_COUNT``       Number of trials to conduct for each model
+        ``GPU_COUNT``               Number of GPUs to allocate across all models
         =====================       =====================
         '''
 
