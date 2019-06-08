@@ -1,7 +1,7 @@
 # Core external configuration for Rafiki
 export DOCKER_NETWORK=rafiki
 export DOCKER_SWARM_ADVERTISE_ADDR=127.0.0.1
-export RAFIKI_VERSION=0.0.9
+export RAFIKI_VERSION=0.2.0
 export RAFIKI_ADDR=127.0.0.1
 export ADMIN_EXT_PORT=3000
 export ADMIN_WEB_EXT_PORT=3001
