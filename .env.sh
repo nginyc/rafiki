@@ -46,12 +46,3 @@ export IMAGE_REDIS=redis:5.0.3-alpine3.8
 
 # Utility configuration
 export PYTHONPATH=$PWD # Ensures that `rafiki` module can be imported at project root
-
-# Set alias for correct PIP & python
-alias pip='pip3.6'
-alias python='python3.6'
-
-# Web Admin Application
-export NODE_PATH=./src
-export REACT_APP_API_POINT_HOST=ncrs.d2.comp.nus.edu.sg
-export REACT_APP_API_POINT_PORT=3000
