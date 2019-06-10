@@ -15,46 +15,6 @@ from tensorflow.python.platform import gfile
 from rafiki.model import dataset_utils
 
 
-
-def load(train_images_url, train_labels_url, test_images_url, test_labels_url, label_to_name, \
-        out_train_dataset_path, out_test_dataset_path, out_meta_csv_path, limit=None):
-    '''
-        Loads and converts an image dataset of the MNIST format to the DatasetType `IMAGE_FILES`.
-        Refer to http://yann.lecun.com/exdb/mnist/ for the MNIST dataset format for.
-
-        :param str train_images_url: URL to download the training set images stored in the MNIST format
-        :param str train_labels_url: URL to download the training set labels stored in the MNIST format
-        :param str test_images_url: URL to download the test set images stored in the MNIST format
-        :param str test_labels_url: URL to download the test set labels stored in the MNIST format
-        :param dict[int, str] label_to_name: Dictionary mapping label index to label name
-        :param str out_train_dataset_path: Path to save the output train dataset file
-        :param str out_test_dataset_path: Path to save the output test dataset file
-        :param str out_meta_csv_path: Path to save the output dataset metadata .CSV file
-        :param int limit: Maximum number of train & test samples (for purposes of testing)
-    '''
-
-    print('Downloading files...')
-    train_images_file_path = dataset_utils.download_dataset_from_uri(train_images_url)
-    train_labels_file_path = dataset_utils.download_dataset_from_uri(train_labels_url)
-    test_images_file_path = dataset_utils.download_dataset_from_uri(test_images_url)
-    test_labels_file_path = dataset_utils.download_dataset_from_uri(test_labels_url)
-
-    print('Loading datasets into memory...')
-    (train_images, train_labels) = _load_dataset_from_files(train_images_file_path, train_labels_file_path, limit=limit)
-    (test_images, test_labels) = _load_dataset_from_files(test_images_file_path, test_labels_file_path, limit=limit)
-
-    print('Converting and writing datasets...')
-
-    (label_to_index) = _write_meta_csv(chain(train_labels, test_labels), label_to_name, out_meta_csv_path)
-    print('Dataset metadata file is saved at {}'.format(out_meta_csv_path))
-
-    _write_dataset(train_images, train_labels, label_to_index, out_train_dataset_path)
-    print('Train dataset file is saved at {}'.format(out_train_dataset_path))
-
-    _write_dataset(test_images, test_labels, label_to_index, out_test_dataset_path)
-    print('Test dataset file is saved at {}'.format(out_test_dataset_path))
-
-
 def load(data_dir):
     '''
         Loads and converts an voice dataset called librispeech to the DatasetType `AUDIO_FILES`.
@@ -161,6 +121,10 @@ def load(data_dir):
 
     test_clean.to_csv(os.path.join(data_dir, "librivox-test-clean.csv"), index=False)
     test_other.to_csv(os.path.join(data_dir, "librivox-test-other.csv"), index=False)
+
+    print('Dataset metadata file is saved at {}'.format(data_dir))
+
+    print('Dataset file is saved at {}'.format(data_dir + 'LibriSpeech/'))
 
 
 def maybe_download(archive_name, target_dir, archive_url):
