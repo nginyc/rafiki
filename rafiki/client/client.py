@@ -153,6 +153,19 @@ class Client(object):
         )
         return data
 
+    def get_datasets(self, task=None):
+        '''
+        Lists all datasets owned by the current user, optionally filtering by task.
+
+        :param str trsk: Task name
+        :returns: List of datasets
+        :rtype: dict[str, any][]
+        '''
+        data = self._get('/datasets', params={
+            'task': task
+        })
+        return data
+
     ####################################
     # Models
     ####################################

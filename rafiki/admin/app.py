@@ -69,7 +69,7 @@ def generate_user_token():
 ####################################
 
 @app.route('/datasets', methods=['POST'])
-@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
 def create_dataset(auth):
     admin = get_admin()
     params = get_request_params()
@@ -80,6 +80,14 @@ def create_dataset(auth):
 
     with admin:
         return jsonify(admin.create_dataset(auth['user_id'], **params))
+
+@app.route('/datasets', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def get_datasets(auth):
+    admin = get_admin()
+    params = get_request_params()
+    with admin:
+        return jsonify(admin.get_datasets(auth['user_id'], **params))
 
 ####################################
 # Models

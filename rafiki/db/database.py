@@ -52,15 +52,26 @@ class Database(object):
     # Datasets
     ####################################
 
-    def create_dataset(self, name, task, size_bytes, store_dataset_id):
+    def create_dataset(self, name, task, size_bytes, store_dataset_id, owner_id):
         dataset = Dataset(
             name=name,
             task=task,
             size_bytes=size_bytes,
-            store_dataset_id=store_dataset_id
+            store_dataset_id=store_dataset_id,
+            owner_id=owner_id
         )
         self._session.add(dataset)
         return dataset
+
+    def get_datasets(self, user_id, task=None):
+        query = self._session.query(Dataset) \
+            .filter(Dataset.owner_id == user_id)
+
+        if task is not None:
+            query = query.filter(Dataset.task == task)
+        
+        datasets = query.all()
+        return datasets
     
     ####################################
     # Models

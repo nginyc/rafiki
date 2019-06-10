@@ -97,10 +97,13 @@ class Admin(object):
     def create_dataset(self, user_id, name, task, file_bytes):
         # Store dataset in data folder
         store_dataset = self._data_store.save(file_bytes)
+
+        # Get metadata for dataset
         store_dataset_id = store_dataset.id
         size_bytes = store_dataset.size_bytes
+        owner_id = user_id
 
-        dataset = self._db.create_dataset(name, task, size_bytes, store_dataset_id)
+        dataset = self._db.create_dataset(name, task, size_bytes, store_dataset_id, owner_id)
         self._db.commit()
 
         return {
@@ -109,7 +112,21 @@ class Admin(object):
             'task': dataset.task,
             'size_bytes': dataset.size_bytes
         }
-    
+
+    def get_datasets(self, user_id, task=None):
+        datasets = self._db.get_datasets(user_id, task)
+        return [
+            {
+                'id': x.id,
+                'name': x.name,
+                'task': x.task,
+                'datetime_created': x.datetime_created,
+                'size_bytes': x.size_bytes
+
+            }
+            for x in datasets
+        ]
+
     ####################################
     # Models
     ####################################

@@ -41,12 +41,13 @@ class Dataset(Base):
     task = Column(String, nullable=False)
     store_dataset_id = Column(String, nullable=False)
     size_bytes = Column(Integer, default=0)
+    owner_id = Column(String, ForeignKey('user.id'), nullable=False)
+    datetime_created = Column(DateTime, nullable=False, default=generate_datetime)
 
 class Model(Base):
     __tablename__ = 'model'
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    datetime_created = Column(DateTime, nullable=False, default=generate_datetime)
     name = Column(String, unique=True, nullable=False)
     task = Column(String, nullable=False)
     model_file_bytes = Column(Binary, nullable=False)
@@ -55,6 +56,7 @@ class Model(Base):
     docker_image = Column(String, nullable=False)
     dependencies = Column(JSON, nullable=False)
     access_right = Column(String, nullable=False, default=ModelAccessRight.PRIVATE)
+    datetime_created = Column(DateTime, nullable=False, default=generate_datetime)
 
 class Service(Base):
     __tablename__ = 'service'
