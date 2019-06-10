@@ -4,7 +4,7 @@ export DOCKER_SWARM_ADVERTISE_ADDR=127.0.0.1
 export RAFIKI_VERSION=0.2.0
 export RAFIKI_ADDR=127.0.0.1
 export ADMIN_EXT_PORT=3000
-export ADMIN_WEB_EXT_PORT=3001
+export WEB_ADMIN_EXT_PORT=3001
 export ADVISOR_EXT_PORT=3002
 export POSTGRES_EXT_PORT=5433
 export REDIS_EXT_PORT=6380
@@ -28,7 +28,7 @@ export ADVISOR_PORT=3002
 export REDIS_HOST=rafiki_cache
 export REDIS_PORT=6379
 export PREDICTOR_PORT=3003
-export ADMIN_WEB_HOST=rafiki_admin_web
+export WEB_ADMIN_HOST=rafiki_admin_web
 export DATA_DOCKER_WORKDIR_PATH=/root/rafiki/data
 export LOGS_DOCKER_WORKDIR_PATH=/root/rafiki/logs
 export DOCKER_WORKDIR_PATH=/root/rafiki
@@ -36,7 +36,7 @@ export CONDA_ENVIORNMENT=rafiki
 
 # Docker images for Rafiki's custom components
 export RAFIKI_IMAGE_ADMIN=rafikiai/rafiki_admin
-export RAFIKI_IMAGE_ADMIN_WEB=rafikiai/rafiki_admin_web
+export RAFIKI_IMAGE_WEB_ADMIN=rafikiai/rafiki_admin_web
 export RAFIKI_IMAGE_ADVISOR=rafikiai/rafiki_advisor
 export RAFIKI_IMAGE_WORKER=rafikiai/rafiki_worker
 export RAFIKI_IMAGE_PREDICTOR=rafikiai/rafiki_predictor

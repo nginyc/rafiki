@@ -147,7 +147,7 @@ def quickstart(client, enable_gpu):
 if __name__ == '__main__':
     rafiki_host = os.environ.get('RAFIKI_HOST', 'localhost')
     admin_port = int(os.environ.get('ADMIN_EXT_PORT', 3000))
-    admin_web_port = int(os.environ.get('ADMIN_WEB_EXT_PORT', 3001))
+    admin_web_port = int(os.environ.get('WEB_ADMIN_EXT_PORT', 3001))
     user_email = os.environ.get('USER_EMAIL', SUPERADMIN_EMAIL)
     user_password = os.environ.get('USER_PASSWORD', SUPERADMIN_PASSWORD)
 
