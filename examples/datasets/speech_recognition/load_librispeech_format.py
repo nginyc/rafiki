@@ -8,6 +8,7 @@ import progressbar
 import requests
 import subprocess
 import tarfile
+import tempfile
 import unicodedata
 
 from sox import Transformer
@@ -24,7 +25,10 @@ def load(data_dir):
     '''
 
     # Conditionally download data to data_dir
-    print("Downloading Librivox data set (55GB) into {} if not already present...".format(data_dir))
+    print("Downloading LibriSppech data set (55GB) into a tmp file...")
+    print("You can skip the download by putting the downloaded tar.gz files into {} directory on your own..."
+          .format(data_dir))
+
     with progressbar.ProgressBar(max_value=7, widget=progressbar.AdaptiveETA) as bar:
         TRAIN_CLEAN_100_URL = "http://www.openslr.org/resources/12/train-clean-100.tar.gz"
         TRAIN_CLEAN_360_URL = "http://www.openslr.org/resources/12/train-clean-360.tar.gz"
@@ -112,23 +116,39 @@ def load(data_dir):
         bar.update(6)
 
     # Write sets to disk as CSV files
-    train_100.to_csv(os.path.join(data_dir, "librivox-train-clean-100.csv"), index=False)
-    train_360.to_csv(os.path.join(data_dir, "librivox-train-clean-360.csv"), index=False)
-    train_500.to_csv(os.path.join(data_dir, "librivox-train-other-500.csv"), index=False)
+    train_100.to_csv(os.path.join(work_dir, "train-clean-100-wav", "librivox-train-clean-100.csv"), index=False)
+    train_360.to_csv(os.path.join(work_dir, "train-clean-360-wav", "librivox-train-clean-360.csv"), index=False)
+    train_500.to_csv(os.path.join(work_dir, "train-other-500-wav", "librivox-train-other-500.csv"), index=False)
 
-    dev_clean.to_csv(os.path.join(data_dir, "librivox-dev-clean.csv"), index=False)
-    dev_other.to_csv(os.path.join(data_dir, "librivox-dev-other.csv"), index=False)
+    dev_clean.to_csv(os.path.join(work_dir, "dev-clean-wav", "librivox-dev-clean.csv"), index=False)
+    dev_other.to_csv(os.path.join(work_dir, "dev-other-wav", "librivox-dev-other.csv"), index=False)
 
-    test_clean.to_csv(os.path.join(data_dir, "librivox-test-clean.csv"), index=False)
-    test_other.to_csv(os.path.join(data_dir, "librivox-test-other.csv"), index=False)
+    test_clean.to_csv(os.path.join(work_dir, "test-clean-wav", "librivox-test-clean.csv"), index=False)
+    test_other.to_csv(os.path.join(work_dir, "test-other-wav", "librivox-test-other.csv"), index=False)
 
-    print('Dataset metadata file is saved at {}'.format(data_dir))
+    _write_dataset(os.path.join(work_dir, "train-clean-100-wav"), os.path.join(data_dir, "train-clean-100.zip"))
+    print('Train-clean-100 dataset file is saved at {}'.format(os.path.join(data_dir, "train-clean-100.zip")))
 
-    print('Dataset file is saved at {}'.format(data_dir + 'LibriSpeech/'))
+    _write_dataset(os.path.join(work_dir, "train-clean-360-wav"), os.path.join(data_dir, "train-clean-360.zip"))
+    print('Train-clean-360 dataset file is saved at {}'.format(os.path.join(data_dir, "train-clean-360.zip")))
 
+    _write_dataset(os.path.join(work_dir, "train-other-500-wav"), os.path.join(data_dir, "train-other-500.zip"))
+    print('Train-other-500 dataset file is saved at {}'.format(os.path.join(data_dir, "train-other-500.zip")))
+
+    _write_dataset(os.path.join(work_dir, "dev-clean-wav"), os.path.join(data_dir, "dev-clean.zip"))
+    print('Dev-clean dataset file is saved at {}'.format(os.path.join(data_dir, "dev-clean.zip")))
+
+    _write_dataset(os.path.join(work_dir, "dev-other-wav"), os.path.join(data_dir, "dev-other.zip"))
+    print('Dev-other dataset file is saved at {}'.format(os.path.join(data_dir, "dev-other.zip")))
+
+    _write_dataset(os.path.join(work_dir, "test-clean-wav"), os.path.join(data_dir, "test-clean.zip"))
+    print('Test-clean dataset file is saved at {}'.format(os.path.join(data_dir, "test-clean.zip")))
+
+    _write_dataset(os.path.join(work_dir, "test-other-wav"), os.path.join(data_dir, "test-other.zip"))
+    print('Test-other dataset file is saved at {}'.format(os.path.join(data_dir, "test-other.zip")))
 
 def maybe_download(archive_name, target_dir, archive_url):
-    # If archive file does not exist, download it...
+    # If no downloaded file is provided, download it...
     archive_path = os.path.join(target_dir, archive_name)
 
     if not os.path.exists(target_dir):
@@ -137,7 +157,7 @@ def maybe_download(archive_name, target_dir, archive_url):
 
     if not os.path.exists(archive_path):
         print('No archive "%s" - downloading...' % archive_path)
-        dataset_utils.download_dataset_from_uri(archive_url)
+        archive_path = dataset_utils.download_dataset_from_uri(archive_url)
     else:
         print('Found archive "%s" - not downloading.' % archive_path)
     return archive_path
@@ -202,5 +222,10 @@ def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir):
     return pandas.DataFrame(data=files, columns=["wav_filename", "wav_filesize", "transcript"])
 
 
+def _write_dataset(dir_path, out_dataset_path):
+    # Zip and export folder as dataset
+    out_path = shutil.make_archive(out_dataset_path, 'zip', dir_path)
+    os.rename(out_path, out_dataset_path) # Remove additional trailing `.zip`
+
 if __name__ == "__main__":
-    load('data/')
+    load(data_dir='data/libri')
