@@ -46,11 +46,16 @@
           work correctly both with client-side routing and a non-root public URL.
           Learn how to configure a non-root public URL by running `npm run build`.
         -->
-    <title>%NODE_ENV% - %REACT_APP_WEBSITE_NAME% - %REACT_APP_API_POINT_HOST% : %REACT_APP_API_POINT_PORT%</title>
+    <title>Rafiki Web Admin</title>
     <script>
       // Expect server to inject configuration
-      window.ADMIN_HOST = "%REACT_APP_API_POINT_HOST%"
-      window.ADMIN_PORT = %REACT_APP_API_POINT_PORT%
+      if ('%NODE_ENV%' == 'development') {
+        window.ADMIN_HOST = '%REACT_APP_API_POINT_HOST%'
+        window.ADMIN_PORT = %REACT_APP_API_POINT_PORT%
+      } else { 
+        window.ADMIN_HOST = '<?= REACT_APP_API_POINT_HOST ?>'
+        window.ADMIN_PORT = <?= REACT_APP_API_POINT_PORT ?>
+      }
     </script>
   </head>
   <body>

@@ -6,13 +6,13 @@ RUN mkdir $DOCKER_WORKDIR_PATH
 WORKDIR $DOCKER_WORKDIR_PATH
 
 COPY web/package.json web/package.json
-COPY web/package-lock.json web/package-lock.json
+COPY web/yarn.lock web/yarn.lock
 
-RUN cd web/ && npm install --production
+RUN cd web/ && yarn install --production
 
 COPY web/ web/
 
-RUN cd web/ && npm run build
+RUN cd web/ && yarn build
 
 EXPOSE 3001
 
