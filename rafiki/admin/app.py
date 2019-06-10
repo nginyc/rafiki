@@ -65,6 +65,81 @@ def generate_user_token():
     })
 
 ####################################
+# Datasets
+####################################
+
+@app.route('/datasets', methods=['POST'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER])
+def create_dataset(auth):
+    admin = get_admin()
+    params = get_request_params()
+
+    # Expect file as bytes
+    file_bytes = request.files['file_bytes'].read()
+    params['file_bytes'] = file_bytes
+
+    with admin:
+        return jsonify(admin.create_dataset(auth['user_id'], **params))
+
+####################################
+# Models
+####################################
+
+@app.route('/models', methods=['POST'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER])
+def create_model(auth):
+    admin = get_admin()
+    params = get_request_params()
+
+    # Expect model file as bytes
+    model_file_bytes = request.files['model_file_bytes'].read()
+    params['model_file_bytes'] = model_file_bytes
+
+    # Expect model dependencies as dict
+    if 'dependencies' in params and isinstance(params['dependencies'], str):
+        params['dependencies'] = json.loads(params['dependencies'])
+
+    with admin:
+        return jsonify(admin.create_model(auth['user_id'], **params))
+
+@app.route('/models/<name>/model_file', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def get_model_file(auth, name):
+    admin = get_admin()
+    params = get_request_params()
+
+    with admin:
+        model_file = admin.get_model_file(auth['user_id'], name, **params)
+
+    res = make_response(model_file)
+    res.headers.set('Content-Type', 'application/octet-stream')
+    return res
+
+@app.route('/models/<name>', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def get_model(auth, name):
+    admin = get_admin()
+    params = get_request_params()
+    with admin:
+        return jsonify(admin.get_model(auth['user_id'], name, **params))
+
+@app.route('/models', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def get_models(auth):
+    admin = get_admin()
+    params = get_request_params()
+
+    # Return models by task
+    if params.get('task') is not None:
+        with admin:
+            return jsonify(admin.get_models_of_task(auth['user_id'], **params))
+    
+    # Return all models
+    else:
+        with admin:
+            return jsonify(admin.get_models(auth['user_id'], **params))
+
+####################################
 # Train Jobs
 ####################################
 
@@ -239,64 +314,6 @@ def stop_inference_job(auth, app, app_version=-1):
 
     with admin:
         return jsonify(admin.stop_inference_job(app, app_version=int(app_version), **params))
-
-####################################
-# Models
-####################################
-
-@app.route('/models', methods=['POST'])
-@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER])
-def create_model(auth):
-    admin = get_admin()
-    params = get_request_params()
-
-    # Expect model file as bytes
-    model_file_bytes = request.files['model_file_bytes'].read()
-    params['model_file_bytes'] = model_file_bytes
-
-    # Expect model dependencies as dict
-    if 'dependencies' in params and isinstance(params['dependencies'], str):
-        params['dependencies'] = json.loads(params['dependencies'])
-
-    with admin:
-        return jsonify(admin.create_model(auth['user_id'], **params))
-
-@app.route('/models/<name>/model_file', methods=['GET'])
-@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_model_file(auth, name):
-    admin = get_admin()
-    params = get_request_params()
-
-    with admin:
-        model_file = admin.get_model_file(auth['user_id'], name, **params)
-
-    res = make_response(model_file)
-    res.headers.set('Content-Type', 'application/octet-stream')
-    return res
-
-@app.route('/models/<name>', methods=['GET'])
-@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_model(auth, name):
-    admin = get_admin()
-    params = get_request_params()
-    with admin:
-        return jsonify(admin.get_model(auth['user_id'], name, **params))
-
-@app.route('/models', methods=['GET'])
-@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_models(auth):
-    admin = get_admin()
-    params = get_request_params()
-
-    # Return models by task
-    if params.get('task') is not None:
-        with admin:
-            return jsonify(admin.get_models_of_task(auth['user_id'], **params))
-    
-    # Return all models
-    else:
-        with admin:
-            return jsonify(admin.get_models(auth['user_id'], **params))
 
 ####################################
 # Administrative Actions

@@ -120,6 +120,40 @@ class Client(object):
         return data
 
     ####################################
+    # Datasets
+    ####################################
+
+    def create_dataset(self, name, task, dataset_file_path):
+        '''
+        Creates (and uploads) a dataset on (onto) Rafiki.
+
+        Only admins, model developers and app developers can manage their own datasets.
+
+        :param str name: Name for the dataset, does not need to be unique
+        :param str task: Task associated to the dataset
+        :param str dataset_file_path: Path to the file to upload as the dataset
+        :returns: Created dataset as dictionary
+        :rtype: dict[str, any]
+
+        '''
+        f = open(dataset_file_path, 'rb')
+        file_bytes = f.read()
+        f.close()
+        
+        # TODO: Progress bar for upload?
+        data = self._post(
+            '/datasets', 
+            files={
+                'file_bytes': file_bytes
+            },
+            form_data={
+                'name': name,
+                'task': task
+            }
+        )
+        return data
+
+    ####################################
     # Models
     ####################################
 

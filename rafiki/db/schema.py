@@ -33,6 +33,15 @@ class InferenceJobWorker(Base):
     inference_job_id = Column(String, ForeignKey('inference_job.id'))
     trial_id = Column(String, ForeignKey('trial.id'), nullable=False)
 
+class Dataset(Base):
+    __tablename__ = 'dataset'
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    name = Column(String, unique=True, nullable=False)
+    task = Column(String, nullable=False)
+    store_dataset_id = Column(String, nullable=False)
+    size_bytes = Column(Integer, default=0)
+
 class Model(Base):
     __tablename__ = 'model'
 

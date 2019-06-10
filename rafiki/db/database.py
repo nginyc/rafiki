@@ -8,7 +8,7 @@ from rafiki.constants import TrainJobStatus, \
 
 from .schema import Base, TrainJob, SubTrainJob, TrainJobWorker, \
     InferenceJob, Trial, Model, User, Service, InferenceJobWorker, \
-    TrialLog
+    TrialLog, Dataset
 
 class Database(object):
     def __init__(self, 
@@ -47,6 +47,67 @@ class Database(object):
     def get_user_by_email(self, email):
         user = self._session.query(User).filter(User.email == email).first()
         return user
+
+    ####################################
+    # Datasets
+    ####################################
+
+    def create_dataset(self, name, task, size_bytes, store_dataset_id):
+        dataset = Dataset(
+            name=name,
+            task=task,
+            size_bytes=size_bytes,
+            store_dataset_id=store_dataset_id
+        )
+        self._session.add(dataset)
+        return dataset
+    
+    ####################################
+    # Models
+    ####################################
+
+    def create_model(self, user_id, name, task, model_file_bytes, 
+                    model_class, docker_image, dependencies, access_right):
+        model = Model(
+            user_id=user_id,
+            name=name,
+            task=task,
+            model_file_bytes=model_file_bytes,
+            model_class=model_class,
+            docker_image=docker_image,
+            dependencies=dependencies,
+            access_right=access_right
+        )
+        self._session.add(model)
+        return model
+
+    def get_models_of_task(self, user_id, task):
+        task_models = self._session.query(Model) \
+            .filter(Model.task == task) \
+            .all()
+
+        public_models = self._filter_public_models(task_models)
+        private_models = self._filter_private_models(task_models, user_id)
+        models = public_models + private_models
+        return models
+
+    def get_models(self, user_id):
+        all_models = self._session.query(Model).all()
+
+        public_models = self._filter_public_models(all_models)
+        private_models = self._filter_private_models(all_models, user_id)
+        models = public_models + private_models
+        return models
+
+    def get_model_by_name(self, name):
+        model = self._session.query(Model) \
+            .filter(Model.name == name).first()
+        
+        return model
+
+    def get_model(self, id):
+        model = self._session.query(Model).get(id)
+        return model
 
     ####################################
     # Train Jobs
@@ -309,53 +370,6 @@ class Database(object):
         services = query.all()
 
         return services
-
-    ####################################
-    # Models
-    ####################################
-
-    def create_model(self, user_id, name, task, model_file_bytes, 
-                    model_class, docker_image, dependencies, access_right):
-        model = Model(
-            user_id=user_id,
-            name=name,
-            task=task,
-            model_file_bytes=model_file_bytes,
-            model_class=model_class,
-            docker_image=docker_image,
-            dependencies=dependencies,
-            access_right=access_right
-        )
-        self._session.add(model)
-        return model
-
-    def get_models_of_task(self, user_id, task):
-        task_models = self._session.query(Model) \
-            .filter(Model.task == task) \
-            .all()
-
-        public_models = self._filter_public_models(task_models)
-        private_models = self._filter_private_models(task_models, user_id)
-        models = public_models + private_models
-        return models
-
-    def get_models(self, user_id):
-        all_models = self._session.query(Model).all()
-
-        public_models = self._filter_public_models(all_models)
-        private_models = self._filter_private_models(all_models, user_id)
-        models = public_models + private_models
-        return models
-
-    def get_model_by_name(self, name):
-        model = self._session.query(Model) \
-            .filter(Model.name == name).first()
-        
-        return model
-
-    def get_model(self, id):
-        model = self._session.query(Model).get(id)
-        return model
 
     ####################################
     # Trials

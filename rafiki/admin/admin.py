@@ -10,7 +10,8 @@ from rafiki.constants import ServiceStatus, UserType, ServiceType, InferenceJobS
     TrainJobStatus, ModelAccessRight, BudgetType
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.model import ModelLogger
-from rafiki.container import DockerSwarmContainerManager 
+from rafiki.container import DockerSwarmContainerManager
+from rafiki.data_store import Dataset, FileDataStore, DataStore
 
 from .services_manager import ServicesManager
 
@@ -28,16 +29,12 @@ class RunningInferenceJobExistsError(Exception): pass
 class NoModelsForTrainJobError(Exception): pass
 
 class Admin(object):
-    def __init__(self, db=None, container_manager=None):
-        if db is None: 
-            db = Database()
-        if container_manager is None: 
-            container_manager = DockerSwarmContainerManager()
-            
+    def __init__(self, db=None, container_manager=None, data_store=None):
+        self._db = db or Database()
+        self._data_store: DataStore = data_store or FileDataStore(os.environ['DATA_DOCKER_WORKDIR_PATH'])
+        container_manager = container_manager or DockerSwarmContainerManager()
         self._base_worker_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_WORKER'],
                                                 os.environ['RAFIKI_VERSION'])
-
-        self._db = db
         self._services_manager = ServicesManager(db, container_manager)
 
     def seed(self):
@@ -90,6 +87,111 @@ class Admin(object):
                 'user_type': user.user_type
             }
             for user in users
+        ]
+
+    
+    ####################################
+    # Datasets
+    ####################################
+
+    def create_dataset(self, user_id, name, task, file_bytes):
+        # Store dataset in data folder
+        store_dataset = self._data_store.save(file_bytes)
+        store_dataset_id = store_dataset.id
+        size_bytes = store_dataset.size_bytes
+
+        dataset = self._db.create_dataset(name, task, size_bytes, store_dataset_id)
+        self._db.commit()
+
+        return {
+            'id': dataset.id,
+            'name': dataset.name,
+            'task': dataset.task,
+            'size_bytes': dataset.size_bytes
+        }
+    
+    ####################################
+    # Models
+    ####################################
+
+    def create_model(self, user_id, name, task, model_file_bytes, 
+                    model_class, docker_image=None, dependencies={}, access_right=ModelAccessRight.PRIVATE):
+        
+        model = self._db.create_model(
+            user_id=user_id,
+            name=name,
+            task=task,
+            model_file_bytes=model_file_bytes,
+            model_class=model_class,
+            docker_image=(docker_image or self._base_worker_image),
+            dependencies=dependencies,
+            access_right=access_right
+        )
+
+        return {
+            'name': model.name 
+        }
+
+    def get_model(self, user_id, name):
+        model = self._db.get_model_by_name(name)
+        if model is None:
+            raise InvalidModelError()
+
+        if model.access_right == ModelAccessRight.PRIVATE and model.user_id != user_id:
+            raise InvalidModelAccessError()
+
+        return {
+            'name': model.name,
+            'task': model.task,
+            'model_class': model.model_class,
+            'datetime_created': model.datetime_created,
+            'user_id': model.user_id,
+            'docker_image': model.docker_image,
+            'dependencies': model.dependencies,
+            'access_right': model.access_right
+        }
+
+    def get_model_file(self, user_id, name):
+        model = self._db.get_model_by_name(name)
+        
+        if model is None:
+            raise InvalidModelError()
+
+        if model.access_right == ModelAccessRight.PRIVATE and model.user_id != user_id:
+            raise InvalidModelAccessError()
+
+        return model.model_file_bytes
+
+    def get_models(self, user_id):
+        models = self._db.get_models(user_id)
+        return [
+            {
+                'name': model.name,
+                'task': model.task,
+                'model_class': model.model_class,
+                'datetime_created': model.datetime_created,
+                'user_id': model.user_id,
+                'docker_image': model.docker_image,
+                'dependencies': model.dependencies,
+                'access_right': model.access_right
+            }
+            for model in models
+        ]
+
+    def get_models_of_task(self, user_id, task):
+        models = self._db.get_models_of_task(user_id, task)
+        return [
+            {
+                'name': model.name,
+                'task': model.task,
+                'model_class': model.model_class,
+                'datetime_created': model.datetime_created,
+                'user_id': model.user_id,
+                'docker_image': model.docker_image,
+                'dependencies': model.dependencies,
+                'access_right': model.access_right
+            }
+            for model in models
         ]
 
     ####################################
@@ -490,90 +592,6 @@ class Admin(object):
                 'id': inference_job.id
             }
             for inference_job in inference_jobs
-        ]
-
-    ####################################
-    # Models
-    ####################################
-
-    def create_model(self, user_id, name, task, model_file_bytes, 
-                    model_class, docker_image=None, dependencies={}, access_right=ModelAccessRight.PRIVATE):
-        
-        model = self._db.create_model(
-            user_id=user_id,
-            name=name,
-            task=task,
-            model_file_bytes=model_file_bytes,
-            model_class=model_class,
-            docker_image=(docker_image or self._base_worker_image),
-            dependencies=dependencies,
-            access_right=access_right
-        )
-
-        return {
-            'name': model.name 
-        }
-
-    def get_model(self, user_id, name):
-        model = self._db.get_model_by_name(name)
-        if model is None:
-            raise InvalidModelError()
-
-        if model.access_right == ModelAccessRight.PRIVATE and model.user_id != user_id:
-            raise InvalidModelAccessError()
-
-        return {
-            'name': model.name,
-            'task': model.task,
-            'model_class': model.model_class,
-            'datetime_created': model.datetime_created,
-            'user_id': model.user_id,
-            'docker_image': model.docker_image,
-            'dependencies': model.dependencies,
-            'access_right': model.access_right
-        }
-
-    def get_model_file(self, user_id, name):
-        model = self._db.get_model_by_name(name)
-        
-        if model is None:
-            raise InvalidModelError()
-
-        if model.access_right == ModelAccessRight.PRIVATE and model.user_id != user_id:
-            raise InvalidModelAccessError()
-
-        return model.model_file_bytes
-
-    def get_models(self, user_id):
-        models = self._db.get_models(user_id)
-        return [
-            {
-                'name': model.name,
-                'task': model.task,
-                'model_class': model.model_class,
-                'datetime_created': model.datetime_created,
-                'user_id': model.user_id,
-                'docker_image': model.docker_image,
-                'dependencies': model.dependencies,
-                'access_right': model.access_right
-            }
-            for model in models
-        ]
-
-    def get_models_of_task(self, user_id, task):
-        models = self._db.get_models_of_task(user_id, task)
-        return [
-            {
-                'name': model.name,
-                'task': model.task,
-                'model_class': model.model_class,
-                'datetime_created': model.datetime_created,
-                'user_id': model.user_id,
-                'docker_image': model.docker_image,
-                'dependencies': model.dependencies,
-                'access_right': model.access_right
-            }
-            for model in models
         ]
         
     ####################################
