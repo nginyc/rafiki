@@ -27,15 +27,16 @@ class InvalidTrainJobError(Exception): pass
 class InvalidTrialError(Exception): pass
 class RunningInferenceJobExistsError(Exception): pass
 class NoModelsForTrainJobError(Exception): pass
+class InvalidDatasetError(Exception): pass
 
 class Admin(object):
     def __init__(self, db=None, container_manager=None, data_store=None):
         self._db = db or Database()
         self._data_store: DataStore = data_store or FileDataStore(os.environ['DATA_DOCKER_WORKDIR_PATH'])
-        container_manager = container_manager or DockerSwarmContainerManager()
         self._base_worker_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_WORKER'],
                                                 os.environ['RAFIKI_VERSION'])
-        self._services_manager = ServicesManager(db, container_manager)
+        container_manager = container_manager or DockerSwarmContainerManager()
+        self._services_manager = ServicesManager(self._db, container_manager)
 
     def seed(self):
         with self._db:
@@ -94,9 +95,9 @@ class Admin(object):
     # Datasets
     ####################################
 
-    def create_dataset(self, user_id, name, task, file_bytes):
+    def create_dataset(self, user_id, name, task, data_file_path):
         # Store dataset in data folder
-        store_dataset = self._data_store.save(file_bytes)
+        store_dataset = self._data_store.save(data_file_path)
 
         # Get metadata for dataset
         store_dataset_id = store_dataset.id
@@ -111,6 +112,20 @@ class Admin(object):
             'name': dataset.name,
             'task': dataset.task,
             'size_bytes': dataset.size_bytes
+        }
+
+    def get_dataset(self, dataset_id):
+        dataset = self._db.get_dataset(dataset_id)
+        if dataset is None:
+            raise InvalidDatasetError()
+
+        return {
+            'id': dataset.id,
+            'name': dataset.name,
+            'task': dataset.task,
+            'datetime_created': dataset.datetime_created,
+            'size_bytes': dataset.size_bytes,
+            'owner_id': dataset.owner_id
         }
 
     def get_datasets(self, user_id, task=None):
@@ -215,8 +230,8 @@ class Admin(object):
     # Train Job
     ####################################
 
-    def create_train_job(self, user_id, app, task, train_dataset_uri, 
-                        test_dataset_uri, budget, models=None):
+    def create_train_job(self, user_id, app, task, train_dataset_id, 
+                        val_dataset_id, budget, models=None):
         
         # Compute auto-incremented app version
         train_jobs = self._db.get_train_jobs_of_app(app)
@@ -241,14 +256,25 @@ class Admin(object):
         if len(model_ids) == 0:
             raise NoModelsForTrainJobError()
 
+        # Ensure that datasets are valid and of the correct task
+        try:
+            train_dataset = self._db.get_dataset(train_dataset_id)
+            assert train_dataset is not None
+            assert train_dataset.task == task
+            val_dataset = self._db.get_dataset(val_dataset_id)
+            assert val_dataset is not None
+            assert val_dataset.task == task
+        except AssertionError as e:
+            raise InvalidDatasetError(e)
+
         train_job = self._db.create_train_job(
             user_id=user_id,
             app=app,
             app_version=app_version,
             task=task,
             budget=budget,
-            train_dataset_uri=train_dataset_uri,
-            test_dataset_uri=test_dataset_uri
+            train_dataset_id=train_dataset_id,
+            val_dataset_id=val_dataset_id
         )
         self._db.commit()
 
@@ -297,8 +323,8 @@ class Admin(object):
             'app': train_job.app,
             'app_version': train_job.app_version,
             'task': train_job.task,
-            'train_dataset_uri': train_job.train_dataset_uri,
-            'test_dataset_uri': train_job.test_dataset_uri,
+            'train_dataset_id': train_job.train_dataset_id,
+            'val_dataset_id': train_job.val_dataset_id,
             'datetime_started': datetime_started,
             'datetime_stopped': datetime_stopped,
             'workers': [
@@ -325,8 +351,8 @@ class Admin(object):
                 'app': x.app,
                 'app_version': x.app_version,
                 'task': x.task,
-                'train_dataset_uri': x.train_dataset_uri,
-                'test_dataset_uri': x.test_dataset_uri,
+                'train_dataset_id': x.train_dataset_id,
+                'val_dataset_id': x.val_dataset_id,
                 'datetime_started': datetime_started,
                 'datetime_stopped': datetime_stopped,
                 'budget': x.budget
@@ -365,8 +391,8 @@ class Admin(object):
                 'app': x.app,
                 'app_version': x.app_version,
                 'task': x.task,
-                'train_dataset_uri': x.train_dataset_uri,
-                'test_dataset_uri': x.test_dataset_uri,
+                'train_dataset_id': x.train_dataset_id,
+                'val_dataset_id': x.val_dataset_id,
                 'datetime_started': datetime_started,
                 'datetime_stopped': datetime_stopped,
                 'budget': x.budget

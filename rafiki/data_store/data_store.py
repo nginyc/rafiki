@@ -1,6 +1,7 @@
 import abc
 import sys
 from typing import List, Dict
+import os
 
 class Dataset():
     def __init__(self, id: str, size_bytes: int):
@@ -13,21 +14,22 @@ class DataStore(abc.ABC):
     '''
 
     @abc.abstractclassmethod
-    def save(self, data_bytes: bytes) -> Dataset:
+    def save(self, data_file_path: str) -> Dataset:
         '''
-            Saves a dataset as bytes and returns a ``Dataset`` abstraction containing a unique ID for the dataset.
+            Persists a dataset in the local filesystem at file path, returning a ``Dataset`` abstraction containing a unique ID for the dataset.
         '''
         raise NotImplementedError()
 
     @abc.abstractclassmethod
-    def load(self, dataset_id: str) -> bytes:
+    def load(self, dataset_id: str) -> str:
         '''
-            Loads the bytes of a dataset identified by ID.
+            Loads a persisted dataset to the local filesystem, identified by ID, returning the file path to the dataset.
         '''
         raise NotImplementedError()
 
     @staticmethod
-    def _get_size_bytes(data_bytes):
-        return sys.getsizeof(data_bytes)
+    def _get_size_bytes(data_file_path):
+        st = os.stat(data_file_path)
+        return st.st_size
 
     

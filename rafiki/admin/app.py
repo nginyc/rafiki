@@ -3,9 +3,10 @@ from flask_cors import CORS
 import os
 import traceback
 import json
+import tempfile
 
 from rafiki.constants import UserType
-from rafiki.utils.auth import generate_token, decode_token, auth
+from rafiki.utils.auth import generate_token, decode_token, auth, UnauthorizedError
 
 from .admin import Admin
 
@@ -73,13 +74,17 @@ def generate_user_token():
 def create_dataset(auth):
     admin = get_admin()
     params = get_request_params()
+    
+    # Temporarily store incoming dataset data as file
+    with tempfile.NamedTemporaryFile() as f:
+        file_storage = request.files['dataset']
+        print(f.name)
+        file_storage.save(f.name)
+        file_storage.close()
+        params['data_file_path'] = f.name
 
-    # Expect file as bytes
-    file_bytes = request.files['file_bytes'].read()
-    params['file_bytes'] = file_bytes
-
-    with admin:
-        return jsonify(admin.create_dataset(auth['user_id'], **params))
+        with admin:
+            return jsonify(admin.create_dataset(auth['user_id'], **params))
 
 @app.route('/datasets', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
@@ -158,6 +163,15 @@ def create_train_job(auth):
     params = get_request_params()
 
     with admin:
+        # Ensure that datasets are owned by current user
+        dataset_attrs = ['train_dataset_id', 'val_dataset_id']
+        for attr in dataset_attrs:
+            if attr in params:
+                dataset_id = params[attr]
+                dataset = admin.get_dataset(dataset_id)
+                if auth['user_id'] != dataset['owner_id']:
+                    raise UnauthorizedError('You have no access to dataset of ID "{}"'.format(dataset_id))
+        
         return jsonify(admin.create_train_job(auth['user_id'], **params))
 
 @app.route('/train_jobs', methods=['GET'])
