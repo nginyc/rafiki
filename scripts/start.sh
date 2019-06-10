@@ -56,9 +56,9 @@ title "Starting Rafiki's Advisor..."
 (bash $FILE_DIR/start_advisor.sh &> $LOG_FILEPATH) &
 ensure_stable "Rafiki's Advisor"
 
-title "Starting Rafiki's Admin Web..."
+title "Starting Rafiki's Web Admin..."
 (bash $FILE_DIR/start_admin_web.sh &> $LOG_FILEPATH) &
-ensure_stable "Rafiki's Admin Web"
+ensure_stable "Rafiki's Web Admin"
 
 title "Installing any dependencies..."
 pip install -r ./rafiki/client/requirements.txt

@@ -10,7 +10,7 @@ User Guide
    quickstart-app-users
    quickstart-admins
    user-types
-   using-admin-web
+   using-web-admin
    creating-models
    tasks
    datasets

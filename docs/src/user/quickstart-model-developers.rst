@@ -12,7 +12,7 @@ To learn about how to manage train & inference jobs, go to :ref:`quickstart-app-
 To learn more about what you can do on Rafiki, explore the methods of :class:`rafiki.client.Client`.
 
 We assume that you have access to a running instance of *Rafiki Admin* at ``<rafiki_host>:<admin_port>``
-and *Rafiki Admin Web* at ``<rafiki_host>:<admin_web_port>``.
+and *Rafiki Web Admin* at ``<rafiki_host>:<admin_web_port>``.
 
 
 Installing the client

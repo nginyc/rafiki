@@ -1,7 +1,7 @@
 To create a model training job, you'll need to submit your dataset and a target task (see :ref:`tasks`), together with your app's name.
 You'll need to prepare your dataset in a format specified by the target task, and upload it to a publicly accessible URL. 
 
-After creating a train job, you can monitor it on Rafiki Admin Web (see :ref:`using-admin-web`).
+After creating a train job, you can monitor it on Rafiki Web Admin (see :ref:`using-web-admin`).
 
 Refer to the parameters of :meth:`rafiki.client.Client.create_train_job()` for configuring how your train job runs on Rafiki, such as enabling GPU usage.
 

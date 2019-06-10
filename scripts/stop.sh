@@ -27,8 +27,8 @@ docker rm -f $ADMIN_HOST || echo "Failed to stop Rafiki's Admin"
 title "Stopping Rafiki's Advisor..."
 docker rm -f $ADVISOR_HOST || echo "Failed to stop Rafiki's Advisor"
 
-title "Stopping Rafiki's Admin Web..."
-docker rm -f $ADMIN_WEB_HOST || echo "Failed to stop Rafiki's Admin Web"
+title "Stopping Rafiki's Web Admin..."
+docker rm -f $ADMIN_WEB_HOST || echo "Failed to stop Rafiki's Web Admin"
 
 echo "You'll need to destroy your machine's Docker swarm manually"
 
