@@ -13,6 +13,18 @@ Before running any individual scripts, make sure to run the shell configuration 
 
 Refer to :ref:`architecture` and :ref:`folder-structure` for a developer's overview of Rafiki.
 
+Building Images Locally
+--------------------------------------------------------------------
+
+The quickstart instructions pull pre-built `Rafiki's images <https://hub.docker.com/r/rafikiai/>`_ from Docker Hub. To build Rafiki's images locally (e.g. to reflect latest code changes):
+
+    .. code-block:: shell
+
+        bash scripts/build_images.sh
+
+.. note::
+
+    If you're testing latest code changes on multiple nodes, you'll need to build Rafiki's images on those nodes as well.
 
 Starting Parts of the Stack
 --------------------------------------------------------------------
@@ -48,19 +60,6 @@ You can connect to Redis DB with `rebrow <https://github.com/marians/rebrow>`_:
 
         RAFIKI_ADDR=127.0.0.1
         REDIS_EXT_PORT=6380
-
-Building Images Locally
---------------------------------------------------------------------
-
-The quickstart instructions pull pre-built `Rafiki's images <https://hub.docker.com/r/rafikiai/>`_ from Docker Hub. To build Rafiki's images locally (e.g. to reflect latest code changes):
-
-    .. code-block:: shell
-
-        bash scripts/build_images.sh
-
-.. note::
-
-    If you're testing latest code changes on multiple nodes, you'll need to build Rafiki's images on those nodes as well.
 
 Pushing Images to Docker Hub
 --------------------------------------------------------------------

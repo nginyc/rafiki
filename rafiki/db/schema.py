@@ -2,7 +2,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, ForeignKey, Integer, Binary, DateTime, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSON, ARRAY
 import uuid
-import datetime
+from datetime import datetime
 
 from rafiki.constants import InferenceJobStatus, ServiceStatus, TrainJobStatus, \
     TrialStatus, ModelAccessRight
@@ -13,7 +13,7 @@ def generate_uuid():
     return str(uuid.uuid4())
 
 def generate_datetime():
-    return datetime.datetime.utcnow()
+    return datetime.utcnow()
 
 class InferenceJob(Base):
     __tablename__ = 'inference_job'
@@ -126,4 +126,5 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     password_hash = Column(Binary, nullable=False)
     user_type = Column(String, nullable=False)
+    banned_date = Column(DateTime, default=None)
     
