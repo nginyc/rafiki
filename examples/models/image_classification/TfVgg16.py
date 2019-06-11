@@ -20,7 +20,7 @@ class TfVgg16(BaseModel):
     def get_knob_config():
         return {
             'epochs': FixedKnob(1),
-            'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
+            'learning_rate': FloatKnob(1e-5, 1e-2, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
         }
 
