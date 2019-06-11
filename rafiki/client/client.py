@@ -36,6 +36,8 @@ class Client(object):
         App developers can create, list and stop train and inference jobs, as well as list models.
         Model developers can create and list models.
 
+        The login session (the session token) expires in 1 hour.
+
         :param str email: User's email
         :param str password: User's password
 
@@ -80,7 +82,8 @@ class Client(object):
         '''
         Creates a Rafiki user. 
         
-        Only admins can manage users.
+        Only admins can create users (except for admins).
+        Only superadmins can create admins.
 
         :param str email: The new user's email
         :param str password: The new user's password
@@ -90,33 +93,41 @@ class Client(object):
         :returns: Created user as dictionary
         :rtype: dict[str, any]
         '''
-        data = self._post('/user', json={
+        data = self._post('/users', json={
             'email': email,
             'password': password,
             'user_type': user_type
         })
         return data
 
-    def create_users(self, csv_file_path):
+    def get_users(self):
         '''
-        Creates multiple Rafiki users.
+        Lists all Rafiki users.
+        
+        Only admins can list all users.
 
-        :param str csv_file_path: Path to a single csv file containing users to seed
-
-        :returns: Created users as list of dictionaries
+        :returns: List of users
         :rtype: dict[str, any][]
         '''
+        data = self._get('/users')
+        return data
 
-        f = open(csv_file_path, 'rb')
-        csv_file_bytes = f.read()
-        f.close()
+    def ban_user(self, email):
+        '''
+        Bans a Rafiki user, disallowing logins.
+        
+        This action is irrevisible.
+        Only admins can ban users (except for admins).
+        Only superadmins can ban admins.
 
-        data = self._post(
-            '/users', 
-            files={
-                'csv_file_bytes': csv_file_bytes
-            }
-        )
+        :param str email: The user's email
+
+        :returns: Banned user as dictionary
+        :rtype: dict[str, any]
+        '''
+        data = self._delete('/users', json={
+            'email': email
+        })
         return data
 
     ####################################

@@ -1,14 +1,16 @@
-import datetime
+from datetime import datetime
 import os
 from sqlalchemy import create_engine, distinct
 from sqlalchemy.orm import sessionmaker
 
-from rafiki.constants import TrainJobStatus, \
+from rafiki.constants import TrainJobStatus, UserType, \
     TrialStatus, ServiceStatus, InferenceJobStatus, ModelAccessRight
 
 from .schema import Base, TrainJob, SubTrainJob, TrainJobWorker, \
     InferenceJob, Trial, Model, User, Service, InferenceJobWorker, \
     TrialLog
+
+class InvalidUserTypeError(Exception): pass
 
 class Database(object):
     def __init__(self, 
@@ -36,6 +38,7 @@ class Database(object):
     ####################################
 
     def create_user(self, email, password_hash, user_type):
+        self._validate_user_type(user_type)
         user = User(
             email=email,
             password_hash=password_hash,
@@ -44,9 +47,21 @@ class Database(object):
         self._session.add(user)
         return user
 
+    def ban_user(self, user):
+        user.banned_date = datetime.utcnow()
+        self._session.add(user)
+
     def get_user_by_email(self, email):
         user = self._session.query(User).filter(User.email == email).first()
         return user
+
+    def get_users(self):
+        users = self._session.query(User).all()
+        return users
+
+    def _validate_user_type(self, user_type):
+        if user_type not in [UserType.SUPERADMIN, UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER]:
+            raise InvalidUserTypeError()
 
     ####################################
     # Train Jobs
@@ -135,7 +150,7 @@ class Database(object):
 
     def mark_sub_train_job_as_stopped(self, sub_train_job):
         sub_train_job.status = TrainJobStatus.STOPPED
-        sub_train_job.datetime_stopped = datetime.datetime.utcnow()
+        sub_train_job.datetime_stopped = datetime.utcnow()
         self._session.add(sub_train_job)
         return sub_train_job
 
@@ -206,13 +221,13 @@ class Database(object):
 
     def mark_inference_job_as_stopped(self, inference_job):
         inference_job.status = InferenceJobStatus.STOPPED
-        inference_job.datetime_stopped = datetime.datetime.utcnow()
+        inference_job.datetime_stopped = datetime.utcnow()
         self._session.add(inference_job)
         return inference_job
 
     def mark_inference_job_as_errored(self, inference_job):
         inference_job.status = InferenceJobStatus.ERRORED
-        inference_job.datetime_stopped = datetime.datetime.utcnow()
+        inference_job.datetime_stopped = datetime.utcnow()
         self._session.add(inference_job)
         return inference_job
 
@@ -287,12 +302,12 @@ class Database(object):
 
     def mark_service_as_errored(self, service):
         service.status = ServiceStatus.ERRORED
-        service.datetime_stopped = datetime.datetime.utcnow()
+        service.datetime_stopped = datetime.utcnow()
         self._session.add(service)
 
     def mark_service_as_stopped(self, service):
         service.status = ServiceStatus.STOPPED
-        service.datetime_stopped = datetime.datetime.utcnow()
+        service.datetime_stopped = datetime.utcnow()
         self._session.add(service)
 
     def get_service(self, service_id):
@@ -418,14 +433,14 @@ class Database(object):
 
     def mark_trial_as_errored(self, trial):
         trial.status = TrialStatus.ERRORED
-        trial.datetime_stopped = datetime.datetime.utcnow()
+        trial.datetime_stopped = datetime.utcnow()
         self._session.add(trial)
         return trial
 
     def mark_trial_as_complete(self, trial, score, parameters):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
-        trial.datetime_stopped = datetime.datetime.utcnow()
+        trial.datetime_stopped = datetime.utcnow()
         trial.parameters = parameters
         self._session.add(trial)
         return trial
@@ -437,7 +452,7 @@ class Database(object):
 
     def mark_trial_as_terminated(self, trial):
         trial.status = TrialStatus.TERMINATED
-        trial.datetime_stopped = datetime.datetime.utcnow()
+        trial.datetime_stopped = datetime.utcnow()
         self._session.add(trial)
         return trial
 
