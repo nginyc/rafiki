@@ -11,7 +11,7 @@ from examples.scripts.quickstart import get_predictor_host, \
 
 from examples.datasets.pos_tagging.load_ptb_format import load_sample_ptb
 
-def run_pos_tagging(client, train_dataset_file_path, val_dataset_file_path, enable_gpu):
+def run_pos_tagging(client, train_dataset_path, val_dataset_path, enable_gpu):
     task = TaskType.POS_TAGGING
 
     # Randomly generate app & model names to avoid naming conflicts
@@ -27,9 +27,9 @@ def run_pos_tagging(client, train_dataset_file_path, val_dataset_file_path, enab
                         'PyBiLstm', dependencies={ ModelDependency.PYTORCH: '0.4.1' }))
 
     print('Creating & uploading datasets onto Rafiki...')
-    train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_file_path)
+    train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
     pprint(train_dataset)
-    val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_file_path)
+    val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_path)
     pprint(val_dataset)
 
     print('Creating train job for app "{}" on Rafiki...'.format(app))

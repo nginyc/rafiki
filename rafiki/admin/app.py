@@ -4,6 +4,7 @@ import os
 import traceback
 import json
 import tempfile
+import requests
 from datetime import datetime
 
 from rafiki.constants import UserType
@@ -96,13 +97,20 @@ def generate_user_token():
 def create_dataset(auth):
     admin = get_admin()
     params = get_request_params()
-    
+
     # Temporarily store incoming dataset data as file
     with tempfile.NamedTemporaryFile() as f:
-        file_storage = request.files['dataset']
-        print(f.name)
-        file_storage.save(f.name)
-        file_storage.close()
+        if 'dataset' in request.files:
+            # Save dataset data in request body
+            file_storage = request.files['dataset']
+            file_storage.save(f.name)
+            file_storage.close()
+        else:
+            # Download dataset at URL and save it
+            assert 'dataset_url' in params
+            r = requests.get(params['dataset_url'], allow_redirects=True)
+            f.write(r.content)
+
         params['data_file_path'] = f.name
 
         with admin:

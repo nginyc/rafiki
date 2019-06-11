@@ -37,7 +37,7 @@ class TrainWorker(object):
         while True:
             with self._db:
                 (sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
-                    train_job_id, train_dataset_file_path, val_dataset_file_path) = self._read_worker_info()
+                    train_job_id, train_dataset_path, val_dataset_path) = self._read_worker_info()
 
                 if self._if_budget_reached(budget, sub_train_job_id):
                     # If budget reached
@@ -91,8 +91,8 @@ class TrainWorker(object):
                         trial = self._db.get_trial(self._trial_id)
                         self._db.add_trial_log(trial, log_line, log_lvl)
 
-                (score, parameters) = self._train_and_evaluate_model(clazz, knobs, train_dataset_file_path, 
-                                                                    val_dataset_file_path, handle_log)
+                (score, parameters) = self._train_and_evaluate_model(clazz, knobs, train_dataset_path, 
+                                                                    val_dataset_path, handle_log)
                 logger.info('Trial score: {}'.format(score))
                 
                 with self._db:
@@ -135,8 +135,8 @@ class TrainWorker(object):
             logger.error('Error marking trial as terminated:')
             logger.error(traceback.format_exc())
 
-    def _train_and_evaluate_model(self, clazz, knobs, train_dataset_file_path, \
-                                val_dataset_file_path, handle_log):
+    def _train_and_evaluate_model(self, clazz, knobs, train_dataset_path, \
+                                val_dataset_path, handle_log):
 
         # Initialize model
         model_inst = clazz(**knobs)
@@ -153,10 +153,10 @@ class TrainWorker(object):
         model_logger.set_logger(py_model_logger)
 
         # Train model
-        model_inst.train(train_dataset_file_path)
+        model_inst.train(train_dataset_path)
 
         # Evaluate model
-        score = model_inst.evaluate(val_dataset_file_path)
+        score = model_inst.evaluate(val_dataset_path)
 
         # Remove log handlers from loggers for this trial
         root_logger.removeHandler(log_handler)
@@ -235,8 +235,8 @@ class TrainWorker(object):
             assert train_dataset is not None
             val_dataset = self._db.get_dataset(train_job.val_dataset_id)
             assert val_dataset is not None
-            train_dataset_file_path = self._data_store.load(train_dataset.store_dataset_id)
-            val_dataset_file_path = self._data_store.load(val_dataset.store_dataset_id)
+            train_dataset_path = self._data_store.load(train_dataset.store_dataset_id)
+            val_dataset_path = self._data_store.load(val_dataset.store_dataset_id)
         except Exception as e:
             raise InvalidDatasetException(e)
 
@@ -247,8 +247,8 @@ class TrainWorker(object):
             model.model_file_bytes,
             model.model_class,
             train_job.id,
-            train_dataset_file_path,
-            val_dataset_file_path
+            train_dataset_path,
+            val_dataset_path
         )
 
     def _make_client(self):

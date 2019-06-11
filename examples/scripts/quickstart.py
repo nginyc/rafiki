@@ -67,7 +67,7 @@ def make_predictions(client, predictor_host, queries):
     return predictions
 
 
-def quickstart(client, train_dataset_file_path, val_dataset_file_path, enable_gpu):
+def quickstart(client, train_dataset_path, val_dataset_path, enable_gpu):
     task = TaskType.IMAGE_CLASSIFICATION
 
     # Randomly generate app & model names to avoid naming conflicts
@@ -83,9 +83,9 @@ def quickstart(client, train_dataset_file_path, val_dataset_file_path, enable_gp
                         'SkDt', dependencies={ ModelDependency.SCIKIT_LEARN: '0.20.0' }))
 
     print('Creating & uploading datasets onto Rafiki...')
-    train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_file_path)
+    train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
     pprint(train_dataset)
-    val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_file_path)
+    val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_path)
     pprint(val_dataset)
                         
     print('Creating train job for app "{}" on Rafiki...'.format(app)) 

@@ -25,15 +25,15 @@ class BigramHmm(BaseModel):
     def __init__(self, **knobs):
         super().__init__(**knobs)
 
-    def train(self, dataset_file_path):
-        dataset = dataset_utils.load_dataset_of_corpus(dataset_file_path)
+    def train(self, dataset_path):
+        dataset = dataset_utils.load_dataset_of_corpus(dataset_path)
         (sents_tokens, sents_tags) = zip(*[zip(*sent) for sent in dataset])
         self._num_tags = dataset.tag_num_classes[0]
         (self._trans_probs, self._emiss_probs) = self._compute_probs(self._num_tags, sents_tokens, sents_tags)
         logger.log('No. of tags: {}'.format(self._num_tags))
 
-    def evaluate(self, dataset_file_path):
-        dataset = dataset_utils.load_dataset_of_corpus(dataset_file_path)
+    def evaluate(self, dataset_path):
+        dataset = dataset_utils.load_dataset_of_corpus(dataset_path)
         (sents_tokens, sents_tags) = zip(*[zip(*sent) for sent in dataset])
         (sents_pred_tags) = self._tag_sents(self._num_tags, sents_tokens, self._trans_probs, self._emiss_probs)
         acc = self._compute_accuracy(sents_tags, sents_pred_tags)
@@ -192,8 +192,8 @@ if __name__ == '__main__':
         model_class='BigramHmm',
         task=TaskType.POS_TAGGING,
         dependencies={},
-        train_dataset_file_path='data/ptb_for_pos_tagging_train.zip',
-        val_dataset_file_path='data/ptb_for_pos_tagging_val.zip',
+        train_dataset_path='data/ptb_for_pos_tagging_train.zip',
+        val_dataset_path='data/ptb_for_pos_tagging_val.zip',
         queries=[
             ['Ms.', 'Haag', 'plays', 'Elianti', '18', '.'],
             ['The', 'luxury', 'auto', 'maker', 'last', 'year', 'sold', '1,214', 'cars', 'in', 'the', 'U.S.']

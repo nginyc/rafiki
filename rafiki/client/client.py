@@ -134,32 +134,39 @@ class Client(object):
     # Datasets
     ####################################
 
-    def create_dataset(self, name, task, dataset_file_path):
+    def create_dataset(self, name, task, dataset_path=None, dataset_url=None):
         '''
-        Creates (and uploads) a dataset on (onto) Rafiki.
+        Creates a dataset on Rafiki, either by uploading the dataset file from your filesystem or specifying a URL where the dataset file can be downloaded.
+        The dataset should be in a format specified by the task
+        Either `dataset_url` or `dataset_path` should be specified.
 
         Only admins, model developers and app developers can manage their own datasets.
 
         :param str name: Name for the dataset, does not need to be unique
         :param str task: Task associated to the dataset
-        :param str dataset_file_path: Path to the file to upload as the dataset. The dataset should be in a format specified by the task
+        :param str dataset_path: Path to the dataset file to upload from the local filesystem
+        :param str dataset_url: Publicly accessible URL where the dataset file can be downloaded
         :returns: Created dataset as dictionary
         :rtype: dict[str, any]
-
         '''
-        f = open(dataset_file_path, 'rb')
-        dataset = f.read()
-        f.close()
-        
-        # TODO: Progress bar for upload?
+        files = {}
+
+        if dataset_path is not None:
+            f = open(dataset_path, 'rb')
+            dataset = f.read()
+            f.close()
+            files['dataset'] = dataset
+            print('Uploading dataset..')
+        else:
+            print('Waiting for server finish downloading the dataset from URL...')
+
         data = self._post(
             '/datasets', 
-            files={
-                'dataset': dataset
-            },
+            files=files,
             form_data={
                 'name': name,
-                'task': task
+                'task': task,
+                'dataset_url': dataset_url
             }
         )
         return data
