@@ -27,7 +27,7 @@ class TrainWorker(object):
         self._db = db
         self._trial_id = None
         self._client = self._make_client()
-        self._params_root_dir = os.environ['PARAMS_DOCKER_WORKDIR_PATH']
+        self._params_root_dir = os.path.join(os.environ['WORKDIR_PATH'], os.environ['PARAMS_DIR_PATH'])
 
     def start(self):
         logger.info('Starting train worker for service of ID "{}"...' \

@@ -16,35 +16,35 @@ logger = logging.getLogger(__name__)
 
 class ServiceDeploymentException(Exception): pass
 
+# List of environment variables that will be auto-forwarded to services deployed
+ENVIRONMENT_VARIABLES_AUTOFORWARD = [
+    'POSTGRES_HOST', 'POSTGRES_PORT', 'POSTGRES_USER', 'POSTGRES_PASSWORD',
+    'SUPERADMIN_PASSWORD', 'POSTGRES_DB', 'REDIS_HOST', 'REDIS_PORT',
+    'ADMIN_HOST', 'ADMIN_PORT', 'ADVISOR_HOST', 'ADVISOR_PORT',
+    'DATA_DIR_PATH', 'LOGS_DIR_PATH', 'PARAMS_DIR_PATH', 
+]
+
 class ServicesManager(object):
-    def __init__(self, db=None, container_manager=None):
-        if db is None: 
-            db = Database()
-        if container_manager is None: 
-            container_manager = DockerSwarmContainerManager()
-        
-        self._postgres_host = os.environ['POSTGRES_HOST']
-        self._postgres_port = os.environ['POSTGRES_PORT']
-        self._postgres_user = os.environ['POSTGRES_USER']
-        self._postgres_password = os.environ['POSTGRES_PASSWORD']
-        self._postgres_db = os.environ['POSTGRES_DB']
-        self._redis_host = os.environ['REDIS_HOST']
-        self._redis_port = os.environ['REDIS_PORT']
-        self._admin_host = os.environ['ADMIN_HOST']
-        self._admin_host = os.environ['ADMIN_HOST']
-        self._admin_port = os.environ['ADMIN_PORT']
-        self._advisor_host = os.environ['ADVISOR_HOST']
-        self._advisor_port = os.environ['ADVISOR_PORT']
-        self._data_workdir = os.environ['DATA_WORKDIR_PATH']
-        self._logs_workdir = os.environ['LOGS_WORKDIR_PATH']
-        self._params_workdir = os.environ['PARAMS_WORKDIR_PATH']
-        self._data_docker_workdir = os.environ['DATA_DOCKER_WORKDIR_PATH']
-        self._logs_docker_workdir = os.environ['LOGS_DOCKER_WORKDIR_PATH']
-        self._params_docker_workdir = os.environ['PARAMS_DOCKER_WORKDIR_PATH']
+    def __init__(self, db=None, container_manager=None, 
+                var_autoforward=ENVIRONMENT_VARIABLES_AUTOFORWARD):
+        db = db or Database()
+        container_manager = container_manager or DockerSwarmContainerManager()
+
+         # Ensure that environment variable exists, failing fast
+        for x in var_autoforward:
+            os.environ[x]
+        self._var_autoforward = var_autoforward
+
+        self._data_dir_path = os.environ['DATA_DIR_PATH']
+        self._logs_dir_path = os.environ['LOGS_DIR_PATH']
+        self._params_dir_path = os.environ['PARAMS_DIR_PATH']
+        self._host_workdir_path = os.environ['HOST_WORKDIR_PATH']
+        self._docker_workdir_path = os.environ['DOCKER_WORKDIR_PATH']
         self._predictor_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_PREDICTOR'],
                                                 os.environ['RAFIKI_VERSION'])
         self._predictor_port = os.environ['PREDICTOR_PORT']
         self._rafiki_addr = os.environ['RAFIKI_ADDR']
+        self._app_mode = os.environ['APP_MODE']
 
         self._db = db
         self._container_manager = container_manager
@@ -112,7 +112,7 @@ class ServicesManager(object):
         errors = []
         for (sub_train_job, replicas) in sub_train_job_to_replicas.items():
             try:
-                service = self._create_train_job_worker(train_job, sub_train_job, replicas)
+                service = self._create_sub_train_job_worker(train_job, sub_train_job, replicas)
                 self._wait_until_services_running([service])
                 self._db.mark_sub_train_job_as_running(sub_train_job)
                 self._db.commit()
@@ -153,13 +153,6 @@ class ServicesManager(object):
         service_type = ServiceType.INFERENCE
         install_command = parse_model_install_command(model.dependencies, enable_gpu=False)
         environment_vars = {
-            'POSTGRES_HOST': self._postgres_host,
-            'POSTGRES_PORT': self._postgres_port,
-            'POSTGRES_USER': self._postgres_user,
-            'POSTGRES_DB': self._postgres_db,
-            'POSTGRES_PASSWORD': self._postgres_password,
-            'REDIS_HOST': self._redis_host,
-            'REDIS_PORT': self._redis_port,
             'WORKER_INSTALL_COMMAND': install_command,
             'CUDA_VISIBLE_DEVICES': '-1' # Hide GPU
         }
@@ -182,15 +175,7 @@ class ServicesManager(object):
 
     def _create_predictor_service(self, inference_job):
         service_type = ServiceType.PREDICT
-        environment_vars = {
-            'POSTGRES_HOST': self._postgres_host,
-            'POSTGRES_PORT': self._postgres_port,
-            'POSTGRES_USER': self._postgres_user,
-            'POSTGRES_DB': self._postgres_db,
-            'POSTGRES_PASSWORD': self._postgres_password,
-            'REDIS_HOST': self._redis_host,
-            'REDIS_PORT': self._redis_port
-        }
+        environment_vars = {}
 
         service = self._create_service(
             service_type=service_type,
@@ -202,21 +187,12 @@ class ServicesManager(object):
 
         return service
 
-    def _create_train_job_worker(self, train_job, sub_train_job, replicas):
+    def _create_sub_train_job_worker(self, train_job, sub_train_job, replicas):
         model = self._db.get_model(sub_train_job.model_id)
         service_type = ServiceType.TRAIN
         enable_gpu = int(train_job.budget.get(BudgetType.ENABLE_GPU, 0)) > 0
         install_command = parse_model_install_command(model.dependencies, enable_gpu=enable_gpu)
         environment_vars = {
-            'POSTGRES_HOST': self._postgres_host,
-            'POSTGRES_PORT': self._postgres_port,
-            'POSTGRES_USER': self._postgres_user,
-            'POSTGRES_DB': self._postgres_db,
-            'POSTGRES_PASSWORD': self._postgres_password,
-            'ADMIN_HOST': self._admin_host,
-            'ADMIN_PORT': self._admin_port,
-            'ADVISOR_HOST': self._advisor_host,
-            'ADVISOR_PORT': self._advisor_port,
             'WORKER_INSTALL_COMMAND': install_command,
             **({'CUDA_VISIBLE_DEVICES': -1} if not enable_gpu else {}) # Hide GPU if not enabled
         }
@@ -296,19 +272,32 @@ class ServicesManager(object):
 
         # Pass service details as environment variables 
         environment_vars = {
+            # Autofoward environment variables
+            **{
+                x: os.environ[x]
+                for x in self._var_autoforward
+            },
             **environment_vars,
-            'LOGS_DOCKER_WORKDIR_PATH': self._logs_docker_workdir,
-            'PARAMS_DOCKER_WORKDIR_PATH': self._params_docker_workdir,
             'RAFIKI_SERVICE_ID': service.id,
-            'RAFIKI_SERVICE_TYPE': service_type
+            'RAFIKI_SERVICE_TYPE': service_type,
+            'WORKDIR_PATH': self._docker_workdir_path
         }
 
-        # Mount data, logs & params folders to containers' work directories
-        mounts = {
-            self._data_workdir: self._data_docker_workdir,
-            self._logs_workdir: self._logs_docker_workdir,
-            self._params_workdir: self._params_docker_workdir
-        }
+        if self._app_mode == 'DEV':
+            # Mount whole root directory
+            mounts = {
+                self._host_workdir_path: self._docker_workdir_path
+            }
+        else:
+            # Mount only data, logs and params folders to containers' work directories
+            mounts = {
+                os.path.join(self._host_workdir_path, self._data_dir_path): 
+                    os.path.join(self._docker_workdir_path, self._data_dir_path),
+                os.path.join(self._host_workdir_path, self._logs_dir_path): 
+                    os.path.join(self._docker_workdir_path, self._logs_dir_path),
+                os.path.join(self._host_workdir_path, self._params_dir_path): 
+                    os.path.join(self._docker_workdir_path, self._params_dir_path)
+            }
 
         # Expose container port if it exists
         publish_port = None
