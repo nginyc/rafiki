@@ -8,7 +8,7 @@ import progressbar
 import requests
 import subprocess
 import tarfile
-import tempfile
+import shutil
 import unicodedata
 
 from sox import Transformer
@@ -21,7 +21,7 @@ def load(data_dir):
         Loads and converts an voice dataset called librispeech to the DatasetType `AUDIO_FILES`.
         Refer to http://www.openslr.org/resources/12 for more details on the dataset.
 
-        :param str data_dir: Directory to save the dataset and csv files
+        :param str data_dir: Directory to save the output zip files
     '''
 
     # Conditionally download data to data_dir
@@ -116,6 +116,7 @@ def load(data_dir):
         bar.update(6)
 
     # Write sets to disk as CSV files
+    print("Writing CSV files...")
     train_100.to_csv(os.path.join(work_dir, "train-clean-100-wav", "librivox-train-clean-100.csv"), index=False)
     train_360.to_csv(os.path.join(work_dir, "train-clean-360-wav", "librivox-train-clean-360.csv"), index=False)
     train_500.to_csv(os.path.join(work_dir, "train-other-500-wav", "librivox-train-other-500.csv"), index=False)
@@ -126,6 +127,7 @@ def load(data_dir):
     test_clean.to_csv(os.path.join(work_dir, "test-clean-wav", "librivox-test-clean.csv"), index=False)
     test_other.to_csv(os.path.join(work_dir, "test-other-wav", "librivox-test-other.csv"), index=False)
 
+    print("Zipping required dataset formats...")
     _write_dataset(os.path.join(work_dir, "train-clean-100-wav"), os.path.join(data_dir, "train-clean-100.zip"))
     print('Train-clean-100 dataset file is saved at {}'.format(os.path.join(data_dir, "train-clean-100.zip")))
 
@@ -217,7 +219,7 @@ def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir):
                         Transformer().build(flac_file, wav_file)
                     wav_filesize = os.path.getsize(wav_file)
 
-                    files.append((os.path.abspath(wav_file), wav_filesize, transcript))
+                    files.append((seqid + ".wav", wav_filesize, transcript))
 
     return pandas.DataFrame(data=files, columns=["wav_filename", "wav_filesize", "transcript"])
 
