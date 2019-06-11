@@ -28,7 +28,7 @@ def load(data_dir):
 
     df = pandas.DataFrame(data=[(LDC93S1_BASE + ".wav", os.path.getsize(audio_file), transcript)],
                           columns=["wav_filename", "wav_filesize", "transcript"])
-    df.to_csv(os.path.join(work_dir, "ldc93s1.csv"), index=False)
+    df.to_csv(os.path.join(work_dir, "audios.csv"), index=False)
 
     print("Zipping required dataset formats...")
     _write_dataset(work_dir, os.path.join(data_dir, "ldc93s1.zip"))

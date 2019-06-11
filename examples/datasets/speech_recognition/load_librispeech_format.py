@@ -14,9 +14,9 @@ import unicodedata
 from sox import Transformer
 from tensorflow.python.platform import gfile
 from rafiki.model import dataset_utils
+from rafiki.utils.text import *
 
-
-def load(data_dir):
+def load(data_dir, label_filter):
     '''
         Loads and converts an voice dataset called librispeech to the DatasetType `AUDIO_FILES`.
         Refer to http://www.openslr.org/resources/12 for more details on the dataset.
@@ -98,34 +98,34 @@ def load(data_dir):
     #  ...
     print("Converting FLAC to WAV and splitting transcriptions...")
     with progressbar.ProgressBar(max_value=7,  widget=progressbar.AdaptiveETA) as bar:
-        train_100 = _convert_audio_and_split_sentences(work_dir, "train-clean-100", "train-clean-100-wav")
+        train_100 = _convert_audio_and_split_sentences(work_dir, "train-clean-100", "train-clean-100-wav", label_filter)
         bar.update(0)
-        train_360 = _convert_audio_and_split_sentences(work_dir, "train-clean-360", "train-clean-360-wav")
+        train_360 = _convert_audio_and_split_sentences(work_dir, "train-clean-360", "train-clean-360-wav", label_filter)
         bar.update(1)
-        train_500 = _convert_audio_and_split_sentences(work_dir, "train-other-500", "train-other-500-wav")
+        train_500 = _convert_audio_and_split_sentences(work_dir, "train-other-500", "train-other-500-wav", label_filter)
         bar.update(2)
 
-        dev_clean = _convert_audio_and_split_sentences(work_dir, "dev-clean", "dev-clean-wav")
+        dev_clean = _convert_audio_and_split_sentences(work_dir, "dev-clean", "dev-clean-wav", label_filter)
         bar.update(3)
-        dev_other = _convert_audio_and_split_sentences(work_dir, "dev-other", "dev-other-wav")
+        dev_other = _convert_audio_and_split_sentences(work_dir, "dev-other", "dev-other-wav", label_filter)
         bar.update(4)
 
-        test_clean = _convert_audio_and_split_sentences(work_dir, "test-clean", "test-clean-wav")
+        test_clean = _convert_audio_and_split_sentences(work_dir, "test-clean", "test-clean-wav", label_filter)
         bar.update(5)
-        test_other = _convert_audio_and_split_sentences(work_dir, "test-other", "test-other-wav")
+        test_other = _convert_audio_and_split_sentences(work_dir, "test-other", "test-other-wav", label_filter)
         bar.update(6)
 
     # Write sets to disk as CSV files
     print("Writing CSV files...")
-    train_100.to_csv(os.path.join(work_dir, "train-clean-100-wav", "librivox-train-clean-100.csv"), index=False)
-    train_360.to_csv(os.path.join(work_dir, "train-clean-360-wav", "librivox-train-clean-360.csv"), index=False)
-    train_500.to_csv(os.path.join(work_dir, "train-other-500-wav", "librivox-train-other-500.csv"), index=False)
+    train_100.to_csv(os.path.join(work_dir, "train-clean-100-wav", "audios.csv"), index=False)
+    train_360.to_csv(os.path.join(work_dir, "train-clean-360-wav", "audios.csv"), index=False)
+    train_500.to_csv(os.path.join(work_dir, "train-other-500-wav", "audios.csv"), index=False)
 
-    dev_clean.to_csv(os.path.join(work_dir, "dev-clean-wav", "librivox-dev-clean.csv"), index=False)
-    dev_other.to_csv(os.path.join(work_dir, "dev-other-wav", "librivox-dev-other.csv"), index=False)
+    dev_clean.to_csv(os.path.join(work_dir, "dev-clean-wav", "audios.csv"), index=False)
+    dev_other.to_csv(os.path.join(work_dir, "dev-other-wav", "audios.csv"), index=False)
 
-    test_clean.to_csv(os.path.join(work_dir, "test-clean-wav", "librivox-test-clean.csv"), index=False)
-    test_other.to_csv(os.path.join(work_dir, "test-other-wav", "librivox-test-other.csv"), index=False)
+    test_clean.to_csv(os.path.join(work_dir, "test-clean-wav", "audios.csv"), index=False)
+    test_other.to_csv(os.path.join(work_dir, "test-other-wav", "audios.csv"), index=False)
 
     print("Zipping required dataset formats...")
     _write_dataset(os.path.join(work_dir, "train-clean-100-wav"), os.path.join(data_dir, "train-clean-100.zip"))
@@ -173,7 +173,7 @@ def _maybe_extract(data_dir, extracted_data, archive):
         tar.close()
 
 
-def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir):
+def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir, label_filter):
     source_dir = os.path.join(extracted_dir, data_set)
     target_dir = os.path.join(extracted_dir, dest_dir)
 
@@ -193,6 +193,7 @@ def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir):
     #  ...
     #
     # We also convert the corresponding FLACs to WAV in the same pass
+    counter = {'invalid': 0}
     files = []
     for root, dirnames, filenames in os.walk(source_dir):
         for filename in fnmatch.filter(filenames, '*.trans.txt'):
@@ -212,6 +213,13 @@ def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir):
 
                     transcript = transcript.lower().strip()
 
+                    # Filter samples with invalid characters
+                    transcript = label_filter(transcript)
+                    print(transcript)
+                    if transcript is None:
+                        counter['invalid'] += 1
+                        continue
+
                     # Convert corresponding FLAC to a WAV
                     flac_file = os.path.join(root, seqid + ".flac")
                     wav_file = os.path.join(target_dir, seqid + ".wav")
@@ -221,6 +229,9 @@ def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir):
 
                     files.append((seqid + ".wav", wav_filesize, transcript))
 
+    if counter['invalid']:
+        print('Warning: {} samples with invalid characters are removed! '
+              'You can change the allowed set of characters in alphabet.txt file.'.format(counter['invalid']))
     return pandas.DataFrame(data=files, columns=["wav_filename", "wav_filesize", "transcript"])
 
 
@@ -230,4 +241,15 @@ def _write_dataset(dir_path, out_dataset_path):
     os.rename(out_path, out_dataset_path) # Remove additional trailing `.zip`
 
 if __name__ == "__main__":
-    load(data_dir='data/libri')
+    alphabet = Alphabet(os.path.abspath('examples/datasets/speech_recognition/alphabet.txt'))
+
+    def label_filter(label):
+        label = validate_label(label)
+        if alphabet and label:
+            try:
+                [alphabet.label_from_string(c) for c in label]
+            except KeyError:
+                label = None
+        return label
+
+    load('data/libri', label_filter)
