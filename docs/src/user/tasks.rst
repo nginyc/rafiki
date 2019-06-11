@@ -30,7 +30,7 @@ Dataset Type
 
 :ref:`dataset-type:IMAGE_FILES`
 
-The train & test dataset's images should be have the same dimensions ``W x H``.
+The train & validation dataset's images should be have the same dimensions ``W x H``.
 
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
