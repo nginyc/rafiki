@@ -51,7 +51,7 @@ def load(train_images_url, train_labels_url, test_images_url, test_labels_url, l
         :param str test_labels_url: URL to download the test set labels stored in the MNIST format
         :param dict[int, str] label_to_name: Dictionary mapping label index to label name
         :param str out_train_dataset_path: Path to save the output train dataset file
-        :param str out_val_dataset_path: Path to save the output test dataset file
+        :param str out_val_dataset_path: Path to save the output validation dataset file
         :param str out_meta_csv_path: Path to save the output dataset metadata .CSV file
         :param int limit: Maximum number of train & test samples (for purposes of testing)
     '''
@@ -75,7 +75,7 @@ def load(train_images_url, train_labels_url, test_images_url, test_labels_url, l
     print('Train dataset file is saved at {}'.format(out_train_dataset_path))
 
     _write_dataset(test_images, test_labels, label_to_index, out_val_dataset_path)
-    print('Test dataset file is saved at {}'.format(out_val_dataset_path))
+    print('Validation dataset file is saved at {}'.format(out_val_dataset_path))
 
 def _write_meta_csv(labels, label_to_name, out_meta_csv_path):
     label_to_index = {}

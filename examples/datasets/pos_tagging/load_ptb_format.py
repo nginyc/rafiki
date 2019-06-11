@@ -31,7 +31,7 @@ def load(dataset_url, out_train_dataset_path, out_val_dataset_path, out_meta_tsv
 
         :param str dataset_url: URL to download the dataset stored in the format similar to the Penn Treebank sample
         :param str out_train_dataset_path: Path to save the output train dataset file
-        :param str out_val_dataset_path: Path to save the output test dataset file
+        :param str out_val_dataset_path: Path to save the output validation dataset file
         :param str out_meta_tsv_path: Path to save the output dataset metadata .TSV file
     '''
 
@@ -44,7 +44,7 @@ def load(dataset_url, out_train_dataset_path, out_val_dataset_path, out_meta_tsv
 
     print('Dataset metadata file is saved at {}'.format(out_meta_tsv_path))
     print('Train dataset file is saved at {}'.format(out_train_dataset_path))
-    print('Test dataset file is saved at {}'.format(out_val_dataset_path))
+    print('Validation dataset file is saved at {}'.format(out_val_dataset_path))
 
 def _convert_dataset(dataset_path, out_meta_tsv_path, \
                     out_train_dataset_path, out_val_dataset_path):
@@ -58,7 +58,7 @@ def _convert_dataset(dataset_path, out_meta_tsv_path, \
     train_tsv = open(os.path.join(train_d.name, TSV_FILENAME), 'w')
     train_tsv.write('token\ttag\n') 
 
-    # Same for test dataset
+    # Same for validation dataset
     test_d = tempfile.TemporaryDirectory()
     test_tsv = open(os.path.join(test_d.name, TSV_FILENAME), 'w')
     test_tsv.write('token\ttag\n')
@@ -85,7 +85,7 @@ def _convert_dataset(dataset_path, out_meta_tsv_path, \
                     if len(sent) == 0: break
                     _write_next_sentence(train_tsv, sent)
 
-        # Convert sentences for test dataset
+        # Convert sentences for validation dataset
         for sents_filepath in tqdm(sents_filepaths[train_files_count:], unit='files'):
             with open(sents_filepath) as f:
                 while True:
@@ -93,7 +93,7 @@ def _convert_dataset(dataset_path, out_meta_tsv_path, \
                     if len(sent) == 0: break
                     _write_next_sentence(test_tsv, sent)
 
-    # Zip train & test datasets
+    # Zip train & validation datasets
     test_tsv.close()
     train_tsv.close()
     out_path = shutil.make_archive(out_train_dataset_path, 'zip', train_d.name)

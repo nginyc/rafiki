@@ -73,7 +73,7 @@ class BaseModel(abc.ABC):
         This will be called only when model is *trained*.
 
         :param str dataset_file_path: File path of the validation dataset file in the local file system, in a format specified by the task
-        :returns: Accuracy as float from 0-1 on the test dataset
+        :returns: Accuracy as float from 0-1 on the validation dataset
         :rtype: float
         '''
         raise NotImplementedError()

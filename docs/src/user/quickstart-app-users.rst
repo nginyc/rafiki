@@ -3,8 +3,6 @@
 Quick Start (Application Users)
 ====================================================================
 
-.. contents:: Table of Contents
-
 As an App User, you can make predictions on models deployed on Rafiki.
 
 .. _`making-predictions`:

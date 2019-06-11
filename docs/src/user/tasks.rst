@@ -7,7 +7,7 @@ Supported Tasks
 
 Each task has an associated `Dataset Type`, `Query Format` and `Prediction Format`. 
 
-A task's `Dataset Type` specifies the format of the data sources ``train_dataset_uri`` and  ``test_dataset_uri`` point to. 
+A task's `Dataset Type` specifies the format of each dataset file. 
 Datasets are prepared by `Application Developers` when they create `Train Jobs` 
 and received by `Model Developers` when they define :meth:`rafiki.model.BaseModel.train` and :meth:`rafiki.model.BaseModel.evaluate`.
 
