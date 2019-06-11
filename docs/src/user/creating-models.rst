@@ -72,13 +72,6 @@ To illustrate how to write models on Rafiki, we have written the following:
     - Sample pre-processing logic to convert common dataset formats to Rafiki's own dataset formats in `./examples/datasets/ <https://github.com/nginyc/rafiki/tree/master/examples/datasets/>`_ 
     - Sample models in `./examples/models/ <https://github.com/nginyc/rafiki/tree/master/examples/models/>`_
 
-To start testing your model, first run the following:
-
-    .. code-block:: shell
-
-        source .env.sh
-        pip install -r rafiki/model/requirements.txt
-
 
 Example: Testing Models for ``IMAGE_CLASSIFICATION``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -6,5 +6,5 @@
 
     ::
 
-        pip3.6 install -r ./rafiki/client/requirements.txt
+        pip3.6 install -r ./rafiki/requirements.txt
 
