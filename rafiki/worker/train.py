@@ -26,7 +26,10 @@ class TrainWorker(object):
         self._service_id = service_id
         self._db = db
         self._trial_id = None
-        self._client = self._make_client()
+        self._client = Client(admin_host=os.environ['ADMIN_HOST'], 
+                        admin_port=os.environ['ADMIN_PORT'], 
+                        advisor_host=os.environ['ADVISOR_HOST'],
+                            advisor_port=os.environ['ADVISOR_PORT'])
         self._params_root_dir = os.environ['PARAMS_DOCKER_WORKDIR_PATH']
 
     def start(self):
@@ -176,18 +179,18 @@ class TrainWorker(object):
 
     # Gets proposal of a set of knob values from advisor
     def _get_proposal_from_advisor(self, advisor_id):
-        res = self._client.generate_proposal(advisor_id)
+        res = self._get_client().generate_proposal(advisor_id)
         knobs = res['knobs']
         return knobs
 
     # Feedback result of knobs to advisor
     def _feedback_to_advisor(self, advisor_id, knobs, score):
-        self._client.feedback_to_advisor(advisor_id, knobs, score)
+        self._get_client().feedback_to_advisor(advisor_id, knobs, score)
 
     def _stop_worker(self):
         logger.warn('Stopping train job worker...')
         try:
-            self._client.stop_train_job_worker(self._service_id)
+            self._get_client().stop_train_job_worker(self._service_id)
         except Exception:
             # Throw just a warning - likely that another worker has stopped the service
             logger.warn('Error while stopping train job worker service:')
@@ -199,14 +202,14 @@ class TrainWorker(object):
         knob_config_str = serialize_knob_config(knob_config)
 
         # Create advisor associated with worker
-        res = self._client.create_advisor(knob_config_str, advisor_id=self._service_id)
+        res = self._get_client().create_advisor(knob_config_str, advisor_id=self._service_id)
         advisor_id = res['id']
         return advisor_id
 
     # Delete advisor
     def _delete_advisor(self, advisor_id):
         try:
-            self._client.delete_advisor(advisor_id)
+            self._get_client().delete_advisor(advisor_id)
         except Exception:
             # Throw just a warning - not critical for advisor to be deleted
             logger.warning('Error while deleting advisor:')
@@ -247,19 +250,9 @@ class TrainWorker(object):
             train_job.test_dataset_uri
         )
 
-    def _make_client(self):
-        admin_host = os.environ['ADMIN_HOST']
-        admin_port = os.environ['ADMIN_PORT']
-        advisor_host = os.environ['ADVISOR_HOST']
-        advisor_port = os.environ['ADVISOR_PORT']
-        superadmin_email = SUPERADMIN_EMAIL
-        superadmin_password = SUPERADMIN_PASSWORD
-        client = Client(admin_host=admin_host, 
-                        admin_port=admin_port, 
-                        advisor_host=advisor_host,
-                        advisor_port=advisor_port)
-        client.login(email=superadmin_email, password=superadmin_password)
-        return client
+    def _get_client(self):
+        self._client.login(email=SUPERADMIN_EMAIL, password=SUPERADMIN_PASSWORD)
+        return self._client
 
 class ModelLoggerHandler(logging.Handler):
     def __init__(self, handle_log):
