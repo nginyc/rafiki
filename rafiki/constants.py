@@ -48,7 +48,6 @@ class UserType():
     ADMIN = 'ADMIN'
     MODEL_DEVELOPER = 'MODEL_DEVELOPER'
     APP_DEVELOPER = 'APP_DEVELOPER'
-    USER = 'USER'
 
 class AdvisorType():
     BTB_GP = 'BTB_GP'
