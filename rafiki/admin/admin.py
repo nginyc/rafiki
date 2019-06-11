@@ -3,7 +3,6 @@ import logging
 import traceback
 import bcrypt
 import uuid
-import csv
 
 from rafiki.db import Database
 from rafiki.constants import ServiceStatus, UserType, ServiceType, InferenceJobStatus, \
@@ -17,6 +16,7 @@ from .services_manager import ServicesManager
 logger = logging.getLogger(__name__)
 
 class UserExistsError(Exception): pass
+class UserAlreadyBannedError(Exception): pass
 class InvalidUserError(Exception): pass
 class InvalidPasswordError(Exception): pass
 class InvalidRunningInferenceJobError(Exception): pass
@@ -42,7 +42,7 @@ class Admin(object):
 
     def seed(self):
         with self._db:
-            self._seed_users()
+            self._seed_superadmin()
 
     ####################################
     # Users
@@ -59,38 +59,58 @@ class Admin(object):
 
         return {
             'id': user.id,
-            'user_type': user.user_type
+            'email': user.email,
+            'user_type': user.user_type,
+            'banned_date': user.banned_date
         }
 
     def create_user(self, email, password, user_type):
         user = self._create_user(email, password, user_type)
         return {
-            'id': user.id
+            'id': user.id,
+            'email': user.email,
+            'user_type': user.user_type
         }
 
-    def create_users(self, csv_file_bytes):
-        temp_csv_file = '{}.csv'.format(str(uuid.uuid4()))
-
-        # Temporarily save the csv file to disk
-        with open(temp_csv_file, 'wb') as f:
-            f.write(csv_file_bytes)
-
-        users = []
-        with open(temp_csv_file, 'rt', encoding='utf-8-sig') as f:
-            reader = csv.DictReader(f)
-            reader.fieldnames = [name.lower() for name in reader.fieldnames]
-            for row in reader:
-                user = self._create_user(row['email'], row['password'], row['user_type'])
-                users.append(user)
-        os.remove(temp_csv_file)
+    def get_users(self):
+        users = self._db.get_users()
         return [
             {
                 'id': user.id,
                 'email': user.email,
-                'user_type': user.user_type
+                'user_type': user.user_type,
+                'banned_date': user.banned_date
             }
             for user in users
         ]
+
+    def get_user_by_email(self, email):
+        user = self._db.get_user_by_email(email)
+        if user is None:
+            return None
+
+        return {
+            'id': user.id,
+            'email': user.email,
+            'user_type': user.user_type,
+            'banned_date': user.banned_date
+        }
+
+    def ban_user(self, email):
+        user = self._db.get_user_by_email(email)
+        if user is None:
+            raise InvalidUserError()
+        if user.banned_date is not None:
+            raise UserAlreadyBannedError()
+
+        self._db.ban_user(user)
+        
+        return {
+            'id': user.id,
+            'email': user.email,
+            'user_type': user.user_type,
+            'banned_date': user.banned_date
+        }
 
     ####################################
     # Train Job
@@ -580,8 +600,8 @@ class Admin(object):
     # Private / Users
     ####################################
 
-    def _seed_users(self):
-        logger.info('Seeding users...')
+    def _seed_superadmin(self):
+        logger.info('Seeding superadmin...')
 
         # Seed superadmin
         try:
