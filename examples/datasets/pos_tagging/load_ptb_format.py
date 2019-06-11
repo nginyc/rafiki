@@ -12,14 +12,26 @@ import zipfile
 
 from rafiki.model import dataset_utils
 
-def load(dataset_url, out_train_dataset_path, out_test_dataset_path, out_meta_tsv_path):
+def load_sample_ptb(out_train_dataset_path='data/ptb_for_pos_tagging_train.zip',
+                    out_val_dataset_path='data/ptb_for_pos_tagging_val.zip',
+                    out_meta_tsv_path='data/ptb_for_pos_tagging_meta.tsv'):
+    # Loads the Penn Treebank sample dataset for `POS_TAGGING` task
+    load(
+        dataset_url='https://raw.githubusercontent.com/nltk/nltk_data/gh-pages/packages/corpora/treebank.zip',
+        out_train_dataset_path=out_train_dataset_path,
+        out_val_dataset_path=out_val_dataset_path,
+        out_meta_tsv_path=out_meta_tsv_path
+    )
+
+
+def load(dataset_url, out_train_dataset_path, out_val_dataset_path, out_meta_tsv_path):
     '''
         Loads and converts a dataset of the format of the Penn Treebank sample 
         at http://www.nltk.org/nltk_data/ to the DatasetType `CORPUS` for the Task `POS_TAGGING`.
 
         :param str dataset_url: URL to download the dataset stored in the format similar to the Penn Treebank sample
         :param str out_train_dataset_path: Path to save the output train dataset file
-        :param str out_test_dataset_path: Path to save the output test dataset file
+        :param str out_val_dataset_path: Path to save the output test dataset file
         :param str out_meta_tsv_path: Path to save the output dataset metadata .TSV file
     '''
 
@@ -28,14 +40,14 @@ def load(dataset_url, out_train_dataset_path, out_test_dataset_path, out_meta_ts
 
     print('Loading dataset and writing to output dataset files...')
     _convert_dataset(dataset_path, out_meta_tsv_path, \
-                    out_train_dataset_path, out_test_dataset_path)
+                    out_train_dataset_path, out_val_dataset_path)
 
     print('Dataset metadata file is saved at {}'.format(out_meta_tsv_path))
     print('Train dataset file is saved at {}'.format(out_train_dataset_path))
-    print('Test dataset file is saved at {}'.format(out_test_dataset_path))
+    print('Test dataset file is saved at {}'.format(out_val_dataset_path))
 
 def _convert_dataset(dataset_path, out_meta_tsv_path, \
-                    out_train_dataset_path, out_test_dataset_path):
+                    out_train_dataset_path, out_val_dataset_path):
     TAGGED_DIRNAME = 'treebank/tagged'
     SENTS_FILENAME_GLOB = '*.pos'
     TSV_FILENAME = 'corpus.tsv'
@@ -86,8 +98,8 @@ def _convert_dataset(dataset_path, out_meta_tsv_path, \
     train_tsv.close()
     out_path = shutil.make_archive(out_train_dataset_path, 'zip', train_d.name)
     os.rename(out_path, out_train_dataset_path) # Remove additional trailing `.zip`
-    out_path = shutil.make_archive(out_test_dataset_path, 'zip', test_d.name)
-    os.rename(out_path, out_test_dataset_path) # Remove additional trailing `.zip`
+    out_path = shutil.make_archive(out_val_dataset_path, 'zip', test_d.name)
+    os.rename(out_path, out_val_dataset_path) # Remove additional trailing `.zip`
 
     # Write to out meta file
     index_to_tag = { v: k for (k, v) in tag_to_index.items() }
@@ -141,14 +153,5 @@ def _read_next_sentence(f, tag_to_index):
         
 
 if __name__ == '__main__':
-    # Loads the Penn Treebank sample dataset for `POS_TAGGING` task
-    load(
-        dataset_url='https://raw.githubusercontent.com/nltk/nltk_data/gh-pages/packages/corpora/treebank.zip',
-        out_train_dataset_path='data/ptb_for_pos_tagging_train.zip',
-        out_test_dataset_path='data/ptb_for_pos_tagging_test.zip',
-        out_meta_tsv_path='data/ptb_for_pos_tagging_meta.tsv'
-    )
-
-
-    
+    load_sample_ptb()    
     
