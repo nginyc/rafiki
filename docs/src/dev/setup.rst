@@ -16,6 +16,10 @@ We assume development or deployment in a MacOS or Linux environment.
 1. Install Docker 18 (`Ubuntu <https://docs.docker.com/install/linux/docker-ce/ubuntu/>`__, `MacOS <https://docs.docker.com/docker-for-mac/install/>`__)
    and, if required, add your user to ``docker`` group (`Linux <https://docs.docker.com/install/linux/linux-postinstall/>`__).
 
+.. note::
+
+    If you're not a user in the ``docker`` group, you'll instead need ``sudo`` access and prefix every bash command with ``sudo -E``.
+
 2. Install Python 3.6 (`Ubuntu <http://ubuntuhandbook.org/index.php/2017/07/install-python-3-6-1-in-ubuntu-16-04-lts/>`__, `MacOS <https://www.python.org/downloads/mac-osx/>`__)
 
 3. Clone the project at https://github.com/nginyc/rafiki (e.g. with `Git <https://git-scm.com/downloads>`__)

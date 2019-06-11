@@ -4,6 +4,7 @@ import os
 import traceback
 import json
 import tempfile
+from datetime import datetime
 
 from rafiki.constants import UserType
 from rafiki.utils.auth import generate_token, decode_token, auth, UnauthorizedError
@@ -21,27 +22,49 @@ def index():
 # Users
 ####################################
 
-@app.route('/user', methods=['POST'])
+@app.route('/users', methods=['POST'])
 @auth([UserType.ADMIN])
 def create_user(auth):
     admin = get_admin()
     params = get_request_params()
 
+    # Only superadmins can create admins
+    if auth['user_type'] != UserType.SUPERADMIN and \
+            params['user_type'] in [UserType.ADMIN, UserType.SUPERADMIN]:
+        raise UnauthorizedError()
+
     with admin:
         return jsonify(admin.create_user(**params))
 
-@app.route('/users', methods=['POST'])
+@app.route('/users', methods=['GET'])
 @auth([UserType.ADMIN])
-def create_users(auth):
+def get_users(auth):
     admin = get_admin()
     params = get_request_params()
 
-    # Expect csv file as bytes
-    csv_file_bytes = request.files['csv_file_bytes'].read()
-    params['csv_file_bytes'] = csv_file_bytes
+    with admin:
+        return jsonify(admin.get_users(**params))
+
+@app.route('/users', methods=['DELETE'])
+@auth([UserType.ADMIN])
+def ban_user(auth):
+    admin = get_admin()
+    params = get_request_params()
 
     with admin:
-        return jsonify(admin.create_users(**params))
+        user = admin.get_user_by_email(params['email'])
+        
+        if user is not None:
+            # Only superadmins can ban admins
+            if auth['user_type'] != UserType.SUPERADMIN and \
+                    user['user_type'] in [UserType.ADMIN, UserType.SUPERADMIN]:
+                raise UnauthorizedError()
+
+            # Cannot ban yourself
+            if auth['user_id'] == user['id']:
+                raise UnauthorizedError()
+        
+        return jsonify(admin.ban_user(**params))
 
 @app.route('/tokens', methods=['POST'])
 def generate_user_token():
@@ -52,12 +75,11 @@ def generate_user_token():
     with admin:
         user = admin.authenticate_user(**params)
 
-    auth = {
-        'user_id': user['id'],
-        'user_type': user['user_type']
-    }
+    # User cannot be banned
+    if user.get('banned_date') is not None and datetime.now() > user.get('banned_date'):
+        raise UnauthorizedError('User is banned')
     
-    token = generate_token(auth)
+    token = generate_token(user)
 
     return jsonify({
         'user_id': user['id'],
