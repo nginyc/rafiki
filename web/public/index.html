@@ -52,9 +52,6 @@
       if ('%NODE_ENV%' == 'development') {
         window.ADMIN_HOST = '%REACT_APP_API_POINT_HOST%'
         window.ADMIN_PORT = %REACT_APP_API_POINT_PORT%
-      } else { 
-        window.ADMIN_HOST = '<?= REACT_APP_API_POINT_HOST ?>'
-        window.ADMIN_PORT = <?= REACT_APP_API_POINT_PORT ?>
       }
     </script>
   </head>
