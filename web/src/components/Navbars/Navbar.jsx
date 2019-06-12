@@ -34,8 +34,12 @@ function Header({ ...props }) {
       props.routes.map((prop, key) => {
         if (prop.layout + prop.path === pathName) { // props.loation.pathname = "/admin/jobs/new"
           let brand = {}
-          brand.name = props.rtlActive ? prop.rtlName : prop.name;
-          brand.href = prop.layout + prop.path
+          brand.name = prop.name;
+          if (getUrlDirectory(pathName) === "/admin") {
+            brand.href = prop.layout + prop.path
+          } else {
+            brand.href = undefined
+          }
           brands.push(brand)
         }
         return null;
@@ -49,12 +53,20 @@ function Header({ ...props }) {
   const { classes, color } = props;
   const brands = makeBrands().map((brand)=> {
     /* Here we create navbar brand, based on route name */
-    return ( <Link to={brand.href} className={classes.link}>
-      <Button color="transparent" href={brand.href} className={classes.title}>
-       {brand.name}
+    return brand.href ? 
+      (
+        <Link to={brand.href} className={classes.link}>
+          <Button color="transparent" className={classes.title}>
+            {brand.name}
+          </Button> 
+        </Link> 
+      ) : (
+       <Button color="transparent" className={classes.invalid_title}>
+          {brand.name}
       </Button> 
-    </Link> )
-  })
+      )
+    }
+  )
   const appBarClasses = classNames({
     [" " + classes[color]]: color
   });

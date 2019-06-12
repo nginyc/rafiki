@@ -55,6 +55,15 @@ const headerStyle = theme => ({
       color: whiteColor
     },
   },
+  invalid_title: {
+    ...defaultFont,
+    lineHeight: "30px",
+    fontSize: "18px",
+    borderRadius: "3px",
+    textTransform: "none",
+    color: grayColor[0],
+    margin: "0",
+  },
   appResponsive: {
     top: "8px"
   },

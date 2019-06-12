@@ -140,25 +140,7 @@ class Details extends React.Component {
         <GridItem xs={12} sm={12} md={12}>
           <Card>
             <CardHeader color="warning">
-              <Fab variant="extended" className={classes.buttonAdd} onClick={this.handleClick}>
-                <Icon>add_circle</Icon>Deploy Trials
-                    </Fab>
-              <Popover className={classes.popOver}
-                id="simple-popper"
-                open={open}
-                anchorEl={anchorEl}
-                onClose={this.handleClose}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center', }}
-                transformOrigin={{ vertical: 'top', horizontal: 'left', }}
-              >
-                <Fab variant="extended" className={classes.buttonDetails} onClick={() => {
-                  this.props.history.push("/admin/jobs/trials/deploy") //route to jobs/trials/deploy, there should be a better way to do this, try to rewrite the routes file.
-                  this.setState({anchorEl:null})
-                }}>
-                  <Icon> add_photo_alternate</Icon>
-                  Image Classification
-                  </Fab>
-              </Popover>
+              <h4 className={classes.cardTitleWhite}>Trials for this Job</h4> 
             </CardHeader>
             <CardBody>
               { !this.state.trials ? <CircularProgress /> : 
