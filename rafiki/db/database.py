@@ -8,7 +8,7 @@ from rafiki.constants import TrainJobStatus, UserType, \
 
 from .schema import Base, TrainJob, SubTrainJob, TrainJobWorker, \
     InferenceJob, Trial, Model, User, Service, InferenceJobWorker, \
-    TrialLog
+    TrialLog, Dataset
 
 class InvalidUserTypeError(Exception): pass
 
@@ -64,11 +64,87 @@ class Database(object):
             raise InvalidUserTypeError()
 
     ####################################
+    # Datasets
+    ####################################
+
+    def create_dataset(self, name, task, size_bytes, store_dataset_id, owner_id):
+        dataset = Dataset(
+            name=name,
+            task=task,
+            size_bytes=size_bytes,
+            store_dataset_id=store_dataset_id,
+            owner_id=owner_id
+        )
+        self._session.add(dataset)
+        return dataset
+
+    def get_dataset(self, id):
+        dataset = self._session.query(Dataset).get(id)
+        return dataset
+
+    def get_datasets(self, user_id, task=None):
+        query = self._session.query(Dataset) \
+            .filter(Dataset.owner_id == user_id)
+
+        if task is not None:
+            query = query.filter(Dataset.task == task)
+        
+        datasets = query.all()
+        return datasets
+    
+    ####################################
+    # Models
+    ####################################
+
+    def create_model(self, user_id, name, task, model_file_bytes, 
+                    model_class, docker_image, dependencies, access_right):
+        model = Model(
+            user_id=user_id,
+            name=name,
+            task=task,
+            model_file_bytes=model_file_bytes,
+            model_class=model_class,
+            docker_image=docker_image,
+            dependencies=dependencies,
+            access_right=access_right
+        )
+        self._session.add(model)
+        return model
+
+    def get_models_of_task(self, user_id, task):
+        task_models = self._session.query(Model) \
+            .filter(Model.task == task) \
+            .all()
+
+        public_models = self._filter_public_models(task_models)
+        private_models = self._filter_private_models(task_models, user_id)
+        models = public_models + private_models
+        return models
+
+    def get_models(self, user_id):
+        all_models = self._session.query(Model).all()
+
+        public_models = self._filter_public_models(all_models)
+        private_models = self._filter_private_models(all_models, user_id)
+        models = public_models + private_models
+        return models
+
+    def get_model_by_name(self, name):
+        model = self._session.query(Model) \
+            .filter(Model.name == name).first()
+        
+        return model
+
+    def get_model(self, id):
+        model = self._session.query(Model).get(id)
+        return model
+
+    ####################################
     # Train Jobs
     ####################################
 
     def create_train_job(self, user_id, app, app_version, task, budget,
-                        train_dataset_uri, test_dataset_uri):
+                        train_dataset_id, val_dataset_id):
 
         train_job = TrainJob(
             user_id=user_id,
@@ -76,8 +152,8 @@ class Database(object):
             app_version=app_version,
             task=task,
             budget=budget,
-            train_dataset_uri=train_dataset_uri,
-            test_dataset_uri=test_dataset_uri
+            train_dataset_id=train_dataset_id,
+            val_dataset_id=val_dataset_id
         )
         self._session.add(train_job)
         return train_job
@@ -324,53 +400,6 @@ class Database(object):
         services = query.all()
 
         return services
-
-    ####################################
-    # Models
-    ####################################
-
-    def create_model(self, user_id, name, task, model_file_bytes, 
-                    model_class, docker_image, dependencies, access_right):
-        model = Model(
-            user_id=user_id,
-            name=name,
-            task=task,
-            model_file_bytes=model_file_bytes,
-            model_class=model_class,
-            docker_image=docker_image,
-            dependencies=dependencies,
-            access_right=access_right
-        )
-        self._session.add(model)
-        return model
-
-    def get_models_of_task(self, user_id, task):
-        task_models = self._session.query(Model) \
-            .filter(Model.task == task) \
-            .all()
-
-        public_models = self._filter_public_models(task_models)
-        private_models = self._filter_private_models(task_models, user_id)
-        models = public_models + private_models
-        return models
-
-    def get_models(self, user_id):
-        all_models = self._session.query(Model).all()
-
-        public_models = self._filter_public_models(all_models)
-        private_models = self._filter_private_models(all_models, user_id)
-        models = public_models + private_models
-        return models
-
-    def get_model_by_name(self, name):
-        model = self._session.query(Model) \
-            .filter(Model.name == name).first()
-        
-        return model
-
-    def get_model(self, id):
-        model = self._session.query(Model).get(id)
-        return model
 
     ####################################
     # Trials

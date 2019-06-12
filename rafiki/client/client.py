@@ -131,6 +131,60 @@ class Client(object):
         return data
 
     ####################################
+    # Datasets
+    ####################################
+
+    def create_dataset(self, name, task, dataset_path=None, dataset_url=None):
+        '''
+        Creates a dataset on Rafiki, either by uploading the dataset file from your filesystem or specifying a URL where the dataset file can be downloaded.
+        The dataset should be in a format specified by the task
+        Either `dataset_url` or `dataset_path` should be specified.
+
+        Only admins, model developers and app developers can manage their own datasets.
+
+        :param str name: Name for the dataset, does not need to be unique
+        :param str task: Task associated to the dataset
+        :param str dataset_path: Path to the dataset file to upload from the local filesystem
+        :param str dataset_url: Publicly accessible URL where the dataset file can be downloaded
+        :returns: Created dataset as dictionary
+        :rtype: dict[str, any]
+        '''
+        files = {}
+
+        if dataset_path is not None:
+            f = open(dataset_path, 'rb')
+            dataset = f.read()
+            f.close()
+            files['dataset'] = dataset
+            print('Uploading dataset..')
+        else:
+            print('Waiting for server finish downloading the dataset from URL...')
+
+        data = self._post(
+            '/datasets', 
+            files=files,
+            form_data={
+                'name': name,
+                'task': task,
+                'dataset_url': dataset_url
+            }
+        )
+        return data
+
+    def get_datasets(self, task=None):
+        '''
+        Lists all datasets owned by the current user, optionally filtering by task.
+
+        :param str trsk: Task name
+        :returns: List of datasets
+        :rtype: dict[str, any][]
+        '''
+        data = self._get('/datasets', params={
+            'task': task
+        })
+        return data
+
+    ####################################
     # Models
     ####################################
 
@@ -271,7 +325,7 @@ class Client(object):
     # Train Jobs
     ####################################
     
-    def create_train_job(self, app, task, train_dataset_uri, test_dataset_uri, budget, models=None):
+    def create_train_job(self, app, task, train_dataset_id, val_dataset_id, budget, models=None):
         '''
         Creates and starts a train job on Rafiki. 
         A train job is uniquely identified by its associated app and the app version (returned in output).
@@ -281,8 +335,8 @@ class Client(object):
         :param str app: Name of the app associated with the train job
         :param str task: Task associated with the train job, 
             the train job will train models associated with the task
-        :param str train_dataset_uri: URI of the train dataset in a format specified by the task
-        :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task
+        :param str train_dataset_id: ID of the train dataset, previously created on Rafiki
+        :param str val_dataset_id: ID of the validation dataset, previously created on Rafiki
         :param str budget: Budget for each model
         :param str[] models: List of model names to use for train job
         :returns: Created train job as dictionary
@@ -307,8 +361,8 @@ class Client(object):
         data = self._post('/train_jobs', json={
             'app': app,
             'task': task,
-            'train_dataset_uri': train_dataset_uri,
-            'test_dataset_uri': test_dataset_uri,
+            'train_dataset_id': train_dataset_id,
+            'val_dataset_id': val_dataset_id,
             'budget': budget,
             'models': models
         })
