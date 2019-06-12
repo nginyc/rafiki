@@ -65,7 +65,7 @@ def make_predictions(client, predictor_host, queries):
 
     return predictions
 
-def quickstart(client, gpus):
+def quickstart(client, gpus, trials):
     task = TaskType.IMAGE_CLASSIFICATION
 
     # Randomly generate app & model names to avoid naming conflicts
@@ -82,7 +82,7 @@ def quickstart(client, gpus):
                         
     print('Creating train job for app "{}" on Rafiki...'.format(app)) 
     budget = {
-        BudgetType.MODEL_TRIAL_COUNT: 5,
+        BudgetType.MODEL_TRIAL_COUNT: trials,
         BudgetType.GPU_COUNT: gpus
     }
     train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true'
@@ -151,6 +151,7 @@ if __name__ == '__main__':
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
+    parser.add_argument('--trials', type=int, default=5, help='How many trials to conduct for each model')
     (args, _) = parser.parse_known_args()
 
     # Initialize client
@@ -161,4 +162,4 @@ if __name__ == '__main__':
     print('Login with email "{}" and password "{}"'.format(args.email, args.password)) 
     
     # Run quickstart
-    quickstart(client, args.gpus)
+    quickstart(client, args.gpus, args.trials)
