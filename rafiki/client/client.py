@@ -12,25 +12,25 @@ class RafikiConnectionError(ConnectionError): pass
 DOCS_URL = 'https://nginyc.github.io/rafiki/docs/latest/docs/src/python/rafiki.client.Client.html'
 
 # Returns a decorator that warns user about the method being deprecated
-def deprecated(msg=None):
+def _deprecated(msg=None):
     def deco(func):
         nonlocal msg
         msg = msg or f'`{func.__name__}` has been deprecated.'
 
         @wraps(func)
         def deprecated_func(*args, **kwargs):
-            warn(f'{msg}\n' \
+            _warn(f'{msg}\n' \
                 f'Refer to the updated documentation at {DOCS_URL}')
             return func(*args, **kwargs)
         
         return deprecated_func
     return deco
 
-def warn(msg):
-    print(f'\033[93mWARNING: {msg}\033[0m')
+def _warn(msg):
+    print(f'\033[93m_warnING: {msg}\033[0m')
 
-def note(msg):
-    print(f'\033[94mNOTE: {msg}\033[0m')
+def _note(msg):
+    print(f'\033[94m_note: {msg}\033[0m')
 
 class Client(object):
 
@@ -123,7 +123,7 @@ class Client(object):
         })
         return data
 
-    @deprecated('`create_users` has been removed')
+    @_deprecated('`create_users` has been removed')
     def create_users(self, *args, **kwargs):
         pass
 
@@ -242,7 +242,7 @@ class Client(object):
         :returns: Details of model as dictionary
         :rtype: dict[str, any]
         '''
-        note('`get_model` now requires `model_id` instead of `name`')
+        _note('`get_model` now requires `model_id` instead of `name`')
 
         data = self._get('/models/{}'.format(model_id))
         return data
@@ -258,7 +258,7 @@ class Client(object):
         :returns: Details of model as dictionary
         :rtype: dict[str, any]
         '''
-        note('`download_model_file` now requires `model_id` instead of `name`')
+        _note('`download_model_file` now requires `model_id` instead of `name`')
 
         model_file_bytes = self._get('/models/{}/model_file'.format(model_id))
 
@@ -278,11 +278,11 @@ class Client(object):
 
         return data
 
-    @deprecated('`get_models` & `get_models_of_task` have been combined into `get_available_models`')
+    @_deprecated('`get_models` & `get_models_of_task` have been combined into `get_available_models`')
     def get_models(self, *args, **kwargs):
         pass
 
-    @deprecated('`get_models` & `get_models_of_task` have been combined into `get_available_models`')
+    @_deprecated('`get_models` & `get_models_of_task` have been combined into `get_available_models`')
     def get_models_of_task(self, *args, **kwargs):
         pass
 
@@ -348,7 +348,7 @@ class Client(object):
         ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported
         =====================       =====================
         '''
-        note('`create_train_job` now requires `models` as a list of model IDs instead of a list of model names')
+        _note('`create_train_job` now requires `models` as a list of model IDs instead of a list of model names')
 
         # Default to all available models
         if models is None: 
