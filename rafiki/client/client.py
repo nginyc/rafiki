@@ -3,10 +3,34 @@ import json
 import pprint
 import pickle
 import os
+from functools import wraps
 
 from rafiki.constants import BudgetType, ModelAccessRight
 
 class RafikiConnectionError(ConnectionError): pass
+
+DOCS_URL = 'https://nginyc.github.io/rafiki/docs/latest/docs/src/python/rafiki.client.Client.html'
+
+# Returns a decorator that warns user about the method being deprecated
+def deprecated(msg=None):
+    def deco(func):
+        nonlocal msg
+        msg = msg or f'`{func.__name__}` has been deprecated.'
+
+        @wraps(func)
+        def deprecated_func(*args, **kwargs):
+            warn(f'{msg}\n' \
+                f'Refer to the updated documentation at {DOCS_URL}')
+            return func(*args, **kwargs)
+        
+        return deprecated_func
+    return deco
+
+def warn(msg):
+    print(f'\033[93mWARNING: {msg}\033[0m')
+
+def note(msg):
+    print(f'\033[94mNOTE: {msg}\033[0m')
 
 class Client(object):
 
@@ -99,6 +123,10 @@ class Client(object):
         })
         return data
 
+    @deprecated('`create_users` has been removed')
+    def create_users(self, *args, **kwargs):
+        pass
+
     def get_users(self):
         '''
         Lists all Rafiki users.
@@ -133,7 +161,7 @@ class Client(object):
     # Models
     ####################################
 
-    def create_model(self, name, task, model_file_path, model_class, docker_image=None, \
+    def create_model(self, name, task, model_file_path, model_class, docker_image=None, 
                     dependencies={}, access_right=ModelAccessRight.PRIVATE):
         '''
         Creates a model on Rafiki.
@@ -214,9 +242,11 @@ class Client(object):
         :returns: Details of model as dictionary
         :rtype: dict[str, any]
         '''
+        note('`get_model` now requires `model_id` instead of `name`')
+
         data = self._get('/models/{}'.format(model_id))
         return data
-    
+
     def download_model_file(self, model_id, out_model_file_path):
         '''
         Downloads the Python model class file for the Rafiki model.
@@ -228,6 +258,8 @@ class Client(object):
         :returns: Details of model as dictionary
         :rtype: dict[str, any]
         '''
+        note('`download_model_file` now requires `model_id` instead of `name`')
+
         model_file_bytes = self._get('/models/{}/model_file'.format(model_id))
 
         with open(out_model_file_path, 'wb') as f:
@@ -245,6 +277,14 @@ class Client(object):
         print('From the file, import the model class `{}`.'.format(model_class))
 
         return data
+
+    @deprecated('`get_models` & `get_models_of_task` have been combined into `get_available_models`')
+    def get_models(self, *args, **kwargs):
+        pass
+
+    @deprecated('`get_models` & `get_models_of_task` have been combined into `get_available_models`')
+    def get_models_of_task(self, *args, **kwargs):
+        pass
 
     def get_available_models(self, task=None):
         '''
@@ -308,6 +348,8 @@ class Client(object):
         ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported
         =====================       =====================
         '''
+        note('`create_train_job` now requires `models` as a list of model IDs instead of a list of model names')
+
         # Default to all available models
         if models is None: 
             avail_models = self.get_available_models(task)
