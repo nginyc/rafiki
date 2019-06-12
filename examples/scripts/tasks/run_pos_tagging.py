@@ -27,7 +27,7 @@ def run_pos_tagging(client, gpus):
 
     print('Creating train job for app "{}" on Rafiki...'.format(app))
     budget = {
-        BudgetType.MODEL_TRIAL_COUNT: 3,
+        BudgetType.MODEL_TRIAL_COUNT: 5,
         BudgetType.GPU_COUNT: gpus
     }
     train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_train.zip?raw=true'

@@ -223,8 +223,8 @@ class TrainWorker(object):
 
     # Returns whether the worker reached its budget (only consider COMPLETED or ERRORED trials)
     def _if_budget_reached(self, budget):
-        # By default, budget is model trial count of 3
-        max_trials = budget.get(BudgetType.MODEL_TRIAL_COUNT, 3)
+        # By default, budget is model trial count of 5
+        max_trials = budget.get(BudgetType.MODEL_TRIAL_COUNT, 5)
         trials = self._db.get_trials_of_sub_train_job(self._sub_train_job_id)
         trials = [x for x in trials if x.status in [TrialStatus.COMPLETED, TrialStatus.ERRORED]]
         return len(trials) >= max_trials

@@ -16,7 +16,7 @@ class SkDt(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'max_depth': IntegerKnob(2, 4),
+            'max_depth': IntegerKnob(1, 32),
             'criterion': CategoricalKnob(['gini', 'entropy'])
         }
 

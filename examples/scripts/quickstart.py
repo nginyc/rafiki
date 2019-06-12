@@ -82,7 +82,7 @@ def quickstart(client, gpus):
                         
     print('Creating train job for app "{}" on Rafiki...'.format(app)) 
     budget = {
-        BudgetType.MODEL_TRIAL_COUNT: 3,
+        BudgetType.MODEL_TRIAL_COUNT: 5,
         BudgetType.GPU_COUNT: gpus
     }
     train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true'

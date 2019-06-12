@@ -302,7 +302,7 @@ class Client(object):
         =====================       =====================
         **Budget Type**             **Description**
         ---------------------       ---------------------        
-        ``MODEL_TRIAL_COUNT``       No. of trials to conduct for each model (defaults to 2)
+        ``MODEL_TRIAL_COUNT``       No. of trials to conduct for each model (defaults to 5)
         ``GPU_COUNT``               No. of GPUs to exclusively allocate for training, across all models (defaults to 0)
         =====================       =====================
         '''
