@@ -131,7 +131,7 @@ class ServicesManager(object):
         except Exception as e:
             # Stop partially started train services
             self.stop_train_services(train_job_id)
-
+            self._db.mark_train_job_as_errored(train_job)
             raise ServiceDeploymentError(e)
 
     def stop_train_services(self, train_job_id):
