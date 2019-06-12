@@ -26,12 +26,6 @@ def _deprecated(msg=None):
         return deprecated_func
     return deco
 
-def _warn(msg):
-    print(f'\033[93m_warnING: {msg}\033[0m')
-
-def _note(msg):
-    print(f'\033[94m_note: {msg}\033[0m')
-
 class Client(object):
 
     '''
@@ -726,3 +720,9 @@ class Client(object):
             }
         else:
             return {}
+
+def _warn(msg):
+    print(f'\033[93mWARNING: {msg}\033[0m')
+
+def _note(msg):
+    print(f'\033[94mNOTE: {msg}\033[0m')
