@@ -1,4 +1,4 @@
-import pprint
+from pprint import pprint
 import os
 import csv
 
@@ -14,7 +14,7 @@ def seed_users(client, csv_file_path):
             password = row['password']
             user_type = row['user_type']
             try:
-                client.create_user(email, password, user_type)
+                pprint(client.create_user(email, password, user_type))
             except Exception as e:
                 print('Failed to create user `{}` due to:'.format(email))
                 print(e)

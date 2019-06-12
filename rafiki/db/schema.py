@@ -106,7 +106,7 @@ class Trial(Base):
     status = Column(String, nullable=False, default=TrialStatus.STARTED)
     knobs = Column(JSON, default=None)
     score = Column(Float, default=0)
-    parameters = Column(Binary, default=None)
+    params_file_path = Column(String, default=None)
     datetime_stopped = Column(DateTime, default=None)
 
 class TrialLog(Base):
