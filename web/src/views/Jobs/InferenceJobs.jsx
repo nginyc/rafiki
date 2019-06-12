@@ -35,12 +35,7 @@ const styles = {
 
 function InferenceJobs(props) {
   const { classes } = props;
-  const codeString = `import sys
 
-from google.cloud import automl_v1beta1
-
-def get_prediction(...):
-  `
   return (
     <div>
       <GridContainer justify="center" alignContent="center">
@@ -99,7 +94,6 @@ def get_prediction(...):
               <GridContainer>
                 <GridItem xs={12} sm={12} md={12}>
                   <h6 className={classes.cardCategory}>Apply your train job with Python</h6>
-                  <SyntaxHighlighter language='python' style={docco}>{codeString}</SyntaxHighlighter>; 
                 </GridItem>
               </GridContainer>
             </CardBody>

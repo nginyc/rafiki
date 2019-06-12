@@ -1,7 +1,7 @@
 import React from "react";
 // @material-ui/core components
 import withStyles from "@material-ui/core/styles/withStyles";
-import { Icon, Fab, Popover, CircularProgress } from '@material-ui/core';
+import { CircularProgress } from '@material-ui/core';
 // core components
 import GridItem from "components/Grid/GridItem.jsx";
 import GridContainer from "components/Grid/GridContainer.jsx";
@@ -95,7 +95,6 @@ class Details extends React.Component {
     }
   }
 
-
   state = {
     anchorEl: null,
   };
@@ -115,8 +114,6 @@ class Details extends React.Component {
   render() {
 
     const { classes } = this.props;
-    const { anchorEl } = this.state;
-    const open = Boolean(anchorEl);
     const { app, appVersion, appUtils } = this.props
 
     return (

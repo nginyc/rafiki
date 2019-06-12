@@ -6,20 +6,42 @@
 yarn start
 ```
 
-open https://localhost:3000/
-
-
 ## How to setup Api End Point (environment parameters)
 
 ```
-$ vim .env
+rafiki $ source env.sh
+```
+
+
+```
+rafiki/web $ vim .env
 ```
 
 ```
+PORT=$WEB_ADMIN_EXT_PORT
 NODE_PATH=./src
-REACT_APP_WEBSITE_NAME="Rafiki DashBoard"
-REACT_APP_API_POINT_HOST=ncrs.d2.comp.nus.edu.sg
-REACT_APP_API_POINT_PORT=3000
+REACT_APP_API_POINT_HOST=$RAFIKI_ADDR
+REACT_APP_API_POINT_PORT=$ADMIN_EXT_PORT
+```
+
+## How to TEST the app
+
+```
+yarn test
+```
+
+https://github.com/facebook/jest/issues/3254
+
+If you cannot test on Ubuntu, maybe it is because jest is watching too many files.
+
+```
+echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+```
+
+### migrate from `react-testing-library` to `@testing-library/react`
+
+```
+react-testing-library has moved to @testing-library/react. Please uninstall react-testing-library and install @testing-library/react instead, or use an older version of react-testing-library. Learn more about this change here: https://github.com/testing-library/dom-testing-library/issues/260 Thanks! :)
 ```
 
 ## API Endpoints
@@ -238,12 +260,3 @@ https://stackoverflow.com/questions/47508564/migrating-create-react-app-from-jav
 
 - using redux to handle the data (by 7.June)
 
-### TEST
-
-https://github.com/facebook/jest/issues/3254
-
-If you cannot test on Ubuntu, maybe it is because jest is watching too many files.
-
-```
-echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
-```

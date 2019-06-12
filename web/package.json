@@ -6,6 +6,7 @@
   "dependencies": {
     "@material-ui/core": "3.9.2",
     "@material-ui/icons": "3.0.2",
+    "@testing-library/react": "^8.0.1",
     "chartist": "0.10.1",
     "classnames": "2.2.6",
     "echarts": "^4.2.1",
@@ -44,6 +45,7 @@
   ],
   "devDependencies": {
     "eslint-config-prettier": "4.0.0",
-    "eslint-plugin-prettier": "3.0.1"
+    "eslint-plugin-prettier": "3.0.1",
+    "jest-dom": "^3.5.0"
   }
 }
