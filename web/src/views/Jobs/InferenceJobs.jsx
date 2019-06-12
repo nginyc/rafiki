@@ -1,7 +1,4 @@
 import React from "react";
-import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
-import js from 'react-syntax-highlighter/dist/esm/languages/hljs/python';
-import docco from 'react-syntax-highlighter/dist/esm/styles/hljs/docco'; 
 
 // @material-ui/core components
 import withStyles from "@material-ui/core/styles/withStyles";
@@ -16,8 +13,6 @@ import CardHeader from "components/Card/CardHeader.jsx";
 import CardBody from "components/Card/CardBody.jsx";
 import CardFooter from "components/Card/CardFooter.jsx";
 import FormHelperText from '@material-ui/core/FormHelperText';
-
-SyntaxHighlighter.registerLanguage('javascript', js);
 
 const styles = {
   cardCategoryWhite: {

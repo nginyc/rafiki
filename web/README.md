@@ -238,5 +238,12 @@ https://stackoverflow.com/questions/47508564/migrating-create-react-app-from-jav
 
 - using redux to handle the data (by 7.June)
 
+### TEST
 
+https://github.com/facebook/jest/issues/3254
 
+If you cannot test on Ubuntu, maybe it is because jest is watching too many files.
+
+```
+echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+```

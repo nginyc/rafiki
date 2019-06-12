@@ -3,14 +3,12 @@
   "version": "0.2.0",
   "description": "Web Admin Portal for Rafiki",
   "private": false,
-  "dependencies": {    
+  "dependencies": {
     "@material-ui/core": "3.9.2",
     "@material-ui/icons": "3.0.2",
     "chartist": "0.10.1",
     "classnames": "2.2.6",
     "echarts": "^4.2.1",
-    "ejs": "^2.6.1",
-    "express": "^4.17.1",
     "history": "4.7.2",
     "moment": "^2.24.0",
     "perfect-scrollbar": "1.4.0",

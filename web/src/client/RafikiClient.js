@@ -70,7 +70,6 @@ class RafikiClient {
     Lists all train jobs associated to an user on Rafiki.
   */
   async createTrainJob(json) {
-    debugger;
     const data = await this._post('/train_jobs', json)
     const trainJob = data
     return trainJob;
