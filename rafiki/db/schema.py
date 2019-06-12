@@ -52,19 +52,20 @@ class Service(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     service_type = Column(String, nullable=False)
-    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
-    datetime_stopped = Column(DateTime, default=None)
     status = Column(String, nullable=False, default=ServiceStatus.STARTED)
     docker_image = Column(String, nullable=False)
     container_manager_type = Column(String, nullable=False)
-    replicas = Column(Integer, default=0)
+    replicas = Column(Integer, nullable=False)
+    gpus = Column(Integer, nullable=False)
     ext_hostname = Column(String)
     ext_port = Column(Integer)
     hostname = Column(String)
     port = Column(Integer)
     container_service_name = Column(String)
     container_service_id = Column(String)
-    requirements = Column(ARRAY(String))
+    container_service_info = Column(JSON)
+    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
+    datetime_stopped = Column(DateTime, default=None)
 
 class TrainJob(Base):
     __tablename__ = 'train_job'
@@ -77,6 +78,9 @@ class TrainJob(Base):
     train_dataset_uri = Column(String, nullable=False)
     test_dataset_uri = Column(String, nullable=False)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
+    status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
+    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
+    datetime_stopped = Column(DateTime, default=None)
 
 class SubTrainJob(Base):
     __tablename__ = 'sub_train_job'
@@ -85,7 +89,6 @@ class SubTrainJob(Base):
     train_job_id = Column(String, ForeignKey('train_job.id'))
     model_id = Column(String, ForeignKey('model.id'))
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
-    status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     datetime_stopped = Column(DateTime, default=None)
 
@@ -93,7 +96,6 @@ class TrainJobWorker(Base):
     __tablename__ = 'train_job_worker'
 
     service_id = Column(String, ForeignKey('service.id'), primary_key=True)
-    train_job_id = Column(String, ForeignKey('train_job.id'))
     sub_train_job_id = Column(String, ForeignKey('sub_train_job.id'), nullable=False)
 
 class Trial(Base):

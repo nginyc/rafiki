@@ -23,6 +23,7 @@ class TrainJobStatus():
     STARTED = 'STARTED'
     RUNNING = 'RUNNING'
     STOPPED = 'STOPPED'
+    ERRORED = 'ERRORED'
 
 class TrialStatus():
     STARTED = 'STARTED'

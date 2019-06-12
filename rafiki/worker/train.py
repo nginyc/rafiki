@@ -28,6 +28,7 @@ class TrainWorker(object):
         self._trial_id = None
         self._client = self._make_client()
         self._params_root_dir = os.path.join(os.environ['WORKDIR_PATH'], os.environ['PARAMS_DIR_PATH'])
+        self._sub_train_job_id = None
 
     def start(self):
         logger.info('Starting train worker for service of ID "{}"...' \
@@ -37,13 +38,15 @@ class TrainWorker(object):
         advisor_id = None
         while True:
             with self._db:
-                (sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
+                (self._sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
                     train_job_id, train_dataset_uri, test_dataset_uri) = self._read_worker_info()
 
-                if self._if_budget_reached(budget, sub_train_job_id):
+                self._client.send_event('train_job_worker_started', sub_train_job_id=self._sub_train_job_id)
+
+                if self._if_budget_reached(budget):
                     # If budget reached
                     logger.info('Budget for train job has reached')
-                    self._stop_worker()
+                    self._stop_sub_train_job()
                     if advisor_id is not None:
                         self._delete_advisor(advisor_id)
                     break
@@ -51,7 +54,7 @@ class TrainWorker(object):
                 # Create a new trial
                 logger.info('Creating new trial in DB...')
                 trial = self._db.create_trial(
-                    sub_train_job_id=sub_train_job_id,
+                    sub_train_job_id=self._sub_train_job_id,
                     model_id=model_id
                 )
                 self._db.commit()
@@ -136,6 +139,9 @@ class TrainWorker(object):
             logger.error('Error marking trial as terminated:')
             logger.error(traceback.format_exc())
 
+        if self._sub_train_job_id is not None:
+            self._client.send_event('train_job_worker_stopped', sub_train_job_id=self._sub_train_job_id)
+
     def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, \
                                 test_dataset_uri, handle_log):
 
@@ -184,13 +190,13 @@ class TrainWorker(object):
     def _feedback_to_advisor(self, advisor_id, knobs, score):
         self._client.feedback_to_advisor(advisor_id, knobs, score)
 
-    def _stop_worker(self):
-        logger.warn('Stopping train job worker...')
+    def _stop_sub_train_job(self):
+        logger.warn('Stopping sub train job...')
         try:
-            self._client.stop_train_job_worker(self._service_id)
+            self._client.send_event('sub_train_job_budget_reached', sub_train_job_id=self._sub_train_job_id)
         except Exception:
-            # Throw just a warning - likely that another worker has stopped the service
-            logger.warn('Error while stopping train job worker service:')
+            # Throw just a warning - likely that another worker has stopped it
+            logger.warn('Error while stopping sub train job:')
             logger.warn(traceback.format_exc())
         
     def _create_advisor(self, clazz):
@@ -213,10 +219,10 @@ class TrainWorker(object):
             logger.warning(traceback.format_exc())
 
     # Returns whether the worker reached its budget (only consider COMPLETED or ERRORED trials)
-    def _if_budget_reached(self, budget, sub_train_job_id):
-        # By default, budget is model trial count of 2
-        max_trials = budget.get(BudgetType.MODEL_TRIAL_COUNT, 2)
-        trials = self._db.get_trials_of_sub_train_job(sub_train_job_id)
+    def _if_budget_reached(self, budget):
+        # By default, budget is model trial count of 3
+        max_trials = budget.get(BudgetType.MODEL_TRIAL_COUNT, 3)
+        trials = self._db.get_trials_of_sub_train_job(self._sub_train_job_id)
         trials = [x for x in trials if x.status in [TrialStatus.COMPLETED, TrialStatus.ERRORED]]
         return len(trials) >= max_trials
 
@@ -226,8 +232,8 @@ class TrainWorker(object):
         if worker is None:
             raise InvalidWorkerException()
 
-        train_job = self._db.get_train_job(worker.train_job_id)
         sub_train_job = self._db.get_sub_train_job(worker.sub_train_job_id)
+        train_job = self._db.get_train_job(sub_train_job.train_job_id)
         model = self._db.get_model(sub_train_job.model_id)
 
         if model is None:
