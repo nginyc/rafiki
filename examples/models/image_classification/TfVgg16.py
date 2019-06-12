@@ -9,7 +9,7 @@ import abc
 from urllib.parse import urlparse, parse_qs 
 
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, FloatKnob, CategoricalKnob, dataset_utils
+                        IntegerKnob, FloatKnob, CategoricalKnob, FixedKnob, dataset_utils
 from rafiki.constants import TaskType, ModelDependency
 
 class TfVgg16(BaseModel):
@@ -20,7 +20,7 @@ class TfVgg16(BaseModel):
     def get_knob_config():
         return {
             'epochs': FixedKnob(1),
-            'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
+            'learning_rate': FloatKnob(1e-5, 1e-2, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
         }
 
@@ -32,11 +32,11 @@ class TfVgg16(BaseModel):
         config.gpu_options.allow_growth = True
         self._sess = tf.Session(graph=self._graph, config=config)
 
-    def train(self, dataset_uri):
+    def train(self, dataset_path):
         ep = self._knobs.get('epochs')
         bs = self._knobs.get('batch_size')
 
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[48, 48])
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[48, 48])
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
@@ -53,8 +53,8 @@ class TfVgg16(BaseModel):
                     batch_size=bs
                 )
 
-    def evaluate(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[48, 48])
+    def evaluate(self, dataset_path):
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[48, 48])
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
         images = np.stack([images] * 3, axis=-1)
@@ -137,8 +137,9 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.TENSORFLOW: '1.12.0'
         },
-        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
+        train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
+        val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
+        enable_gpu=True,
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

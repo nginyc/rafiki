@@ -1,4 +1,4 @@
-LOG_FILE_PATH=$PWD/logs/start_admin_web.log
+LOG_FILE_PATH=$PWD/logs/start_web_admin.log
 
 source ./scripts/utils.sh
 

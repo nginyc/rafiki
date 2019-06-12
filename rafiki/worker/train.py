@@ -9,6 +9,7 @@ from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
 from rafiki.model import load_model_class, serialize_knob_config, logger as model_logger
 from rafiki.db import Database
+from rafiki.data_store import DataStore, FileDataStore
 from rafiki.client import Client
 
 logger = logging.getLogger(__name__)
@@ -17,16 +18,19 @@ class InvalidTrainJobException(Exception): pass
 class InvalidModelException(Exception): pass
 class InvalidBudgetTypeException(Exception): pass
 class InvalidWorkerException(Exception): pass
+class InvalidDatasetException(Exception): pass
 
 class TrainWorker(object):
-    def __init__(self, service_id, db=None):
-        if db is None: 
-            db = Database()
-            
+    def __init__(self, service_id, db=None, data_store=None):
+        self._db = db or Database()
+        self._data_store: DataStore = data_store or FileDataStore(os.environ['DATA_DOCKER_WORKDIR_PATH'])
         self._service_id = service_id
-        self._db = db
         self._trial_id = None
-        self._client = self._make_client()
+        self._client = Client(admin_host=os.environ['ADMIN_HOST'], 
+                        admin_port=os.environ['ADMIN_PORT'], 
+                        advisor_host=os.environ['ADVISOR_HOST'],
+                            advisor_port=os.environ['ADVISOR_PORT'])
+        self._params_root_dir = os.environ['PARAMS_DOCKER_WORKDIR_PATH']
 
     def start(self):
         logger.info('Starting train worker for service of ID "{}"...' \
@@ -37,7 +41,7 @@ class TrainWorker(object):
         while True:
             with self._db:
                 (sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
-                    train_job_id, train_dataset_uri, test_dataset_uri) = self._read_worker_info()
+                    train_job_id, train_dataset_path, val_dataset_path) = self._read_worker_info()
 
                 if self._if_budget_reached(budget, sub_train_job_id):
                     # If budget reached
@@ -91,14 +95,14 @@ class TrainWorker(object):
                         trial = self._db.get_trial(self._trial_id)
                         self._db.add_trial_log(trial, log_line, log_lvl)
 
-                (score, parameters) = self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
-                                                                    test_dataset_uri, handle_log)
+                (score, params_file_path) = self._train_and_evaluate_model(clazz, knobs, train_dataset_path, 
+                                                                    val_dataset_path, handle_log)
                 logger.info('Trial score: {}'.format(score))
                 
                 with self._db:
                     logger.info('Marking trial as complete in DB...')
                     trial = self._db.get_trial(self._trial_id)
-                    self._db.mark_trial_as_complete(trial, score, parameters)
+                    self._db.mark_trial_as_complete(trial, score, params_file_path)
 
                 self._trial_id = None
 
@@ -135,8 +139,8 @@ class TrainWorker(object):
             logger.error('Error marking trial as terminated:')
             logger.error(traceback.format_exc())
 
-    def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, \
-                                test_dataset_uri, handle_log):
+    def _train_and_evaluate_model(self, clazz, knobs, train_dataset_path, \
+                                val_dataset_path, handle_log):
 
         # Initialize model
         model_inst = clazz(**knobs)
@@ -153,10 +157,10 @@ class TrainWorker(object):
         model_logger.set_logger(py_model_logger)
 
         # Train model
-        model_inst.train(train_dataset_uri)
+        model_inst.train(train_dataset_path)
 
         # Evaluate model
-        score = model_inst.evaluate(test_dataset_uri)
+        score = model_inst.evaluate(val_dataset_path)
 
         # Remove log handlers from loggers for this trial
         root_logger.removeHandler(log_handler)
@@ -165,24 +169,28 @@ class TrainWorker(object):
         # Dump and pickle model parameters
         parameters = model_inst.dump_parameters()
         parameters = pickle.dumps(parameters)
+        params_file_path = os.path.join(self._params_root_dir, '{}.model'.format(self._trial_id))
+        with open(params_file_path, 'wb') as f:
+            f.write(parameters)
+
         model_inst.destroy()
 
-        return (score, parameters)
+        return (score, params_file_path)
 
     # Gets proposal of a set of knob values from advisor
     def _get_proposal_from_advisor(self, advisor_id):
-        res = self._client.generate_proposal(advisor_id)
+        res = self._get_client().generate_proposal(advisor_id)
         knobs = res['knobs']
         return knobs
 
     # Feedback result of knobs to advisor
     def _feedback_to_advisor(self, advisor_id, knobs, score):
-        self._client.feedback_to_advisor(advisor_id, knobs, score)
+        self._get_client().feedback_to_advisor(advisor_id, knobs, score)
 
     def _stop_worker(self):
         logger.warn('Stopping train job worker...')
         try:
-            self._client.stop_train_job_worker(self._service_id)
+            self._get_client().stop_train_job_worker(self._service_id)
         except Exception:
             # Throw just a warning - likely that another worker has stopped the service
             logger.warn('Error while stopping train job worker service:')
@@ -194,14 +202,14 @@ class TrainWorker(object):
         knob_config_str = serialize_knob_config(knob_config)
 
         # Create advisor associated with worker
-        res = self._client.create_advisor(knob_config_str, advisor_id=self._service_id)
+        res = self._get_client().create_advisor(knob_config_str, advisor_id=self._service_id)
         advisor_id = res['id']
         return advisor_id
 
     # Delete advisor
     def _delete_advisor(self, advisor_id):
         try:
-            self._client.delete_advisor(advisor_id)
+            self._get_client().delete_advisor(advisor_id)
         except Exception:
             # Throw just a warning - not critical for advisor to be deleted
             logger.warning('Error while deleting advisor:')
@@ -223,13 +231,22 @@ class TrainWorker(object):
 
         train_job = self._db.get_train_job(worker.train_job_id)
         sub_train_job = self._db.get_sub_train_job(worker.sub_train_job_id)
-        model = self._db.get_model(sub_train_job.model_id)
+        if train_job is None or sub_train_job is None:
+            raise InvalidTrainJobException()
 
+        model = self._db.get_model(sub_train_job.model_id)
         if model is None:
             raise InvalidModelException()
 
-        if train_job is None or sub_train_job is None:
-            raise InvalidTrainJobException()
+        try:
+            train_dataset = self._db.get_dataset(train_job.train_dataset_id)
+            assert train_dataset is not None
+            val_dataset = self._db.get_dataset(train_job.val_dataset_id)
+            assert val_dataset is not None
+            train_dataset_path = self._data_store.load(train_dataset.store_dataset_id)
+            val_dataset_path = self._data_store.load(val_dataset.store_dataset_id)
+        except Exception as e:
+            raise InvalidDatasetException(e)
 
         return (
             sub_train_job.id,
@@ -238,23 +255,13 @@ class TrainWorker(object):
             model.model_file_bytes,
             model.model_class,
             train_job.id,
-            train_job.train_dataset_uri,
-            train_job.test_dataset_uri
+            train_dataset_path,
+            val_dataset_path
         )
 
-    def _make_client(self):
-        admin_host = os.environ['ADMIN_HOST']
-        admin_port = os.environ['ADMIN_PORT']
-        advisor_host = os.environ['ADVISOR_HOST']
-        advisor_port = os.environ['ADVISOR_PORT']
-        superadmin_email = SUPERADMIN_EMAIL
-        superadmin_password = SUPERADMIN_PASSWORD
-        client = Client(admin_host=admin_host, 
-                        admin_port=admin_port, 
-                        advisor_host=advisor_host,
-                        advisor_port=advisor_port)
-        client.login(email=superadmin_email, password=superadmin_password)
-        return client
+    def _get_client(self):
+        self._client.login(email=SUPERADMIN_EMAIL, password=SUPERADMIN_PASSWORD)
+        return self._client
 
 class ModelLoggerHandler(logging.Handler):
     def __init__(self, handle_log):
