@@ -44,7 +44,7 @@ class TrainWorker(object):
                 (self._sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
                     train_job_id, train_dataset_uri, test_dataset_uri) = self._read_worker_info()
 
-                self._client.send_event('train_job_worker_started', sub_train_job_id=self._sub_train_job_id)
+                self._get_client().send_event('train_job_worker_started', sub_train_job_id=self._sub_train_job_id)
 
                 if self._if_budget_reached(budget):
                     # If budget reached
@@ -143,7 +143,7 @@ class TrainWorker(object):
             logger.error(traceback.format_exc())
 
         if self._sub_train_job_id is not None:
-            self._client.send_event('train_job_worker_stopped', sub_train_job_id=self._sub_train_job_id)
+            self._get_client().send_event('train_job_worker_stopped', sub_train_job_id=self._sub_train_job_id)
 
     def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, \
                                 test_dataset_uri, handle_log):
