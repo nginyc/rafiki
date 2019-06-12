@@ -13,6 +13,11 @@ import io
 import abc
 import tempfile
 import csv
+import pandas
+from functools import partial
+
+from ..utils.text import Alphabet, text_to_char_array
+
 
 from rafiki.constants import DatasetType
 
@@ -64,6 +69,16 @@ class ModelDatasetUtils():
         '''
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         return ImageFilesDataset(dataset_path, image_size)
+
+    def load_dataset_of_audio_files(self, dataset_uri, dataset_dir):
+        '''
+            Loads dataset with type `AUDIO_FILES`.
+
+            :param str dataset_uri: URI of the dataset file
+            :returns: An instance of ``ImageFilesDataset``.
+        '''
+        dataset_path = self.download_dataset_from_uri(dataset_uri)
+        return AudioFilesDataset(dataset_path, dataset_dir)
 
     def resize_as_images(self, images, image_size):
         '''
@@ -266,5 +281,39 @@ class ImageFilesDataset(ModelDataset):
         num_samples = len(image_paths)
 
         return (num_samples, num_classes, image_paths, image_classes, dataset_dir)
+
+class AudioFilesDataset(ModelDataset):
+    '''
+    Class that helps loading of dataset with type `AUDIO_FILES`
+
+    '''
+
+    def __init__(self, dataset_path, dataset_dir):
+        super().__init__(dataset_path)
+        self._dataset_dir = dataset_dir
+        (self.size, self.df) = self._load(self.path)
+
+    def _load(self, dataset_path):
+        dataset_dir = self._dataset_dir
+
+        dataset_zipfile = zipfile.ZipFile(dataset_path, 'r')
+        dataset_zipfile.extractall(path=dataset_dir.name)
+        dataset_zipfile.close()
+
+        # Read images.csv, and read image paths & classes
+        audios_csv_path = os.path.join(dataset_dir.name, 'audios.csv')
+
+
+        df = pandas.read_csv(audios_csv_path, encoding='utf-8', na_filter=False)
+        df.sort_values(by='wav_filesize', inplace=True)
+
+        # Convert to character index arrays
+        df['transcript'] = df['transcript']\
+            .apply(partial(text_to_char_array,
+                           alphabet=Alphabet(os.path.abspath('examples/datasets/speech_recognition/alphabet.txt'))))
+
+        num_samples = df['wav_filename'].count()
+
+        return (num_samples, df)
 
 dataset_utils = ModelDatasetUtils()
