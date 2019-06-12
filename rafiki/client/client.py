@@ -167,10 +167,8 @@ class Client(object):
         ``<dependency_name>`` corresponds to the name of the Python Package Index (PyPI) package (e.g. ``tensorflow``)
         and ``<dependency_version>`` corresponds to the version of the PyPI package (e.g. ``1.12.0``). These dependencies 
         will be lazily installed on top of the worker's Docker image before the submitted model's code is executed.
-
-        If the model is to be run on GPU, Rafiki could map dependencies to their GPU-enabled versions, if required. 
+        If the model is to be run on GPU, Rafiki would map dependencies to their GPU-supported versions, if required. 
         For example, ``{ 'tensorflow': '1.12.0' }`` will be installed as ``{ 'tensorflow-gpu': '1.12.0' }``.
-
         Rafiki could also parse specific dependency names to install certain non-PyPI packages. 
         For example, ``{ 'singa': '1.1.1' }`` will be installed as ``singa-cpu=1.1.1`` or ``singa-gpu=1.1.1`` using ``conda``.
 
@@ -186,6 +184,8 @@ class Client(object):
         ``scikit-learn``            ``pip install scikit-learn==${ver}``
         ``torch``                   ``pip install torch==${ver}``
         =====================       =====================
+
+        Refer to :ref:`creating-models` to understand more about how to write & test models for Rafiki.
 
         '''
         f = open(model_file_path, 'rb')
@@ -302,8 +302,8 @@ class Client(object):
         =====================       =====================
         **Budget Type**             **Description**
         ---------------------       ---------------------        
-        ``MODEL_TRIAL_COUNT``       Number of trials to conduct for each model
-        ``GPU_COUNT``               Number of GPUs to allocate across all models
+        ``MODEL_TRIAL_COUNT``       No. of trials to conduct for each model (defaults to 2)
+        ``GPU_COUNT``               No. of GPUs to exclusively allocate for training, across all models (defaults to 0)
         =====================       =====================
         '''
 
