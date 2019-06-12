@@ -3,8 +3,6 @@
 Development
 ====================================================================
 
-.. contents:: Table of Contents
-
 Before running any individual scripts, make sure to run the shell configuration script:
 
     .. code-block:: shell

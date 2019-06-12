@@ -3,9 +3,6 @@
 Setup & Configuration
 ====================================================================
 
-.. contents:: Table of Contents
-
-
 .. _`quick-setup`:
 
 Quick Setup
