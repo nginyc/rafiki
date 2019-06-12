@@ -37,8 +37,10 @@ class ServicesManager(object):
         self._advisor_port = os.environ['ADVISOR_PORT']
         self._data_workdir = os.environ['DATA_WORKDIR_PATH']
         self._logs_workdir = os.environ['LOGS_WORKDIR_PATH']
+        self._params_workdir = os.environ['PARAMS_WORKDIR_PATH']
         self._data_docker_workdir = os.environ['DATA_DOCKER_WORKDIR_PATH']
         self._logs_docker_workdir = os.environ['LOGS_DOCKER_WORKDIR_PATH']
+        self._params_docker_workdir = os.environ['PARAMS_DOCKER_WORKDIR_PATH']
         self._predictor_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_PREDICTOR'],
                                                 os.environ['RAFIKI_VERSION'])
         self._predictor_port = os.environ['PREDICTOR_PORT']
@@ -107,15 +109,20 @@ class ServicesManager(object):
         
         # Create a worker service for each sub train job, wait for them to be running, then mark them as running
         sub_train_job_to_replicas = self._compute_train_worker_replicas_for_sub_train_jobs(sub_train_jobs)
+        errors = []
         for (sub_train_job, replicas) in sub_train_job_to_replicas.items():
             try:
                 service = self._create_train_job_worker(train_job, sub_train_job, replicas)
                 self._wait_until_services_running([service])
                 self._db.mark_sub_train_job_as_running(sub_train_job)
                 self._db.commit()
-            except InvalidServiceRequest:
+            except InvalidServiceRequest as e:
                 self._db.mark_sub_train_job_as_stopped(sub_train_job)
                 self._db.commit()
+                errors.append(e)
+
+        if len(errors) > 0:
+            raise errors[0]
 
         return train_job
 
@@ -292,14 +299,16 @@ class ServicesManager(object):
             **environment_vars,
             'DATA_DOCKER_WORKDIR_PATH': self._data_docker_workdir,
             'LOGS_DOCKER_WORKDIR_PATH': self._logs_docker_workdir,
+            'PARAMS_DOCKER_WORKDIR_PATH': self._params_docker_workdir,
             'RAFIKI_SERVICE_ID': service.id,
             'RAFIKI_SERVICE_TYPE': service_type
         }
 
-        # Mount data and logs folders to containers' work directories
+        # Mount data, logs & params folders to containers' work directories
         mounts = {
             self._data_workdir: self._data_docker_workdir,
-            self._logs_workdir: self._logs_docker_workdir
+            self._logs_workdir: self._logs_docker_workdir,
+            self._params_workdir: self._params_docker_workdir
         }
 
         # Expose container port if it exists

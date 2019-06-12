@@ -9,6 +9,7 @@ export ADVISOR_EXT_PORT=3002
 export POSTGRES_EXT_PORT=5433
 export REDIS_EXT_PORT=6380
 export DATA_WORKDIR_PATH=$PWD/data # Folder shared with containers that contains datasets
+export PARAMS_WORKDIR_PATH=$PWD/params # Folder shared with containers that contains model parameters
 export LOGS_WORKDIR_PATH=$PWD/logs # Folder shared with containers that stores components' logs
 export APP_MODE=DEV # DEV or PROD
 export POSTGRES_DUMP_FILE_PATH=$PWD/db_dump.sql # PostgreSQL database dump file
@@ -31,6 +32,7 @@ export PREDICTOR_PORT=3003
 export ADMIN_WEB_HOST=rafiki_admin_web
 export DATA_DOCKER_WORKDIR_PATH=/root/rafiki/data
 export LOGS_DOCKER_WORKDIR_PATH=/root/rafiki/logs
+export PARAMS_DOCKER_WORKDIR_PATH=/root/rafiki/params
 export DOCKER_WORKDIR_PATH=/root/rafiki
 export CONDA_ENVIORNMENT=rafiki
 
