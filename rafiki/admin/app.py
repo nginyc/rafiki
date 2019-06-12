@@ -110,6 +110,7 @@ def create_dataset(auth):
             assert 'dataset_url' in params
             r = requests.get(params['dataset_url'], allow_redirects=True)
             f.write(r.content)
+            del params['dataset_url']
 
         params['data_file_path'] = f.name
 
