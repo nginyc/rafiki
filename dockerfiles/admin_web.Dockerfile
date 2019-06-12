@@ -1,4 +1,4 @@
-FROM node:11.1
+FROM node:11.1-alpine
 
 ARG DOCKER_WORKDIR_PATH
 
