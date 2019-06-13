@@ -34,7 +34,7 @@ Example:
         
 .. seealso:: :meth:`rafiki.client.Client.login`
 
-Listing models by task
+Listing available models by task
 --------------------------------------------------------------------
 
 .. include:: ./client-list-models.include.rst
