@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Float, ForeignKey, Integer, Binary, DateTime
+from sqlalchemy import Column, String, Float, ForeignKey, Integer, Binary, DateTime, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSON, ARRAY
 import uuid
 from datetime import datetime
@@ -38,14 +38,15 @@ class Model(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     datetime_created = Column(DateTime, nullable=False, default=generate_datetime)
-    name = Column(String, unique=True, nullable=False)
+    user_id = Column(String, ForeignKey('user.id'), nullable=False)
+    name = Column(String, nullable=False)
     task = Column(String, nullable=False)
     model_file_bytes = Column(Binary, nullable=False)
     model_class = Column(String, nullable=False)
-    user_id = Column(String, ForeignKey('user.id'), nullable=False)
     docker_image = Column(String, nullable=False)
     dependencies = Column(JSON, nullable=False)
     access_right = Column(String, nullable=False, default=ModelAccessRight.PRIVATE)
+    __table_args__ = (UniqueConstraint('name', 'user_id'),)
 
 class Service(Base):
     __tablename__ = 'service'

@@ -283,42 +283,63 @@ def create_model(auth):
     with admin:
         return jsonify(admin.create_model(auth['user_id'], **params))
 
-@app.route('/models/<name>/model_file', methods=['GET'])
+@app.route('/models/available', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_model_file(auth, name):
+def get_available_models(auth):
+    admin = get_admin()
+    params = get_request_params()
+    with admin:
+        return jsonify(admin.get_available_models(auth['user_id'], **params))
+
+@app.route('/models/<model_id>', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def get_model(auth, model_id):
     admin = get_admin()
     params = get_request_params()
 
     with admin:
-        model_file = admin.get_model_file(auth['user_id'], name, **params)
+        # Non-admins cannot access others' models
+        if auth['user_type'] in [UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER]:
+            model = admin.get_model(model_id)
+            if auth['user_id'] != model['user_id']:
+                raise UnauthorizedError()  
+                
+        return jsonify(admin.get_model(model_id, **params))
+
+@app.route('/models/<model_id>', methods=['DELETE'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER])
+def delete_model(auth, model_id):
+    admin = get_admin()
+    params = get_request_params()
+
+    with admin:
+        # Non-admins cannot delete others' models
+        if auth['user_type'] in [UserType.MODEL_DEVELOPER]:
+            model = admin.get_model(model_id)
+            if auth['user_id'] != model['user_id']:
+                raise UnauthorizedError()  
+
+        return jsonify(admin.delete_model(model_id, **params))
+
+@app.route('/models/<model_id>/model_file', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER])
+def download_model_file(auth, model_id):
+    admin = get_admin()
+    params = get_request_params()
+
+    with admin:
+        # Non-admins cannot access others' models
+        if auth['user_type'] in [UserType.MODEL_DEVELOPER]:
+            model = admin.get_model(model_id)
+            if auth['user_id'] != model['user_id']:
+                raise UnauthorizedError()  
+
+
+        model_file = admin.get_model_file(model_id, **params)
 
     res = make_response(model_file)
     res.headers.set('Content-Type', 'application/octet-stream')
     return res
-
-@app.route('/models/<name>', methods=['GET'])
-@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_model(auth, name):
-    admin = get_admin()
-    params = get_request_params()
-    with admin:
-        return jsonify(admin.get_model(auth['user_id'], name, **params))
-
-@app.route('/models', methods=['GET'])
-@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_models(auth):
-    admin = get_admin()
-    params = get_request_params()
-
-    # Return models by task
-    if params.get('task') is not None:
-        with admin:
-            return jsonify(admin.get_models_of_task(auth['user_id'], **params))
-    
-    # Return all models
-    else:
-        with admin:
-            return jsonify(admin.get_models(auth['user_id'], **params))
 
 ####################################
 # Administrative Actions
