@@ -135,11 +135,14 @@ class ServicesManager(object):
             raise ServiceDeploymentError(e)
 
     def stop_train_services(self, train_job_id):
+        train_job = self._db.get_train_job(train_job_id)
         sub_train_jobs = self._db.get_sub_train_jobs_of_train_job(train_job_id)
 
         # Stop all sub train jobs for train job
         for sub_train_job in sub_train_jobs:
             self.stop_sub_train_job_services(sub_train_job.id)
+
+        self._db.mark_train_job_as_stopped(train_job)
 
     def stop_sub_train_job_services(self, sub_train_job_id):
         sub_train_job = self._db.get_sub_train_job(sub_train_job_id)
@@ -150,7 +153,35 @@ class ServicesManager(object):
             service = self._db.get_service(worker.service_id)
             self._stop_service(service)
 
+        self.refresh_train_job_status(sub_train_job.train_job_id)
+
         return sub_train_job
+    
+    def refresh_train_job_status(self, train_job_id):
+        train_job = self._db.get_train_job(train_job_id)
+        workers = self._db.get_workers_of_train_job(train_job_id)
+        services = [self._db.get_service(x.service_id) for x in workers]
+
+        count = {
+            ServiceStatus.STARTED: 0,
+            ServiceStatus.DEPLOYING: 0,
+            ServiceStatus.RUNNING: 0,
+            ServiceStatus.ERRORED: 0,
+            ServiceStatus.STOPPED: 0
+        }
+
+        for service in services:
+            if service is None:
+                continue
+            count[service.status] += 1
+
+        # Determine status of train job based on sub-jobs
+        if count[ServiceStatus.ERRORED] > 0:
+            self._db.mark_train_job_as_errored(train_job)
+        elif count[ServiceStatus.STOPPED] == len(services):
+            self._db.mark_train_job_as_stopped(train_job)
+        elif count[ServiceStatus.RUNNING] > 0:
+            self._db.mark_train_job_as_running(train_job)
 
     ####################################
     # Private

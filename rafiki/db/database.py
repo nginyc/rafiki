@@ -99,9 +99,9 @@ class Database(object):
         train_job = self._session.query(TrainJob).get(id)
         return train_job
 
-    def get_train_jobs_by_status(self, status):
+    def get_train_jobs_by_statuses(self, statuses):
         train_jobs = self._session.query(TrainJob) \
-            .filter(TrainJob.status == status).all()
+            .filter(TrainJob.status.in_(statuses)).all()
         return train_jobs
 
     # Returns for the latest app version unless specified
@@ -383,10 +383,11 @@ class Database(object):
     # Trials
     ####################################
 
-    def create_trial(self, sub_train_job_id, model_id):
+    def create_trial(self, sub_train_job_id, model_id, worker_id):
         trial = Trial(
             sub_train_job_id=sub_train_job_id,
-            model_id=model_id
+            model_id=model_id,
+            worker_id=worker_id
         )
         self._session.add(trial)
         return trial

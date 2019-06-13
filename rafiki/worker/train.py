@@ -19,12 +19,13 @@ class InvalidBudgetTypeException(Exception): pass
 class InvalidWorkerException(Exception): pass
 
 class TrainWorker(object):
-    def __init__(self, service_id, db=None):
+    def __init__(self, service_id, worker_id, db=None):
         if db is None: 
             db = Database()
             
         self._service_id = service_id
         self._db = db
+        self._worker_id = worker_id
         self._trial_id = None
         self._sub_train_job_id = None
         self._client = Client(admin_host=os.environ['ADMIN_HOST'], 
@@ -58,7 +59,8 @@ class TrainWorker(object):
                 logger.info('Creating new trial in DB...')
                 trial = self._db.create_trial(
                     sub_train_job_id=self._sub_train_job_id,
-                    model_id=model_id
+                    model_id=model_id,
+                    worker_id=self._worker_id
                 )
                 self._db.commit()
                 self._trial_id = trial.id
@@ -107,8 +109,6 @@ class TrainWorker(object):
                     trial = self._db.get_trial(self._trial_id)
                     self._db.mark_trial_as_complete(trial, score, params_file_path)
 
-                self._trial_id = None
-
                 # Report results of trial to advisor
                 try:
                     logger.info('Sending result of trials\' knobs to advisor...')
@@ -116,6 +116,8 @@ class TrainWorker(object):
                 except Exception:
                     logger.error('Error while sending result of proposal to advisor:')
                     logger.error(traceback.format_exc())
+
+                self._trial_id = None
 
             except Exception:
                 logger.error('Error while running trial:')

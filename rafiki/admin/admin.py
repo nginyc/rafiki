@@ -215,32 +215,6 @@ class Admin(object):
             ]
         }
 
-    def refresh_train_job_status(self, train_job_id):
-        train_job = self._db.get_train_job(train_job_id)
-        workers = self._db.get_workers_of_train_job(train_job_id)
-        services = [self._db.get_service(x.service_id) for x in workers]
-
-        count = {
-            ServiceStatus.STARTED: 0,
-            ServiceStatus.DEPLOYING: 0,
-            ServiceStatus.RUNNING: 0,
-            ServiceStatus.ERRORED: 0,
-            ServiceStatus.STOPPED: 0
-        }
-
-        for service in services:
-            if service is None:
-                continue
-            count[service.status] += 1
-
-        # Determine status of train job based on sub-jobs
-        if count[ServiceStatus.ERRORED] > 0:
-            self._db.mark_train_job_as_errored(train_job)
-        elif count[ServiceStatus.STOPPED] == len(services):
-            self._db.mark_train_job_as_stopped(train_job)
-        elif count[ServiceStatus.RUNNING] > 0:
-            self._db.mark_train_job_as_running(train_job)
-
     def get_train_jobs_of_app(self, app):
         train_jobs = self._db.get_train_jobs_of_app(app)
         return [
@@ -323,15 +297,8 @@ class Admin(object):
             for (trial, model) in zip(trials, trials_models)
         ]
 
-    def stop_sub_train_job(self, sub_train_job_id):
-        sub_train_job = self._services_manager.stop_sub_train_job_services(sub_train_job_id)
-        return {
-            'id': sub_train_job.id,
-            'train_job_id': sub_train_job.train_job_id,
-        }
-
     def stop_all_train_jobs(self):
-        train_jobs = self._db.get_train_jobs_by_status(TrainJobStatus.RUNNING)
+        train_jobs = self._db.get_train_jobs_by_statuses([TrainJobStatus.STARTED, TrainJobStatus.RUNNING])
         for train_job in train_jobs:
             self._services_manager.stop_train_services(train_job.id)
 
@@ -361,7 +328,8 @@ class Admin(object):
             'datetime_stopped': trial.datetime_stopped,
             'model_name': model.name,
             'score': trial.score,
-            'knobs': trial.knobs
+            'knobs': trial.knobs,
+            'worker_id': trial.worker_id
         }
 
     def get_trial_logs(self, trial_id):
@@ -635,15 +603,15 @@ class Admin(object):
             logger.error('Unknown event: "{}"'.format(name))
 
     def _on_sub_train_job_budget_reached(self, sub_train_job_id):
-        self.stop_sub_train_job(sub_train_job_id)
+        self._services_manager.stop_sub_train_job_services(sub_train_job_id)
 
     def _on_train_job_worker_started(self, sub_train_job_id):
         sub_train_job = self._db.get_sub_train_job(sub_train_job_id)
-        self.refresh_train_job_status(sub_train_job.train_job_id)
+        self._services_manager.refresh_train_job_status(sub_train_job.train_job_id)
 
     def _on_train_job_worker_stopped(self, sub_train_job_id):
         sub_train_job = self._db.get_sub_train_job(sub_train_job_id)
-        self.refresh_train_job_status(sub_train_job.train_job_id)
+        self._services_manager.refresh_train_job_status(sub_train_job.train_job_id)
     
     ####################################
     # Private / Users
