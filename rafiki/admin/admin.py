@@ -21,7 +21,6 @@ class InvalidUserError(Exception): pass
 class InvalidPasswordError(Exception): pass
 class InvalidRunningInferenceJobError(Exception): pass
 class InvalidModelError(Exception): pass
-class InvalidModelAccessError(Exception): pass
 class InvalidTrainJobError(Exception): pass
 class InvalidTrialError(Exception): pass
 class RunningInferenceJobExistsError(Exception): pass
@@ -117,30 +116,23 @@ class Admin(object):
     ####################################
 
     def create_train_job(self, user_id, app, task, train_dataset_uri, 
-                        test_dataset_uri, budget, models=None):
+                        test_dataset_uri, budget, model_ids):
         
+        # Ensure at least 1 model
+        if len(model_ids) == 0:
+            raise NoModelsForTrainJobError()
+
         # Compute auto-incremented app version
         train_jobs = self._db.get_train_jobs_of_app(app)
         app_version = max([x.app_version for x in train_jobs], default=0) + 1
 
         # Get models available to user
-        avail_models = self._db.get_models_of_task(user_id, task)
-        
-        # Auto populate models with all available models if not specified
-        if models is None:
-            model_ids = [x.id for x in avail_models]
-        else:
-            # Ensure all models are available
-            model_ids = []
-            for model in models:
-                db_model = next((x for x in avail_models if x.name == model), None)
-                if db_model is None:
-                    raise InvalidModelAccessError('You don\'t have access to model "{}"'.format(model))
-                model_ids.append(db_model.id)
+        avail_model_ids = [x.id for x in self._db.get_available_models(user_id, task)]
 
-        # Ensure that models are specified
-        if len(model_ids) == 0:
-            raise NoModelsForTrainJobError()
+        # Ensure all specified models are available
+        for model_id in model_ids:
+            if model_id not in avail_model_ids:
+                raise InvalidModelError('No model of ID "{}" is available'.format(model_id))
 
         train_job = self._db.create_train_job(
             user_id=user_id,
@@ -507,8 +499,9 @@ class Admin(object):
     ####################################
 
     def create_model(self, user_id, name, task, model_file_bytes, 
-                    model_class, docker_image=None, dependencies={}, access_right=ModelAccessRight.PRIVATE):
-        
+                    model_class, docker_image=None, dependencies={}, 
+                    access_right=ModelAccessRight.PRIVATE):
+
         model = self._db.create_model(
             user_id=user_id,
             name=name,
@@ -519,67 +512,77 @@ class Admin(object):
             dependencies=dependencies,
             access_right=access_right
         )
+        self._db.commit()
 
         return {
+            'id': model.id,
+            'user_id': model.user_id,
             'name': model.name 
         }
 
-    def get_model(self, user_id, name):
-        model = self._db.get_model_by_name(name)
+    def delete_model(self, model_id):
+        model = self._db.get_model(model_id)
         if model is None:
             raise InvalidModelError()
 
-        if model.access_right == ModelAccessRight.PRIVATE and model.user_id != user_id:
-            raise InvalidModelAccessError()
+        self._db.delete_model(model)
+        
+        return {
+            'id': model.id,
+            'user_id': model.user_id,
+            'name': model.name 
+        }
+
+    def get_model_by_name(self, user_id, name):
+        model = self._db.get_model_by_name(user_id, name)
+        if model is None:
+            raise InvalidModelError()
 
         return {
+            'id': model.id,
+            'user_id': model.user_id,
             'name': model.name,
             'task': model.task,
             'model_class': model.model_class,
             'datetime_created': model.datetime_created,
-            'user_id': model.user_id,
             'docker_image': model.docker_image,
             'dependencies': model.dependencies,
             'access_right': model.access_right
         }
 
-    def get_model_file(self, user_id, name):
-        model = self._db.get_model_by_name(name)
-        
+    def get_model(self, model_id):
+        model = self._db.get_model(model_id)
         if model is None:
             raise InvalidModelError()
 
-        if model.access_right == ModelAccessRight.PRIVATE and model.user_id != user_id:
-            raise InvalidModelAccessError()
+        return {
+            'id': model.id,
+            'user_id': model.user_id,
+            'name': model.name,
+            'task': model.task,
+            'model_class': model.model_class,
+            'datetime_created': model.datetime_created,
+            'docker_image': model.docker_image,
+            'dependencies': model.dependencies,
+            'access_right': model.access_right
+        }
+
+    def get_model_file(self, model_id):
+        model = self._db.get_model(model_id)
+        if model is None:
+            raise InvalidModelError()
 
         return model.model_file_bytes
 
-    def get_models(self, user_id):
-        models = self._db.get_models(user_id)
+    def get_available_models(self, user_id, task=None):
+        models = self._db.get_available_models(user_id, task)
         return [
             {
+                'id': model.id,
+                'user_id': model.user_id,
                 'name': model.name,
                 'task': model.task,
-                'model_class': model.model_class,
                 'datetime_created': model.datetime_created,
-                'user_id': model.user_id,
-                'docker_image': model.docker_image,
-                'dependencies': model.dependencies,
-                'access_right': model.access_right
-            }
-            for model in models
-        ]
-
-    def get_models_of_task(self, user_id, task):
-        models = self._db.get_models_of_task(user_id, task)
-        return [
-            {
-                'name': model.name,
-                'task': model.task,
-                'model_class': model.model_class,
-                'datetime_created': model.datetime_created,
-                'user_id': model.user_id,
-                'docker_image': model.docker_image,
                 'dependencies': model.dependencies,
                 'access_right': model.access_right
             }

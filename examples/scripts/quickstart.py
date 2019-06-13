@@ -75,10 +75,11 @@ def quickstart(client, gpus, trials):
     sk_model_name = 'SkDt_{}'.format(app_id)
 
     print('Adding models "{}" and "{}" to Rafiki...'.format(tf_model_name, sk_model_name)) 
-    client.create_model(tf_model_name, task, 'examples/models/image_classification/TfFeedForward.py', 
+    tf_model = client.create_model(tf_model_name, task, 'examples/models/image_classification/TfFeedForward.py', 
                         'TfFeedForward', dependencies={ ModelDependency.TENSORFLOW: '1.12.0' })
-    client.create_model(sk_model_name, task, 'examples/models/image_classification/SkDt.py', 
+    sk_model = client.create_model(sk_model_name, task, 'examples/models/image_classification/SkDt.py', 
                         'SkDt', dependencies={ ModelDependency.SCIKIT_LEARN: '0.20.0' })
+    model_ids = [tf_model['id'], sk_model['id']]
                         
     print('Creating train job for app "{}" on Rafiki...'.format(app)) 
     budget = {
@@ -88,7 +89,7 @@ def quickstart(client, gpus, trials):
     train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true'
     test_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true'
     train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, 
-                                        budget, models=[tf_model_name, sk_model_name])
+                                        budget, models=model_ids)
     pprint.pprint(train_job)
 
     print('Waiting for train job to complete...')

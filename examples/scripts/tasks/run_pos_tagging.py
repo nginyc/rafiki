@@ -20,10 +20,11 @@ def run_pos_tagging(client, gpus):
     py_model_name = 'PyBiLstm_{}'.format(app_id)
 
     print('Adding models "{}" and "{}" to Rafiki...'.format(bihmm_model_name, py_model_name)) 
-    client.create_model(bihmm_model_name, task, 'examples/models/pos_tagging/BigramHmm.py', \
+    bihmm_model = client.create_model(bihmm_model_name, task, 'examples/models/pos_tagging/BigramHmm.py', \
                         'BigramHmm', dependencies={}) 
-    client.create_model(py_model_name, task, 'examples/models/pos_tagging/PyBiLstm.py', \
+    py_model = client.create_model(py_model_name, task, 'examples/models/pos_tagging/PyBiLstm.py', \
                         'PyBiLstm', dependencies={ ModelDependency.PYTORCH: '0.4.1' })
+    model_ids = [bihmm_model['id'], py_model['id']]
 
     print('Creating train job for app "{}" on Rafiki...'.format(app))
     budget = {
@@ -33,7 +34,7 @@ def run_pos_tagging(client, gpus):
     train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_train.zip?raw=true'
     test_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_test.zip?raw=true'
     train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, 
-                                        budget, models=[bihmm_model_name, py_model_name])
+                                        budget, models=model_ids)
     pprint.pprint(train_job)
 
     print('Waiting for train job to complete...')
