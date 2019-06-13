@@ -8,6 +8,7 @@ class ModelDependency():
     SCIKIT_LEARN = 'scikit-learn'
     PYTORCH = 'torch'
     SINGA = 'singa'
+    DS_CTCDECODER = 'ds-ctcdecoder'
 
 class ModelAccessRight():
     PUBLIC = 'PUBLIC'

@@ -272,6 +272,8 @@ def parse_model_install_command(dependencies, enable_gpu=False):
                 commands.append('conda install {} singa-gpu={}'.format(options, ver))
             else:
                 commands.append('conda install {} singa-cpu={}'.format(options, ver))
+        elif dep == ModelDependency.DS_CTCDECODER:
+            commands.append('pip install $(python3 {} --decoder)'.format(ver))
         else:
             # Assume that dependency is the exact PIP package name
             commands.append('pip install {}=={}'.format(dep, ver))
