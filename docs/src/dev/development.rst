@@ -13,24 +13,23 @@ Before running any individual scripts, make sure to run the shell configuration 
 
 Refer to :ref:`architecture` and :ref:`folder-structure` for a developer's overview of Rafiki.
 
-Building Images Locally
+Testing Latest Code Changes
 --------------------------------------------------------------------
 
-The quickstart instructions pull pre-built `Rafiki's images <https://hub.docker.com/r/rafikiai/>`_ from Docker Hub. To build Rafiki's images locally (e.g. to reflect latest code changes):
+To test the lastet code changes e.g. in the ``dev`` branch, you'll need to do the following:
+
+    1. Build Rafiki's images on each participating node (the quickstart instructions pull pre-built `Rafiki's images <https://hub.docker.com/r/rafikiai/>`_ from Docker Hub):
 
     .. code-block:: shell
 
         bash scripts/build_images.sh
 
-.. note::
+    2. Purge all of Rafiki's data (since there might be database schema changes):
 
-    If you're testing latest code changes on multiple nodes, you'll need to build Rafiki's images on those nodes as well.
+    .. code-block:: shell
 
-Starting Parts of the Stack
---------------------------------------------------------------------
+        bash scripts/clean.sh
 
-The quickstart instructions set up a single node Docker Swarm on your machine. Separate shell scripts in the `./scripts/` folder configure and start parts of Rafiki's stack. Refer to the commands in
-`./scripts/start.sh`.
 
 Connecting to Rafiki's DB
 --------------------------------------------------------------------
