@@ -6,7 +6,12 @@ from tensorflow.contrib.framework.python.ops import audio_ops as contrib_audio
 
 import numpy as np
 from datetime import datetime
+from multiprocessing import cpu_count
+from multiprocessing.dummy import Pool
+import itertools
 import tempfile
+
+from ds_ctcdecoder import ctc_beam_search_decoder_batch, Scorer
 
 from rafiki.model import BaseModel, FixedKnob, FloatKnob, CategoricalKnob, dataset_utils, logger, test_model_class
 # InvalidModelParamsException, IntegerKnob
@@ -115,7 +120,7 @@ class TfDeepSpeech(BaseModel):
         f.DEFINE_string('checkpoint_dir', '',
                         'directory in which checkpoints are stored - defaults to directory "deepspeech/checkpoints" within user\'s data home specified by the XDG Base Directory Specification')
         f.DEFINE_integer('checkpoint_secs', 600, 'checkpoint saving interval in seconds')
-        f.DEFINE_integer('max_to_keep', 5, 'number of checkpoint files to keep - default value is 5')
+        f.DEFINE_integer('max_to_keep', 3, 'number of checkpoint files to keep - default value is 5')
         f.DEFINE_string('load', 'auto',
                         '"last" for loading most recent epoch checkpoint, "best" for loading best validated checkpoint, "init" for initializing a fresh model, "auto" for trying the other options in order last > best > init')
 
@@ -169,9 +174,9 @@ class TfDeepSpeech(BaseModel):
 
         f.DEFINE_string('alphabet_config_path', 'data/alphabet.txt',
                         'path to the configuration file specifying the alphabet used by the network. See the comment in data/alphabet.txt for a description of the format.')
-        f.DEFINE_string('lm_binary_path', 'data/lm/lm.binary',
+        f.DEFINE_string('lm_binary_path', 'data/lm.binary',
                         'path to the language model binary file created with KenLM')
-        f.DEFINE_string('lm_trie_path', 'data/lm/trie',
+        f.DEFINE_string('lm_trie_path', 'data/trie',
                         'path to the language model trie file created with native_client/generate_trie')
         f.DEFINE_integer('beam_width', 1024,
                          'beam width used in the CTC decoder when building candidate transcriptions')
@@ -213,6 +218,8 @@ class TfDeepSpeech(BaseModel):
         if FLAGS.dropout_rate6 < 0:
             FLAGS.dropout_rate6 = FLAGS.dropout_rate
 
+        c.alphabet = Alphabet(os.path.abspath(os.path.abspath('examples/datasets/speech_recognition/alphabet.txt')))
+
         c.n_input = 26
 
         # The number of frames in the context
@@ -234,8 +241,7 @@ class TfDeepSpeech(BaseModel):
         c.n_hidden_3 = c.n_cell_dim
 
         # Units in the sixth layer = number of characters in the target language plus one
-        c.n_hidden_6 = Alphabet(
-            os.path.abspath('examples/datasets/speech_recognition/alphabet.txt')).size() + 1  # +1 for CTC blank label
+        c.n_hidden_6 = c.alphabet.size() + 1  # +1 for CTC blank label
 
         # Size of audio window in samples
         c.audio_window_samples = FLAGS.audio_sample_rate * (FLAGS.feature_win_len / 1000)
@@ -248,11 +254,12 @@ class TfDeepSpeech(BaseModel):
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
-        self._graph = tf.Graph()
+        # self._graph = tf.Graph()
         self._sess_config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False,
                                 inter_op_parallelism_threads=0, intra_op_parallelism_threads=0)
         self._sess_config.gpu_options.allow_growth = True
-        self._sess = tf.Session(graph=self._graph, config=self._sess_config)
+        # self._sess = tf.Session(graph=self._graph, config=self._sess_config)
+        self._sess = tf.Session( config=self._sess_config)
 
         self.create_flags()
         self.f = tf.app.flags.FLAGS
@@ -618,7 +625,7 @@ class TfDeepSpeech(BaseModel):
             self.log_variable(variable, gradient=gradient)
 
     def train(self, dataset_uri):
-        tf.reset_default_graph()
+        # tf.reset_default_graph()
         tf.set_random_seed(FLAGS.random_seed)
 
         ep = self._knobs.get('epochs')
@@ -657,6 +664,7 @@ class TfDeepSpeech(BaseModel):
         }
 
         # Building the graph
+        # with self._graph.as_default():
         optimizer = self.create_optimizer()
         gradients, loss = self.get_tower_results(iterator, optimizer, dropout_rates)
 
@@ -673,7 +681,9 @@ class TfDeepSpeech(BaseModel):
 
         initializer = tf.global_variables_initializer()
 
-        with tf.Session(config=self._sess_config) as session:
+        with self._sess.as_default():
+        # with tf.Session(config=self._sess_config) as session:
+            session = tf.get_default_session()
             tf.get_default_graph().finalize()
 
             # Initializing
@@ -719,8 +729,195 @@ class TfDeepSpeech(BaseModel):
             logger.log('FINISHED optimization in {}'.format(datetime.utcnow() - train_start_time))
 
     def evaluate(self, dataset_uri):
-        return 1
-        pass
+        Config = self.c
+        tf.reset_default_graph()
+
+        scorer = Scorer(FLAGS.lm_alpha, FLAGS.lm_beta,
+                        FLAGS.lm_binary_path, FLAGS.lm_trie_path,
+                        Config.alphabet)
+
+        dataset_dir = tempfile.TemporaryDirectory()
+        logger.log('Test dataset will be extracted to {}'.format(dataset_dir.name))
+
+        test_set = self.create_dataset(dataset_uri, dataset_dir)
+
+        iterator = tf.data.Iterator.from_structure(test_set.output_types,
+                                                   test_set.output_shapes,
+                                                   output_classes=test_set.output_classes)
+
+        test_init_op = iterator.make_initializer(test_set)
+
+        (batch_x, batch_x_len), batch_y = iterator.get_next()
+
+        # One rate per layer
+        no_dropout = [None] * 6
+        logits, _ = self.create_model(batch_x=batch_x,
+                                      seq_length=batch_x_len,
+                                      dropout=no_dropout)
+
+        # Transpose to batch major and apply softmax for decoder
+        transposed = tf.nn.softmax(tf.transpose(logits, [1, 0, 2]))
+
+        loss = tf.nn.ctc_loss(labels=batch_y,
+                              inputs=logits,
+                              sequence_length=batch_x_len)
+
+        tf.train.get_or_create_global_step()
+
+        # Get number of accessible CPU cores for this process
+        try:
+            num_processes = cpu_count()
+        except NotImplementedError:
+            num_processes = 1
+
+        # Create a saver using variables from the above newly created graph
+        saver = tf.train.Saver()
+
+        with self._sess.as_default():
+            session = tf.get_default_session()
+
+            def sparse_tuple_to_texts(sp_tuple, alphabet):
+                indices = sp_tuple[0]
+                values = sp_tuple[1]
+                results = [''] * sp_tuple[2][0]
+                for i, index in enumerate(indices):
+                    results[index[0]] += alphabet.string_from_label(values[i])
+                # List of strings
+                return results
+
+            def sparse_tensor_value_to_texts(value, alphabet):
+                r"""
+                Given a :class:`tf.SparseTensor` ``value``, return an array of Python strings
+                representing its values, converting tokens to strings using ``alphabet``.
+                """
+                return sparse_tuple_to_texts((value.indices, value.values, value.dense_shape), alphabet)
+
+            def calculate_report(labels, decodings, losses):
+                r'''
+                This routine will calculate a WER report.
+                It'll compute the `mean` WER and create ``Sample`` objects of the ``report_count`` top lowest
+                loss items from the provided WER results tuple (only items with WER!=0 and ordered by their WER).
+                '''
+
+                def pmap(fun, iterable):
+                    pool = Pool()
+                    results = pool.map(fun, iterable)
+                    pool.close()
+                    return results
+
+                def wer_cer_batch(samples):
+                    r"""
+                    The WER is defined as the edit/Levenshtein distance on word level divided by
+                    the amount of words in the original text.
+                    In case of the original having more words (N) than the result and both
+                    being totally different (all N words resulting in 1 edit operation each),
+                    the WER will always be 1 (N / N = 1).
+                    """
+                    wer = sum(s.word_distance for s in samples) / sum(s.word_length for s in samples)
+                    cer = sum(s.char_distance for s in samples) / sum(s.char_length for s in samples)
+
+                    wer = min(wer, 1.0)
+                    cer = min(cer, 1.0)
+
+                    return wer, cer
+
+                def levenshtein(a, b):
+                    "Calculates the Levenshtein distance between a and b."
+                    n, m = len(a), len(b)
+                    if n > m:
+                        # Make sure n <= m, to use O(min(n,m)) space
+                        a, b = b, a
+                        n, m = m, n
+
+                    current = list(range(n + 1))
+                    for i in range(1, m + 1):
+                        previous, current = current, [i] + [0] * n
+                        for j in range(1, n + 1):
+                            add, delete = previous[j] + 1, current[j - 1] + 1
+                            change = previous[j - 1]
+                            if a[j - 1] != b[i - 1]:
+                                change = change + 1
+                            current[j] = min(add, delete, change)
+
+                    return current[n]
+
+                def process_decode_result(item):
+                    ground_truth, prediction, loss = item
+                    char_distance = levenshtein(ground_truth, prediction)
+                    char_length = len(ground_truth)
+                    word_distance = levenshtein(ground_truth.split(), prediction.split())
+                    word_length = len(ground_truth.split())
+                    return AttrDict({
+                        'src': ground_truth,
+                        'res': prediction,
+                        'loss': loss,
+                        'char_distance': char_distance,
+                        'char_length': char_length,
+                        'word_distance': word_distance,
+                        'word_length': word_length,
+                        'cer': char_distance / char_length,
+                        'wer': word_distance / word_length,
+                    })
+
+                samples = pmap(process_decode_result, zip(labels, decodings, losses))
+
+                # Getting the WER and CER from the accumulated edit distances and lengths
+                samples_wer, samples_cer = wer_cer_batch(samples)
+
+                # Order the remaining items by their loss (lowest loss on top)
+                samples.sort(key=lambda s: s.loss)
+
+                # Then order by WER (highest WER on top)
+                samples.sort(key=lambda s: s.wer, reverse=False)
+
+                return samples_wer, samples_cer, samples
+
+            def run_test(init_op, dataset):
+                losses = []
+                predictions = []
+                ground_truths = []
+
+                logger.log('Running the test set...')
+
+                # Initialize iterator to the appropriate dataset
+                session.run(init_op)
+
+                # First pass, compute losses and transposed logits for decoding
+                while True:
+                    try:
+                        batch_logits, batch_loss, batch_lengths, batch_transcripts = \
+                            session.run([transposed, loss, batch_x_len, batch_y])
+                    except tf.errors.OutOfRangeError:
+                        break
+
+                    decoded = ctc_beam_search_decoder_batch(batch_logits, batch_lengths,
+                                                            Config.alphabet, FLAGS.beam_width,
+                                                            num_processes=num_processes, scorer=scorer)
+
+                    predictions.extend(d[0][1] for d in decoded)
+                    ground_truths.extend(sparse_tensor_value_to_texts(batch_transcripts, Config.alphabet))
+                    losses.extend(batch_loss)
+
+                wer, cer, samples = calculate_report(ground_truths, predictions, losses)
+                mean_loss = np.mean(losses)
+
+                # Take only the first report_count items
+                report_samples = itertools.islice(samples, FLAGS.report_count)
+
+                logger.log('Test on %s - WER: %f, CER: %f, loss: %f' % (dataset, wer, cer, mean_loss))
+                logger.log('-' * 80)
+                for sample in report_samples:
+                    print('WER: %f, CER: %f, loss: %f' %
+                          (sample.wer, sample.cer, sample.loss))
+                    print(' - src: "%s"' % sample.src)
+                    print(' - res: "%s"' % sample.res)
+                    print('-' * 80)
+
+                return samples
+
+            samples = run_test(test_init_op, dataset=dataset_uri)
+
+            return samples
 
     def predict(self, queries):
         pass
@@ -752,6 +949,7 @@ if __name__ == '__main__':
         task=TaskType.SPEECH_RECOGNITION,
         dependencies={
             # ModelDependency.TENSORFLOW: '1.12.0',
+            ModelDependency.DS_CTCDECODER: os.path.abspath('examples/models/speech_recognition/utils/taskcluster.py')
         },
         # Demonstrative only, replace with test data in practice
         train_dataset_uri=os.path.abspath('data/ldc93s1/ldc93s1.zip'),
