@@ -346,7 +346,10 @@ class Client(object):
         =====================       =====================
         '''
         _note('`create_train_job` now requires `models` as a list of model IDs instead of a list of model names')
-
+        
+        if 'ENABLE_GPU' in budget:
+            _warn('The `ENABLE_GPU` option has been changed to `GPU_COUNT`')
+            
         # Default to all available models
         if models is None: 
             avail_models = self.get_available_models(task)
