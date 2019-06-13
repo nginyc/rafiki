@@ -10,6 +10,8 @@
     "chartist": "0.10.1",
     "classnames": "2.2.6",
     "echarts": "^4.2.1",
+    "ejs": "^2.6.1",	
+    "express": "^4.17.1",
     "history": "4.7.2",
     "moment": "^2.24.0",
     "perfect-scrollbar": "1.4.0",
