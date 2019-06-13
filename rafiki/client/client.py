@@ -158,8 +158,8 @@ class Client(object):
     # Models
     ####################################
 
-    def create_model(self, name, task, model_file_path, model_class, docker_image=None, 
-                    dependencies={}, access_right=ModelAccessRight.PRIVATE):
+    def create_model(self, name, task, model_file_path, model_class, dependencies={}, 
+                    access_right=ModelAccessRight.PRIVATE, docker_image=None):
         '''
         Creates a model on Rafiki.
 
@@ -171,9 +171,9 @@ class Client(object):
         :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
         :param dependencies: List of dependencies & their versions
         :type dependencies: dict[str, str]
-        :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
         :param access_right: Model access right
         :type access_right: :class:`rafiki.constants.ModelAccessRight`
+        :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
         :returns: Created model as dictionary
         :rtype: dict[str, any]
 
