@@ -75,12 +75,16 @@ def quickstart(client, train_dataset_path, val_dataset_path, enable_gpu):
     app = 'image_classification_app_{}'.format(app_id)
     tf_model_name = 'TfFeedForward_{}'.format(app_id)
     sk_model_name = 'SkDt_{}'.format(app_id)
+    
 
     print('Adding models "{}" and "{}" to Rafiki...'.format(tf_model_name, sk_model_name)) 
-    pprint(client.create_model(tf_model_name, task, 'examples/models/image_classification/TfFeedForward.py', 
-                        'TfFeedForward', dependencies={ ModelDependency.TENSORFLOW: '1.12.0' }))
-    pprint(client.create_model(sk_model_name, task, 'examples/models/image_classification/SkDt.py', 
-                        'SkDt', dependencies={ ModelDependency.SCIKIT_LEARN: '0.20.0' }))
+    tf_model = client.create_model(tf_model_name, task, 'examples/models/image_classification/TfFeedForward.py', 
+                        'TfFeedForward', dependencies={ ModelDependency.TENSORFLOW: '1.12.0' })
+    pprint(tf_model)
+    sk_model = client.create_model(sk_model_name, task, 'examples/models/image_classification/SkDt.py', 
+                        'SkDt', dependencies={ ModelDependency.SCIKIT_LEARN: '0.20.0' })
+    pprint(sk_model)
+    model_ids = [tf_model['id'], sk_model['id']]
 
     print('Creating & uploading datasets onto Rafiki...')
     train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
@@ -94,7 +98,7 @@ def quickstart(client, train_dataset_path, val_dataset_path, enable_gpu):
         BudgetType.ENABLE_GPU: enable_gpu
     }
     train_job = client.create_train_job(app, task, train_dataset['id'], val_dataset['id'], 
-                                        budget, models=[tf_model_name, sk_model_name])
+                                        budget, models=model_ids)
     pprint(train_job)
 
     print('Waiting for train job to complete...')

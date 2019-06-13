@@ -21,10 +21,13 @@ def run_pos_tagging(client, train_dataset_path, val_dataset_path, enable_gpu):
     py_model_name = 'PyBiLstm_{}'.format(app_id)
 
     print('Adding models "{}" and "{}" to Rafiki...'.format(bihmm_model_name, py_model_name)) 
-    pprint(client.create_model(bihmm_model_name, task, 'examples/models/pos_tagging/BigramHmm.py', \
-                        'BigramHmm', dependencies={}))
-    pprint(client.create_model(py_model_name, task, 'examples/models/pos_tagging/PyBiLstm.py', \
-                        'PyBiLstm', dependencies={ ModelDependency.PYTORCH: '0.4.1' }))
+    bihmm_model = client.create_model(bihmm_model_name, task, 'examples/models/pos_tagging/BigramHmm.py', \
+                        'BigramHmm', dependencies={}) 
+    pprint(bihmm_model)
+    py_model = client.create_model(py_model_name, task, 'examples/models/pos_tagging/PyBiLstm.py', \
+                        'PyBiLstm', dependencies={ ModelDependency.PYTORCH: '0.4.1' })
+    pprint(py_model)
+    model_ids = [bihmm_model['id'], py_model['id']]
 
     print('Creating & uploading datasets onto Rafiki...')
     train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
@@ -38,7 +41,7 @@ def run_pos_tagging(client, train_dataset_path, val_dataset_path, enable_gpu):
         BudgetType.ENABLE_GPU: enable_gpu
     }
     train_job = client.create_train_job(app, task, train_dataset['id'], val_dataset['id'], 
-                                        budget, models=[bihmm_model_name, py_model_name])
+                                        budget, models=model_ids)
     pprint(train_job)
 
     print('Waiting for train job to complete...')

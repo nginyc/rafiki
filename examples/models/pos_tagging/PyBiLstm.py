@@ -13,7 +13,7 @@ import torch.optim as optim
 from torch.utils.data.dataset import Dataset
 
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, FloatKnob, CategoricalKnob, logger, dataset_utils
+                        IntegerKnob, FloatKnob, CategoricalKnob, FixedKnob, logger, dataset_utils
 from rafiki.constants import TaskType, ModelDependency
 
 class PyBiLstm(BaseModel):

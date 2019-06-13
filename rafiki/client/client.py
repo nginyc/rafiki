@@ -3,11 +3,28 @@ import json
 import pprint
 import pickle
 import os
+from functools import wraps
 
 from rafiki.constants import BudgetType, ModelAccessRight
 
-class RafikiConnectionError(ConnectionError):
-    pass
+class RafikiConnectionError(ConnectionError): pass
+
+DOCS_URL = 'https://nginyc.github.io/rafiki/docs/latest/docs/src/python/rafiki.client.Client.html'
+
+# Returns a decorator that warns user about the method being deprecated
+def _deprecated(msg=None):
+    def deco(func):
+        nonlocal msg
+        msg = msg or f'`{func.__name__}` has been deprecated.'
+
+        @wraps(func)
+        def deprecated_func(*args, **kwargs):
+            _warn(f'{msg}\n' \
+                f'Refer to the updated documentation at {DOCS_URL}')
+            return func(*args, **kwargs)
+        
+        return deprecated_func
+    return deco
 
 class Client(object):
 
@@ -100,6 +117,10 @@ class Client(object):
         })
         return data
 
+    @_deprecated('`create_users` has been removed')
+    def create_users(self, *args, **kwargs):
+        pass
+
     def get_users(self):
         '''
         Lists all Rafiki users.
@@ -188,14 +209,14 @@ class Client(object):
     # Models
     ####################################
 
-    def create_model(self, name, task, model_file_path, model_class, docker_image=None, \
+    def create_model(self, name, task, model_file_path, model_class, docker_image=None, 
                     dependencies={}, access_right=ModelAccessRight.PRIVATE):
         '''
         Creates a model on Rafiki.
 
         Only admins & model developers can manage models.
 
-        :param str name: Name of the model, must be unique on Rafiki
+        :param str name: Name of the model, which must be unique across all models added by the current user 
         :param str task: Task associated with the model, where the model must adhere to the specification of the task
         :param str model_file_path: Path to a single Python file that contains the definition for the model class
         :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
@@ -211,7 +232,7 @@ class Client(object):
         If the Python file imports any external Python modules, you should list it in ``dependencies`` or create a custom
         ``docker_image``. 
 
-        If a model's ``access_right`` is set to ``PUBLIC``, all other users have access to the model for training
+        If a model's ``access_right`` is set to ``PUBLIC``, this model will be publicly available to all other users on Rafiki for training
         and inference. By default, a model's access is ``PRIVATE``.
 
         ``dependencies`` should be a dictionary of ``{ <dependency_name>: <dependency_version> }``, where 
@@ -259,66 +280,84 @@ class Client(object):
         )
         return data
 
-    def get_model(self, name):
+    def get_model(self, model_id):
         '''
         Retrieves details of a single model.
 
-        :param str name: Name of model
+        Model developers can only view their own models.
+
+        :param str model_id: ID of model
         :returns: Details of model as dictionary
         :rtype: dict[str, any]
         '''
-        data = self._get('/models/{}'.format(name))
+        _note('`get_model` now requires `model_id` instead of `name`')
+
+        data = self._get('/models/{}'.format(model_id))
         return data
 
-    def get_models(self):
+    def download_model_file(self, model_id, out_model_file_path):
         '''
-        Lists all models on Rafiki.
+        Downloads the Python model class file for the Rafiki model.
 
-        :param str access_right: Model access right.
-        :returns: Details of models as list of dictionaries
-        :rtype: dict[str, any][]
-        '''
-        data = self._get('/models')
-        return data
+        Model developers can only download their own models.
 
-    def get_models_of_task(self, task):
-        '''
-        Lists all models associated to a task on Rafiki.
-
-        :param str task: Task name
-        :returns: Details of models as list of dictionaries
-        :rtype: dict[str, any][]
-        '''
-        data = self._get('/models', params={
-            'task': task
-        })
-        return data
-
-    def download_model_file(self, name, model_file_path):
-        '''
-        Downloads the Python script containing the model's class to the local filesystem.
-
-        :param str name: Name of model
-        :param str model_file_path: Absolute/relative path to save the Python script to
+        :param str model_id: ID of model
+        :param str out_model_file_path: Absolute/relative path to save model class file to
         :returns: Details of model as dictionary
         :rtype: dict[str, any]
         '''
-        model_file_bytes = self._get('/models/{}/model_file'.format(name))
+        _note('`download_model_file` now requires `model_id` instead of `name`')
 
-        with open(model_file_path, 'wb') as f:
+        model_file_bytes = self._get('/models/{}/model_file'.format(model_id))
+
+        with open(out_model_file_path, 'wb') as f:
             f.write(model_file_bytes)
 
-        data = self.get_model(name)
+        data = self.get_model(model_id)
         dependencies = data.get('dependencies')
         model_class = data.get('model_class')
 
-        print('Model file downloaded to "{}"!'.format(os.path.join(os.getcwd(), model_file_path)))
+        print('Model file downloaded to "{}"!'.format(os.path.join(os.getcwd(), out_model_file_path)))
         
         if dependencies:
             print('You\'ll need to install the following model dependencies locally: {}'.format(dependencies))
 
         print('From the file, import the model class `{}`.'.format(model_class))
 
+        return data
+
+    @_deprecated('`get_models` & `get_models_of_task` have been combined into `get_available_models`')
+    def get_models(self, *args, **kwargs):
+        pass
+
+    @_deprecated('`get_models` & `get_models_of_task` have been combined into `get_available_models`')
+    def get_models_of_task(self, *args, **kwargs):
+        pass
+
+    def get_available_models(self, task=None):
+        '''
+        Lists all Rafiki models available to the current user, optionally filtering by task.
+
+        :param str task: Task name
+        :returns: Available models as list of dictionaries
+        :rtype: dict[str, any][]
+        '''
+        data = self._get('/models/available', params={
+            'task': task
+        })
+        return data
+
+    def delete_model(self, model_id):
+        '''
+        Deletes a single model. Models that have been used in train jobs cannot be deleted.
+
+        Model developers can only delete their own models.
+
+        :param str model_id: ID of model
+        :returns: Deleted model
+        :rtype: dict[str, any]
+        '''
+        data = self._delete('/models/{}'.format(model_id))
         return data
 
     ####################################
@@ -338,7 +377,7 @@ class Client(object):
         :param str train_dataset_id: ID of the train dataset, previously created on Rafiki
         :param str val_dataset_id: ID of the validation dataset, previously created on Rafiki
         :param str budget: Budget for each model
-        :param str[] models: List of model names to use for train job
+        :param str[] models: List of IDs of model to use for train job. Defaults to all available models
         :returns: Created train job as dictionary
         :rtype: dict[str, any]
 
@@ -357,6 +396,12 @@ class Client(object):
         ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported
         =====================       =====================
         '''
+        _note('`create_train_job` now requires `models` as a list of model IDs instead of a list of model names')
+
+        # Default to all available models
+        if models is None: 
+            avail_models = self.get_available_models(task)
+            models = [x['id'] for x in avail_models]
 
         data = self._post('/train_jobs', json={
             'app': app,
@@ -364,7 +409,7 @@ class Client(object):
             'train_dataset_id': train_dataset_id,
             'val_dataset_id': val_dataset_id,
             'budget': budget,
-            'models': models
+            'model_ids': models
         })
         return data
 
@@ -729,3 +774,9 @@ class Client(object):
             }
         else:
             return {}
+
+def _warn(msg):
+    print(f'\033[93mWARNING: {msg}\033[0m')
+
+def _note(msg):
+    print(f'\033[94mNOTE: {msg}\033[0m')
