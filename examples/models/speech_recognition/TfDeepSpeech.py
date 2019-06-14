@@ -1,4 +1,6 @@
 import os
+import sys
+import time
 
 import tensorflow as tf
 from tensorflow.python.client import device_lib
@@ -43,14 +45,14 @@ FLAGS = tf.app.flags.FLAGS
 class TfDeepSpeech(BaseModel):
     '''
     Implements a speech recognition neural network model developed by Baidu. It contains five hiddlen layers.
-    Validation set and checkpointing not implemented
+    Validation set not implemented
     '''
     @staticmethod
     def get_knob_config():
         return {
             'epochs': FixedKnob(3),
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
-            'batch_size': CategoricalKnob([16, 32, 64, 128]),
+            'batch_size': CategoricalKnob([1]),
         }
 
     @staticmethod
@@ -118,7 +120,7 @@ class TfDeepSpeech(BaseModel):
         # Checkpointing
 
         f.DEFINE_string('checkpoint_dir', '',
-                        'directory in which checkpoints are stored - defaults to directory "deepspeech/checkpoints" within user\'s data home specified by the XDG Base Directory Specification')
+                        'directory in which checkpoints are stored - defaults to directory "/tmp/deepspeech/checkpoints" within user\'s data home specified by the XDG Base Directory Specification')
         f.DEFINE_integer('checkpoint_secs', 600, 'checkpoint saving interval in seconds')
         f.DEFINE_integer('max_to_keep', 3, 'number of checkpoint files to keep - default value is 5')
         f.DEFINE_string('load', 'auto',
@@ -218,6 +220,16 @@ class TfDeepSpeech(BaseModel):
         if FLAGS.dropout_rate6 < 0:
             FLAGS.dropout_rate6 = FLAGS.dropout_rate
 
+        # Set default checkpoint dir
+        if not FLAGS.checkpoint_dir:
+            FLAGS.checkpoint_dir = '/tmp/deepspeech/checkpoints'
+
+        if not os.path.isdir(FLAGS.checkpoint_dir):
+            os.makedirs(FLAGS.checkpoint_dir)
+
+        if FLAGS.load not in ['last', 'best', 'init', 'auto']:
+            FLAGS.load = 'auto'
+
         c.alphabet = Alphabet(os.path.abspath(os.path.abspath('examples/datasets/speech_recognition/alphabet.txt')))
 
         c.n_input = 26
@@ -259,7 +271,7 @@ class TfDeepSpeech(BaseModel):
                                 inter_op_parallelism_threads=0, intra_op_parallelism_threads=0)
         self._sess_config.gpu_options.allow_growth = True
         # self._sess = tf.Session(graph=self._graph, config=self._sess_config)
-        self._sess = tf.Session( config=self._sess_config)
+        # self._sess = tf.Session( config=self._sess_config)
 
         self.create_flags()
         self.f = tf.app.flags.FLAGS
@@ -624,8 +636,26 @@ class TfDeepSpeech(BaseModel):
         for gradient, variable in grads_and_vars:
             self.log_variable(variable, gradient=gradient)
 
+    def try_loading(self, session, saver, checkpoint_filename, caption):
+        try:
+            checkpoint = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir, checkpoint_filename)
+            if not checkpoint:
+                return False
+            checkpoint_path = checkpoint.model_checkpoint_path
+            saver.restore(session, checkpoint_path)
+            restored_step = session.run(tf.train.get_global_step())
+            logger.log('Restored variables from %s checkpoint at %s, step %d' % (caption, checkpoint_path, restored_step))
+            return True
+        except tf.errors.InvalidArgumentError as e:
+            logger.log(str(e))
+            logger.log('The checkpoint in {0} does not match the shapes of the model.'
+                       ' Did you change alphabet.txt or the --n_hidden parameter'
+                       ' between train runs using the same checkpoint dir? Try moving'
+                       ' or removing the contents of {0}.'.format(checkpoint_path))
+            sys.exit(1)
+
     def train(self, dataset_uri):
-        # tf.reset_default_graph()
+        tf.reset_default_graph()
         tf.set_random_seed(FLAGS.random_seed)
 
         ep = self._knobs.get('epochs')
@@ -679,11 +709,16 @@ class TfDeepSpeech(BaseModel):
         # Summaries
         step_summaries_op = tf.summary.merge_all('step_summaries')
 
+        # Checkpointing
+        checkpoint_saver = tf.train.Saver(max_to_keep=FLAGS.max_to_keep)
+        checkpoint_path = os.path.join(FLAGS.checkpoint_dir, 'train')
+        checkpoint_filename = 'checkpoint'
+
         initializer = tf.global_variables_initializer()
 
-        with self._sess.as_default():
-        # with tf.Session(config=self._sess_config) as session:
-            session = tf.get_default_session()
+        # with self._sess.as_default():
+        with tf.Session(config=self._sess_config) as session:
+            # session = tf.get_default_session()
             tf.get_default_graph().finalize()
 
             # Initializing
@@ -697,6 +732,7 @@ class TfDeepSpeech(BaseModel):
 
                 total_loss = 0.0
                 step_count = 0
+                checkpoint_time = time.time()
 
                 # Initialize iterator to the appropriate dataset
                 session.run(init_op)
@@ -712,6 +748,10 @@ class TfDeepSpeech(BaseModel):
                     total_loss += batch_loss
                     step_count += 1
 
+                    if is_train and FLAGS.checkpoint_secs > 0 and time.time() - checkpoint_time > FLAGS.checkpoint_secs:
+                        checkpoint_saver.save(session, checkpoint_path, global_step=current_step)
+                        checkpoint_time = time.time()
+
                 mean_loss = total_loss / step_count if step_count > 0 else 0.0
                 return mean_loss, step_count
 
@@ -723,6 +763,7 @@ class TfDeepSpeech(BaseModel):
                     logger.log('Training epoch %d...' % epoch)
                     train_loss, _ = run_set('train', epoch, train_init_op)
                     logger.log('Finished training epoch %d - loss: %f' % (epoch, train_loss))
+                    checkpoint_saver.save(session, checkpoint_path, global_step=global_step)
 
             except KeyboardInterrupt:
                 pass
@@ -773,8 +814,14 @@ class TfDeepSpeech(BaseModel):
         # Create a saver using variables from the above newly created graph
         saver = tf.train.Saver()
 
-        with self._sess.as_default():
-            session = tf.get_default_session()
+        with tf.Session(config=self._sess_config) as session:
+
+            # Restore variables from training checkpoint
+            loaded = self.try_loading(session, saver, 'checkpoint', 'most recent')
+            if not loaded:
+                logger.log('Checkpoint directory ({}) does not contain a valid checkpoint state.'
+                           .format(FLAGS.checkpoint_dir))
+                sys.exit(1)
 
             def sparse_tuple_to_texts(sp_tuple, alphabet):
                 indices = sp_tuple[0]
@@ -907,17 +954,17 @@ class TfDeepSpeech(BaseModel):
                 logger.log('Test on %s - WER: %f, CER: %f, loss: %f' % (dataset, wer, cer, mean_loss))
                 logger.log('-' * 80)
                 for sample in report_samples:
-                    print('WER: %f, CER: %f, loss: %f' %
+                    print('WER: %f, CER: %f, loss: %f' %\
                           (sample.wer, sample.cer, sample.loss))
                     print(' - src: "%s"' % sample.src)
                     print(' - res: "%s"' % sample.res)
                     print('-' * 80)
 
-                return samples
+                return samples, mean_loss
 
-            samples = run_test(test_init_op, dataset=dataset_uri)
+            samples, mean_loss = run_test(test_init_op, dataset=dataset_uri)
 
-            return samples
+            return float(mean_loss)
 
     def predict(self, queries):
         pass
@@ -951,8 +998,10 @@ if __name__ == '__main__':
             # ModelDependency.TENSORFLOW: '1.12.0',
             ModelDependency.DS_CTCDECODER: os.path.abspath('examples/models/speech_recognition/utils/taskcluster.py')
         },
-        # Demonstrative only, replace with test data in practice
+        # Demonstrative only, this dataset only contains one sample, use batch_size = 1 to run
+        # Replace with larger test data and larger batch_size in practice
         train_dataset_uri=os.path.abspath('data/ldc93s1/ldc93s1.zip'),
-        test_dataset_uri=os.path.abspath('data/libri/test-clean.zip'),
+        test_dataset_uri=os.path.abspath('data/ldc93s1/ldc93s1.zip'),
+        # test_dataset_uri=os.path.abspath('data/libri/test-clean.zip'),
         queries=[]
     )
