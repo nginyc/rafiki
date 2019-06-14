@@ -48,10 +48,14 @@
         -->
     <title>Rafiki Web Admin</title>
     <script>
-      // Expect server to inject configuration
       if ('%NODE_ENV%' == 'development') {
+        // Expect `react-scripts` to inject configuration during development
         window.ADMIN_HOST = '%REACT_APP_API_POINT_HOST%'
         window.ADMIN_PORT = %REACT_APP_API_POINT_PORT%
+      } else { 	
+        // Expect ExpressJS to inject configuration during deployment 
+        window.ADMIN_HOST = '<?= REACT_APP_API_POINT_HOST ?>'	
+        window.ADMIN_PORT = parseInt('<?= REACT_APP_API_POINT_PORT ?>')
       }
     </script>
   </head>
