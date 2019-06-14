@@ -1,5 +1,6 @@
-To create an model deployment job, you need to submit the app name associated with a *stopped* train job.
-The inference job would be created from the best trials from the train job.
+To create an model serving job, you'll have to wait for your train job to stop. 
+Then, you'll submit the app name associated with the train job (with a status of ``STOPPED``).
+The inference job would be created from the best trials from that train job.
 
 Example:
 
