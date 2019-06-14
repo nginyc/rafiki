@@ -57,23 +57,23 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def train(self, dataset_uri):
+    def train(self, dataset_path):
         '''
         Train this model instance with given dataset and initialized knob values.
 
-        :param str dataset_uri: URI of the train dataset in a format specified by the task
+        :param str dataset_path: File path of the train dataset file in the local file system, in a format specified by the task
         '''
         raise NotImplementedError()
 
     # TODO: Allow configuration of other metrics
     @abc.abstractmethod
-    def evaluate(self, dataset_uri):
+    def evaluate(self, dataset_path):
         '''
         Evaluate this model instance with given dataset after training. 
         This will be called only when model is *trained*.
 
-        :param str dataset_uri: URI of the test dataset in a format specified by the task
-        :returns: Accuracy as float from 0-1 on the test dataset
+        :param str dataset_path: File path of the validation dataset file in the local file system, in a format specified by the task
+        :returns: Accuracy as float from 0-1 on the validation dataset
         :rtype: float
         '''
         raise NotImplementedError()
@@ -127,34 +127,27 @@ class BaseModel(abc.ABC):
         pass
 
 def test_model_class(model_file_path, model_class, task, dependencies, \
-                    train_dataset_uri, test_dataset_uri, \
-                    enable_gpu=False, queries=[], knobs=None):
+                    train_dataset_path, val_dataset_path, \
+                    queries=[], knobs=None):
     '''
     Tests whether a model class is properly defined by running a full train-inference flow.
     The model instance's methods will be called in an order similar to that in Rafiki.
+    It is assumed that all of the model's dependencies have been installed in the current Python environment. 
 
     :param str model_file_path: Path to a single Python file that contains the definition for the model class
     :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
     :param str task: Task type of model
     :param dict[str, str] dependencies: Model's dependencies
-    :param str train_dataset_uri: URI of the train dataset for testing the training of model
-    :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model
+    :param str train_dataset_path: File path of the train dataset for training of model
+    :param str val_dataset_path: File path of the validation dataset for evaluation of the resultant trained model
     :param list[any] queries: List of queries for testing predictions with the trained model
     :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used
     :type knobs: dict[str, any]
     :returns: The trained model
     '''
     try:
-        _print_header('Installing & checking model dependencies...')
+        _print_header('Checking model dependencies...')
         _check_dependencies(dependencies)
-
-        # Test installation
-        if not isinstance(dependencies, dict):
-            raise Exception('`dependencies` should be a dict[str, str]')
-
-        install_command = parse_model_install_command(dependencies, enable_gpu=enable_gpu)
-        exit_code = os.system(install_command)
-        if exit_code != 0: raise Exception('Error in installing model dependencies')
 
         _print_header('Checking loading of model & model definition...')
         f = open(model_file_path, 'rb')
@@ -175,8 +168,8 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         _check_model_inst(model_inst)
 
         _print_header('Checking training & evaluation of model...')
-        model_inst.train(train_dataset_uri)
-        score = model_inst.evaluate(test_dataset_uri)
+        model_inst.train(train_dataset_path)
+        score = model_inst.evaluate(val_dataset_path)
 
         if not isinstance(score, float):
             raise Exception('`evaluate()` should return a float!')
@@ -217,7 +210,7 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
 
         print('Predictions: {}'.format(predictions))
 
-        _info('The model definition is valid!')
+        _note('The model definition is valid!')
     
         return model_inst
 
@@ -279,23 +272,28 @@ def parse_model_install_command(dependencies, enable_gpu=False):
     return '; '.join(commands)
 
 def _check_dependencies(dependencies):
+
+    if not isinstance(dependencies, dict):
+        raise Exception('`dependencies` should be a dict[str, str]')
+
     for (dep, ver) in dependencies.items():
-        # Warn that Keras models should additionally depend on TF for GPU usage
         if dep == ModelDependency.KERAS:
-            _warn('Keras models can enable GPU usage with by adding a `tensorflow` dependency.')
-        elif dep == ModelDependency.PYTORCH:
-            _info('PIP package `{}=={}` will be installed'.format(dep, ver))
-        elif dep == ModelDependency.SCIKIT_LEARN:
-            _info('PIP package `{}=={}` will be installed'.format(dep, ver))
-        elif dep == ModelDependency.TENSORFLOW:
             # Warn that Keras models should additionally depend on TF for GPU usage
-            _info('`tensorflow-gpu` of the same version will be installed if GPU is available during training.')
-            _warn('TensorFlow models must cater for GPU-sharing with ' \
+            _note('Keras models can enable GPU usage with by adding a `tensorflow` dependency.')
+        elif dep == ModelDependency.PYTORCH:
+            pass
+        elif dep == ModelDependency.SCIKIT_LEARN:
+            pass
+        elif dep == ModelDependency.TENSORFLOW:
+            _note('TensorFlow models must cater for GPU-sharing with ' \
                     + '`config.gpu_options.allow_growth = True` (ref: https://www.tensorflow.org/guide/using_gpu#allowing_gpu_memory_growth).')
         elif dep == ModelDependency.SINGA:
-            _info('Conda packages `singa-gpu` or `singa-cpu` will be installed, depending on GPU availablility during training.')
-        else:
-            _info('PIP package `{}=={}` will be installed'.format(dep, ver))
+            pass
+    
+    install_command = parse_model_install_command(dependencies, enable_gpu=False)
+    install_command_with_gpu = parse_model_install_command(dependencies, enable_gpu=True)
+    _note(f'Install command (without GPU): `{install_command}`')
+    _note(f'Install command (with GPU): `{install_command_with_gpu}`')
 
 def _check_model_class(py_model_class):
     if not issubclass(py_model_class, BaseModel):
@@ -338,17 +336,13 @@ def _check_knob_config(knob_config):
     knob_config_str = serialize_knob_config(knob_config)
     knob_config = deserialize_knob_config(knob_config_str)
 
-def _info(msg):
-    msg_color = '\033[94m'
-    end_color = '\033[0m'
-    print('{}{}{}'.format(msg_color, msg, end_color))
-
 def _print_header(msg):
     print('-' * (len(msg) + 4))
     print('| {} |'.format(msg))
     print('-' * (len(msg) + 4))
 
 def _warn(msg):
-    msg_color = '\033[93m'
-    end_color = '\033[0m'
-    print('{}WARNING: {}{}'.format(msg_color, msg, end_color))
+    print(f'\033[93mWARNING: {msg}\033[0m')
+
+def _note(msg):
+    print(f'\033[94mNOTE: {msg}\033[0m')

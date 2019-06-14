@@ -9,7 +9,8 @@ from rafiki.constants import ServiceStatus, UserType, ServiceType, InferenceJobS
     TrainJobStatus, ModelAccessRight, BudgetType
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.model import ModelLogger
-from rafiki.container import DockerSwarmContainerManager 
+from rafiki.container import DockerSwarmContainerManager
+from rafiki.data_store import Dataset, FileDataStore, DataStore
 
 from .services_manager import ServicesManager
 
@@ -21,24 +22,20 @@ class InvalidUserError(Exception): pass
 class InvalidPasswordError(Exception): pass
 class InvalidRunningInferenceJobError(Exception): pass
 class InvalidModelError(Exception): pass
-class InvalidModelAccessError(Exception): pass
 class InvalidTrainJobError(Exception): pass
 class InvalidTrialError(Exception): pass
 class RunningInferenceJobExistsError(Exception): pass
 class NoModelsForTrainJobError(Exception): pass
+class InvalidDatasetError(Exception): pass
 
 class Admin(object):
-    def __init__(self, db=None, container_manager=None):
-        if db is None: 
-            db = Database()
-        if container_manager is None: 
-            container_manager = DockerSwarmContainerManager()
-            
+    def __init__(self, db=None, container_manager=None, data_store=None):
+        self._db = db or Database()
+        self._data_store: DataStore = data_store or FileDataStore(os.environ['DATA_DOCKER_WORKDIR_PATH'])
         self._base_worker_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_WORKER'],
                                                 os.environ['RAFIKI_VERSION'])
-
-        self._db = db
-        self._services_manager = ServicesManager(db, container_manager)
+        container_manager = container_manager or DockerSwarmContainerManager()
+        self._services_manager = ServicesManager(self._db, container_manager)
 
     def seed(self):
         with self._db:
@@ -83,7 +80,7 @@ class Admin(object):
             }
             for user in users
         ]
-
+        
     def get_user_by_email(self, email):
         user = self._db.get_user_by_email(email)
         if user is None:
@@ -111,36 +108,91 @@ class Admin(object):
             'user_type': user.user_type,
             'banned_date': user.banned_date
         }
+    
+    ####################################
+    # Datasets
+    ####################################
+
+    def create_dataset(self, user_id, name, task, data_file_path):
+        # Store dataset in data folder
+        store_dataset = self._data_store.save(data_file_path)
+
+        # Get metadata for dataset
+        store_dataset_id = store_dataset.id
+        size_bytes = store_dataset.size_bytes
+        owner_id = user_id
+
+        dataset = self._db.create_dataset(name, task, size_bytes, store_dataset_id, owner_id)
+        self._db.commit()
+
+        return {
+            'id': dataset.id,
+            'name': dataset.name,
+            'task': dataset.task,
+            'size_bytes': dataset.size_bytes
+        }
+
+    def get_dataset(self, dataset_id):
+        dataset = self._db.get_dataset(dataset_id)
+        if dataset is None:
+            raise InvalidDatasetError()
+
+        return {
+            'id': dataset.id,
+            'name': dataset.name,
+            'task': dataset.task,
+            'datetime_created': dataset.datetime_created,
+            'size_bytes': dataset.size_bytes,
+            'owner_id': dataset.owner_id
+        }
+
+    def get_datasets(self, user_id, task=None):
+        datasets = self._db.get_datasets(user_id, task)
+        return [
+            {
+                'id': x.id,
+                'name': x.name,
+                'task': x.task,
+                'datetime_created': x.datetime_created,
+                'size_bytes': x.size_bytes
+
+            }
+            for x in datasets
+        ]
 
     ####################################
     # Train Job
     ####################################
 
-    def create_train_job(self, user_id, app, task, train_dataset_uri, 
-                        test_dataset_uri, budget, models=None):
+    def create_train_job(self, user_id, app, task, train_dataset_id, 
+                        val_dataset_id, budget, model_ids):
         
+        # Ensure at least 1 model
+        if len(model_ids) == 0:
+            raise NoModelsForTrainJobError()
+
         # Compute auto-incremented app version
         train_jobs = self._db.get_train_jobs_of_app(app)
         app_version = max([x.app_version for x in train_jobs], default=0) + 1
 
         # Get models available to user
-        avail_models = self._db.get_models_of_task(user_id, task)
-        
-        # Auto populate models with all available models if not specified
-        if models is None:
-            model_ids = [x.id for x in avail_models]
-        else:
-            # Ensure all models are available
-            model_ids = []
-            for model in models:
-                db_model = next((x for x in avail_models if x.name == model), None)
-                if db_model is None:
-                    raise InvalidModelAccessError('You don\'t have access to model "{}"'.format(model))
-                model_ids.append(db_model.id)
+        avail_model_ids = [x.id for x in self._db.get_available_models(user_id, task)]
 
-        # Ensure that models are specified
-        if len(model_ids) == 0:
-            raise NoModelsForTrainJobError()
+        # Ensure all specified models are available
+        for model_id in model_ids:
+            if model_id not in avail_model_ids:
+                raise InvalidModelError('No model of ID "{}" is available'.format(model_id))
+
+        # Ensure that datasets are valid and of the correct task
+        try:
+            train_dataset = self._db.get_dataset(train_dataset_id)
+            assert train_dataset is not None
+            assert train_dataset.task == task
+            val_dataset = self._db.get_dataset(val_dataset_id)
+            assert val_dataset is not None
+            assert val_dataset.task == task
+        except AssertionError as e:
+            raise InvalidDatasetError(e)
 
         train_job = self._db.create_train_job(
             user_id=user_id,
@@ -148,8 +200,8 @@ class Admin(object):
             app_version=app_version,
             task=task,
             budget=budget,
-            train_dataset_uri=train_dataset_uri,
-            test_dataset_uri=test_dataset_uri
+            train_dataset_id=train_dataset_id,
+            val_dataset_id=val_dataset_id
         )
         self._db.commit()
 
@@ -198,8 +250,8 @@ class Admin(object):
             'app': train_job.app,
             'app_version': train_job.app_version,
             'task': train_job.task,
-            'train_dataset_uri': train_job.train_dataset_uri,
-            'test_dataset_uri': train_job.test_dataset_uri,
+            'train_dataset_id': train_job.train_dataset_id,
+            'val_dataset_id': train_job.val_dataset_id,
             'datetime_started': datetime_started,
             'datetime_stopped': datetime_stopped,
             'workers': [
@@ -226,8 +278,8 @@ class Admin(object):
                 'app': x.app,
                 'app_version': x.app_version,
                 'task': x.task,
-                'train_dataset_uri': x.train_dataset_uri,
-                'test_dataset_uri': x.test_dataset_uri,
+                'train_dataset_id': x.train_dataset_id,
+                'val_dataset_id': x.val_dataset_id,
                 'datetime_started': datetime_started,
                 'datetime_stopped': datetime_stopped,
                 'budget': x.budget
@@ -266,8 +318,8 @@ class Admin(object):
                 'app': x.app,
                 'app_version': x.app_version,
                 'task': x.task,
-                'train_dataset_uri': x.train_dataset_uri,
-                'test_dataset_uri': x.test_dataset_uri,
+                'train_dataset_id': x.train_dataset_id,
+                'val_dataset_id': x.val_dataset_id,
                 'datetime_started': datetime_started,
                 'datetime_stopped': datetime_stopped,
                 'budget': x.budget
@@ -363,7 +415,10 @@ class Admin(object):
         if trial is None:
             raise InvalidTrialError()
 
-        return trial.parameters
+        with open(trial.params_file_path, 'rb') as f:
+            parameters = f.read()
+
+        return parameters
 
     ####################################
     # Inference Job
@@ -517,8 +572,9 @@ class Admin(object):
     ####################################
 
     def create_model(self, user_id, name, task, model_file_bytes, 
-                    model_class, docker_image=None, dependencies={}, access_right=ModelAccessRight.PRIVATE):
-        
+                    model_class, docker_image=None, dependencies={}, 
+                    access_right=ModelAccessRight.PRIVATE):
+
         model = self._db.create_model(
             user_id=user_id,
             name=name,
@@ -529,67 +585,77 @@ class Admin(object):
             dependencies=dependencies,
             access_right=access_right
         )
+        self._db.commit()
 
         return {
+            'id': model.id,
+            'user_id': model.user_id,
             'name': model.name 
         }
 
-    def get_model(self, user_id, name):
-        model = self._db.get_model_by_name(name)
+    def delete_model(self, model_id):
+        model = self._db.get_model(model_id)
         if model is None:
             raise InvalidModelError()
 
-        if model.access_right == ModelAccessRight.PRIVATE and model.user_id != user_id:
-            raise InvalidModelAccessError()
+        self._db.delete_model(model)
+        
+        return {
+            'id': model.id,
+            'user_id': model.user_id,
+            'name': model.name 
+        }
+
+    def get_model_by_name(self, user_id, name):
+        model = self._db.get_model_by_name(user_id, name)
+        if model is None:
+            raise InvalidModelError()
 
         return {
+            'id': model.id,
+            'user_id': model.user_id,
             'name': model.name,
             'task': model.task,
             'model_class': model.model_class,
             'datetime_created': model.datetime_created,
-            'user_id': model.user_id,
             'docker_image': model.docker_image,
             'dependencies': model.dependencies,
             'access_right': model.access_right
         }
 
-    def get_model_file(self, user_id, name):
-        model = self._db.get_model_by_name(name)
-        
+    def get_model(self, model_id):
+        model = self._db.get_model(model_id)
         if model is None:
             raise InvalidModelError()
 
-        if model.access_right == ModelAccessRight.PRIVATE and model.user_id != user_id:
-            raise InvalidModelAccessError()
+        return {
+            'id': model.id,
+            'user_id': model.user_id,
+            'name': model.name,
+            'task': model.task,
+            'model_class': model.model_class,
+            'datetime_created': model.datetime_created,
+            'docker_image': model.docker_image,
+            'dependencies': model.dependencies,
+            'access_right': model.access_right
+        }
+
+    def get_model_file(self, model_id):
+        model = self._db.get_model(model_id)
+        if model is None:
+            raise InvalidModelError()
 
         return model.model_file_bytes
 
-    def get_models(self, user_id):
-        models = self._db.get_models(user_id)
+    def get_available_models(self, user_id, task=None):
+        models = self._db.get_available_models(user_id, task)
         return [
             {
+                'id': model.id,
+                'user_id': model.user_id,
                 'name': model.name,
                 'task': model.task,
-                'model_class': model.model_class,
                 'datetime_created': model.datetime_created,
-                'user_id': model.user_id,
-                'docker_image': model.docker_image,
-                'dependencies': model.dependencies,
-                'access_right': model.access_right
-            }
-            for model in models
-        ]
-
-    def get_models_of_task(self, user_id, task):
-        models = self._db.get_models_of_task(user_id, task)
-        return [
-            {
-                'name': model.name,
-                'task': model.task,
-                'model_class': model.model_class,
-                'datetime_created': model.datetime_created,
-                'user_id': model.user_id,
-                'docker_image': model.docker_image,
                 'dependencies': model.dependencies,
                 'access_right': model.access_right
             }

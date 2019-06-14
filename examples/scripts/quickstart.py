@@ -1,4 +1,4 @@
-import pprint
+from pprint import pprint
 import time
 import requests
 import traceback
@@ -10,6 +10,8 @@ from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TaskType, UserType, BudgetType, TrainJobStatus, \
                                 InferenceJobStatus, ModelDependency, ModelAccessRight
+
+from examples.datasets.image_classification.load_mnist_format import load_fashion_mnist
 
 # Generates a random ID
 def gen_id(length=16):
@@ -65,7 +67,7 @@ def make_predictions(client, predictor_host, queries):
     return predictions
 
 
-def quickstart(client, enable_gpu):
+def quickstart(client, train_dataset_path, val_dataset_path, enable_gpu):
     task = TaskType.IMAGE_CLASSIFICATION
 
     # Randomly generate app & model names to avoid naming conflicts
@@ -73,23 +75,31 @@ def quickstart(client, enable_gpu):
     app = 'image_classification_app_{}'.format(app_id)
     tf_model_name = 'TfFeedForward_{}'.format(app_id)
     sk_model_name = 'SkDt_{}'.format(app_id)
+    
 
     print('Adding models "{}" and "{}" to Rafiki...'.format(tf_model_name, sk_model_name)) 
-    client.create_model(tf_model_name, task, 'examples/models/image_classification/TfFeedForward.py', 
+    tf_model = client.create_model(tf_model_name, task, 'examples/models/image_classification/TfFeedForward.py', 
                         'TfFeedForward', dependencies={ ModelDependency.TENSORFLOW: '1.12.0' })
-    client.create_model(sk_model_name, task, 'examples/models/image_classification/SkDt.py', 
+    pprint(tf_model)
+    sk_model = client.create_model(sk_model_name, task, 'examples/models/image_classification/SkDt.py', 
                         'SkDt', dependencies={ ModelDependency.SCIKIT_LEARN: '0.20.0' })
+    pprint(sk_model)
+    model_ids = [tf_model['id'], sk_model['id']]
+
+    print('Creating & uploading datasets onto Rafiki...')
+    train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
+    pprint(train_dataset)
+    val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_path)
+    pprint(val_dataset)
                         
     print('Creating train job for app "{}" on Rafiki...'.format(app)) 
     budget = {
         BudgetType.MODEL_TRIAL_COUNT: 2,
         BudgetType.ENABLE_GPU: enable_gpu
     }
-    train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true'
-    test_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true'
-    train_job = client.create_train_job(app, task, train_dataset_uri, test_dataset_uri, 
-                                        budget, models=[tf_model_name, sk_model_name])
-    pprint.pprint(train_job)
+    train_job = client.create_train_job(app, task, train_dataset['id'], val_dataset['id'], 
+                                        budget, models=model_ids)
+    pprint(train_job)
 
     print('Waiting for train job to complete...')
     print('This might take a few minutes')
@@ -97,10 +107,10 @@ def quickstart(client, enable_gpu):
     print('Train job has been stopped')
 
     print('Listing best trials of latest train job for app "{}"...'.format(app))
-    pprint.pprint(client.get_best_trials_of_train_job(app))
+    pprint(client.get_best_trials_of_train_job(app))
 
     print('Creating inference job for app "{}" on Rafiki...'.format(app))
-    pprint.pprint(client.create_inference_job(app))
+    pprint(client.create_inference_job(app))
     predictor_host = get_predictor_host(client, app)
     if not predictor_host: raise Exception('Inference job has errored or stopped')
     print('Inference job is running!')
@@ -142,23 +152,28 @@ def quickstart(client, enable_gpu):
     print(predictions)
 
     print('Stopping inference job...')
-    pprint.pprint(client.stop_inference_job(app))
+    pprint(client.stop_inference_job(app))
 
 if __name__ == '__main__':
     rafiki_host = os.environ.get('RAFIKI_HOST', 'localhost')
     admin_port = int(os.environ.get('ADMIN_EXT_PORT', 3000))
-    admin_web_port = int(os.environ.get('WEB_ADMIN_EXT_PORT', 3001))
+    web_admin_port = int(os.environ.get('WEB_ADMIN_EXT_PORT', 3001))
     user_email = os.environ.get('USER_EMAIL', SUPERADMIN_EMAIL)
     user_password = os.environ.get('USER_PASSWORD', SUPERADMIN_PASSWORD)
+    out_train_dataset_path = 'data/fashion_mnist_for_image_classification_train.zip'
+    out_val_dataset_path = 'data/fashion_mnist_for_image_classification_val.zip'
+
+    # Load dataset
+    load_fashion_mnist(out_train_dataset_path, out_val_dataset_path)
 
     # Initialize client
     client = Client(admin_host=rafiki_host, admin_port=admin_port)
     client.login(email=user_email, password=user_password)
-    admin_web_url = 'http://{}:{}'.format(rafiki_host, admin_web_port)
-    print('During training, you can view the status of the train job at {}'.format(admin_web_url))
+    web_admin_url = 'http://{}:{}'.format(rafiki_host, web_admin_port)
+    print('During training, you can view the status of the train job at {}'.format(web_admin_url))
     print('Login with email "{}" and password "{}"'.format(user_email, user_password)) 
     
     enable_gpu = int(os.environ.get('ENABLE_GPU', 0))
 
     # Run quickstart
-    quickstart(client, enable_gpu)
+    quickstart(client, out_train_dataset_path, out_val_dataset_path, enable_gpu)

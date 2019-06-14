@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Float, ForeignKey, Integer, Binary, DateTime
+from sqlalchemy import Column, String, Float, ForeignKey, Integer, Binary, DateTime, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSON, ARRAY
 import uuid
 from datetime import datetime
@@ -33,19 +33,31 @@ class InferenceJobWorker(Base):
     inference_job_id = Column(String, ForeignKey('inference_job.id'))
     trial_id = Column(String, ForeignKey('trial.id'), nullable=False)
 
+class Dataset(Base):
+    __tablename__ = 'dataset'
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    name = Column(String, nullable=False)
+    task = Column(String, nullable=False)
+    store_dataset_id = Column(String, nullable=False)
+    size_bytes = Column(Integer, default=0)
+    owner_id = Column(String, ForeignKey('user.id'), nullable=False)
+    datetime_created = Column(DateTime, nullable=False, default=generate_datetime)
+
 class Model(Base):
     __tablename__ = 'model'
 
     id = Column(String, primary_key=True, default=generate_uuid)
     datetime_created = Column(DateTime, nullable=False, default=generate_datetime)
-    name = Column(String, unique=True, nullable=False)
+    user_id = Column(String, ForeignKey('user.id'), nullable=False)
+    name = Column(String, nullable=False)
     task = Column(String, nullable=False)
     model_file_bytes = Column(Binary, nullable=False)
     model_class = Column(String, nullable=False)
-    user_id = Column(String, ForeignKey('user.id'), nullable=False)
     docker_image = Column(String, nullable=False)
     dependencies = Column(JSON, nullable=False)
     access_right = Column(String, nullable=False, default=ModelAccessRight.PRIVATE)
+    __table_args__ = (UniqueConstraint('name', 'user_id'),)
 
 class Service(Base):
     __tablename__ = 'service'
@@ -74,8 +86,8 @@ class TrainJob(Base):
     app_version = Column(Integer, nullable=False)
     task = Column(String, nullable=False)
     budget = Column(JSON, nullable=False)
-    train_dataset_uri = Column(String, nullable=False)
-    test_dataset_uri = Column(String, nullable=False)
+    train_dataset_id = Column(String, ForeignKey('dataset.id'), nullable=False)
+    val_dataset_id = Column(String, ForeignKey('dataset.id'), nullable=False)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
 
 class SubTrainJob(Base):
@@ -106,7 +118,7 @@ class Trial(Base):
     status = Column(String, nullable=False, default=TrialStatus.STARTED)
     knobs = Column(JSON, default=None)
     score = Column(Float, default=0)
-    parameters = Column(Binary, default=None)
+    params_file_path = Column(String, default=None)
     datetime_stopped = Column(DateTime, default=None)
 
 class TrialLog(Base):

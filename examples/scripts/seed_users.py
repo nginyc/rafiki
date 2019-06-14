@@ -1,4 +1,4 @@
-import pprint
+from pprint import pprint
 import os
 import csv
 
@@ -14,7 +14,7 @@ def seed_users(client, csv_file_path):
             password = row['password']
             user_type = row['user_type']
             try:
-                client.create_user(email, password, user_type)
+                pprint(client.create_user(email, password, user_type))
             except Exception as e:
                 print('Failed to create user `{}` due to:'.format(email))
                 print(e)
@@ -22,7 +22,7 @@ def seed_users(client, csv_file_path):
 if __name__ == '__main__':
     rafiki_host = os.environ.get('RAFIKI_HOST', 'localhost')
     admin_port = int(os.environ.get('ADMIN_EXT_PORT', 3000))
-    admin_web_port = int(os.environ.get('WEB_ADMIN_EXT_PORT', 3001))
+    web_admin_port = int(os.environ.get('WEB_ADMIN_EXT_PORT', 3001))
     user_email = os.environ.get('USER_EMAIL', SUPERADMIN_EMAIL)
     user_password = os.environ.get('USER_PASSWORD', SUPERADMIN_PASSWORD)
     csv_file_path = os.environ.get('CSV_FILE_PATH', 'examples/scripts/users.csv')

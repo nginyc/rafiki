@@ -5,7 +5,7 @@ source ./scripts/utils.sh
 source ./.env.sh
 
 title "Stopping any existing jobs..."
-python3.6 ./scripts/stop_all_jobs.py
+python ./scripts/stop_all_jobs.py
 
 title "Dumping database..." 
 bash ./scripts/save_db.sh

@@ -9,8 +9,9 @@ User Guide
    quickstart-app-developers
    quickstart-app-users
    quickstart-admins
-   user-types
    using-web-admin
    creating-models
    tasks
    datasets
+   user-types
+   installing-python
