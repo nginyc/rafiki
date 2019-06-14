@@ -1,5 +1,5 @@
 import os
-from rafiki.utils.service import run_service
+from rafiki.utils.service import run_worker
 from rafiki.db import Database
 from rafiki.constants import ServiceType
 
@@ -11,12 +11,12 @@ if exit_code != 0:
 
 worker = None
 
-def start_service(service_id, service_type):
+def start_worker(service_id, service_type, container_id):
     global worker
 
     if service_type == ServiceType.TRAIN:
         from rafiki.worker import TrainWorker
-        worker = TrainWorker(service_id)
+        worker = TrainWorker(service_id, container_id)
         worker.start()
     elif service_type == ServiceType.INFERENCE:
         from rafiki.worker import InferenceWorker
@@ -25,10 +25,10 @@ def start_service(service_id, service_type):
     else:
         raise Exception('Invalid service type: {}'.format(service_type))
 
-def end_service(service_id, service_type):
+def stop_worker():
     global worker
     if worker is not None:
         worker.stop()    
 
 db = Database()
-run_service(db, start_service, end_service)
+run_worker(db, start_worker, stop_worker)

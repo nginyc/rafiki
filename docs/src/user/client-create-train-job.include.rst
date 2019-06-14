@@ -14,7 +14,7 @@ Example:
             task='IMAGE_CLASSIFICATION',
             train_dataset_uri='https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true',
             test_dataset_uri='https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true',
-            budget={ 'MODEL_TRIAL_COUNT': 2 }
+            budget={ 'MODEL_TRIAL_COUNT': 5 }
         )
 
     Output:

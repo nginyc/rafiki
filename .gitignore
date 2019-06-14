@@ -15,7 +15,7 @@ __pycache__/
 
 # Sphinx documentation
 .doctrees/
-docs/**/
+docs/*
 !docs/src
 
 # Datasets

@@ -1,16 +1,16 @@
 import os
 
-from rafiki.utils.service import run_service
+from rafiki.utils.service import run_worker
 from rafiki.db import Database
 from rafiki.predictor.app import app
 
-def start_service(service_id, service_type):
+def start_worker(service_id, service_type, container_id):
     app.run(host='0.0.0.0', 
             port=os.getenv('PREDICTOR_PORT', 3003), 
             threaded=True)
 
-def end_service(service_id, service_type):
+def stop_worker():
     pass
 
 db = Database()
-run_service(db, start_service, end_service)
+run_worker(db, start_worker, stop_worker)

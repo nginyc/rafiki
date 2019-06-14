@@ -37,8 +37,11 @@ class Client(object):
     :param str advisor_host: Host of Rafiki Advisor
     :param int advisor_port: Port of Rafiki Advisor
     '''
-    def __init__(self, admin_host='localhost', admin_port=3000,
-                advisor_host='localhost', advisor_port=3002):
+    def __init__(self, admin_host=os.environ.get('RAFIKI_ADDR', 'localhost'),
+                    admin_port=os.environ.get('ADMIN_EXT_PORT', 3000),
+                    advisor_host=os.environ.get('RAFIKI_ADDR', 'localhost'),
+                    advisor_port=os.environ.get('ADVISOR_EXT_PORT', 3002)):
+                    
         self._admin_host = admin_host
         self._admin_port = admin_port
         self._advisor_host = advisor_host
@@ -155,8 +158,8 @@ class Client(object):
     # Models
     ####################################
 
-    def create_model(self, name, task, model_file_path, model_class, docker_image=None, 
-                    dependencies={}, access_right=ModelAccessRight.PRIVATE):
+    def create_model(self, name, task, model_file_path, model_class, dependencies={}, 
+                    access_right=ModelAccessRight.PRIVATE, docker_image=None):
         '''
         Creates a model on Rafiki.
 
@@ -168,9 +171,9 @@ class Client(object):
         :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
         :param dependencies: List of dependencies & their versions
         :type dependencies: dict[str, str]
-        :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
         :param access_right: Model access right
         :type access_right: :class:`rafiki.constants.ModelAccessRight`
+        :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
         :returns: Created model as dictionary
         :rtype: dict[str, any]
 
@@ -185,10 +188,8 @@ class Client(object):
         ``<dependency_name>`` corresponds to the name of the Python Package Index (PyPI) package (e.g. ``tensorflow``)
         and ``<dependency_version>`` corresponds to the version of the PyPI package (e.g. ``1.12.0``). These dependencies 
         will be lazily installed on top of the worker's Docker image before the submitted model's code is executed.
-
-        If the model is to be run on GPU, Rafiki could map dependencies to their GPU-enabled versions, if required. 
+        If the model is to be run on GPU, Rafiki would map dependencies to their GPU-supported versions, if required. 
         For example, ``{ 'tensorflow': '1.12.0' }`` will be installed as ``{ 'tensorflow-gpu': '1.12.0' }``.
-
         Rafiki could also parse specific dependency names to install certain non-PyPI packages. 
         For example, ``{ 'singa': '1.1.1' }`` will be installed as ``singa-cpu=1.1.1`` or ``singa-gpu=1.1.1`` using ``conda``.
 
@@ -204,6 +205,8 @@ class Client(object):
         ``scikit-learn``            ``pip install scikit-learn==${ver}``
         ``torch``                   ``pip install torch==${ver}``
         =====================       =====================
+
+        Refer to :ref:`creating-models` to understand more about how to write & test models for Rafiki.
 
         '''
         f = open(model_file_path, 'rb')
@@ -313,9 +316,10 @@ class Client(object):
     def create_train_job(self, app, task, train_dataset_uri, test_dataset_uri, budget, models=None):
         '''
         Creates and starts a train job on Rafiki. 
-        A train job is uniquely identified by its associated app and the app version (returned in output).
+
+        A train job is uniquely identified by user, its associated app, and the app version (returned in output).
         
-        Only admins, model developers and app developers can manage train jobs.
+        Only admins, model developers & app developers can manage train jobs. Model developers & app developers can only manage their own train jobs.
 
         :param str app: Name of the app associated with the train job
         :param str task: Task associated with the train job, 
@@ -338,12 +342,15 @@ class Client(object):
         =====================       =====================
         **Budget Type**             **Description**
         ---------------------       ---------------------        
-        ``MODEL_TRIAL_COUNT``       Target number of trials to run
-        ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported
+        ``MODEL_TRIAL_COUNT``       No. of trials to conduct for each model (defaults to 5)
+        ``GPU_COUNT``               No. of GPUs to exclusively allocate for training, across all models (defaults to 0)
         =====================       =====================
         '''
         _note('`create_train_job` now requires `models` as a list of model IDs instead of a list of model names')
-
+        
+        if 'ENABLE_GPU' in budget:
+            _warn('The `ENABLE_GPU` option has been changed to `GPU_COUNT`')
+            
         # Default to all available models
         if models is None: 
             avail_models = self.get_available_models(task)
@@ -361,7 +368,7 @@ class Client(object):
 
     def get_train_jobs_by_user(self, user_id):
         '''
-        Lists all train jobs associated to an user on Rafiki.
+        Lists all of user's train jobs on Rafiki.
 
         :param str user_id: ID of the user
         :returns: Details of train jobs as list of dictionaries
@@ -374,7 +381,7 @@ class Client(object):
     
     def get_train_jobs_of_app(self, app):
         '''
-        Lists all train jobs associated to an app on Rafiki.
+        Lists all of current user's train jobs associated to the app name on Rafiki.
 
         :param str app: Name of the app
         :returns: Details of train jobs as list of dictionaries
@@ -385,7 +392,7 @@ class Client(object):
 
     def get_train_job(self, app, app_version=-1):
         '''
-        Retrieves details of the train job identified by an app and an app version, 
+        Retrieves details of the current user's train job identified by an app and an app version, 
         including workers' details.
 
         :param str app: Name of the app
@@ -398,7 +405,7 @@ class Client(object):
 
     def get_best_trials_of_train_job(self, app, app_version=-1, max_count=2):
         '''
-        Lists the best scoring trials of the train job identified by an app and an app version,
+        Lists the best scoring trials of the current user's train job identified by an app and an app version,
         ordered by descending score.
 
         :param str app: Name of the app
@@ -415,7 +422,7 @@ class Client(object):
 
     def get_trials_of_train_job(self, app, app_version=-1):
         '''
-        Lists all trials of the train job identified by an app and an app version,
+        Lists all trials of the current user's train job identified by an app and an app version,
         ordered by when the trial started.
 
         :param str app: Name of the app
@@ -428,7 +435,7 @@ class Client(object):
 
     def stop_train_job(self, app, app_version=-1):
         '''
-        Prematurely stops the train job identified by an app and an app version.
+        Prematurely stops the current user's train job identified by an app and an app version.
         Otherwise, the train job should stop by itself when its budget is reached.
 
         :param str app: Name of the app
@@ -437,11 +444,6 @@ class Client(object):
         :rtype: dict[str, any]
         '''
         data = self._post('/train_jobs/{}/{}/stop'.format(app, app_version))
-        return data
-
-    # Rafiki-internal method
-    def stop_train_job_worker(self, service_id):
-        data = self._post('/train_job_workers/{}/stop'.format(service_id))
         return data
 
     ####################################
@@ -515,7 +517,7 @@ class Client(object):
 
         In this method's response, `predictor_host` is this inference job's predictor's host. 
 
-        Only admins & app developers can manage inference jobs.
+        Only admins, model developers & app developers can manage inference jobs. Model developers & app developers can only manage their own inference jobs.
 
         :param str app: Name of the app identifying the train job to use
         :param str app_version: Version of the app identifying the train job to use
@@ -530,7 +532,7 @@ class Client(object):
 
     def get_inference_jobs_by_user(self, user_id):
         '''
-        Lists all inference jobs associated to an user on Rafiki.
+        Lists all of user's inference jobs on Rafiki.
 
         :param str user_id: ID of the user
         :returns: Details of inference jobs as list of dictionaries
@@ -649,6 +651,14 @@ class Client(object):
         Only admins can call this.
         '''
         data = self._post('/actions/stop_all_jobs')
+        return data
+
+    ####################################
+    # Rafiki Internal
+    ####################################
+
+    def send_event(self, name, **params):
+        data = self._post('/event/{}'.format(name), json=params)
         return data
 
     ####################################
