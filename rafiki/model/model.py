@@ -95,7 +95,7 @@ class BaseModel(abc.ABC):
     @abc.abstractmethod
     def dump_parameters(self):
         '''
-        Return a dictionary of model parameters that fully define this model instance's trained state. 
+        Return a dictionary of model parameters that fully defines this model instance's trained state. 
         This dictionary should be serializable by the Python's ``pickle`` module.
         This will be used for trained model serialization within Rafiki.
         This will be called only when model is *trained*.
@@ -135,9 +135,10 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
     It is assumed that all of the model's dependencies have been installed in the current Python environment. 
 
     :param str model_file_path: Path to a single Python file that contains the definition for the model class
-    :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
+    :param type model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
     :param str task: Task type of model
-    :param dict[str, str] dependencies: Model's dependencies
+    :param dependencies: Model's dependencies
+    :type dependencies: dict[str, str]
     :param str train_dataset_uri: URI of the train dataset for testing the training of model
     :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model
     :param list[any] queries: List of queries for testing predictions with the trained model

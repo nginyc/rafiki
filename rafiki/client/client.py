@@ -168,7 +168,7 @@ class Client(object):
         :param str name: Name of the model, which must be unique across all models added by the current user 
         :param str task: Task associated with the model, where the model must adhere to the specification of the task
         :param str model_file_path: Path to a single Python file that contains the definition for the model class
-        :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
+        :param str model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
         :param dependencies: List of dependencies & their versions
         :type dependencies: dict[str, str]
         :param access_right: Model access right
@@ -188,7 +188,7 @@ class Client(object):
         ``<dependency_name>`` corresponds to the name of the Python Package Index (PyPI) package (e.g. ``tensorflow``)
         and ``<dependency_version>`` corresponds to the version of the PyPI package (e.g. ``1.12.0``). These dependencies 
         will be lazily installed on top of the worker's Docker image before the submitted model's code is executed.
-        If the model is to be run on GPU, Rafiki would map dependencies to their GPU-supported versions, if required. 
+        If the model is to be run on GPU, Rafiki would map dependencies to their GPU-supported versions, if supported. 
         For example, ``{ 'tensorflow': '1.12.0' }`` will be installed as ``{ 'tensorflow-gpu': '1.12.0' }``.
         Rafiki could also parse specific dependency names to install certain non-PyPI packages. 
         For example, ``{ 'singa': '1.1.1' }`` will be installed as ``singa-cpu=1.1.1`` or ``singa-gpu=1.1.1`` using ``conda``.
@@ -583,7 +583,7 @@ class Client(object):
     # Advisors
     ####################################
 
-    def create_advisor(self, knob_config_str, advisor_id=None):
+    def _create_advisor(self, knob_config_str, advisor_id=None):
         '''
         Creates a Rafiki advisor. If `advisor_id` is passed, it will create an advisor
         of that ID, or do nothing if an advisor of that ID has already been created.
@@ -600,7 +600,7 @@ class Client(object):
                             })
         return data
 
-    def generate_proposal(self, advisor_id):
+    def _generate_proposal(self, advisor_id):
         '''
         Generate a proposal of knobs from an advisor.
 
@@ -611,7 +611,7 @@ class Client(object):
         data = self._post('/advisors/{}/propose'.format(advisor_id), target='advisor')
         return data
 
-    def feedback_to_advisor(self, advisor_id, knobs, score):
+    def _feedback_to_advisor(self, advisor_id, knobs, score):
         '''
         Feedbacks to the advisor on the score of a set of knobs.
         Additionally returns another proposal of knobs after ingesting feedback.
@@ -629,7 +629,7 @@ class Client(object):
                         })
         return data
 
-    def delete_advisor(self, advisor_id):
+    def _delete_advisor(self, advisor_id):
         '''
         Deletes a Rafiki advisor.
 
