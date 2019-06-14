@@ -12,11 +12,12 @@ from multiprocessing import cpu_count
 from multiprocessing.dummy import Pool
 import itertools
 import tempfile
+import base64
 
 from ds_ctcdecoder import ctc_beam_search_decoder_batch, Scorer
 
-from rafiki.model import BaseModel, FixedKnob, FloatKnob, CategoricalKnob, dataset_utils, logger, test_model_class
-# InvalidModelParamsException, IntegerKnob
+from rafiki.model import BaseModel, FixedKnob, FloatKnob, CategoricalKnob, dataset_utils, logger, test_model_class, InvalidModelParamsException
+# IntegerKnob
 
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.utils.text import Alphabet
@@ -52,7 +53,7 @@ class TfDeepSpeech(BaseModel):
         return {
             'epochs': FixedKnob(3),
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
-            'batch_size': CategoricalKnob([1]),
+            'batch_size': CategoricalKnob([16]),
         }
 
     @staticmethod
@@ -278,6 +279,23 @@ class TfDeepSpeech(BaseModel):
         self.c = ConfigSingleton()
         self.initialize_globals()
 
+    def samples_to_mfccs(self, samples, sample_rate):
+        spectrogram = contrib_audio.audio_spectrogram(samples,
+                                                      window_size=Config.audio_window_samples,
+                                                      stride=Config.audio_step_samples,
+                                                      magnitude_squared=True)
+        mfccs = contrib_audio.mfcc(spectrogram, sample_rate, dct_coefficient_count=Config.n_input)
+        mfccs = tf.reshape(mfccs, [-1, self.c.n_input])
+
+        return mfccs, tf.shape(mfccs)[0]
+
+    def audiofile_to_features(self, wav_filename):
+        samples = tf.read_file(wav_filename)
+        decoded = contrib_audio.decode_wav(samples, desired_channels=1)
+        features, features_len = self.samples_to_mfccs(decoded.audio, decoded.sample_rate)
+
+        return features, features_len
+
     def create_dataset(self, dataset_uri, dataset_dir, cache_path=''):
         def to_sparse_tuple(sequence):
             r"""Creates a sparse representention of ``sequence``.
@@ -305,26 +323,9 @@ class TfDeepSpeech(BaseModel):
             transcripts = transcripts.batch(batch_size).map(sparse_reshape)
             return tf.data.Dataset.zip((features, transcripts))
 
-        def samples_to_mfccs(samples, sample_rate):
-            spectrogram = contrib_audio.audio_spectrogram(samples,
-                                                          window_size=Config.audio_window_samples,
-                                                          stride=Config.audio_step_samples,
-                                                          magnitude_squared=True)
-            mfccs = contrib_audio.mfcc(spectrogram, sample_rate, dct_coefficient_count=Config.n_input)
-            mfccs = tf.reshape(mfccs, [-1, Config.n_input])
-
-            return mfccs, tf.shape(mfccs)[0]
-
-        def audiofile_to_features(wav_filename):
-            samples = tf.read_file(wav_filename)
-            decoded = contrib_audio.decode_wav(samples, desired_channels=1)
-            features, features_len = samples_to_mfccs(decoded.audio, decoded.sample_rate)
-
-            return features, features_len
-
         def entry_to_features(wav_filename, transcript):
             # https://bugs.python.org/issue32117
-            features, features_len = audiofile_to_features(wav_filename)
+            features, features_len = self.audiofile_to_features(wav_filename)
             return features, features_len, tf.SparseTensor(*transcript)
 
         batch_size = self._knobs.get('batch_size')
@@ -362,6 +363,16 @@ class TfDeepSpeech(BaseModel):
                                            epsilon=FLAGS.epsilon)
         return optimizer
 
+    def variable_on_cpu(self, name, shape, initializer):
+        r"""
+        used to create a variable in CPU memory.
+        """
+        # Use the /cpu:0 device for scoped operations
+        with tf.device(self.c.cpu_device):
+            # Create or get apropos variable
+            var = tf.get_variable(name=name, shape=shape, initializer=initializer)
+        return var
+
     def rnn_impl_lstmblockfusedcell(self, x, seq_length, previous_state, reuse):
         # Forward direction cell
         fw_cell = tf.contrib.rnn.LSTMBlockFusedCell(self.c.n_cell_dim, reuse=reuse)
@@ -373,23 +384,34 @@ class TfDeepSpeech(BaseModel):
 
         return output, output_state
 
+    def create_overlapping_windows(self, batch_x):
+        Config = self.c
+        batch_size = tf.shape(batch_x)[0]
+        window_width = 2 * Config.n_context + 1
+        num_channels = Config.n_input
+
+        # Create a constant convolution filter using an identity matrix, so that the
+        # convolution returns patches of the input tensor as is, and we can create
+        # overlapping windows over the MFCCs.
+        eye_filter = tf.constant(np.eye(window_width * num_channels)
+                                 .reshape(window_width, num_channels, window_width * num_channels),
+                                 tf.float32)  # pylint: disable=bad-continuation
+
+        # Create overlapping windows
+        batch_x = tf.nn.conv1d(batch_x, eye_filter, stride=1, padding='SAME')
+
+        # Remove dummy depth dimension and reshape into [batch_size, n_windows, window_width, n_input]
+        batch_x = tf.reshape(batch_x, [batch_size, -1, window_width, num_channels])
+
+        return batch_x
+
     def create_model(self, batch_x, seq_length, dropout, reuse=False, previous_state=None, overlap=True,
                      rnn_impl=rnn_impl_lstmblockfusedcell):
 
-        def variable_on_cpu(name, shape, initializer):
-            r"""
-            used to create a variable in CPU memory.
-            """
-            # Use the /cpu:0 device for scoped operations
-            with tf.device(Config.cpu_device):
-                # Create or get apropos variable
-                var = tf.get_variable(name=name, shape=shape, initializer=initializer)
-            return var
-
         def dense(name, x, units, dropout_rate=None, relu=True):
             with tf.variable_scope(name):
-                bias = variable_on_cpu('bias', [units], tf.zeros_initializer())
-                weights = variable_on_cpu('weights', [x.shape[-1], units], tf.contrib.layers.xavier_initializer())
+                bias = self.variable_on_cpu('bias', [units], tf.zeros_initializer())
+                weights = self.variable_on_cpu('weights', [x.shape[-1], units], tf.contrib.layers.xavier_initializer())
 
             output = tf.nn.bias_add(tf.matmul(x, weights), bias)
 
@@ -401,26 +423,6 @@ class TfDeepSpeech(BaseModel):
 
             return output
 
-        def create_overlapping_windows(batch_x):
-            batch_size = tf.shape(batch_x)[0]
-            window_width = 2 * Config.n_context + 1
-            num_channels = Config.n_input
-
-            # Create a constant convolution filter using an identity matrix, so that the
-            # convolution returns patches of the input tensor as is, and we can create
-            # overlapping windows over the MFCCs.
-            eye_filter = tf.constant(np.eye(window_width * num_channels)
-                                     .reshape(window_width, num_channels, window_width * num_channels),
-                                     tf.float32)  # pylint: disable=bad-continuation
-
-            # Create overlapping windows
-            batch_x = tf.nn.conv1d(batch_x, eye_filter, stride=1, padding='SAME')
-
-            # Remove dummy depth dimension and reshape into [batch_size, n_windows, window_width, n_input]
-            batch_x = tf.reshape(batch_x, [batch_size, -1, window_width, num_channels])
-
-            return batch_x
-
         Config = self.c
         layers = {}
 
@@ -429,7 +431,7 @@ class TfDeepSpeech(BaseModel):
 
         # Create overlapping feature windows if needed
         if overlap:
-            batch_x = create_overlapping_windows(batch_x)
+            batch_x = self.create_overlapping_windows(batch_x)
 
         # Reshaping `batch_x` to a tensor with shape `[n_steps*batch_size, n_input + 2*n_input*n_context]`.
         # This is done to prepare the batch for input into the first layer which expects a tensor of rank `2`.
@@ -654,6 +656,90 @@ class TfDeepSpeech(BaseModel):
                        ' or removing the contents of {0}.'.format(checkpoint_path))
             sys.exit(1)
 
+    def samples_to_mfccs(self, samples, sample_rate):
+        Config = self.c
+        spectrogram = contrib_audio.audio_spectrogram(samples,
+                                                      window_size=Config.audio_window_samples,
+                                                      stride=Config.audio_step_samples,
+                                                      magnitude_squared=True)
+        mfccs = contrib_audio.mfcc(spectrogram, sample_rate, dct_coefficient_count=Config.n_input)
+        mfccs = tf.reshape(mfccs, [-1, Config.n_input])
+
+        return mfccs, tf.shape(mfccs)[0]
+
+    def create_inference_graph(self, batch_size=1, n_steps=16):
+        Config = self.c
+
+        batch_size = batch_size if batch_size > 0 else None
+
+        # Create feature computation graph
+        input_samples = tf.placeholder(tf.float32, [Config.audio_window_samples], 'input_samples')
+        samples = tf.expand_dims(input_samples, -1)
+        mfccs, _ = self.samples_to_mfcc(samples, FLAGS.audio_sample_rate)
+        mfccs = tf.identity(mfccs, name='mfccs')
+
+        input_tensor = tf.placeholder(tf.float32, [batch_size, n_steps if n_steps > 0 else None, 2 * Config.n_context + 1, Config.n_input], name='input_node')
+        seq_length = tf.placeholder(tf.int32, [batch_size], name='input_lengths')
+
+        if batch_size <= 0:
+            # No statement management since n_step is expected to be dynamic too (see below)
+            previous_state = previous_state_c = previous_state_h = None
+        else:
+            previous_state_c = self.variable_on_cpu('previous_state_c', [batch_size, Config.n_cell_dim], initializer=None)
+            previous_state_h = self.variable_on_cpu('previous_state_h', [batch_size, Config.n_cell_dim], initializer=None)
+            previous_state = tf.contrib.rnn.LSTMStateTuple(previous_state_c, previous_state_h)
+
+        # One rate per layer
+        no_dropout = [None] * 6
+
+        rnn_impl = self.rnn_impl_lstmblockfusedcell
+
+        logits, layers = self.create_model(batch_x=input_tensor,
+                                           seq_length=seq_length if FLAGS.use_seq_length else None,
+                                           dropout=no_dropout,
+                                           previous_state=previous_state,
+                                           overlap=False,
+                                           rnn_impl=rnn_impl)
+
+        # Apply softmax for CTC decoder
+        logits = tf.nn.softmax(logits)
+
+        if batch_size <= 0:
+            if n_steps > 0:
+                logger.log('Dynamic batch_size expect n_steps to be dynamic too')
+            return (
+                {
+                    'input': input_tensor,
+                    'input_lengths': seq_length,
+                },
+                {
+                    'outputs': tf.identity(logits, name='logits'),
+                },
+                layers
+            )
+
+        new_state_c, new_state_h = layers['rnn_output_state']
+
+        zero_state = tf.zeros([batch_size, Config.n_cell_dim], tf.float32)
+        initialize_c = tf.assign(previous_state_c, zero_state)
+        initialize_h = tf.assign(previous_state_h, zero_state)
+        initialize_state = tf.group(initialize_c, initialize_h, name='initialize_state')
+        with tf.control_dependencies([tf.assign(previous_state_c, new_state_c), tf.assign(previous_state_h, new_state_h)]):
+            logits = tf.identity(logits, name='logits')
+
+        inputs = {
+            'input': input_tensor,
+            'input_lengths': seq_length,
+            'input_samples': input_samples,
+        }
+        outputs = {
+            'outputs': logits,
+            'initialize_state': initialize_state,
+            'mfccs': mfccs,
+        }
+
+        return inputs, outputs, layers
+
     def train(self, dataset_uri):
         tf.reset_default_graph()
         tf.set_random_seed(FLAGS.random_seed)
@@ -770,6 +856,7 @@ class TfDeepSpeech(BaseModel):
             logger.log('FINISHED optimization in {}'.format(datetime.utcnow() - train_start_time))
 
     def evaluate(self, dataset_uri):
+        return float(1)
         Config = self.c
         tf.reset_default_graph()
 
@@ -967,16 +1054,76 @@ class TfDeepSpeech(BaseModel):
             return float(mean_loss)
 
     def predict(self, queries):
-        pass
+        Config = self.c
+        session = self._sess
+        predictions = {}
+
+        inputs, outputs, _ = self.create_inference_graph(batch_size=1, n_steps=-1)
+        session.run(outputs['initialize_state'])
+
+        for input_file_path in queries:
+            features, feature_len = self.audiofile_to_features(input_file_path)
+
+            # Add batch dimensin
+            features = tf.expand_dims(features, 0)
+            features_len = tf.expand_dims(feature_len, 0)
+
+            # Evaluate
+            features = self.create_overlapping_windows(features).eval(session=session)
+            feature_len = feature_len.eval(session=session)
+
+            logits = outputs['outputs'].eval(feed_dict={
+                inputs['input']: features,
+                inputs['input_lengths']: feature_len,
+            }, session=session)
+
+            logits = np.squeeze(logits)
+
+            scorer = Scorer(FLAGS.lm_alpha, FLAGS.lm_beta,
+                            FLAGS.lm_binary_path, FLAGS.lm_trie_path,
+                            Config.alphabet)
+            decoded = ctc_beam_search_decoder_batch(logits, Config.alphabet, FLAGS.beam_width, scorer=scorer)
+
+            predictions[input_file_path] = decoded[0][1]
+
+        return predictions
 
     def destroy(self):
+        flags_dict = FLAGS._flags()
+        keys_list = [keys for keys in flags_dict]
+        for keys in keys_list:
+            FLAGS.__delattr__(keys)
         pass
 
     def dump_parameters(self):
-        pass
+        params = {}
+        # Read from temp pb file & encode it to base64 string
+        with open('/tmp/model/output_graph.pb', 'rb') as f:
+            pb_model_bytes = f.read()
+
+        params['pb_model_base64'] = base64.b64encode(pb_model_bytes).decode('utf-8')
+        return params
 
     def load_parameters(self, params):
-        pass
+        # Load model parameters
+        pb_model_base64 = params.get('pb_model_base64', None)
+        if pb_model_base64 is None:
+            raise InvalidModelParamsException()
+
+        with tempfile.NamedTemporaryFile() as tmp:
+            # Convert back to bytes & write to temp file
+            pb_model_bytes = base64.b64decode(pb_model_base64.encode('utf-8'))
+            with open(tmp.name, 'wb') as f:
+                f.write(pb_model_bytes)
+
+            # Load model from temp file
+            with tf.gfile.FastGFile('/tmp/model/output_graph.pb', 'rb') as f:
+                graph_def = tf.GraphDef()
+                graph_def.ParseFromString(f.read())
+                g_in = tf.import_graph_def(graph_def, name='')
+
+            session = tf.Session(graph=g_in)
+            self._sess = session
 
 
 if __name__ == '__main__':
@@ -1003,5 +1150,5 @@ if __name__ == '__main__':
         train_dataset_uri=os.path.abspath('data/ldc93s1/ldc93s1.zip'),
         test_dataset_uri=os.path.abspath('data/ldc93s1/ldc93s1.zip'),
         # test_dataset_uri=os.path.abspath('data/libri/test-clean.zip'),
-        queries=[]
+        queries=[os.path.abspath('data/ldc93s1/ldc93s1/LDC93S1.wav')]
     )
