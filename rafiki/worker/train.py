@@ -187,13 +187,13 @@ class TrainWorker(object):
 
     # Gets proposal of a set of knob values from advisor
     def _get_proposal_from_advisor(self, advisor_id):
-        res = self._get_client().generate_proposal(advisor_id)
+        res = self._get_client()._generate_proposal(advisor_id)
         knobs = res['knobs']
         return knobs
 
     # Feedback result of knobs to advisor
     def _feedback_to_advisor(self, advisor_id, knobs, score):
-        self._get_client().feedback_to_advisor(advisor_id, knobs, score)
+        self._get_client()._feedback_to_advisor(advisor_id, knobs, score)
 
     def _stop_sub_train_job(self):
         logger.warn('Stopping sub train job...')
@@ -210,14 +210,14 @@ class TrainWorker(object):
         knob_config_str = serialize_knob_config(knob_config)
 
         # Create advisor associated with worker
-        res = self._get_client().create_advisor(knob_config_str, advisor_id=self._service_id)
+        res = self._get_client()._create_advisor(knob_config_str, advisor_id=self._service_id)
         advisor_id = res['id']
         return advisor_id
 
     # Delete advisor
     def _delete_advisor(self, advisor_id):
         try:
-            self._get_client().delete_advisor(advisor_id)
+            self._get_client()._delete_advisor(advisor_id)
         except Exception:
             # Throw just a warning - not critical for advisor to be deleted
             logger.warning('Error while deleting advisor:')
