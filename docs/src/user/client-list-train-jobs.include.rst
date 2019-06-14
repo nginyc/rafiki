@@ -10,7 +10,7 @@ Example:
 
         [{'app': 'fashion_mnist_app',
         'app_version': 1,
-        'budget': {'MODEL_TRIAL_COUNT': 2},
+        'budget': {'MODEL_TRIAL_COUNT': 5},
         'datetime_started': 'Mon, 17 Dec 2018 07:08:05 GMT',
         'datetime_stopped': None,
         'id': 'ec4db479-b9b2-4289-8086-52794ffc71c8',

@@ -19,7 +19,7 @@ class TfFeedForward(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': FixedKnob(3),
+            'epochs': FixedKnob(2),
             'hidden_layer_count': IntegerKnob(1, 2),
             'hidden_layer_units': IntegerKnob(2, 128),
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),

@@ -3,8 +3,6 @@
 Supported Tasks
 ====================================================================
 
-.. contents:: Table of Contents
-
 Each task has an associated `Dataset Type`, `Query Format` and `Prediction Format`. 
 
 A task's `Dataset Type` specifies the format of each dataset file. 

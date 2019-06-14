@@ -13,5 +13,4 @@ User Guide
    creating-models
    tasks
    datasets
-   user-types
    installing-python

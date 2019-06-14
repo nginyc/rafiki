@@ -15,21 +15,21 @@ RUN pip install --upgrade pip
 ENV PYTHONUNBUFFERED 1
 
 ARG DOCKER_WORKDIR_PATH
-RUN mkdir $DOCKER_WORKDIR_PATH
+RUN mkdir -p $DOCKER_WORKDIR_PATH
 WORKDIR $DOCKER_WORKDIR_PATH
 ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 
 # Install python dependencies
-COPY rafiki/utils/requirements.txt utils/requirements.txt
-RUN pip install -r utils/requirements.txt
-COPY rafiki/db/requirements.txt db/requirements.txt
-RUN pip install -r db/requirements.txt
-COPY rafiki/model/requirements.txt model/requirements.txt
-RUN pip install -r model/requirements.txt
-COPY rafiki/container/requirements.txt container/requirements.txt
-RUN pip install -r container/requirements.txt
-COPY rafiki/admin/requirements.txt admin/requirements.txt
-RUN pip install -r admin/requirements.txt
+COPY rafiki/requirements.txt rafiki/requirements.txt
+RUN pip install -r rafiki/requirements.txt
+COPY rafiki/utils/requirements.txt rafiki/utils/requirements.txt
+RUN pip install -r rafiki/utils/requirements.txt
+COPY rafiki/db/requirements.txt rafiki/db/requirements.txt
+RUN pip install -r rafiki/db/requirements.txt
+COPY rafiki/container/requirements.txt rafiki/container/requirements.txt
+RUN pip install -r rafiki/container/requirements.txt
+COPY rafiki/admin/requirements.txt rafiki/admin/requirements.txt
+RUN pip install -r rafiki/admin/requirements.txt
 
 COPY rafiki/ rafiki/
 COPY scripts/ scripts/

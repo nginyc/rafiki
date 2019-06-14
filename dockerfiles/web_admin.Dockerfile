@@ -1,8 +1,7 @@
 FROM node:11.1-alpine
 
 ARG DOCKER_WORKDIR_PATH
-
-RUN mkdir $DOCKER_WORKDIR_PATH
+RUN mkdir -p $DOCKER_WORKDIR_PATH
 WORKDIR $DOCKER_WORKDIR_PATH
 
 COPY web/package.json web/package.json

@@ -10,7 +10,7 @@ import shutil
 from tqdm import tqdm
 import zipfile
 
-from rafiki.model import dataset_utils
+from examples.datasets.utils import download_dataset_from_url
 
 def load_sample_ptb(out_train_dataset_path='data/ptb_for_pos_tagging_train.zip',
                     out_val_dataset_path='data/ptb_for_pos_tagging_val.zip',
@@ -34,9 +34,11 @@ def load(dataset_url, out_train_dataset_path, out_val_dataset_path, out_meta_tsv
         :param str out_val_dataset_path: Path to save the output validation dataset file
         :param str out_meta_tsv_path: Path to save the output dataset metadata .TSV file
     '''
+    if all([os.path.exists(x) for x in [out_train_dataset_path, out_val_dataset_path, out_meta_tsv_path]]):
+        print('Dataset already loaded in local filesystem - skipping...')
+        return
 
-    print('Downloading files...')
-    dataset_path = dataset_utils.download_dataset_from_uri(dataset_url)
+    dataset_path = download_dataset_from_url(dataset_url)
 
     print('Loading dataset and writing to output dataset files...')
     _convert_dataset(dataset_path, out_meta_tsv_path, \

@@ -6,5 +6,5 @@
 
     ::
 
-        pip install -r ./rafiki/client/requirements.txt
+        pip install -r ./rafiki/requirements.txt
 

@@ -3,9 +3,6 @@
 Setup & Configuration
 ====================================================================
 
-.. contents:: Table of Contents
-
-
 .. _`quick-setup`:
 
 Quick Setup
@@ -103,9 +100,7 @@ Re-deploy Rafiki. Rafiki Admin and Rafiki Web Admin will be available at that IP
 over ports 3000 and 3001 (by default), assuming incoming connections to these ports are allowed.
 
 **Before you expose Rafiki to the public, 
-it is highly recommended to change the master passwords for superadmin (located in `./rafiki/config.py` as `SUPERADMIN_PASSWORD`)
-and the database (located in `.env.sh` as `POSTGRES_PASSWORD`)**
-
+it is highly recommended to change the master passwords for superadmin, server and the database (located in `.env.sh` as `POSTGRES_PASSWORD`, `APP_SECRET` & `SUPERADMIN_PASSWORD`)**
 
 Reading Rafiki's logs
 --------------------------------------------------------------------
