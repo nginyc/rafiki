@@ -63,11 +63,36 @@ class RafikiClient {
   }
 
   /* ***************************************
+   * Datasets
+   * ***************************************/
+
+  /*
+    Create datasets from local file
+  */
+  async createDataset(name,task,file,dataset_url) {
+    const formData = new FormData();
+      if (file !== undefined) {
+        formData.append('dataset',file)
+      } else {
+        formData.append("dataset_url", dataset_url)
+      }
+    formData.append("name", name)
+    formData.append("task", task)
+    const dataset = await this._postForm('/datasets', formData)
+    return dataset 
+  }
+
+  async getDatasets() {
+    const datasets = await this._get('/datasets')
+    return datasets
+  }
+
+  /* ***************************************
    * Train Jobs
    * ***************************************/
 
   /*
-    Lists all train jobs associated to an user on Rafiki.
+    Create a train jobs associated to an user on Rafiki.
   */
   async createTrainJob(json) {
     const data = await this._post('/train_jobs', json)
@@ -75,6 +100,9 @@ class RafikiClient {
     return trainJob;
   }
 
+  /*
+    Lists all train jobs associated to an user on Rafiki.
+  */
   async getTrainJobsByUser(userId) {
     const data = await this._get('/train_jobs', {
       'user_id': userId
@@ -233,6 +261,22 @@ class RafikiClient {
     
     const data = await this._parseResponse(res);
     return data;
+  }
+
+  /* this function is for form/file upload */
+  async _postForm(urlPath, formData, params = {}) {
+    const url = this._makeUrl(urlPath, params);
+    const headers =  this._getHeaders();
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...headers,
+      },
+      body: formData
+    });
+
+    const responseData = await this._parseResponse(res);
+    return formData;
   }
 
   async _get(urlPath, params = {}) {

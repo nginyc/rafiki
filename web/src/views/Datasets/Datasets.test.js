@@ -18,5 +18,4 @@ it('renders without crashing', () => {
 it('renders datasets message', () => {
     const app = render(Wrapper);
     app.getAllByText("Dataset",{exact:false})
-    expect(app.container).toMatchSnapshot()
 });

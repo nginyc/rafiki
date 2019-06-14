@@ -13,7 +13,7 @@ import Trials from "./views/Trials/Trials";
 import TrialsDetail from "./views/Trials/TrialsDetail";
 
 import Datasets from "./views/Datasets/Datasets"
-import NewDatasets from "./views/Datasets/NewDatasets";
+import NewDataset from "./views/Datasets/NewDataset";
 
 // core components/views for RTL layout
 
@@ -23,7 +23,7 @@ const dashboardRoutes = [
     name: "New Datasets",
     rtlName: "قائمة الجدول",
     icon: "playlist_add",
-    component: NewDatasets,
+    component: NewDataset,
     layout: "/admin"
   }, 
  /* {

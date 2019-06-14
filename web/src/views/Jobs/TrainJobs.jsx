@@ -65,7 +65,6 @@ class TrainJobs extends React.Component {
 
   async handleClickButton(event) {
     event.preventDefault();
-    debugger;
     const { appUtils: { rafikiClient, showError } } = this.props;
 
     try {
@@ -80,6 +79,7 @@ class TrainJobs extends React.Component {
         "models": this.state.models
       }
       await rafikiClient.createTrainJob(json_params)
+      alert("Create Train Job succeed")
       this.setState({ "submit_status":"succeed" })
     } catch (error) {
       this.setState({ "submit_status": "failed" })
@@ -119,7 +119,7 @@ class TrainJobs extends React.Component {
           <Card>
             <CardHeader color="primary">
               <h4 className={classes.cardTitleWhite}><Icon>add_photo_alternate</Icon>New Train Jobs</h4>
-              <p className={classes.cardCategoryWhite}>Image Claasification</p>
+              <p className={classes.cardCategoryWhite}>Image Classification</p>
             </CardHeader>
             <CardBody>
               <GridContainer justify="center" alignContent="center">

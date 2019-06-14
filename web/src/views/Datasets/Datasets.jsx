@@ -5,13 +5,14 @@ import withStyles from "@material-ui/core/styles/withStyles";
 import Icon from "@material-ui/core/Icon";
 import Fab from '@material-ui/core/Fab';
 import Popover from '@material-ui/core/Popover';
+
 // core components
 import GridItem from "components/Grid/GridItem.jsx";
 import GridContainer from "components/Grid/GridContainer.jsx";
-import Table from "components/Table/Table.jsx";
 import Card from "components/Card/Card.jsx";
 import CardHeader from "components/Card/CardHeader.jsx";
 import CardBody from "components/Card/CardBody.jsx";
+import TableDatasets from "../../components/Table/TableDatasets";
 // routes
 
 const styles = {
@@ -73,8 +74,10 @@ const styles = {
 };
 
 class Dataset extends React.Component {
+
   state = {
     anchorEl: null,
+    datasets: []
   };
 
   handleClick = event => {
@@ -89,13 +92,24 @@ class Dataset extends React.Component {
     });
   };
 
+  async componentDidMount() {
+    const { appUtils: { rafikiClient, showError } } = this.props;
+    try {
+      const datasets = await rafikiClient.getDatasets()
+      this.setState({ datasets });
+    } catch (error) {
+      showError(error, 'Failed to retrieve datasets');
+    }
+  }
+
   render() {
     const classes = this.props.classes
+    const { appUtils } = this.props
     const { anchorEl } = this.state;
     const open = Boolean(anchorEl);
 
     return (
-            <GridContainer>
+            <GridContainer justify="center" alignContent="center">
               <GridItem xs={12} sm={12} md={12}>
                 <Card>
                   <CardHeader color="info">
@@ -121,10 +135,11 @@ class Dataset extends React.Component {
                   </CardHeader>
                   <CardBody>
                     <Link to="/admin/datasets/details">
-                    <Table
+                    <TableDatasets
                       tableHeaderColor="primary"
-                      tableHead={["#", "Name", "ID", "Task", "Total items", "Last Updated"]}
-                      tableData={[]}
+                      tableHead={["ID","Name","Task", "Size", "Uploaded At"]}
+                      tableData={this.state.datasets}
+                      appUtils={appUtils}
                     />
                     </Link>
                   </CardBody>

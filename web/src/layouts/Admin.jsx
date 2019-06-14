@@ -65,7 +65,6 @@ class Dashboard extends React.Component {
   };
 
   onLogout = () => {
-    console.log(this.props)
     const { appUtils } = this.props; /* appUtils : { rafikiClient, appNavigator }  */
     appUtils.rafikiClient.logout();
     appUtils.appNavigator.goTo(AppRoute.LOGIN);
