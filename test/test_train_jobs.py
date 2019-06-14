@@ -104,6 +104,28 @@ class TestTrainJobs():
         assert train_job['app_version'] == 2 # 2nd version of the train job
 
 
+    def test_multiple_app_devs_use_same_app(self, app_dev_create_train_job_and_waited):
+        (app_dev, app, task, *args) = app_dev_create_train_job_and_waited
+        (_, _, model_id, train_dataset_uri, val_dataset_uri, budget) = make_train_job_info(task=task) # Get another set of job info
+        app_dev2 = make_app_dev()
+        
+        # App dev 2 create another train job with same app
+        train_job = app_dev2.create_train_job(app, task, train_dataset_uri, val_dataset_uri, budget, models=[model_id])
+        assert train_job['app'] == app
+        assert train_job['app_version'] == 1 # Should not increment
+
+
+    def test_app_dev_cant_view_others_job(self, app_dev_create_train_job_and_waited):
+        (app_dev, app, task, *args) = app_dev_create_train_job_and_waited
+        app_dev: Client
+        app_dev_user = app_dev.get_current_user()
+        app_dev_id = app_dev_user['id']
+        app_dev2 = make_app_dev()
+
+        with pytest.raises(Exception):
+            app_dev2.get_train_jobs_by_user(app_dev_id)
+
+
     def test_app_dev_stop_train_job(self):
         (task, app, model_id, train_dataset_uri, val_dataset_uri, budget) = make_train_job_info()
         app_dev = make_app_dev()

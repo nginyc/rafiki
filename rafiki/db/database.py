@@ -85,9 +85,10 @@ class Database(object):
         self._session.add(train_job)
         return train_job
 
-    def get_train_jobs_of_app(self, app):
+    def get_train_jobs_by_app(self, user_id, app):
         train_jobs = self._session.query(TrainJob) \
             .filter(TrainJob.app == app) \
+            .filter(TrainJob.user_id == user_id) \
             .order_by(TrainJob.app_version.desc()).all()
 
         return train_jobs
@@ -108,9 +109,10 @@ class Database(object):
         return train_jobs
 
     # Returns for the latest app version unless specified
-    def get_train_job_by_app_version(self, app, app_version=-1):
+    def get_train_job_by_app_version(self, user_id, app, app_version=-1):
         # pylint: disable=E1111
         query = self._session.query(TrainJob) \
+            .filter(TrainJob.user_id == user_id) \
             .filter(TrainJob.app == app)
 
         if app_version == -1:
@@ -240,9 +242,10 @@ class Database(object):
         self._session.add(inference_job)
         return inference_job
 
-    def get_inference_jobs_of_app(self, app):
+    def get_inference_jobs_of_app(self, user_id, app):
         inference_jobs = self._session.query(InferenceJob) \
             .join(TrainJob, InferenceJob.train_job_id == TrainJob.id) \
+            .filter(TrainJob.user_id == user_id) \
             .filter(TrainJob.app == app) \
             .order_by(InferenceJob.datetime_started.desc()).all()
 

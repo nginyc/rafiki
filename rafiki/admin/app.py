@@ -101,22 +101,28 @@ def create_train_job(auth):
 
 @app.route('/train_jobs', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_train_jobs(auth):
+def get_train_jobs_by_user(auth):
     admin = get_admin()
     params = get_request_params()
 
-    if 'user_id' in params:
-        with admin:
-            return jsonify(admin.get_train_jobs_by_user(params['user_id']))
+    assert 'user_id' in params
+
+    # Non-admins can only get their own jobs
+    if auth['user_type'] in [UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER] \
+            and auth['user_id'] != params['user_id']:
+        raise UnauthorizedError()
+
+    with admin:
+        return jsonify(admin.get_train_jobs_by_user(**params))
 
 @app.route('/train_jobs/<app>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_train_jobs_of_app(auth, app):
+def get_train_jobs_by_app(auth, app):
     admin = get_admin()
     params = get_request_params()
 
     with admin:
-        return jsonify(admin.get_train_jobs_of_app(app, **params))
+        return jsonify(admin.get_train_jobs_by_app(auth['user_id'], app, **params))
 
 @app.route('/train_jobs/<app>/<app_version>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
@@ -125,7 +131,7 @@ def get_train_job(auth, app, app_version):
     params = get_request_params()
 
     with admin:
-        return jsonify(admin.get_train_job(app, app_version=int(app_version), **params))
+        return jsonify(admin.get_train_job(auth['user_id'], app, app_version=int(app_version), **params))
 
 @app.route('/train_jobs/<app>/<app_version>/stop', methods=['POST'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
@@ -134,7 +140,7 @@ def stop_train_job(auth, app, app_version):
     params = get_request_params()
 
     with admin:
-        return jsonify(admin.stop_train_job(app, app_version=int(app_version), **params))
+        return jsonify(admin.stop_train_job(auth['user_id'], app, app_version=int(app_version), **params))
 
 @app.route('/train_jobs/<app>/<app_version>/trials', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
@@ -150,20 +156,12 @@ def get_trials_of_train_job(auth, app, app_version):
             params['max_count'] = int(params['max_count'])
 
         with admin:
-            return jsonify(admin.get_best_trials_of_train_job(
-                app, 
-                app_version=int(app_version),
-                **params
-            ))
+            return jsonify(admin.get_best_trials_of_train_job(auth['user_id'], app, app_version=int(app_version), **params ))
     
     # Return all trials by train job
     else:
         with admin:
-            return jsonify(admin.get_trials_of_train_job(
-                app, 
-                app_version=int(app_version),
-                **params)
-            )
+            return jsonify(admin.get_trials_of_train_job(auth['user_id'], app, app_version=int(app_version), **params ))
 
 ####################################
 # Trials
@@ -206,7 +204,7 @@ def get_trial(auth, trial_id):
 
 @app.route('/inference_jobs', methods=['POST'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def create_inference_jobs(auth):
+def create_inference_job(auth):
     admin = get_admin()
     params = get_request_params()
 
@@ -218,13 +216,19 @@ def create_inference_jobs(auth):
 
 @app.route('/inference_jobs', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_inference_jobs(auth):
+def get_inference_jobs_by_user(auth):
     admin = get_admin()
     params = get_request_params()
 
-    if 'user_id' in params:
-        with admin:
-            return jsonify(admin.get_inference_jobs_by_user(params['user_id']))
+    assert 'user_id' in params
+
+    # Non-admins can only get their own jobs
+    if auth['user_type'] in [UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER] \
+            and auth['user_id'] != params['user_id']:
+        raise UnauthorizedError()
+
+    with admin:
+        return jsonify(admin.get_inference_jobs_by_user(**params))
 
 @app.route('/inference_jobs/<app>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
@@ -233,7 +237,7 @@ def get_inference_jobs_of_app(auth, app):
     params = get_request_params()
 
     with admin:
-        return jsonify(admin.get_inference_jobs_of_app(app, **params))
+        return jsonify(admin.get_inference_jobs_of_app(auth['user_id'], app, **params))
 
 @app.route('/inference_jobs/<app>/<app_version>', methods=['GET'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
@@ -242,7 +246,7 @@ def get_running_inference_job(auth, app, app_version):
     params = get_request_params()
 
     with admin:
-        return jsonify(admin.get_running_inference_job(app, app_version=int(app_version), **params))
+        return jsonify(admin.get_running_inference_job(auth['user_id'], app, app_version=int(app_version), **params))
 
 @app.route('/inference_jobs/<app>/<app_version>/stop', methods=['POST'])
 @auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
@@ -251,7 +255,7 @@ def stop_inference_job(auth, app, app_version=-1):
     params = get_request_params()
 
     with admin:
-        return jsonify(admin.stop_inference_job(app, app_version=int(app_version), **params))
+        return jsonify(admin.stop_inference_job(auth['user_id'], app, app_version=int(app_version), **params))
 
 ####################################
 # Models

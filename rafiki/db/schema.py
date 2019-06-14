@@ -82,6 +82,7 @@ class TrainJob(Base):
     status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     datetime_stopped = Column(DateTime, default=None)
+    __table_args__ = (UniqueConstraint('app', 'app_version', 'user_id'),)
 
 class SubTrainJob(Base):
     __tablename__ = 'sub_train_job'

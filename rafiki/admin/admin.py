@@ -123,7 +123,7 @@ class Admin(object):
             raise NoModelsForTrainJobError()
 
         # Compute auto-incremented app version
-        train_jobs = self._db.get_train_jobs_of_app(app)
+        train_jobs = self._db.get_train_jobs_by_app(user_id, app)
         app_version = max([x.app_version for x in train_jobs], default=0) + 1
 
         # Get models available to user
@@ -132,7 +132,7 @@ class Admin(object):
         # Ensure all specified models are available
         for model_id in model_ids:
             if model_id not in avail_model_ids:
-                raise InvalidModelError('No model of ID "{}" is available'.format(model_id))
+                raise InvalidModelError(f'No model of ID "{model_id}" is available for task "{task}"')
 
         train_job = self._db.create_train_job(
             user_id=user_id,
@@ -160,8 +160,8 @@ class Admin(object):
             'app_version': train_job.app_version
         }
 
-    def stop_train_job(self, app, app_version=-1):
-        train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+    def stop_train_job(self, user_id, app, app_version=-1):
+        train_job = self._db.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidTrainJobError()
 
@@ -173,8 +173,8 @@ class Admin(object):
             'app_version': train_job.app_version
         }
             
-    def get_train_job(self, app, app_version=-1):
-        train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+    def get_train_job(self, user_id, app, app_version=-1):
+        train_job = self._db.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidTrainJobError()
 
@@ -207,8 +207,8 @@ class Admin(object):
             ]
         }
 
-    def get_train_jobs_of_app(self, app):
-        train_jobs = self._db.get_train_jobs_of_app(app)
+    def get_train_jobs_by_app(self, user_id, app):
+        train_jobs = self._db.get_train_jobs_by_app(user_id, app)
         return [
             {
                 'id': x.id,
@@ -225,8 +225,8 @@ class Admin(object):
             for x in train_jobs
         ]
 
-    def get_best_trials_of_train_job(self, app, app_version=-1, max_count=2):
-        train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+    def get_best_trials_of_train_job(self, user_id, app, app_version=-1, max_count=2):
+        train_job = self._db.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidTrainJobError()
 
@@ -263,8 +263,8 @@ class Admin(object):
             for x in train_jobs
         ]
 
-    def get_trials_of_train_job(self, app, app_version=-1):
-        train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+    def get_trials_of_train_job(self, user_id, app, app_version=-1):
+        train_job = self._db.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidTrainJobError()
 
@@ -320,7 +320,6 @@ class Admin(object):
             'datetime_stopped': trial.datetime_stopped,
             'model_name': model.name,
             'score': trial.score,
-            'knobs': trial.knobs,
             'worker_id': trial.worker_id
         }
 
@@ -354,7 +353,7 @@ class Admin(object):
     ####################################
 
     def create_inference_job(self, user_id, app, app_version):
-        train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+        train_job = self._db.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidTrainJobError('Have you started a train job for this app?')
 
@@ -383,8 +382,8 @@ class Admin(object):
             'predictor_host': self._get_service_host(predictor_service)
         }
 
-    def stop_inference_job(self, app, app_version=-1):
-        train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+    def stop_inference_job(self, user_id, app, app_version=-1):
+        train_job = self._db.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidRunningInferenceJobError()
 
@@ -400,8 +399,8 @@ class Admin(object):
             'app_version': train_job.app_version
         }
 
-    def get_running_inference_job(self, app, app_version=-1):
-        train_job = self._db.get_train_job_by_app_version(app, app_version=app_version)
+    def get_running_inference_job(self, user_id, app, app_version=-1):
+        train_job = self._db.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidRunningInferenceJobError()
 
@@ -444,8 +443,8 @@ class Admin(object):
             ]
         }
 
-    def get_inference_jobs_of_app(self, app):
-        inference_jobs = self._db.get_inference_jobs_of_app(app)
+    def get_inference_jobs_of_app(self, user_id, app):
+        inference_jobs = self._db.get_inference_jobs_of_app(user_id, app)
         train_jobs = [self._db.get_train_job(x.train_job_id) for x in inference_jobs]
         predictor_services = [self._db.get_service(x.predictor_service_id) for x in inference_jobs]
         predictor_hosts = [self._get_service_host(x) for x in predictor_services]

@@ -316,9 +316,10 @@ class Client(object):
     def create_train_job(self, app, task, train_dataset_uri, test_dataset_uri, budget, models=None):
         '''
         Creates and starts a train job on Rafiki. 
-        A train job is uniquely identified by its associated app and the app version (returned in output).
+
+        A train job is uniquely identified by user, its associated app, and the app version (returned in output).
         
-        Only admins, model developers and app developers can manage train jobs.
+        Only admins, model developers & app developers can manage train jobs. Model developers & app developers can only manage their own train jobs.
 
         :param str app: Name of the app associated with the train job
         :param str task: Task associated with the train job, 
@@ -367,7 +368,7 @@ class Client(object):
 
     def get_train_jobs_by_user(self, user_id):
         '''
-        Lists all train jobs associated to an user on Rafiki.
+        Lists all of user's train jobs on Rafiki.
 
         :param str user_id: ID of the user
         :returns: Details of train jobs as list of dictionaries
@@ -380,7 +381,7 @@ class Client(object):
     
     def get_train_jobs_of_app(self, app):
         '''
-        Lists all train jobs associated to an app on Rafiki.
+        Lists all of current user's train jobs associated to the app name on Rafiki.
 
         :param str app: Name of the app
         :returns: Details of train jobs as list of dictionaries
@@ -391,7 +392,7 @@ class Client(object):
 
     def get_train_job(self, app, app_version=-1):
         '''
-        Retrieves details of the train job identified by an app and an app version, 
+        Retrieves details of the current user's train job identified by an app and an app version, 
         including workers' details.
 
         :param str app: Name of the app
@@ -404,7 +405,7 @@ class Client(object):
 
     def get_best_trials_of_train_job(self, app, app_version=-1, max_count=2):
         '''
-        Lists the best scoring trials of the train job identified by an app and an app version,
+        Lists the best scoring trials of the current user's train job identified by an app and an app version,
         ordered by descending score.
 
         :param str app: Name of the app
@@ -421,7 +422,7 @@ class Client(object):
 
     def get_trials_of_train_job(self, app, app_version=-1):
         '''
-        Lists all trials of the train job identified by an app and an app version,
+        Lists all trials of the current user's train job identified by an app and an app version,
         ordered by when the trial started.
 
         :param str app: Name of the app
@@ -434,7 +435,7 @@ class Client(object):
 
     def stop_train_job(self, app, app_version=-1):
         '''
-        Prematurely stops the train job identified by an app and an app version.
+        Prematurely stops the current user's train job identified by an app and an app version.
         Otherwise, the train job should stop by itself when its budget is reached.
 
         :param str app: Name of the app
@@ -516,7 +517,7 @@ class Client(object):
 
         In this method's response, `predictor_host` is this inference job's predictor's host. 
 
-        Only admins & app developers can manage inference jobs.
+        Only admins, model developers & app developers can manage inference jobs. Model developers & app developers can only manage their own inference jobs.
 
         :param str app: Name of the app identifying the train job to use
         :param str app_version: Version of the app identifying the train job to use
@@ -531,7 +532,7 @@ class Client(object):
 
     def get_inference_jobs_by_user(self, user_id):
         '''
-        Lists all inference jobs associated to an user on Rafiki.
+        Lists all of user's inference jobs on Rafiki.
 
         :param str user_id: ID of the user
         :returns: Details of inference jobs as list of dictionaries
