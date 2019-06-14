@@ -10,6 +10,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# PIP cache
+.cache/
+
 # MacOS
 .DS_Store
 
