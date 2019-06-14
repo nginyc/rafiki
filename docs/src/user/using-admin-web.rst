@@ -4,8 +4,6 @@
 Using Rafiki's Admin Web
 ====================================================================
 
-.. contents:: Table of Contents
-
 Rafiki Admin Web is accessible at ``<rafiki_host>:<admin_web_port>`` (e.g. ``127.0.0.1:3001`` by default).
 
 

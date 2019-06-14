@@ -1,17 +1,18 @@
 from pprint import pprint
 import time
 import requests
+import argparse
 import os
 
 from rafiki.client import Client
-from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
+from rafiki.config import SUPERADMIN_EMAIL
 from rafiki.constants import TaskType, BudgetType, UserType, ModelDependency, ModelAccessRight
 from examples.scripts.quickstart import get_predictor_host, \
     wait_until_train_job_has_stopped, make_predictions,  gen_id
 
 from examples.datasets.pos_tagging.load_ptb_format import load_sample_ptb
 
-def run_pos_tagging(client, train_dataset_path, val_dataset_path, enable_gpu):
+def run_pos_tagging(client, train_dataset_path, val_dataset_path, gpus):
     task = TaskType.POS_TAGGING
 
     # Randomly generate app & model names to avoid naming conflicts
@@ -37,8 +38,8 @@ def run_pos_tagging(client, train_dataset_path, val_dataset_path, enable_gpu):
 
     print('Creating train job for app "{}" on Rafiki...'.format(app))
     budget = {
-        BudgetType.MODEL_TRIAL_COUNT: 2,
-        BudgetType.ENABLE_GPU: enable_gpu
+        BudgetType.MODEL_TRIAL_COUNT: 5,
+        BudgetType.GPU_COUNT: gpus
     }
     train_job = client.create_train_job(app, task, train_dataset['id'], val_dataset['id'], 
                                         budget, models=model_ids)
@@ -72,21 +73,17 @@ def run_pos_tagging(client, train_dataset_path, val_dataset_path, enable_gpu):
     pprint(client.stop_inference_job(app))
 
 if __name__ == '__main__':
-    rafiki_host = os.environ.get('RAFIKI_HOST', 'localhost')
-    admin_port = int(os.environ.get('ADMIN_EXT_PORT', 3000))
-    user_email = os.environ.get('USER_EMAIL', SUPERADMIN_EMAIL)
-    user_password = os.environ.get('USER_PASSWORD', SUPERADMIN_PASSWORD)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
+    parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
+    parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
+    (args, _) = parser.parse_known_args()
     out_train_dataset_path = 'data/ptb_for_pos_tagging_train.zip'
     out_val_dataset_path = 'data/ptb_for_pos_tagging_val.zip'
 
-    # Load dataset
-    load_sample_ptb(out_train_dataset_path, out_val_dataset_path)
-
     # Initialize client
-    client = Client(admin_host=rafiki_host, admin_port=admin_port)
-    client.login(email=user_email, password=user_password)
-    enable_gpu = int(os.environ.get('ENABLE_GPU', 0))
-
-    # Run training & inference
-    run_pos_tagging(client, out_train_dataset_path, out_val_dataset_path, enable_gpu)
-            
+    client = Client()
+    client.login(email=args.email, password=args.password)
+    
+    # Run quickstart
+    run_pos_tagging(client, out_train_dataset_path, out_val_dataset_path, args.gpus)

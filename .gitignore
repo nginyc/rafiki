@@ -10,12 +10,15 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# PIP cache
+.cache/
+
 # MacOS
 .DS_Store
 
 # Sphinx documentation
 .doctrees/
-docs/**/
+docs/*
 !docs/src
 
 # Datasets

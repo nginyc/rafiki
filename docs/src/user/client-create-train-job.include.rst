@@ -13,7 +13,7 @@ Example:
             task='IMAGE_CLASSIFICATION',
             train_dataset_id='ecf87d2f-6893-4e4b-8ed9-1d9454af9763',
             val_dataset_id='7e9a2f8a-c61d-4365-ae4a-601e90892b88',
-            budget={ 'MODEL_TRIAL_COUNT': 2 }
+            budget={ 'MODEL_TRIAL_COUNT': 5 }
         )
 
     Output:
