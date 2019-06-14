@@ -1,0 +1,357 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Quick Start (Model Developers) &mdash; Rafiki  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Quick Start (Application Developers)" href="quickstart-app-developers.html" />
+    <link rel="prev" title="Quick Start" href="quickstart.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> Rafiki
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">User Guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Quick Start (Model Developers)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#installing-the-client">Installing the client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#initializing-the-client">Initializing the client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#creating-models">Creating models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#listing-available-models-by-task">Listing available models by task</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#deleting-a-model">Deleting a model</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html">Quick Start (Application Developers)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html">Quick Start (Application Users)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html">Quick Start (Admins)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using-admin-web.html">Using Rafiki’s Admin Web</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-models.html">Creating Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tasks.html">Supported Tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datasets.html">Supported Dataset Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-types.html">Users of Rafiki</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installing-python.html">Installing Python</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dev/index.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../python/index.html">Python Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Rafiki</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">User Guide</a> &raquo;</li>
+        
+      <li>Quick Start (Model Developers)</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../_sources/src/user/quickstart-model-developers.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="quick-start-model-developers">
+<span id="quickstart-model-developers"></span><h1>Quick Start (Model Developers)<a class="headerlink" href="#quick-start-model-developers" title="Permalink to this headline">¶</a></h1>
+<p>As a Model Developer, you can manage models and manage train &amp; inference jobs on Rafiki.</p>
+<p>This quickstart only highlights the key methods available to manage models.
+To learn about how to manage train &amp; inference jobs, go to <a class="reference internal" href="quickstart-app-developers.html#quickstart-app-developers"><span class="std std-ref">Quick Start (Application Developers)</span></a>.
+To learn more about what you can do on Rafiki, explore the methods of <a class="reference internal" href="../python/rafiki.client.Client.html#rafiki.client.Client" title="rafiki.client.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.client.Client</span></code></a>.</p>
+<p>We assume that you have access to a running instance of <em>Rafiki Admin</em> at <code class="docutils literal notranslate"><span class="pre">&lt;rafiki_host&gt;:&lt;admin_port&gt;</span></code>
+and <em>Rafiki Admin Web</em> at <code class="docutils literal notranslate"><span class="pre">&lt;rafiki_host&gt;:&lt;admin_web_port&gt;</span></code>.</p>
+<div class="section" id="installing-the-client">
+<h2>Installing the client<a class="headerlink" href="#installing-the-client" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">Install Python 3.6 such that the <code class="docutils literal notranslate"><span class="pre">python</span></code> and <code class="docutils literal notranslate"><span class="pre">pip</span></code> point to the correct installation of Python (see <a class="reference internal" href="installing-python.html#installing-python"><span class="std std-ref">Installing Python</span></a>)</p>
+</li>
+<li><p class="first">Clone the project at <a class="reference external" href="https://github.com/nginyc/rafiki">https://github.com/nginyc/rafiki</a> (e.g. with <a class="reference external" href="https://git-scm.com/downloads">Git</a>)</p>
+</li>
+<li><p class="first">Within the project’s root folder, install Rafiki Client’s dependencies by running:</p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="o">./</span><span class="n">rafiki</span><span class="o">/</span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ol>
+</div>
+<div class="section" id="initializing-the-client">
+<h2>Initializing the client<a class="headerlink" href="#initializing-the-client" title="Permalink to this headline">¶</a></h2>
+<p>Example:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">rafiki.client</span> <span class="kn">import</span> <span class="n">Client</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">admin_host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">admin_port</span><span class="o">=</span><span class="mi">3000</span><span class="p">)</span>
+<span class="n">client</span><span class="o">.</span><span class="n">login</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;model_developer@rafiki&#39;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;rafiki&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div></blockquote>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../python/rafiki.client.Client.html#rafiki.client.Client.login" title="rafiki.client.Client.login"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.login()</span></code></a></p>
+</div>
+</div>
+<div class="section" id="creating-models">
+<h2>Creating models<a class="headerlink" href="#creating-models" title="Permalink to this headline">¶</a></h2>
+<p>To create a model, you will need to submit a model class that conforms to the specification
+by <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.BaseModel" title="rafiki.model.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.BaseModel</span></code></a>, written in a <cite>single</cite> Python file.
+The model’s implementation should conform to a specific task (see <a class="reference internal" href="tasks.html#tasks"><span class="std std-ref">Supported Tasks</span></a>).</p>
+<p>Refer to the parameters of <a class="reference internal" href="../python/rafiki.client.Client.html#rafiki.client.Client.create_model" title="rafiki.client.Client.create_model"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_model()</span></code></a> for configuring how your model runs on Rafiki,
+and refer to <a class="reference internal" href="creating-models.html#creating-models"><span class="std std-ref">Creating Models</span></a> to understand more about how to write &amp; test models for Rafiki.</p>
+<p>Examples:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">create_model</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;TfFeedForward&#39;</span><span class="p">,</span>
+    <span class="n">task</span><span class="o">=</span><span class="s1">&#39;IMAGE_CLASSIFICATION&#39;</span><span class="p">,</span>
+    <span class="n">model_file_path</span><span class="o">=</span><span class="s1">&#39;examples/models/image_classification/TfFeedForward.py&#39;</span><span class="p">,</span>
+    <span class="n">model_class</span><span class="o">=</span><span class="s1">&#39;TfFeedForward&#39;</span><span class="p">,</span>
+    <span class="n">dependencies</span><span class="o">=</span><span class="p">{</span> <span class="s1">&#39;tensorflow&#39;</span><span class="p">:</span> <span class="s1">&#39;1.12.0&#39;</span> <span class="p">}</span>
+<span class="p">)</span>
+
+<span class="n">client</span><span class="o">.</span><span class="n">create_model</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;SkDt&#39;</span><span class="p">,</span>
+    <span class="n">task</span><span class="o">=</span><span class="s1">&#39;IMAGE_CLASSIFICATION&#39;</span><span class="p">,</span>
+    <span class="n">model_file_path</span><span class="o">=</span><span class="s1">&#39;examples/models/image_classification/SkDt.py&#39;</span><span class="p">,</span>
+    <span class="n">model_class</span><span class="o">=</span><span class="s1">&#39;SkDt&#39;</span><span class="p">,</span>
+    <span class="n">dependencies</span><span class="o">=</span><span class="p">{</span> <span class="s1">&#39;scikit-learn&#39;</span><span class="p">:</span> <span class="s1">&#39;0.20.0&#39;</span> <span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div></blockquote>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../python/rafiki.client.Client.html#rafiki.client.Client.create_model" title="rafiki.client.Client.create_model"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_model()</span></code></a></p>
+</div>
+</div>
+<div class="section" id="listing-available-models-by-task">
+<h2>Listing available models by task<a class="headerlink" href="#listing-available-models-by-task" title="Permalink to this headline">¶</a></h2>
+<p>Example:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">get_available_models</span><span class="p">(</span><span class="n">task</span><span class="o">=</span><span class="s1">&#39;IMAGE_CLASSIFICATION&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Output:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;access_right&#39;</span><span class="p">:</span> <span class="s1">&#39;PRIVATE&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;datetime_created&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Dec 2018 07:06:03 GMT&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;dependencies&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;tensorflow&#39;</span><span class="p">:</span> <span class="s1">&#39;1.12.0&#39;</span><span class="p">},</span>
+ <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;45df3f34-53d7-4fb8-a7c2-55391ea10030&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TfFeedForward&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="s1">&#39;IMAGE_CLASSIFICATION&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;user_id&#39;</span><span class="p">:</span> <span class="s1">&#39;fb5671f1-c673-40e7-b53a-9208eb1ccc50&#39;</span><span class="p">},</span>
+ <span class="p">{</span><span class="s1">&#39;access_right&#39;</span><span class="p">:</span> <span class="s1">&#39;PRIVATE&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;datetime_created&#39;</span><span class="p">:</span> <span class="s1">&#39;Mon, 17 Dec 2018 07:06:03 GMT&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;dependencies&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;scikit-learn&#39;</span><span class="p">:</span> <span class="s1">&#39;0.20.0&#39;</span><span class="p">},</span>
+ <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;d0ea96ce-478b-4167-8a84-eb36ae631235&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;SkDt&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="s1">&#39;IMAGE_CLASSIFICATION&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;user_id&#39;</span><span class="p">:</span> <span class="s1">&#39;fb5671f1-c673-40e7-b53a-9208eb1ccc50&#39;</span><span class="p">}]</span>
+</pre></div>
+</div>
+</div></blockquote>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../python/rafiki.client.Client.html#rafiki.client.Client.get_available_models" title="rafiki.client.Client.get_available_models"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_available_models()</span></code></a></p>
+</div>
+</div>
+<div class="section" id="deleting-a-model">
+<h2>Deleting a model<a class="headerlink" href="#deleting-a-model" title="Permalink to this headline">¶</a></h2>
+<p>Example:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">delete_model</span><span class="p">(</span><span class="s1">&#39;fb5671f1-c673-40e7-b53a-9208eb1ccc50&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div></blockquote>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../python/rafiki.client.Client.html#rafiki.client.Client.delete_model" title="rafiki.client.Client.delete_model"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.delete_model()</span></code></a></p>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="quickstart-app-developers.html" class="btn btn-neutral float-right" title="Quick Start (Application Developers)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="quickstart.html" class="btn btn-neutral" title="Quick Start" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
