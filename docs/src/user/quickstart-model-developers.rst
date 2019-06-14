@@ -3,8 +3,6 @@
 Quick Start (Model Developers)
 ====================================================================
 
-.. contents:: Table of Contents
-
 As a Model Developer, you can manage models and manage train & inference jobs on Rafiki.
 
 This quickstart only highlights the key methods available to manage models.
