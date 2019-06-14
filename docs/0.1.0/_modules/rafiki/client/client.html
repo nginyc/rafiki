@@ -317,7 +317,7 @@
 <span class="sd">        :param str name: Name of the model, which must be unique across all models added by the current user </span>
 <span class="sd">        :param str task: Task associated with the model, where the model must adhere to the specification of the task</span>
 <span class="sd">        :param str model_file_path: Path to a single Python file that contains the definition for the model class</span>
-<span class="sd">        :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`</span>
+<span class="sd">        :param str model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`</span>
 <span class="sd">        :param dependencies: List of dependencies &amp; their versions</span>
 <span class="sd">        :type dependencies: dict[str, str]</span>
 <span class="sd">        :param access_right: Model access right</span>
@@ -337,7 +337,7 @@
 <span class="sd">        ``&lt;dependency_name&gt;`` corresponds to the name of the Python Package Index (PyPI) package (e.g. ``tensorflow``)</span>
 <span class="sd">        and ``&lt;dependency_version&gt;`` corresponds to the version of the PyPI package (e.g. ``1.12.0``). These dependencies </span>
 <span class="sd">        will be lazily installed on top of the worker&#39;s Docker image before the submitted model&#39;s code is executed.</span>
-<span class="sd">        If the model is to be run on GPU, Rafiki would map dependencies to their GPU-supported versions, if required. </span>
+<span class="sd">        If the model is to be run on GPU, Rafiki would map dependencies to their GPU-supported versions, if supported. </span>
 <span class="sd">        For example, ``{ &#39;tensorflow&#39;: &#39;1.12.0&#39; }`` will be installed as ``{ &#39;tensorflow-gpu&#39;: &#39;1.12.0&#39; }``.</span>
 <span class="sd">        Rafiki could also parse specific dependency names to install certain non-PyPI packages. </span>
 <span class="sd">        For example, ``{ &#39;singa&#39;: &#39;1.1.1&#39; }`` will be installed as ``singa-cpu=1.1.1`` or ``singa-gpu=1.1.1`` using ``conda``.</span>
@@ -732,7 +732,7 @@
     <span class="c1"># Advisors</span>
     <span class="c1">####################################</span>
 
-<div class="viewcode-block" id="Client.create_advisor"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.create_advisor">[docs]</a>    <span class="k">def</span> <span class="nf">create_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">knob_config_str</span><span class="p">,</span> <span class="n">advisor_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_create_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">knob_config_str</span><span class="p">,</span> <span class="n">advisor_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Creates a Rafiki advisor. If `advisor_id` is passed, it will create an advisor</span>
 <span class="sd">        of that ID, or do nothing if an advisor of that ID has already been created.</span>
@@ -747,9 +747,9 @@
                                 <span class="s1">&#39;advisor_id&#39;</span><span class="p">:</span> <span class="n">advisor_id</span><span class="p">,</span>
                                 <span class="s1">&#39;knob_config_str&#39;</span><span class="p">:</span> <span class="n">knob_config_str</span>
                             <span class="p">})</span>
-        <span class="k">return</span> <span class="n">data</span></div>
+        <span class="k">return</span> <span class="n">data</span>
 
-<div class="viewcode-block" id="Client.generate_proposal"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.generate_proposal">[docs]</a>    <span class="k">def</span> <span class="nf">generate_proposal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_generate_proposal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Generate a proposal of knobs from an advisor.</span>
 
@@ -758,9 +758,9 @@
 <span class="sd">        :rtype: dict[str, any]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/advisors/</span><span class="si">{}</span><span class="s1">/propose&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">advisor_id</span><span class="p">),</span> <span class="n">target</span><span class="o">=</span><span class="s1">&#39;advisor&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">data</span></div>
+        <span class="k">return</span> <span class="n">data</span>
 
-<div class="viewcode-block" id="Client.feedback_to_advisor"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.feedback_to_advisor">[docs]</a>    <span class="k">def</span> <span class="nf">feedback_to_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">,</span> <span class="n">knobs</span><span class="p">,</span> <span class="n">score</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_feedback_to_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">,</span> <span class="n">knobs</span><span class="p">,</span> <span class="n">score</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Feedbacks to the advisor on the score of a set of knobs.</span>
 <span class="sd">        Additionally returns another proposal of knobs after ingesting feedback.</span>
@@ -776,9 +776,9 @@
                             <span class="s1">&#39;score&#39;</span><span class="p">:</span> <span class="n">score</span><span class="p">,</span>
                             <span class="s1">&#39;knobs&#39;</span><span class="p">:</span> <span class="n">knobs</span>
                         <span class="p">})</span>
-        <span class="k">return</span> <span class="n">data</span></div>
+        <span class="k">return</span> <span class="n">data</span>
 
-<div class="viewcode-block" id="Client.delete_advisor"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.delete_advisor">[docs]</a>    <span class="k">def</span> <span class="nf">delete_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_delete_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Deletes a Rafiki advisor.</span>
 
@@ -787,7 +787,7 @@
 <span class="sd">        :rtype: dict[str, any]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delete</span><span class="p">(</span><span class="s1">&#39;/advisors/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">advisor_id</span><span class="p">),</span> <span class="n">target</span><span class="o">=</span><span class="s1">&#39;advisor&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">data</span></div>
+        <span class="k">return</span> <span class="n">data</span>
 
     <span class="c1">####################################</span>
     <span class="c1"># Administrative Actions</span>

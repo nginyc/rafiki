@@ -244,7 +244,7 @@
 <div class="viewcode-block" id="BaseModel.dump_parameters"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.dump_parameters">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
     <span class="k">def</span> <span class="nf">dump_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Return a dictionary of model parameters that fully define this model instance&#39;s trained state. </span>
+<span class="sd">        Return a dictionary of model parameters that fully defines this model instance&#39;s trained state. </span>
 <span class="sd">        This dictionary should be serializable by the Python&#39;s ``pickle`` module.</span>
 <span class="sd">        This will be used for trained model serialization within Rafiki.</span>
 <span class="sd">        This will be called only when model is *trained*.</span>
@@ -284,9 +284,10 @@
 <span class="sd">    It is assumed that all of the model&#39;s dependencies have been installed in the current Python environment. </span>
 
 <span class="sd">    :param str model_file_path: Path to a single Python file that contains the definition for the model class</span>
-<span class="sd">    :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`</span>
+<span class="sd">    :param type model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`</span>
 <span class="sd">    :param str task: Task type of model</span>
-<span class="sd">    :param dict[str, str] dependencies: Model&#39;s dependencies</span>
+<span class="sd">    :param dependencies: Model&#39;s dependencies</span>
+<span class="sd">    :type dependencies: dict[str, str]</span>
 <span class="sd">    :param str train_dataset_uri: URI of the train dataset for testing the training of model</span>
 <span class="sd">    :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model</span>
 <span class="sd">    :param list[any] queries: List of queries for testing predictions with the trained model</span>

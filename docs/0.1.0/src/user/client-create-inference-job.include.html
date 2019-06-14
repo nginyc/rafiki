@@ -148,8 +148,9 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <p>To create an model deployment job, you need to submit the app name associated with a <em>stopped</em> train job.
-The inference job would be created from the best trials from the train job.</p>
+  <p>To create an model serving job, you’ll have to wait for your train job to stop.
+Then, you’ll submit the app name associated with the train job (with a status of <code class="docutils literal notranslate"><span class="pre">STOPPED</span></code>).
+The inference job would be created from the best trials from that train job.</p>
 <p>Example:</p>
 <blockquote>
 <div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">create_inference_job</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">)</span>

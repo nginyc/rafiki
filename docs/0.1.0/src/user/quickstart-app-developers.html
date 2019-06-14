@@ -107,7 +107,6 @@
 <li class="toctree-l2"><a class="reference internal" href="creating-models.html">Creating Models</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tasks.html">Supported Tasks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="datasets.html">Supported Dataset Types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="user-types.html">Users of Rafiki</a></li>
 <li class="toctree-l2"><a class="reference internal" href="installing-python.html">Installing Python</a></li>
 </ul>
 </li>
@@ -383,8 +382,9 @@ The code that does this pre-processing from the original Fashion MNIST dataset i
 <p class="first admonition-title">See also</p>
 <p class="last"><a class="reference internal" href="quickstart-app-users.html#making-predictions"><span class="std std-ref">Making predictions</span></a></p>
 </div>
-<p>To create an model deployment job, you need to submit the app name associated with a <em>stopped</em> train job.
-The inference job would be created from the best trials from the train job.</p>
+<p>To create an model serving job, you’ll have to wait for your train job to stop.
+Then, you’ll submit the app name associated with the train job (with a status of <code class="docutils literal notranslate"><span class="pre">STOPPED</span></code>).
+The inference job would be created from the best trials from that train job.</p>
 <p>Example:</p>
 <blockquote>
 <div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">create_inference_job</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="s1">&#39;fashion_mnist_app&#39;</span><span class="p">)</span>
