@@ -1,6 +1,6 @@
 class BudgetType():
     MODEL_TRIAL_COUNT = 'MODEL_TRIAL_COUNT'
-    ENABLE_GPU = 'ENABLE_GPU'
+    GPU_COUNT = 'GPU_COUNT'
 
 class ModelDependency():
     TENSORFLOW = 'tensorflow'
@@ -23,6 +23,7 @@ class TrainJobStatus():
     STARTED = 'STARTED'
     RUNNING = 'RUNNING'
     STOPPED = 'STOPPED'
+    ERRORED = 'ERRORED'
 
 class TrialStatus():
     STARTED = 'STARTED'
@@ -48,7 +49,6 @@ class UserType():
     ADMIN = 'ADMIN'
     MODEL_DEVELOPER = 'MODEL_DEVELOPER'
     APP_DEVELOPER = 'APP_DEVELOPER'
-    USER = 'USER'
 
 class AdvisorType():
     BTB_GP = 'BTB_GP'

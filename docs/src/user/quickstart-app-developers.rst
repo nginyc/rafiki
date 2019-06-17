@@ -3,8 +3,6 @@
 Quick Start (Application Developers)
 ====================================================================
 
-.. contents:: Table of Contents
-
 As an App Developer, you can manage train & inference jobs on Rafiki.
 
 To learn more about what you can do on Rafiki, explore the methods of :class:`rafiki.client.Client`.
@@ -31,7 +29,7 @@ Example:
         
 .. seealso:: :meth:`rafiki.client.Client.login`
 
-Listing models by task
+Listing available models by task
 --------------------------------------------------------------------
 
 .. include:: ./client-list-models.include.rst

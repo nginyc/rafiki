@@ -1,21 +1,27 @@
+# Core secrets for Rafiki - change these in production!
+export POSTGRES_PASSWORD=rafiki
+export SUPERADMIN_PASSWORD=rafiki
+export APP_SECRET=rafiki
+
 # Core external configuration for Rafiki
 export DOCKER_NETWORK=rafiki
 export DOCKER_SWARM_ADVERTISE_ADDR=127.0.0.1
-export RAFIKI_VERSION=0.0.9
+export RAFIKI_VERSION=0.1.0
 export RAFIKI_ADDR=127.0.0.1
 export ADMIN_EXT_PORT=3000
 export ADMIN_WEB_EXT_PORT=3001
 export ADVISOR_EXT_PORT=3002
 export POSTGRES_EXT_PORT=5433
 export REDIS_EXT_PORT=6380
-export DATA_WORKDIR_PATH=$PWD/data # Shares a data folder with containers
-export LOGS_WORKDIR_PATH=$PWD/logs # Shares a folder with containers that stores components' logs
+export HOST_WORKDIR_PATH=$PWD
 export APP_MODE=DEV # DEV or PROD
+export POSTGRES_DUMP_FILE_PATH=$PWD/db_dump.sql # PostgreSQL database dump file
+export DOCKER_NODE_LABEL_AVAILABLE_GPUS=available_gpus # Docker node label for no. of services currently running on the node
+export DOCKER_NODE_LABEL_NUM_SERVICES=num_services # Docker node label for no. of services currently running on the node
 
 # Internal credentials for Rafiki's components
 export POSTGRES_USER=rafiki
 export POSTGRES_DB=rafiki
-export POSTGRES_PASSWORD=rafiki
 
 # Internal hosts & ports and configuration for Rafiki's components 
 export POSTGRES_HOST=rafiki_db
@@ -28,9 +34,10 @@ export REDIS_HOST=rafiki_cache
 export REDIS_PORT=6379
 export PREDICTOR_PORT=3003
 export ADMIN_WEB_HOST=rafiki_admin_web
-export DATA_DOCKER_WORKDIR_PATH=/root/rafiki/data
-export LOGS_DOCKER_WORKDIR_PATH=/root/rafiki/logs
-export DOCKER_WORKDIR_PATH=/root/rafiki
+export DOCKER_WORKDIR_PATH=/root
+export DATA_DIR_PATH=data # Shares a data folder with containers, relative to workdir
+export LOGS_DIR_PATH=logs # Shares a folder with containers that stores components' logs, relative to workdir
+export PARAMS_DIR_PATH=params # Shares a folder with containers that stores model parameters, relative to workdir
 export CONDA_ENVIORNMENT=rafiki
 
 # Docker images for Rafiki's custom components
@@ -46,7 +53,4 @@ export IMAGE_REDIS=redis:5.0.3-alpine3.8
 
 # Utility configuration
 export PYTHONPATH=$PWD # Ensures that `rafiki` module can be imported at project root
-
-# Set alias for correct PIP & python
-alias pip='pip3.6'
-alias python='python3.6'
+export PYTHONUNBUFFERED=1 # Ensures logs from Python appear instantly ``

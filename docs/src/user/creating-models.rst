@@ -4,8 +4,6 @@
 Creating Models
 ====================================================================
 
-.. contents:: Table of Contents
-
 To create a model, you will need to submit a model class that conforms to the specification
 by :class:`rafiki.model.BaseModel`, written in a `single` Python file.
 The model's implementation should conform to a specific task (see :ref:`tasks`).
@@ -22,6 +20,28 @@ In defining the hyperparameters (knobs) of a model, refer to the documentation a
 After implementing your model, it is highly recommended to use :meth:`rafiki.model.test_model_class` 
 to test your model. This method simulates a full train-inference flow on your model, ensuring that 
 it is likely to work on Rafiki.
+
+Model Environment
+--------------------------------------------------------------------
+
+Your model will be run in Python 3.6 with the following Python libraries pre-installed:
+
+    .. code-block:: shell
+
+        requests==2.20.0
+        numpy==1.14.5
+        Pillow==5.3.0
+
+Additionally, you'll specify a list of dependencies to be installed for your model, 
+prior to model training and inference. This is configurable with the ``dependencies`` option 
+during model creation. Alternatively, you can build a custom Docker image that extends ``rafikiai/rafiki_worker``,
+installing the required dependencies for your model. This is configurable with ``docker_image`` option
+during model creation.
+
+.. seealso:: :meth:`rafiki.client.Client.create_model`
+
+Your model should be GPU-sensitive based on the environment variable ``CUDA_AVAILABLE_DEVICES`` (see `here <https://devblogs.nvidia.com/cuda-pro-tip-control-gpu-visibility-cuda_visible_devices/>`_).  
+If ``CUDA_AVAILABLE_DEVICES`` is set to ``-1``, your model should simply run on CPU. You can assume that your model has exclusive access to the GPUs listed in ``CUDA_AVAILABLE_DEVICES``. 
 
 Logging in Models
 --------------------------------------------------------------------
@@ -42,28 +62,6 @@ a set of built-in dataset loading methods for common dataset types on Rafiki.
 
 Refer to :class:`rafiki.model.ModelDatasetUtils` for full usage instructions.
 
-Model Environment
---------------------------------------------------------------------
-
-Your model will be run in Python 3.6 with the following Python libraries pre-installed:
-
-    .. code-block:: shell
-
-        pip install numpy==1.14.5
-
-
-Additionally, you'll specify a list of dependencies to be installed for your model, 
-prior to model training and inference. This is configurable with the ``dependencies`` option 
-during model creation. 
-
-Alternatively, you can build a custom Docker image that extends ``rafikiai/rafiki_worker``,
-installing the required dependencies for your model. This is configurable with ``docker_image`` option
-during model creation.
-
-Models should run at least run on CPU-only machines and optionally leverage on a shared GPU, if it is available.
-
-Refer to the parameters of :meth:`rafiki.client.Client.create_model` for configuring how your model runs on Rafiki.
-
 Sample Models
 --------------------------------------------------------------------
 
@@ -71,13 +69,6 @@ To illustrate how to write models on Rafiki, we have written the following:
 
     - Sample pre-processing logic to convert common dataset formats to Rafiki's own dataset formats in `./examples/datasets/ <https://github.com/nginyc/rafiki/tree/master/examples/datasets/>`_ 
     - Sample models in `./examples/models/ <https://github.com/nginyc/rafiki/tree/master/examples/models/>`_
-
-To start testing your model, first run the following:
-
-    .. code-block:: shell
-
-        source .env.sh
-        pip install -r rafiki/model/requirements.txt
 
 
 Example: Testing Models for ``IMAGE_CLASSIFICATION``

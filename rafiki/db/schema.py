@@ -1,8 +1,8 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Float, ForeignKey, Integer, Binary, DateTime
+from sqlalchemy import Column, String, Float, ForeignKey, Integer, Binary, DateTime, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSON, ARRAY
 import uuid
-import datetime
+from datetime import datetime
 
 from rafiki.constants import InferenceJobStatus, ServiceStatus, TrainJobStatus, \
     TrialStatus, ModelAccessRight
@@ -13,7 +13,7 @@ def generate_uuid():
     return str(uuid.uuid4())
 
 def generate_datetime():
-    return datetime.datetime.utcnow()
+    return datetime.utcnow()
 
 class InferenceJob(Base):
     __tablename__ = 'inference_job'
@@ -38,33 +38,35 @@ class Model(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     datetime_created = Column(DateTime, nullable=False, default=generate_datetime)
-    name = Column(String, unique=True, nullable=False)
+    user_id = Column(String, ForeignKey('user.id'), nullable=False)
+    name = Column(String, nullable=False)
     task = Column(String, nullable=False)
     model_file_bytes = Column(Binary, nullable=False)
     model_class = Column(String, nullable=False)
-    user_id = Column(String, ForeignKey('user.id'), nullable=False)
     docker_image = Column(String, nullable=False)
     dependencies = Column(JSON, nullable=False)
     access_right = Column(String, nullable=False, default=ModelAccessRight.PRIVATE)
+    __table_args__ = (UniqueConstraint('name', 'user_id'),)
 
 class Service(Base):
     __tablename__ = 'service'
 
     id = Column(String, primary_key=True, default=generate_uuid)
     service_type = Column(String, nullable=False)
-    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
-    datetime_stopped = Column(DateTime, default=None)
     status = Column(String, nullable=False, default=ServiceStatus.STARTED)
     docker_image = Column(String, nullable=False)
     container_manager_type = Column(String, nullable=False)
-    replicas = Column(Integer, default=0)
+    replicas = Column(Integer, nullable=False)
+    gpus = Column(Integer, nullable=False)
     ext_hostname = Column(String)
     ext_port = Column(Integer)
     hostname = Column(String)
     port = Column(Integer)
     container_service_name = Column(String)
     container_service_id = Column(String)
-    requirements = Column(ARRAY(String))
+    container_service_info = Column(JSON)
+    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
+    datetime_stopped = Column(DateTime, default=None)
 
 class TrainJob(Base):
     __tablename__ = 'train_job'
@@ -77,6 +79,10 @@ class TrainJob(Base):
     train_dataset_uri = Column(String, nullable=False)
     test_dataset_uri = Column(String, nullable=False)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
+    status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
+    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
+    datetime_stopped = Column(DateTime, default=None)
+    __table_args__ = (UniqueConstraint('app', 'app_version', 'user_id'),)
 
 class SubTrainJob(Base):
     __tablename__ = 'sub_train_job'
@@ -85,7 +91,6 @@ class SubTrainJob(Base):
     train_job_id = Column(String, ForeignKey('train_job.id'))
     model_id = Column(String, ForeignKey('model.id'))
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
-    status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     datetime_stopped = Column(DateTime, default=None)
 
@@ -93,7 +98,6 @@ class TrainJobWorker(Base):
     __tablename__ = 'train_job_worker'
 
     service_id = Column(String, ForeignKey('service.id'), primary_key=True)
-    train_job_id = Column(String, ForeignKey('train_job.id'))
     sub_train_job_id = Column(String, ForeignKey('sub_train_job.id'), nullable=False)
 
 class Trial(Base):
@@ -104,9 +108,10 @@ class Trial(Base):
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     status = Column(String, nullable=False, default=TrialStatus.STARTED)
+    worker_id = Column(String, nullable=False)
     knobs = Column(JSON, default=None)
     score = Column(Float, default=0)
-    parameters = Column(Binary, default=None)
+    params_file_path = Column(String, default=None)
     datetime_stopped = Column(DateTime, default=None)
 
 class TrialLog(Base):
@@ -125,4 +130,5 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     password_hash = Column(Binary, nullable=False)
     user_type = Column(String, nullable=False)
+    banned_date = Column(DateTime, default=None)
     
