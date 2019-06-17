@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.0.9
+                0.1.0
               </div>
             
           
@@ -81,9 +81,9 @@
             
             
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../docs/src/user/index.html">User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../docs/src/dev/index.html">Developer Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../docs/src/python/index.html">Python Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/user/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/dev/index.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/python/index.html">Python Documentation</a></li>
 </ul>
 
             
@@ -150,7 +150,7 @@
 <span></span><span class="kn">import</span> <span class="nn">abc</span>
 <span class="kn">import</span> <span class="nn">json</span>
 
-<div class="viewcode-block" id="BaseKnob"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.BaseKnob">[docs]</a><span class="k">class</span> <span class="nc">BaseKnob</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
+<div class="viewcode-block" id="BaseKnob"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseKnob">[docs]</a><span class="k">class</span> <span class="nc">BaseKnob</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    The base class for a knob type.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
@@ -182,7 +182,7 @@
 
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Invalid knob type: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">knob_type</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="CategoricalKnob"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.CategoricalKnob">[docs]</a><span class="k">class</span> <span class="nc">CategoricalKnob</span><span class="p">(</span><span class="n">BaseKnob</span><span class="p">):</span>
+<div class="viewcode-block" id="CategoricalKnob"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.CategoricalKnob">[docs]</a><span class="k">class</span> <span class="nc">CategoricalKnob</span><span class="p">(</span><span class="n">BaseKnob</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Knob type representing a categorical value of type ``int``, ``float``, ``bool`` or ``str``.</span>
 <span class="sd">    A generated value of this knob would be an element of ``values``.</span>
@@ -222,7 +222,7 @@
 
         <span class="k">return</span> <span class="p">(</span><span class="n">value_type</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="FixedKnob"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.FixedKnob">[docs]</a><span class="k">class</span> <span class="nc">FixedKnob</span><span class="p">(</span><span class="n">BaseKnob</span><span class="p">):</span>
+<div class="viewcode-block" id="FixedKnob"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.FixedKnob">[docs]</a><span class="k">class</span> <span class="nc">FixedKnob</span><span class="p">(</span><span class="n">BaseKnob</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Knob type representing a single fixed value of type ``int``, ``float``, ``bool`` or ``str``.</span>
 <span class="sd">    Essentially, this represents a knob that does not require tuning.</span>
@@ -256,9 +256,9 @@
         
         <span class="k">return</span> <span class="p">(</span><span class="n">value_type</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="IntegerKnob"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.IntegerKnob">[docs]</a><span class="k">class</span> <span class="nc">IntegerKnob</span><span class="p">(</span><span class="n">BaseKnob</span><span class="p">):</span>
+<div class="viewcode-block" id="IntegerKnob"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.IntegerKnob">[docs]</a><span class="k">class</span> <span class="nc">IntegerKnob</span><span class="p">(</span><span class="n">BaseKnob</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Knob type epresenting `any` ``int`` value within a specific interval [``value_min``, ``value_max``].</span>
+<span class="sd">    Knob type representing `any` ``int`` value within a specific interval [``value_min``, ``value_max``].</span>
 <span class="sd">    ``is_exp`` specifies whether the knob value should be scaled exponentially.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
@@ -294,7 +294,7 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`value_max` should be at least `value_min`&#39;</span><span class="p">)</span></div>
         
 
-<div class="viewcode-block" id="FloatKnob"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.FloatKnob">[docs]</a><span class="k">class</span> <span class="nc">FloatKnob</span><span class="p">(</span><span class="n">BaseKnob</span><span class="p">):</span>
+<div class="viewcode-block" id="FloatKnob"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.FloatKnob">[docs]</a><span class="k">class</span> <span class="nc">FloatKnob</span><span class="p">(</span><span class="n">BaseKnob</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Knob type representing `any` ``float`` value within a specific interval [``value_min``, ``value_max``].</span>
 <span class="sd">    ``is_exp`` specifies whether the knob value should be scaled exponentially.</span>

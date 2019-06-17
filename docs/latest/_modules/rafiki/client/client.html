@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.0.9
+                0.1.0
               </div>
             
           
@@ -81,9 +81,9 @@
             
             
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../docs/src/user/index.html">User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../docs/src/dev/index.html">Developer Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../docs/src/python/index.html">Python Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/user/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/dev/index.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/python/index.html">Python Documentation</a></li>
 </ul>
 
             
@@ -152,13 +152,30 @@
 <span class="kn">import</span> <span class="nn">pprint</span>
 <span class="kn">import</span> <span class="nn">pickle</span>
 <span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">wraps</span>
 
 <span class="kn">from</span> <span class="nn">rafiki.constants</span> <span class="k">import</span> <span class="n">BudgetType</span><span class="p">,</span> <span class="n">ModelAccessRight</span>
 
-<span class="k">class</span> <span class="nc">RafikiConnectionError</span><span class="p">(</span><span class="ne">ConnectionError</span><span class="p">):</span>
-    <span class="k">pass</span>
+<span class="k">class</span> <span class="nc">RafikiConnectionError</span><span class="p">(</span><span class="ne">ConnectionError</span><span class="p">):</span> <span class="k">pass</span>
 
-<div class="viewcode-block" id="Client"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client">[docs]</a><span class="k">class</span> <span class="nc">Client</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="n">DOCS_URL</span> <span class="o">=</span> <span class="s1">&#39;https://nginyc.github.io/rafiki/docs/latest/docs/src/python/rafiki.client.Client.html&#39;</span>
+
+<span class="c1"># Returns a decorator that warns user about the method being deprecated</span>
+<span class="k">def</span> <span class="nf">_deprecated</span><span class="p">(</span><span class="n">msg</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">deco</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+        <span class="k">nonlocal</span> <span class="n">msg</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">msg</span> <span class="ow">or</span> <span class="n">f</span><span class="s1">&#39;`</span><span class="si">{func.__name__}</span><span class="s1">` has been deprecated.&#39;</span>
+
+        <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">deprecated_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="n">_warn</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;</span><span class="si">{msg}</span><span class="se">\n</span><span class="s1">&#39;</span> \
+                <span class="n">f</span><span class="s1">&#39;Refer to the updated documentation at </span><span class="si">{DOCS_URL}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">deprecated_func</span>
+    <span class="k">return</span> <span class="n">deco</span>
+
+<div class="viewcode-block" id="Client"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client">[docs]</a><span class="k">class</span> <span class="nc">Client</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Initializes the Client to connect to a running </span>
@@ -169,8 +186,11 @@
 <span class="sd">    :param str advisor_host: Host of Rafiki Advisor</span>
 <span class="sd">    :param int advisor_port: Port of Rafiki Advisor</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">admin_host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">admin_port</span><span class="o">=</span><span class="mi">3000</span><span class="p">,</span>
-                <span class="n">advisor_host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">advisor_port</span><span class="o">=</span><span class="mi">3002</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">admin_host</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;RAFIKI_ADDR&#39;</span><span class="p">,</span> <span class="s1">&#39;localhost&#39;</span><span class="p">),</span>
+                    <span class="n">admin_port</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ADMIN_EXT_PORT&#39;</span><span class="p">,</span> <span class="mi">3000</span><span class="p">),</span>
+                    <span class="n">advisor_host</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;RAFIKI_ADDR&#39;</span><span class="p">,</span> <span class="s1">&#39;localhost&#39;</span><span class="p">),</span>
+                    <span class="n">advisor_port</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ADVISOR_EXT_PORT&#39;</span><span class="p">,</span> <span class="mi">3002</span><span class="p">)):</span>
+                    
         <span class="bp">self</span><span class="o">.</span><span class="n">_admin_host</span> <span class="o">=</span> <span class="n">admin_host</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_admin_port</span> <span class="o">=</span> <span class="n">admin_port</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_advisor_host</span> <span class="o">=</span> <span class="n">advisor_host</span>
@@ -178,12 +198,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_token</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_user</span> <span class="o">=</span> <span class="kc">None</span>
 
-<div class="viewcode-block" id="Client.login"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.login">[docs]</a>    <span class="k">def</span> <span class="nf">login</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">password</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.login"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.login">[docs]</a>    <span class="k">def</span> <span class="nf">login</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">password</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Creates a login session as a Rafiki user. You will have to be logged in to perform any actions.</span>
 
 <span class="sd">        App developers can create, list and stop train and inference jobs, as well as list models.</span>
 <span class="sd">        Model developers can create and list models.</span>
+
+<span class="sd">        The login session (the session token) expires in 1 hour.</span>
 
 <span class="sd">        :param str email: User&#39;s email</span>
 <span class="sd">        :param str password: User&#39;s password</span>
@@ -205,7 +227,7 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_user</span></div>
 
-<div class="viewcode-block" id="Client.get_current_user"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_current_user">[docs]</a>    <span class="k">def</span> <span class="nf">get_current_user</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.get_current_user"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_current_user">[docs]</a>    <span class="k">def</span> <span class="nf">get_current_user</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Gets currently logged in user&#39;s data.</span>
 
@@ -214,7 +236,7 @@
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_user</span></div>
 
-<div class="viewcode-block" id="Client.logout"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.logout">[docs]</a>    <span class="k">def</span> <span class="nf">logout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.logout"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.logout">[docs]</a>    <span class="k">def</span> <span class="nf">logout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Clears the current login session.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
@@ -225,11 +247,12 @@
     <span class="c1"># User</span>
     <span class="c1">####################################</span>
 
-<div class="viewcode-block" id="Client.create_user"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.create_user">[docs]</a>    <span class="k">def</span> <span class="nf">create_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">user_type</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.create_user"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.create_user">[docs]</a>    <span class="k">def</span> <span class="nf">create_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">user_type</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Creates a Rafiki user. </span>
 <span class="sd">        </span>
-<span class="sd">        Only admins can manage users.</span>
+<span class="sd">        Only admins can create users (except for admins).</span>
+<span class="sd">        Only superadmins can create admins.</span>
 
 <span class="sd">        :param str email: The new user&#39;s email</span>
 <span class="sd">        :param str password: The new user&#39;s password</span>
@@ -239,55 +262,67 @@
 <span class="sd">        :returns: Created user as dictionary</span>
 <span class="sd">        :rtype: dict[str, any]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/user&#39;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/users&#39;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span>
             <span class="s1">&#39;email&#39;</span><span class="p">:</span> <span class="n">email</span><span class="p">,</span>
             <span class="s1">&#39;password&#39;</span><span class="p">:</span> <span class="n">password</span><span class="p">,</span>
             <span class="s1">&#39;user_type&#39;</span><span class="p">:</span> <span class="n">user_type</span>
         <span class="p">})</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.create_users"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.create_users">[docs]</a>    <span class="k">def</span> <span class="nf">create_users</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">csv_file_path</span><span class="p">):</span>
+    <span class="nd">@_deprecated</span><span class="p">(</span><span class="s1">&#39;`create_users` has been removed&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">create_users</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="Client.get_users"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_users">[docs]</a>    <span class="k">def</span> <span class="nf">get_users</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Creates multiple Rafiki users.</span>
+<span class="sd">        Lists all Rafiki users.</span>
+<span class="sd">        </span>
+<span class="sd">        Only admins can list all users.</span>
 
-<span class="sd">        :param str csv_file_path: Path to a single csv file containing users to seed</span>
-
-<span class="sd">        :returns: Created users as list of dictionaries</span>
+<span class="sd">        :returns: List of users</span>
 <span class="sd">        :rtype: dict[str, any][]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/users&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span></div>
 
-        <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">csv_file_path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span>
-        <span class="n">csv_file_bytes</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-        <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<div class="viewcode-block" id="Client.ban_user"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.ban_user">[docs]</a>    <span class="k">def</span> <span class="nf">ban_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">email</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Bans a Rafiki user, disallowing logins.</span>
+<span class="sd">        </span>
+<span class="sd">        This action is irrevisible.</span>
+<span class="sd">        Only admins can ban users (except for admins).</span>
+<span class="sd">        Only superadmins can ban admins.</span>
 
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span>
-            <span class="s1">&#39;/users&#39;</span><span class="p">,</span> 
-            <span class="n">files</span><span class="o">=</span><span class="p">{</span>
-                <span class="s1">&#39;csv_file_bytes&#39;</span><span class="p">:</span> <span class="n">csv_file_bytes</span>
-            <span class="p">}</span>
-        <span class="p">)</span>
+<span class="sd">        :param str email: The user&#39;s email</span>
+
+<span class="sd">        :returns: Banned user as dictionary</span>
+<span class="sd">        :rtype: dict[str, any]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delete</span><span class="p">(</span><span class="s1">&#39;/users&#39;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;email&#39;</span><span class="p">:</span> <span class="n">email</span>
+        <span class="p">})</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
     <span class="c1">####################################</span>
     <span class="c1"># Models</span>
     <span class="c1">####################################</span>
 
-<div class="viewcode-block" id="Client.create_model"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.create_model">[docs]</a>    <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">model_file_path</span><span class="p">,</span> <span class="n">model_class</span><span class="p">,</span> <span class="n">docker_image</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> \
-                    <span class="n">dependencies</span><span class="o">=</span><span class="p">{},</span> <span class="n">access_right</span><span class="o">=</span><span class="n">ModelAccessRight</span><span class="o">.</span><span class="n">PRIVATE</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.create_model"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.create_model">[docs]</a>    <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">model_file_path</span><span class="p">,</span> <span class="n">model_class</span><span class="p">,</span> <span class="n">dependencies</span><span class="o">=</span><span class="p">{},</span> 
+                    <span class="n">access_right</span><span class="o">=</span><span class="n">ModelAccessRight</span><span class="o">.</span><span class="n">PRIVATE</span><span class="p">,</span> <span class="n">docker_image</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Creates a model on Rafiki.</span>
 
 <span class="sd">        Only admins &amp; model developers can manage models.</span>
 
-<span class="sd">        :param str name: Name of the model, must be unique on Rafiki</span>
+<span class="sd">        :param str name: Name of the model, which must be unique across all models added by the current user </span>
 <span class="sd">        :param str task: Task associated with the model, where the model must adhere to the specification of the task</span>
 <span class="sd">        :param str model_file_path: Path to a single Python file that contains the definition for the model class</span>
-<span class="sd">        :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`</span>
+<span class="sd">        :param str model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`</span>
 <span class="sd">        :param dependencies: List of dependencies &amp; their versions</span>
 <span class="sd">        :type dependencies: dict[str, str]</span>
-<span class="sd">        :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``</span>
 <span class="sd">        :param access_right: Model access right</span>
 <span class="sd">        :type access_right: :class:`rafiki.constants.ModelAccessRight`</span>
+<span class="sd">        :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``</span>
 <span class="sd">        :returns: Created model as dictionary</span>
 <span class="sd">        :rtype: dict[str, any]</span>
 
@@ -295,17 +330,15 @@
 <span class="sd">        If the Python file imports any external Python modules, you should list it in ``dependencies`` or create a custom</span>
 <span class="sd">        ``docker_image``. </span>
 
-<span class="sd">        If a model&#39;s ``access_right`` is set to ``PUBLIC``, all other users have access to the model for training</span>
+<span class="sd">        If a model&#39;s ``access_right`` is set to ``PUBLIC``, this model will be publicly available to all other users on Rafiki for training</span>
 <span class="sd">        and inference. By default, a model&#39;s access is ``PRIVATE``.</span>
 
 <span class="sd">        ``dependencies`` should be a dictionary of ``{ &lt;dependency_name&gt;: &lt;dependency_version&gt; }``, where </span>
 <span class="sd">        ``&lt;dependency_name&gt;`` corresponds to the name of the Python Package Index (PyPI) package (e.g. ``tensorflow``)</span>
 <span class="sd">        and ``&lt;dependency_version&gt;`` corresponds to the version of the PyPI package (e.g. ``1.12.0``). These dependencies </span>
 <span class="sd">        will be lazily installed on top of the worker&#39;s Docker image before the submitted model&#39;s code is executed.</span>
-
-<span class="sd">        If the model is to be run on GPU, Rafiki could map dependencies to their GPU-enabled versions, if required. </span>
+<span class="sd">        If the model is to be run on GPU, Rafiki would map dependencies to their GPU-supported versions, if supported. </span>
 <span class="sd">        For example, ``{ &#39;tensorflow&#39;: &#39;1.12.0&#39; }`` will be installed as ``{ &#39;tensorflow-gpu&#39;: &#39;1.12.0&#39; }``.</span>
-
 <span class="sd">        Rafiki could also parse specific dependency names to install certain non-PyPI packages. </span>
 <span class="sd">        For example, ``{ &#39;singa&#39;: &#39;1.1.1&#39; }`` will be installed as ``singa-cpu=1.1.1`` or ``singa-gpu=1.1.1`` using ``conda``.</span>
 
@@ -321,6 +354,8 @@
 <span class="sd">        ``scikit-learn``            ``pip install scikit-learn==${ver}``</span>
 <span class="sd">        ``torch``                   ``pip install torch==${ver}``</span>
 <span class="sd">        =====================       =====================</span>
+
+<span class="sd">        Refer to :ref:`creating-models` to understand more about how to write &amp; test models for Rafiki.</span>
 
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_file_path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span>
@@ -343,60 +378,44 @@
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.get_model"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_model">[docs]</a>    <span class="k">def</span> <span class="nf">get_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.get_model"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_model">[docs]</a>    <span class="k">def</span> <span class="nf">get_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_id</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Retrieves details of a single model.</span>
 
-<span class="sd">        :param str name: Name of model</span>
+<span class="sd">        Model developers can only view their own models.</span>
+
+<span class="sd">        :param str model_id: ID of model</span>
 <span class="sd">        :returns: Details of model as dictionary</span>
 <span class="sd">        :rtype: dict[str, any]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/models/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+        <span class="n">_note</span><span class="p">(</span><span class="s1">&#39;`get_model` now requires `model_id` instead of `name`&#39;</span><span class="p">)</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/models/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">model_id</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.get_models"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_models">[docs]</a>    <span class="k">def</span> <span class="nf">get_models</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.download_model_file"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.download_model_file">[docs]</a>    <span class="k">def</span> <span class="nf">download_model_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_id</span><span class="p">,</span> <span class="n">out_model_file_path</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Lists all models on Rafiki.</span>
+<span class="sd">        Downloads the Python model class file for the Rafiki model.</span>
 
-<span class="sd">        :param str access_right: Model access right.</span>
-<span class="sd">        :returns: Details of models as list of dictionaries</span>
-<span class="sd">        :rtype: dict[str, any][]</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/models&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">data</span></div>
+<span class="sd">        Model developers can only download their own models.</span>
 
-<div class="viewcode-block" id="Client.get_models_of_task"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_models_of_task">[docs]</a>    <span class="k">def</span> <span class="nf">get_models_of_task</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Lists all models associated to a task on Rafiki.</span>
-
-<span class="sd">        :param str task: Task name</span>
-<span class="sd">        :returns: Details of models as list of dictionaries</span>
-<span class="sd">        :rtype: dict[str, any][]</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/models&#39;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span>
-            <span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="n">task</span>
-        <span class="p">})</span>
-        <span class="k">return</span> <span class="n">data</span></div>
-
-<div class="viewcode-block" id="Client.download_model_file"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.download_model_file">[docs]</a>    <span class="k">def</span> <span class="nf">download_model_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">model_file_path</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Downloads the Python script containing the model&#39;s class to the local filesystem.</span>
-
-<span class="sd">        :param str name: Name of model</span>
-<span class="sd">        :param str model_file_path: Absolute/relative path to save the Python script to</span>
+<span class="sd">        :param str model_id: ID of model</span>
+<span class="sd">        :param str out_model_file_path: Absolute/relative path to save model class file to</span>
 <span class="sd">        :returns: Details of model as dictionary</span>
 <span class="sd">        :rtype: dict[str, any]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">model_file_bytes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/models/</span><span class="si">{}</span><span class="s1">/model_file&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+        <span class="n">_note</span><span class="p">(</span><span class="s1">&#39;`download_model_file` now requires `model_id` instead of `name`&#39;</span><span class="p">)</span>
 
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_file_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">model_file_bytes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/models/</span><span class="si">{}</span><span class="s1">/model_file&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">model_id</span><span class="p">))</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_model_file_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">model_file_bytes</span><span class="p">)</span>
 
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_model</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_model</span><span class="p">(</span><span class="n">model_id</span><span class="p">)</span>
         <span class="n">dependencies</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dependencies&#39;</span><span class="p">)</span>
         <span class="n">model_class</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;model_class&#39;</span><span class="p">)</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Model file downloaded to &quot;</span><span class="si">{}</span><span class="s1">&quot;!&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="n">model_file_path</span><span class="p">)))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Model file downloaded to &quot;</span><span class="si">{}</span><span class="s1">&quot;!&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="n">out_model_file_path</span><span class="p">)))</span>
         
         <span class="k">if</span> <span class="n">dependencies</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;You</span><span class="se">\&#39;</span><span class="s1">ll need to install the following model dependencies locally: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dependencies</span><span class="p">))</span>
@@ -405,16 +424,51 @@
 
         <span class="k">return</span> <span class="n">data</span></div>
 
+    <span class="nd">@_deprecated</span><span class="p">(</span><span class="s1">&#39;`get_models` &amp; `get_models_of_task` have been combined into `get_available_models`&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_models</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@_deprecated</span><span class="p">(</span><span class="s1">&#39;`get_models` &amp; `get_models_of_task` have been combined into `get_available_models`&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_models_of_task</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="Client.get_available_models"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_available_models">[docs]</a>    <span class="k">def</span> <span class="nf">get_available_models</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Lists all Rafiki models available to the current user, optionally filtering by task.</span>
+
+<span class="sd">        :param str task: Task name</span>
+<span class="sd">        :returns: Available models as list of dictionaries</span>
+<span class="sd">        :rtype: dict[str, any][]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/models/available&#39;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="n">task</span>
+        <span class="p">})</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Client.delete_model"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.delete_model">[docs]</a>    <span class="k">def</span> <span class="nf">delete_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_id</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Deletes a single model. Models that have been used in train jobs cannot be deleted.</span>
+
+<span class="sd">        Model developers can only delete their own models.</span>
+
+<span class="sd">        :param str model_id: ID of model</span>
+<span class="sd">        :returns: Deleted model</span>
+<span class="sd">        :rtype: dict[str, any]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delete</span><span class="p">(</span><span class="s1">&#39;/models/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">model_id</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
     <span class="c1">####################################</span>
     <span class="c1"># Train Jobs</span>
     <span class="c1">####################################</span>
     
-<div class="viewcode-block" id="Client.create_train_job"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.create_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">create_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">train_dataset_uri</span><span class="p">,</span> <span class="n">test_dataset_uri</span><span class="p">,</span> <span class="n">budget</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.create_train_job"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.create_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">create_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">train_dataset_uri</span><span class="p">,</span> <span class="n">test_dataset_uri</span><span class="p">,</span> <span class="n">budget</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Creates and starts a train job on Rafiki. </span>
-<span class="sd">        A train job is uniquely identified by its associated app and the app version (returned in output).</span>
+
+<span class="sd">        A train job is uniquely identified by user, its associated app, and the app version (returned in output).</span>
 <span class="sd">        </span>
-<span class="sd">        Only admins, model developers and app developers can manage train jobs.</span>
+<span class="sd">        Only admins, model developers &amp; app developers can manage train jobs. Model developers &amp; app developers can only manage their own train jobs.</span>
 
 <span class="sd">        :param str app: Name of the app associated with the train job</span>
 <span class="sd">        :param str task: Task associated with the train job, </span>
@@ -422,7 +476,7 @@
 <span class="sd">        :param str train_dataset_uri: URI of the train dataset in a format specified by the task</span>
 <span class="sd">        :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task</span>
 <span class="sd">        :param str budget: Budget for each model</span>
-<span class="sd">        :param str[] models: List of model names to use for train job</span>
+<span class="sd">        :param str[] models: List of IDs of model to use for train job. Defaults to all available models</span>
 <span class="sd">        :returns: Created train job as dictionary</span>
 <span class="sd">        :rtype: dict[str, any]</span>
 
@@ -437,10 +491,19 @@
 <span class="sd">        =====================       =====================</span>
 <span class="sd">        **Budget Type**             **Description**</span>
 <span class="sd">        ---------------------       ---------------------        </span>
-<span class="sd">        ``MODEL_TRIAL_COUNT``       Target number of trials to run</span>
-<span class="sd">        ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported</span>
+<span class="sd">        ``MODEL_TRIAL_COUNT``       No. of trials to conduct for each model (defaults to 5)</span>
+<span class="sd">        ``GPU_COUNT``               No. of GPUs to exclusively allocate for training, across all models (defaults to 0)</span>
 <span class="sd">        =====================       =====================</span>
 <span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">_note</span><span class="p">(</span><span class="s1">&#39;`create_train_job` now requires `models` as a list of model IDs instead of a list of model names&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="s1">&#39;ENABLE_GPU&#39;</span> <span class="ow">in</span> <span class="n">budget</span><span class="p">:</span>
+            <span class="n">_warn</span><span class="p">(</span><span class="s1">&#39;The `ENABLE_GPU` option has been changed to `GPU_COUNT`&#39;</span><span class="p">)</span>
+            
+        <span class="c1"># Default to all available models</span>
+        <span class="k">if</span> <span class="n">models</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> 
+            <span class="n">avail_models</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_available_models</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
+            <span class="n">models</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">avail_models</span><span class="p">]</span>
 
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/train_jobs&#39;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span>
             <span class="s1">&#39;app&#39;</span><span class="p">:</span> <span class="n">app</span><span class="p">,</span>
@@ -448,13 +511,13 @@
             <span class="s1">&#39;train_dataset_uri&#39;</span><span class="p">:</span> <span class="n">train_dataset_uri</span><span class="p">,</span>
             <span class="s1">&#39;test_dataset_uri&#39;</span><span class="p">:</span> <span class="n">test_dataset_uri</span><span class="p">,</span>
             <span class="s1">&#39;budget&#39;</span><span class="p">:</span> <span class="n">budget</span><span class="p">,</span>
-            <span class="s1">&#39;models&#39;</span><span class="p">:</span> <span class="n">models</span>
+            <span class="s1">&#39;model_ids&#39;</span><span class="p">:</span> <span class="n">models</span>
         <span class="p">})</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.get_train_jobs_by_user"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_train_jobs_by_user">[docs]</a>    <span class="k">def</span> <span class="nf">get_train_jobs_by_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.get_train_jobs_by_user"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_train_jobs_by_user">[docs]</a>    <span class="k">def</span> <span class="nf">get_train_jobs_by_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Lists all train jobs associated to an user on Rafiki.</span>
+<span class="sd">        Lists all of user&#39;s train jobs on Rafiki.</span>
 
 <span class="sd">        :param str user_id: ID of the user</span>
 <span class="sd">        :returns: Details of train jobs as list of dictionaries</span>
@@ -465,9 +528,9 @@
         <span class="p">})</span>
         <span class="k">return</span> <span class="n">data</span></div>
     
-<div class="viewcode-block" id="Client.get_train_jobs_of_app"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_train_jobs_of_app">[docs]</a>    <span class="k">def</span> <span class="nf">get_train_jobs_of_app</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.get_train_jobs_of_app"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_train_jobs_of_app">[docs]</a>    <span class="k">def</span> <span class="nf">get_train_jobs_of_app</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Lists all train jobs associated to an app on Rafiki.</span>
+<span class="sd">        Lists all of current user&#39;s train jobs associated to the app name on Rafiki.</span>
 
 <span class="sd">        :param str app: Name of the app</span>
 <span class="sd">        :returns: Details of train jobs as list of dictionaries</span>
@@ -476,9 +539,9 @@
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/train_jobs/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.get_train_job"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">get_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.get_train_job"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">get_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Retrieves details of the train job identified by an app and an app version, </span>
+<span class="sd">        Retrieves details of the current user&#39;s train job identified by an app and an app version, </span>
 <span class="sd">        including workers&#39; details.</span>
 
 <span class="sd">        :param str app: Name of the app</span>
@@ -489,9 +552,9 @@
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/train_jobs/</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.get_best_trials_of_train_job"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_best_trials_of_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">get_best_trials_of_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_count</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.get_best_trials_of_train_job"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_best_trials_of_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">get_best_trials_of_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_count</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Lists the best scoring trials of the train job identified by an app and an app version,</span>
+<span class="sd">        Lists the best scoring trials of the current user&#39;s train job identified by an app and an app version,</span>
 <span class="sd">        ordered by descending score.</span>
 
 <span class="sd">        :param str app: Name of the app</span>
@@ -506,9 +569,9 @@
         <span class="p">})</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.get_trials_of_train_job"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_trials_of_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">get_trials_of_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.get_trials_of_train_job"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_trials_of_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">get_trials_of_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Lists all trials of the train job identified by an app and an app version,</span>
+<span class="sd">        Lists all trials of the current user&#39;s train job identified by an app and an app version,</span>
 <span class="sd">        ordered by when the trial started.</span>
 
 <span class="sd">        :param str app: Name of the app</span>
@@ -519,9 +582,9 @@
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/train_jobs/</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">/trials&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.stop_train_job"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.stop_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">stop_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.stop_train_job"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.stop_train_job">[docs]</a>    <span class="k">def</span> <span class="nf">stop_train_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Prematurely stops the train job identified by an app and an app version.</span>
+<span class="sd">        Prematurely stops the current user&#39;s train job identified by an app and an app version.</span>
 <span class="sd">        Otherwise, the train job should stop by itself when its budget is reached.</span>
 
 <span class="sd">        :param str app: Name of the app</span>
@@ -532,16 +595,11 @@
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/train_jobs/</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">/stop&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-    <span class="c1"># Rafiki-internal method</span>
-    <span class="k">def</span> <span class="nf">stop_train_job_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_id</span><span class="p">):</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/train_job_workers/</span><span class="si">{}</span><span class="s1">/stop&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">service_id</span><span class="p">))</span>
-        <span class="k">return</span> <span class="n">data</span>
-
     <span class="c1">####################################</span>
     <span class="c1"># Trials</span>
     <span class="c1">####################################</span>
 
-<div class="viewcode-block" id="Client.get_trial"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_trial">[docs]</a>    <span class="k">def</span> <span class="nf">get_trial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.get_trial"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_trial">[docs]</a>    <span class="k">def</span> <span class="nf">get_trial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Gets a specific trial.</span>
 
@@ -552,7 +610,7 @@
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/trials/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">trial_id</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.get_trial_logs"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_trial_logs">[docs]</a>    <span class="k">def</span> <span class="nf">get_trial_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.get_trial_logs"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_trial_logs">[docs]</a>    <span class="k">def</span> <span class="nf">get_trial_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Gets the logs for a specific trial.</span>
 
@@ -563,7 +621,7 @@
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/trials/</span><span class="si">{}</span><span class="s1">/logs&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">trial_id</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.get_trial_parameters"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_trial_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">get_trial_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.get_trial_parameters"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_trial_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">get_trial_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Gets parameters of the model associated with the trial.</span>
 
@@ -575,7 +633,7 @@
         <span class="n">parameters</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">parameters</span></div>
 
-<div class="viewcode-block" id="Client.load_trial_model"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.load_trial_model">[docs]</a>    <span class="k">def</span> <span class="nf">load_trial_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">,</span> <span class="n">ModelClass</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.load_trial_model"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.load_trial_model">[docs]</a>    <span class="k">def</span> <span class="nf">load_trial_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">,</span> <span class="n">ModelClass</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Loads an instance of a trial&#39;s model with the trial&#39;s knobs &amp; parameters.</span>
 
@@ -600,7 +658,7 @@
     <span class="c1"># Inference Jobs</span>
     <span class="c1">####################################</span>
 
-<div class="viewcode-block" id="Client.create_inference_job"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.create_inference_job">[docs]</a>    <span class="k">def</span> <span class="nf">create_inference_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.create_inference_job"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.create_inference_job">[docs]</a>    <span class="k">def</span> <span class="nf">create_inference_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Creates and starts a inference job on Rafiki with the 2 best trials of an associated train job of the app. </span>
 <span class="sd">        The train job must have the status of ``STOPPED``.The inference job would be tagged with the train job&#39;s app and app version. </span>
@@ -608,7 +666,7 @@
 
 <span class="sd">        In this method&#39;s response, `predictor_host` is this inference job&#39;s predictor&#39;s host. </span>
 
-<span class="sd">        Only admins &amp; app developers can manage inference jobs.</span>
+<span class="sd">        Only admins, model developers &amp; app developers can manage inference jobs. Model developers &amp; app developers can only manage their own inference jobs.</span>
 
 <span class="sd">        :param str app: Name of the app identifying the train job to use</span>
 <span class="sd">        :param str app_version: Version of the app identifying the train job to use</span>
@@ -621,9 +679,9 @@
         <span class="p">})</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.get_inference_jobs_by_user"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_inference_jobs_by_user">[docs]</a>    <span class="k">def</span> <span class="nf">get_inference_jobs_by_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.get_inference_jobs_by_user"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_inference_jobs_by_user">[docs]</a>    <span class="k">def</span> <span class="nf">get_inference_jobs_by_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Lists all inference jobs associated to an user on Rafiki.</span>
+<span class="sd">        Lists all of user&#39;s inference jobs on Rafiki.</span>
 
 <span class="sd">        :param str user_id: ID of the user</span>
 <span class="sd">        :returns: Details of inference jobs as list of dictionaries</span>
@@ -634,7 +692,7 @@
         <span class="p">})</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.get_inference_jobs_of_app"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_inference_jobs_of_app">[docs]</a>    <span class="k">def</span> <span class="nf">get_inference_jobs_of_app</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.get_inference_jobs_of_app"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_inference_jobs_of_app">[docs]</a>    <span class="k">def</span> <span class="nf">get_inference_jobs_of_app</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Lists all inference jobs associated to an app on Rafiki.</span>
 
@@ -645,7 +703,7 @@
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/inference_jobs/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.get_running_inference_job"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.get_running_inference_job">[docs]</a>    <span class="k">def</span> <span class="nf">get_running_inference_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.get_running_inference_job"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.get_running_inference_job">[docs]</a>    <span class="k">def</span> <span class="nf">get_running_inference_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Retrieves details of the *running* inference job identified by an app and an app version,</span>
 <span class="sd">        including workers&#39; details.</span>
@@ -658,7 +716,7 @@
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s1">&#39;/inference_jobs/</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Client.stop_inference_job"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.stop_inference_job">[docs]</a>    <span class="k">def</span> <span class="nf">stop_inference_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.stop_inference_job"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.stop_inference_job">[docs]</a>    <span class="k">def</span> <span class="nf">stop_inference_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Stops the inference job identified by an app and an app version.</span>
 
@@ -674,7 +732,7 @@
     <span class="c1"># Advisors</span>
     <span class="c1">####################################</span>
 
-<div class="viewcode-block" id="Client.create_advisor"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.create_advisor">[docs]</a>    <span class="k">def</span> <span class="nf">create_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">knob_config_str</span><span class="p">,</span> <span class="n">advisor_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_create_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">knob_config_str</span><span class="p">,</span> <span class="n">advisor_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Creates a Rafiki advisor. If `advisor_id` is passed, it will create an advisor</span>
 <span class="sd">        of that ID, or do nothing if an advisor of that ID has already been created.</span>
@@ -689,9 +747,9 @@
                                 <span class="s1">&#39;advisor_id&#39;</span><span class="p">:</span> <span class="n">advisor_id</span><span class="p">,</span>
                                 <span class="s1">&#39;knob_config_str&#39;</span><span class="p">:</span> <span class="n">knob_config_str</span>
                             <span class="p">})</span>
-        <span class="k">return</span> <span class="n">data</span></div>
+        <span class="k">return</span> <span class="n">data</span>
 
-<div class="viewcode-block" id="Client.generate_proposal"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.generate_proposal">[docs]</a>    <span class="k">def</span> <span class="nf">generate_proposal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_generate_proposal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Generate a proposal of knobs from an advisor.</span>
 
@@ -700,9 +758,9 @@
 <span class="sd">        :rtype: dict[str, any]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/advisors/</span><span class="si">{}</span><span class="s1">/propose&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">advisor_id</span><span class="p">),</span> <span class="n">target</span><span class="o">=</span><span class="s1">&#39;advisor&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">data</span></div>
+        <span class="k">return</span> <span class="n">data</span>
 
-<div class="viewcode-block" id="Client.feedback_to_advisor"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.feedback_to_advisor">[docs]</a>    <span class="k">def</span> <span class="nf">feedback_to_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">,</span> <span class="n">knobs</span><span class="p">,</span> <span class="n">score</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_feedback_to_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">,</span> <span class="n">knobs</span><span class="p">,</span> <span class="n">score</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Feedbacks to the advisor on the score of a set of knobs.</span>
 <span class="sd">        Additionally returns another proposal of knobs after ingesting feedback.</span>
@@ -718,9 +776,9 @@
                             <span class="s1">&#39;score&#39;</span><span class="p">:</span> <span class="n">score</span><span class="p">,</span>
                             <span class="s1">&#39;knobs&#39;</span><span class="p">:</span> <span class="n">knobs</span>
                         <span class="p">})</span>
-        <span class="k">return</span> <span class="n">data</span></div>
+        <span class="k">return</span> <span class="n">data</span>
 
-<div class="viewcode-block" id="Client.delete_advisor"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.delete_advisor">[docs]</a>    <span class="k">def</span> <span class="nf">delete_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_delete_advisor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">advisor_id</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Deletes a Rafiki advisor.</span>
 
@@ -729,13 +787,13 @@
 <span class="sd">        :rtype: dict[str, any]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delete</span><span class="p">(</span><span class="s1">&#39;/advisors/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">advisor_id</span><span class="p">),</span> <span class="n">target</span><span class="o">=</span><span class="s1">&#39;advisor&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">data</span></div>
+        <span class="k">return</span> <span class="n">data</span>
 
     <span class="c1">####################################</span>
     <span class="c1"># Administrative Actions</span>
     <span class="c1">####################################</span>
 
-<div class="viewcode-block" id="Client.stop_all_jobs"><a class="viewcode-back" href="../../../docs/src/python/rafiki.client.Client.html#rafiki.client.Client.stop_all_jobs">[docs]</a>    <span class="k">def</span> <span class="nf">stop_all_jobs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Client.stop_all_jobs"><a class="viewcode-back" href="../../../src/python/rafiki.client.Client.html#rafiki.client.Client.stop_all_jobs">[docs]</a>    <span class="k">def</span> <span class="nf">stop_all_jobs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Stops all train and inference jobs on Rafiki. </span>
 
@@ -743,6 +801,14 @@
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/actions/stop_all_jobs&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span></div>
+
+    <span class="c1">####################################</span>
+    <span class="c1"># Rafiki Internal</span>
+    <span class="c1">####################################</span>
+
+    <span class="k">def</span> <span class="nf">send_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/event/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">json</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span>
 
     <span class="c1">####################################</span>
     <span class="c1"># Private</span>
@@ -813,6 +879,12 @@
             <span class="p">}</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">{}</span></div>
+
+<span class="k">def</span> <span class="nf">_warn</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[93mWARNING: </span><span class="si">{msg}</span><span class="se">\033</span><span class="s1">[0m&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_note</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[94mNOTE: </span><span class="si">{msg}</span><span class="se">\033</span><span class="s1">[0m&#39;</span><span class="p">)</span>
 </pre></div>
 
            </div>

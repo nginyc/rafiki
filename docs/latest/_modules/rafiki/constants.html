@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.0.9
+                0.1.0
               </div>
             
           
@@ -81,9 +81,9 @@
             
             
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../docs/src/user/index.html">User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../docs/src/dev/index.html">Developer Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../docs/src/python/index.html">Python Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../src/user/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../src/dev/index.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../src/python/index.html">Python Documentation</a></li>
 </ul>
 
             
@@ -147,33 +147,34 @@
            <div itemprop="articleBody">
             
   <h1>Source code for rafiki.constants</h1><div class="highlight"><pre>
-<div class="viewcode-block" id="BudgetType"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.BudgetType">[docs]</a><span></span><span class="k">class</span> <span class="nc">BudgetType</span><span class="p">():</span>
+<div class="viewcode-block" id="BudgetType"><a class="viewcode-back" href="../../src/python/rafiki.constants.html#rafiki.constants.BudgetType">[docs]</a><span></span><span class="k">class</span> <span class="nc">BudgetType</span><span class="p">():</span>
     <span class="n">MODEL_TRIAL_COUNT</span> <span class="o">=</span> <span class="s1">&#39;MODEL_TRIAL_COUNT&#39;</span>
-    <span class="n">ENABLE_GPU</span> <span class="o">=</span> <span class="s1">&#39;ENABLE_GPU&#39;</span></div>
+    <span class="n">GPU_COUNT</span> <span class="o">=</span> <span class="s1">&#39;GPU_COUNT&#39;</span></div>
 
-<div class="viewcode-block" id="ModelDependency"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.ModelDependency">[docs]</a><span class="k">class</span> <span class="nc">ModelDependency</span><span class="p">():</span>
+<div class="viewcode-block" id="ModelDependency"><a class="viewcode-back" href="../../src/python/rafiki.constants.html#rafiki.constants.ModelDependency">[docs]</a><span class="k">class</span> <span class="nc">ModelDependency</span><span class="p">():</span>
     <span class="n">TENSORFLOW</span> <span class="o">=</span> <span class="s1">&#39;tensorflow&#39;</span>
     <span class="n">KERAS</span> <span class="o">=</span> <span class="s1">&#39;Keras&#39;</span>
     <span class="n">SCIKIT_LEARN</span> <span class="o">=</span> <span class="s1">&#39;scikit-learn&#39;</span>
     <span class="n">PYTORCH</span> <span class="o">=</span> <span class="s1">&#39;torch&#39;</span>
     <span class="n">SINGA</span> <span class="o">=</span> <span class="s1">&#39;singa&#39;</span></div>
 
-<div class="viewcode-block" id="ModelAccessRight"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.ModelAccessRight">[docs]</a><span class="k">class</span> <span class="nc">ModelAccessRight</span><span class="p">():</span>
+<div class="viewcode-block" id="ModelAccessRight"><a class="viewcode-back" href="../../src/python/rafiki.constants.html#rafiki.constants.ModelAccessRight">[docs]</a><span class="k">class</span> <span class="nc">ModelAccessRight</span><span class="p">():</span>
     <span class="n">PUBLIC</span> <span class="o">=</span> <span class="s1">&#39;PUBLIC&#39;</span>
     <span class="n">PRIVATE</span> <span class="o">=</span> <span class="s1">&#39;PRIVATE&#39;</span></div>
 
-<div class="viewcode-block" id="InferenceJobStatus"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.InferenceJobStatus">[docs]</a><span class="k">class</span> <span class="nc">InferenceJobStatus</span><span class="p">():</span>
+<div class="viewcode-block" id="InferenceJobStatus"><a class="viewcode-back" href="../../src/python/rafiki.constants.html#rafiki.constants.InferenceJobStatus">[docs]</a><span class="k">class</span> <span class="nc">InferenceJobStatus</span><span class="p">():</span>
     <span class="n">STARTED</span> <span class="o">=</span> <span class="s1">&#39;STARTED&#39;</span>
     <span class="n">RUNNING</span> <span class="o">=</span> <span class="s1">&#39;RUNNING&#39;</span>
     <span class="n">ERRORED</span> <span class="o">=</span> <span class="s1">&#39;ERRORED&#39;</span>
     <span class="n">STOPPED</span> <span class="o">=</span> <span class="s1">&#39;STOPPED&#39;</span></div>
 
-<div class="viewcode-block" id="TrainJobStatus"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.TrainJobStatus">[docs]</a><span class="k">class</span> <span class="nc">TrainJobStatus</span><span class="p">():</span>
+<div class="viewcode-block" id="TrainJobStatus"><a class="viewcode-back" href="../../src/python/rafiki.constants.html#rafiki.constants.TrainJobStatus">[docs]</a><span class="k">class</span> <span class="nc">TrainJobStatus</span><span class="p">():</span>
     <span class="n">STARTED</span> <span class="o">=</span> <span class="s1">&#39;STARTED&#39;</span>
     <span class="n">RUNNING</span> <span class="o">=</span> <span class="s1">&#39;RUNNING&#39;</span>
-    <span class="n">STOPPED</span> <span class="o">=</span> <span class="s1">&#39;STOPPED&#39;</span></div>
+    <span class="n">STOPPED</span> <span class="o">=</span> <span class="s1">&#39;STOPPED&#39;</span>
+    <span class="n">ERRORED</span> <span class="o">=</span> <span class="s1">&#39;ERRORED&#39;</span></div>
 
-<div class="viewcode-block" id="TrialStatus"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.TrialStatus">[docs]</a><span class="k">class</span> <span class="nc">TrialStatus</span><span class="p">():</span>
+<div class="viewcode-block" id="TrialStatus"><a class="viewcode-back" href="../../src/python/rafiki.constants.html#rafiki.constants.TrialStatus">[docs]</a><span class="k">class</span> <span class="nc">TrialStatus</span><span class="p">():</span>
     <span class="n">STARTED</span> <span class="o">=</span> <span class="s1">&#39;STARTED&#39;</span>
     <span class="n">RUNNING</span> <span class="o">=</span> <span class="s1">&#39;RUNNING&#39;</span>
     <span class="n">ERRORED</span> <span class="o">=</span> <span class="s1">&#39;ERRORED&#39;</span>
@@ -192,20 +193,19 @@
     <span class="n">PREDICT</span> <span class="o">=</span> <span class="s1">&#39;PREDICT&#39;</span>
     <span class="n">INFERENCE</span> <span class="o">=</span> <span class="s1">&#39;INFERENCE&#39;</span>
 
-<div class="viewcode-block" id="UserType"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.UserType">[docs]</a><span class="k">class</span> <span class="nc">UserType</span><span class="p">():</span>
+<div class="viewcode-block" id="UserType"><a class="viewcode-back" href="../../src/python/rafiki.constants.html#rafiki.constants.UserType">[docs]</a><span class="k">class</span> <span class="nc">UserType</span><span class="p">():</span>
     <span class="n">SUPERADMIN</span> <span class="o">=</span> <span class="s1">&#39;SUPERADMIN&#39;</span>
     <span class="n">ADMIN</span> <span class="o">=</span> <span class="s1">&#39;ADMIN&#39;</span>
     <span class="n">MODEL_DEVELOPER</span> <span class="o">=</span> <span class="s1">&#39;MODEL_DEVELOPER&#39;</span>
-    <span class="n">APP_DEVELOPER</span> <span class="o">=</span> <span class="s1">&#39;APP_DEVELOPER&#39;</span>
-    <span class="n">USER</span> <span class="o">=</span> <span class="s1">&#39;USER&#39;</span></div>
+    <span class="n">APP_DEVELOPER</span> <span class="o">=</span> <span class="s1">&#39;APP_DEVELOPER&#39;</span></div>
 
 <span class="k">class</span> <span class="nc">AdvisorType</span><span class="p">():</span>
     <span class="n">BTB_GP</span> <span class="o">=</span> <span class="s1">&#39;BTB_GP&#39;</span>
 
-<div class="viewcode-block" id="DatasetType"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.DatasetType">[docs]</a><span class="k">class</span> <span class="nc">DatasetType</span><span class="p">():</span>
+<div class="viewcode-block" id="DatasetType"><a class="viewcode-back" href="../../src/python/rafiki.constants.html#rafiki.constants.DatasetType">[docs]</a><span class="k">class</span> <span class="nc">DatasetType</span><span class="p">():</span>
     <span class="n">IMAGE_FILES</span> <span class="o">=</span> <span class="s1">&#39;IMAGE_FILES&#39;</span></div>
 
-<div class="viewcode-block" id="TaskType"><a class="viewcode-back" href="../../docs/src/python/rafiki.constants.html#rafiki.constants.TaskType">[docs]</a><span class="k">class</span> <span class="nc">TaskType</span><span class="p">():</span>
+<div class="viewcode-block" id="TaskType"><a class="viewcode-back" href="../../src/python/rafiki.constants.html#rafiki.constants.TaskType">[docs]</a><span class="k">class</span> <span class="nc">TaskType</span><span class="p">():</span>
     <span class="n">IMAGE_CLASSIFICATION</span> <span class="o">=</span> <span class="s1">&#39;IMAGE_CLASSIFICATION&#39;</span>
     <span class="n">POS_TAGGING</span> <span class="o">=</span> <span class="s1">&#39;POS_TAGGING&#39;</span></div>
 </pre></div>

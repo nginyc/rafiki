@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.0.9
+                0.1.0
               </div>
             
           
@@ -81,9 +81,9 @@
             
             
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../docs/src/user/index.html">User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../docs/src/dev/index.html">Developer Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../docs/src/python/index.html">Python Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/user/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/dev/index.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/python/index.html">Python Documentation</a></li>
 </ul>
 
             
@@ -171,7 +171,7 @@
 <span class="k">class</span> <span class="nc">InvalidDatasetTypeException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span> 
 <span class="k">class</span> <span class="nc">InvalidDatasetFormatException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span> 
 
-<div class="viewcode-block" id="ModelDatasetUtils"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils">[docs]</a><span class="k">class</span> <span class="nc">ModelDatasetUtils</span><span class="p">():</span>
+<div class="viewcode-block" id="ModelDatasetUtils"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils">[docs]</a><span class="k">class</span> <span class="nc">ModelDatasetUtils</span><span class="p">():</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Collection of utility methods to help with the loading of datasets.</span>
 
@@ -193,7 +193,7 @@
         <span class="c1"># Caches downloaded datasets</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_uri_to_path</span> <span class="o">=</span> <span class="p">{}</span>
 
-<div class="viewcode-block" id="ModelDatasetUtils.load_dataset_of_corpus"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.load_dataset_of_corpus">[docs]</a>    <span class="k">def</span> <span class="nf">load_dataset_of_corpus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;tag&#39;</span><span class="p">],</span> <span class="n">split_by</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">n&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelDatasetUtils.load_dataset_of_corpus"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.load_dataset_of_corpus">[docs]</a>    <span class="k">def</span> <span class="nf">load_dataset_of_corpus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;tag&#39;</span><span class="p">],</span> <span class="n">split_by</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">n&#39;</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">            Loads dataset with type `CORPUS`.</span>
 <span class="sd">            </span>
@@ -203,7 +203,7 @@
         <span class="n">dataset_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">download_dataset_from_uri</span><span class="p">(</span><span class="n">dataset_uri</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">CorpusDataset</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">tags</span><span class="p">,</span> <span class="n">split_by</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ModelDatasetUtils.load_dataset_of_image_files"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.load_dataset_of_image_files">[docs]</a>    <span class="k">def</span> <span class="nf">load_dataset_of_image_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">,</span> <span class="n">image_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelDatasetUtils.load_dataset_of_image_files"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.load_dataset_of_image_files">[docs]</a>    <span class="k">def</span> <span class="nf">load_dataset_of_image_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">,</span> <span class="n">image_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">            Loads dataset with type `IMAGE_FILES`.</span>
 
@@ -214,7 +214,7 @@
         <span class="n">dataset_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">download_dataset_from_uri</span><span class="p">(</span><span class="n">dataset_uri</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">ImageFilesDataset</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">image_size</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ModelDatasetUtils.resize_as_images"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.resize_as_images">[docs]</a>    <span class="k">def</span> <span class="nf">resize_as_images</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">images</span><span class="p">,</span> <span class="n">image_size</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelDatasetUtils.resize_as_images"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.resize_as_images">[docs]</a>    <span class="k">def</span> <span class="nf">resize_as_images</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">images</span><span class="p">,</span> <span class="n">image_size</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">            Resize a list of N grayscale images to another size.</span>
 
@@ -226,7 +226,7 @@
         <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">image_size</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">images</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">images</span><span class="p">)</span></div>
                 
-<div class="viewcode-block" id="ModelDatasetUtils.download_dataset_from_uri"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.download_dataset_from_uri">[docs]</a>    <span class="k">def</span> <span class="nf">download_dataset_from_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelDatasetUtils.download_dataset_from_uri"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.download_dataset_from_uri">[docs]</a>    <span class="k">def</span> <span class="nf">download_dataset_from_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">            Maybe download the dataset at URI, ensuring that the dataset ends up in the local filesystem.</span>
 
@@ -286,7 +286,7 @@
     <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span>
 
-<div class="viewcode-block" id="CorpusDataset"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.CorpusDataset">[docs]</a><span class="k">class</span> <span class="nc">CorpusDataset</span><span class="p">(</span><span class="n">ModelDataset</span><span class="p">):</span>
+<div class="viewcode-block" id="CorpusDataset"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.CorpusDataset">[docs]</a><span class="k">class</span> <span class="nc">CorpusDataset</span><span class="p">(</span><span class="n">ModelDataset</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Class that helps loading of dataset with type `CORPUS`</span>
 
@@ -357,7 +357,7 @@
 
         <span class="k">return</span> <span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">tag_num_classes</span><span class="p">,</span> <span class="n">max_token_len</span><span class="p">,</span> <span class="n">max_sent_len</span><span class="p">,</span> <span class="n">sents</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ImageFilesDataset"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ImageFilesDataset">[docs]</a><span class="k">class</span> <span class="nc">ImageFilesDataset</span><span class="p">(</span><span class="n">ModelDataset</span><span class="p">):</span>
+<div class="viewcode-block" id="ImageFilesDataset"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ImageFilesDataset">[docs]</a><span class="k">class</span> <span class="nc">ImageFilesDataset</span><span class="p">(</span><span class="n">ModelDataset</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Class that helps loading of dataset with type `IMAGE_FILES`</span>
 <span class="sd">    </span>

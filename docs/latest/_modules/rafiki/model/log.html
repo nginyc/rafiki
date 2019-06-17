@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.0.9
+                0.1.0
               </div>
             
           
@@ -81,9 +81,9 @@
             
             
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../docs/src/user/index.html">User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../docs/src/dev/index.html">Developer Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../docs/src/python/index.html">Python Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/user/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/dev/index.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/python/index.html">Python Documentation</a></li>
 </ul>
 
             
@@ -149,7 +149,7 @@
   <h1>Source code for rafiki.model.log</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
-<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="k">import</span> <span class="n">datetime</span>
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">logging</span>
 
@@ -160,7 +160,7 @@
     <span class="n">METRICS</span> <span class="o">=</span> <span class="s1">&#39;METRICS&#39;</span>
     <span class="n">MESSAGE</span> <span class="o">=</span> <span class="s1">&#39;MESSAGE&#39;</span>
 
-<div class="viewcode-block" id="ModelLogger"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelLogger">[docs]</a><span class="k">class</span> <span class="nc">ModelLogger</span><span class="p">():</span>
+<div class="viewcode-block" id="ModelLogger"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelLogger">[docs]</a><span class="k">class</span> <span class="nc">ModelLogger</span><span class="p">():</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Allows models to log messages and metrics during model training, and </span>
 <span class="sd">    define plots for visualization of model training.</span>
@@ -194,21 +194,21 @@
         <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">ModelLoggerDebugHandler</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span> <span class="o">=</span> <span class="n">logger</span>
 
-<div class="viewcode-block" id="ModelLogger.define_loss_plot"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelLogger.define_loss_plot">[docs]</a>    <span class="k">def</span> <span class="nf">define_loss_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelLogger.define_loss_plot"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelLogger.define_loss_plot">[docs]</a>    <span class="k">def</span> <span class="nf">define_loss_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Convenience method of defining a plot of ``loss`` against ``epoch``.</span>
 <span class="sd">        To be used with :meth:`rafiki.model.ModelLogger.log_loss`.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">define_plot</span><span class="p">(</span><span class="s1">&#39;Loss Over Epochs&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;loss&#39;</span><span class="p">],</span> <span class="n">x_axis</span><span class="o">=</span><span class="s1">&#39;epoch&#39;</span><span class="p">)</span></div>
   
-<div class="viewcode-block" id="ModelLogger.log_loss"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelLogger.log_loss">[docs]</a>    <span class="k">def</span> <span class="nf">log_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">epoch</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelLogger.log_loss"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelLogger.log_loss">[docs]</a>    <span class="k">def</span> <span class="nf">log_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">epoch</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Convenience method for logging `loss` against `epoch`.</span>
 <span class="sd">        To be used with :meth:`rafiki.model.ModelLogger.define_loss_plot`.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">loss</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ModelLogger.define_plot"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelLogger.define_plot">[docs]</a>    <span class="k">def</span> <span class="nf">define_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">metrics</span><span class="p">,</span> <span class="n">x_axis</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelLogger.define_plot"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelLogger.define_plot">[docs]</a>    <span class="k">def</span> <span class="nf">define_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">metrics</span><span class="p">,</span> <span class="n">x_axis</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Defines a plot for a set of metrics for analysis of model training.</span>
 <span class="sd">        By default, metrics will be plotted against time.</span>
@@ -227,7 +227,7 @@
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">LogType</span><span class="o">.</span><span class="n">PLOT</span><span class="p">,</span> <span class="p">{</span> <span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="n">title</span><span class="p">,</span> <span class="s1">&#39;metrics&#39;</span><span class="p">:</span> <span class="n">metrics</span><span class="p">,</span> <span class="s1">&#39;x_axis&#39;</span><span class="p">:</span> <span class="n">x_axis</span> <span class="p">})</span></div>
 
-<div class="viewcode-block" id="ModelLogger.log"><a class="viewcode-back" href="../../../docs/src/python/rafiki.model.html#rafiki.model.ModelLogger.log">[docs]</a>    <span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">metrics</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelLogger.log"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelLogger.log">[docs]</a>    <span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">metrics</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Logs a message and/or a set of metrics at a single point in time.</span>
 
@@ -255,7 +255,7 @@
 
     <span class="k">def</span> <span class="nf">_log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">log_type</span><span class="p">,</span> <span class="n">log_dict</span><span class="o">=</span><span class="p">{}):</span>
         <span class="n">log_dict</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">log_type</span>
-        <span class="n">log_dict</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">MODEL_LOG_DATETIME_FORMAT</span><span class="p">)</span>
+        <span class="n">log_dict</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">MODEL_LOG_DATETIME_FORMAT</span><span class="p">)</span>
         <span class="n">log_line</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">log_dict</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">log_line</span><span class="p">)</span>
 
