@@ -1,13 +1,11 @@
 from sklearn import svm
-import json
 import pickle
-import os
 import base64
 import numpy as np
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, utils
+from rafiki.model import BaseModel, CategoricalKnob, FloatKnob, FixedKnob, utils
 from rafiki.constants import TaskType, ModelDependency
+from rafiki.advisor import test_model_class
 
 class SkSvm(BaseModel):
     '''
@@ -16,7 +14,7 @@ class SkSvm(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'max_iter': IntegerKnob(20),
+            'max_iter': FixedKnob(20),
             'kernel': CategoricalKnob(['rbf', 'linear', 'poly']),
             'gamma': CategoricalKnob(['scale', 'auto']),
             'C': FloatKnob(1e-4, 1e4, is_exp=True),
@@ -28,8 +26,8 @@ class SkSvm(BaseModel):
         self.__dict__.update(knobs)
         self._clf = self._build_classifier(self.max_iter, self.kernel, self.gamma, self.C)
         
-    def train(self, dataset_path):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, max_image_size=self.max_image_size, mode='L')
+    def train(self, dataset_path, **kwargs):
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, max_image_size=self.max_image_size, mode='L')
         self._image_size = dataset.image_size
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
@@ -37,7 +35,7 @@ class SkSvm(BaseModel):
         self._clf.fit(X, y)
 
     def evaluate(self, dataset_path):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, max_image_size=self.max_image_size, mode='L')
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, max_image_size=self.max_image_size, mode='L')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -50,9 +48,6 @@ class SkSvm(BaseModel):
         X = self._prepare_X(queries)
         probs = self._clf.predict_proba(X)
         return probs.tolist()
-
-    def destroy(self):
-        pass
 
     def dump_parameters(self):
         params = {}
@@ -69,14 +64,12 @@ class SkSvm(BaseModel):
 
     def load_parameters(self, params):
         # Load model parameters
-        clf_base64 = params.get('clf_base64', None)
-        if clf_base64 is None:
-            raise InvalidModelParamsException()
+        clf_base64 = params['clf_base64']
 
         # Load image size
         self._image_size = params['image_size']
         
-        clf_bytes = base64.b64decode(params['clf_base64'].encode('utf-8'))
+        clf_bytes = base64.b64decode(clf_base64.encode('utf-8'))
         self._clf = pickle.loads(clf_bytes)
 
     def _prepare_X(self, images):

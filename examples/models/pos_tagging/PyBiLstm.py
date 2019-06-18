@@ -1,21 +1,13 @@
-import os
 import math
-import sys
 import random
-import datetime
-import numpy as np
-import traceback
-import pprint
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data.dataset import Dataset
 
-from rafiki.model import BaseModel, InvalidModelParamsException, \
-                        test_model_class, FixedKnob, IntegerKnob, FloatKnob, \
-                        CategoricalKnob, utils
+from rafiki.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, utils
 from rafiki.constants import TaskType, ModelDependency
+from rafiki.advisor import test_model_class
 
 class PyBiLstm(BaseModel):
     '''
@@ -24,7 +16,7 @@ class PyBiLstm(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': FixedKnob(20),
+            'epochs': FixedKnob(1),
             'word_embed_dims': IntegerKnob(16, 128),
             'word_rnn_hidden_size': IntegerKnob(16, 128),
             'word_dropout': FloatKnob(1e-3, 2e-1, is_exp=True),
@@ -36,7 +28,7 @@ class PyBiLstm(BaseModel):
         super().__init__(**knobs)
         self._knobs = knobs
 
-    def train(self, dataset_path):
+    def train(self, dataset_path, **kwargs):
         dataset = utils.dataset.load_dataset_of_corpus(dataset_path)
         self._word_dict = self._extract_word_dict(dataset)
         self._tag_count = dataset.tag_num_classes[0] 
@@ -61,28 +53,24 @@ class PyBiLstm(BaseModel):
         sents_tags = self._predict(queries)
         return sents_tags
 
-    def destroy(self):
-        pass
-
     def dump_parameters(self):
-        params = {}
-        params['net_state_dict'] = self._net.state_dict()
-        params['optimizer_state_dict'] = self._optimizer.state_dict()
-        params['word_dict'] = self._word_dict
-        params['tag_count'] = self._tag_count
+        net_params = self._state_dict_to_params(self._net.state_dict())
+        net_params = self._namespace_params(net_params, 'net')
+        word_dict_params = self._namespace_params(self._word_dict, 'word_dict')
+        params = {
+            **net_params,
+            **word_dict_params,
+            'tag_count': self._tag_count
+        }
         return params
 
     def load_parameters(self, params):
-        self._word_dict = params['word_dict']
         self._tag_count = params['tag_count']
-        (net, optimizer) = self._create_model()
-        net_state_dict = params['net_state_dict']
-        net.load_state_dict(net_state_dict)
-        optimizer_state_dict = params['optimizer_state_dict']
-        optimizer.load_state_dict(optimizer_state_dict)
-
-        self._net = net
-        self._optimizer = optimizer
+        (self._word_dict, params) = self._extract_namespace_from_params(params, 'word_dict')
+        (net_params, params) = self._extract_namespace_from_params(params, 'net')
+        net_state_dict = self._params_to_state_dict(net_params)
+        (self._net, self._optimizer) = self._create_model()
+        self._net.load_state_dict(net_state_dict)
 
     def _extract_word_dict(self, dataset):
         word_dict = {}
@@ -234,6 +222,46 @@ class PyBiLstm(BaseModel):
                 word_embed_dims, word_rnn_hidden_size, word_dropout)
         optimizer = optim.Adam(net.parameters(), lr=lr)
         return (net, optimizer)
+
+    def _state_dict_to_params(self, state_dict):
+        params = {}
+        # For each tensor, convert into numpy array
+        for (name, value) in state_dict.items():
+            if isinstance(value, torch.Tensor):
+                value = value.cpu().numpy()
+            else:
+                raise Exception(f'Param not supported: {value}')
+
+            params[name] = value
+                
+        return params 
+
+    def _params_to_state_dict(self, params):
+        state_dict = {}
+        # For each tensor, convert into numpy array
+        for (name, value) in params.items():
+            state_dict[name] = torch.Tensor(value)
+                
+        return state_dict 
+
+    def _namespace_params(self, params, namespace):
+        # For each param, add namespace prefix
+        out_params = {}
+        for (name, value) in params.items():
+            out_params[f'{namespace}:{name}'] = value
+        
+        return out_params
+
+    def _extract_namespace_from_params(self, params, namespace):
+        out_params = {}
+        # For each param, check for matching namespace, adding to out params without namespace prefix if matching 
+        for (name, value) in params.items():
+            if name.startswith(f'{namespace}:'):
+                param_name = name[(len(namespace)+1):]
+                out_params[param_name] = value
+        
+        return (out_params, params)
+
 
 class PyNet(nn.Module):
     def __init__(self, word_count, tag_count, word_embed_dims=8, \

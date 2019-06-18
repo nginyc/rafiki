@@ -1,17 +1,13 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.python.client import device_lib
-import json
-import os
 import tempfile
 import numpy as np
 import base64
-import abc
-from urllib.parse import urlparse, parse_qs 
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, FloatKnob, CategoricalKnob, FixedKnob, utils
+from rafiki.model import BaseModel, FloatKnob, CategoricalKnob, FixedKnob, utils
 from rafiki.constants import TaskType, ModelDependency
+from rafiki.advisor import test_model_class
 
 class TfVgg16(BaseModel):
     '''
@@ -20,7 +16,7 @@ class TfVgg16(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'max_epochs': FixedKnob(100),
+            'max_epochs': FixedKnob(10),
             'learning_rate': FloatKnob(1e-5, 1e-2, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
             'max_image_size': CategoricalKnob([32, 64, 128, 224]),
@@ -34,7 +30,7 @@ class TfVgg16(BaseModel):
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph, config=config)
 
-    def train(self, dataset_path):
+    def train(self, dataset_path, ***kwargs):
         max_image_size = self._knobs.get('max_image_size')
         bs = self._knobs.get('batch_size')
         max_epochs = self._knobs.get('max_epochs')
@@ -53,9 +49,9 @@ class TfVgg16(BaseModel):
         images = np.asarray(images)
         classes = np.asarray(keras.utils.to_categorical(classes))
 
-        self._model = self._build_model(num_classes, dataset.image_size)
         with self._graph.as_default():
             with self._sess.as_default():
+                self._model = self._build_model(num_classes, dataset.image_size)
                 self._model.fit(
                     images, 
                     classes, 
@@ -112,8 +108,9 @@ class TfVgg16(BaseModel):
         # Save model parameters
         with tempfile.NamedTemporaryFile() as tmp:
             # Save whole model to temp h5 file
-            with self._sess.as_default():
-                self._model.save(tmp.name)
+            with self._graph.as_default():
+                with self._sess.as_default():
+                    self._model.save(tmp.name)
         
             # Read from temp h5 file & encode it to base64 string
             with open(tmp.name, 'rb') as f:
@@ -130,9 +127,7 @@ class TfVgg16(BaseModel):
 
     def load_parameters(self, params):
         # Load model parameters
-        h5_model_base64 = params.get('h5_model_base64', None)
-        if h5_model_base64 is None:
-            raise InvalidModelParamsException()
+        h5_model_base64 = params['h5_model_base64']
 
         with tempfile.NamedTemporaryFile() as tmp:
             # Convert back to bytes & write to temp file
@@ -141,8 +136,9 @@ class TfVgg16(BaseModel):
                 f.write(h5_model_bytes)
 
             # Load model from temp file
-            with self._sess.as_default():
-                self._model = keras.models.load_model(tmp.name)
+            with self._graph.as_default():
+                with self._sess.as_default():
+                    self._model = keras.models.load_model(tmp.name)
         
         # Load pre-processing params
         self._image_size = params['image_size']

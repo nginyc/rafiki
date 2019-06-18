@@ -35,7 +35,7 @@ class TfFeedForward(BaseModel):
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph, config=config)
         
-    def train(self, dataset_path, *args):
+    def train(self, dataset_path, **kwargs):
         max_image_size = self._knobs['max_image_size']
         bs = self._knobs['batch_size']
         max_epochs = self._knobs['max_epochs']
@@ -46,7 +46,7 @@ class TfFeedForward(BaseModel):
         utils.logger.define_plot('Loss Over Epochs', ['loss', 'early_stop_val_loss'], x_axis='epoch')
 
         # Load dataset
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, max_image_size=max_image_size, 
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, max_image_size=max_image_size, 
                                                             mode='RGB')
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
@@ -138,9 +138,7 @@ class TfFeedForward(BaseModel):
 
     def load_parameters(self, params):
         # Load model parameters
-        h5_model_base64 = params.get('h5_model_base64', None)
-        if h5_model_base64 is None:
-            raise InvalidModelParamsException()
+        h5_model_base64 = params['h5_model_base64']
 
         with tempfile.NamedTemporaryFile() as tmp:
             # Convert back to bytes & write to temp file

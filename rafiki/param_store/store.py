@@ -51,9 +51,9 @@ class ParamStore(object):
         # Deserialize as `msgpack`
         params = msgpack.unpackb(params_bytes, raw=False)
 
-        # Convert lists or numbers to numpy arrays
+        # Convert lists to numpy arrays
         for (name, value) in params.items():
-            if isinstance(value, (list, int, float)):
+            if isinstance(value, list):
                 params[name] = np.asarray(value)
         
         return params

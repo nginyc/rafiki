@@ -1,15 +1,8 @@
-import os
 import math
-import sys
-import datetime
-import re
-import numpy as np
-import traceback
-import pprint
-import json
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, utils
+from rafiki.model import BaseModel, utils
 from rafiki.constants import TaskType
+from rafiki.advisor import test_model_class
 
 # Min numeric value
 MIN_VALUE = -9999999999
@@ -25,7 +18,7 @@ class BigramHmm(BaseModel):
     def __init__(self, **knobs):
         super().__init__(**knobs)
 
-    def train(self, dataset_path):
+    def train(self, dataset_path, **kwargs):
         dataset = utils.dataset.load_dataset_of_corpus(dataset_path)
         (sents_tokens, sents_tags) = zip(*[zip(*sent) for sent in dataset])
         self._num_tags = dataset.tag_num_classes[0]
@@ -43,9 +36,6 @@ class BigramHmm(BaseModel):
         sents_tokens = queries
         (sents_tags) = self._tag_sents(self._num_tags, sents_tokens, self._trans_probs, self._emiss_probs)
         return sents_tags
-
-    def destroy(self):
-        pass
 
     def dump_parameters(self):
         params = {}

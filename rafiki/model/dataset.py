@@ -12,10 +12,7 @@ from urllib.parse import urlparse
 import zipfile
 import io
 import abc
-import tempfile
 import csv
-
-from rafiki.constants import DatasetType
 
 logger = logging.getLogger(__name__)
 

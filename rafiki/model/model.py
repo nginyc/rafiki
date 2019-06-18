@@ -61,13 +61,15 @@ class BaseModel(abc.ABC):
         '''
         pass
 
+    # TODO: Improve doc
     @abc.abstractmethod
-    def train(self, dataset_path: str):
+    def train(self, dataset_path: str, shared_params: Params = None):
         '''
         Train this model instance with given dataset and initialized knob values.
-        Additionally, a dictionary of trained shared parameters from previous trials is passed.
+        Additionally, a dictionary of trained parameters shared from previous trials could be passed.
 
         :param str dataset_path: File path of the train dataset file in the local file system, in a format specified by the task
+        :param Params shared_params: { <param_name>: <param_value> }
         '''
         raise NotImplementedError()
 
@@ -98,9 +100,11 @@ class BaseModel(abc.ABC):
         '''
         raise NotImplementedError()
 
+    # TODO: Document format of params
+    @abc.abstractmethod
     def dump_parameters(self) -> Params:
         '''
-        Returns a dictionary of model parameters for persistence and to share with future trials
+        Returns a dictionary of model parameters for persistence and to share with future trials during training.
         This dictionary should be serializable by the Python's ``pickle`` module.
         This will be used for trained model serialization within Rafiki.
         This will be called only when model is *trained*.
@@ -110,10 +114,18 @@ class BaseModel(abc.ABC):
         '''
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def load_parameters(self, params: Params):
         '''
-        Loads the parameters of this model that has been persisted, or has been shared from previous trials.
+        Loads previously trained parameters for this model. This model's initialized knob values would match those during training.
         The model will be considered *trained* subsequently.
         :param Params params: { <param_name>: <param_value> }
         '''
         raise NotImplementedError()
+    
+    def destroy(self):
+        '''
+        Destroy this model instance, freeing any resources held by this model instance.
+        No other instance methods will be called subsequently.
+        '''
+        pass 

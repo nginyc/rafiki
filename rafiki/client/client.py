@@ -813,4 +813,4 @@ def _warn(msg):
     print(f'\033[93mWARNING: {msg}\033[0m')
 
 def _note(msg):
-    print(f'\033[94mNOTE: {msg}\033[0m')
+    print(f'\033[94m{msg}\033[0m')
