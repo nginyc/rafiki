@@ -28,16 +28,16 @@ class SkSvm(BaseModel):
         self.__dict__.update(knobs)
         self._clf = self._build_classifier(self.max_iter, self.kernel, self.gamma, self.C)
         
-    def train(self, dataset_uri):
-        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=self.max_image_size, mode='L')
+    def train(self, dataset_path):
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, max_image_size=self.max_image_size, mode='L')
         self._image_size = dataset.image_size
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
         self._clf.fit(X, y)
 
-    def evaluate(self, dataset_uri):
-        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=self.max_image_size, mode='L')
+    def evaluate(self, dataset_path):
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, max_image_size=self.max_image_size, mode='L')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -101,8 +101,8 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.SCIKIT_LEARN: '0.20.0'
         },
-        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-        val_dataset_uri='data/fashion_mnist_for_image_classification_val.zip',
+        train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
+        val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

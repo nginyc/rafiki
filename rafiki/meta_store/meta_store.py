@@ -1,14 +1,19 @@
 from datetime import datetime
 import os
-from sqlalchemy import create_engine, distinct
+from sqlalchemy import create_engine, distinct, or_
 from sqlalchemy.orm import sessionmaker
 
-from rafiki.constants import TrainJobStatus, \
+from rafiki.constants import TrainJobStatus, UserType, \
     TrialStatus, ServiceStatus, InferenceJobStatus, ModelAccessRight
 
-from .schema import Base, TrainJob, SubTrainJob, \
-    InferenceJob, SubInferenceJob, Trial, Model, User, Service, \
-    TrialLog, SubTrainJobWorker, SubInferenceJobWorker
+from .schema import Base, TrainJob, SubTrainJob, TrainJobWorker, \
+    InferenceJob, Trial, Model, User, Service, InferenceJobWorker, \
+    TrialLog, Dataset
+
+class InvalidModelAccessRightError(Exception): pass
+class DuplicateModelNameError(Exception): pass
+class ModelUsedError(Exception): pass
+class InvalidUserTypeError(Exception): pass
 
 class DuplicateTrialNoError(Exception): pass
 
@@ -38,6 +43,7 @@ class MetaStore(object):
     ####################################
 
     def create_user(self, email, password_hash, user_type):
+        self._validate_user_type(user_type)
         user = User(
             email=email,
             password_hash=password_hash,
@@ -46,16 +52,57 @@ class MetaStore(object):
         self._session.add(user)
         return user
 
+    def ban_user(self, user):
+        user.banned_date = datetime.utcnow()
+        self._session.add(user)
+
     def get_user_by_email(self, email):
         user = self._session.query(User).filter(User.email == email).first()
         return user
 
+    def get_users(self):
+        users = self._session.query(User).all()
+        return users
+
+    def _validate_user_type(self, user_type):
+        if user_type not in [UserType.SUPERADMIN, UserType.ADMIN, UserType.APP_DEVELOPER, UserType.MODEL_DEVELOPER]:
+            raise InvalidUserTypeError()
+
+    ####################################
+    # Datasets
+    ####################################
+
+    def create_dataset(self, name, task, size_bytes, store_dataset_id, owner_id):
+        dataset = Dataset(
+            name=name,
+            task=task,
+            size_bytes=size_bytes,
+            store_dataset_id=store_dataset_id,
+            owner_id=owner_id
+        )
+        self._session.add(dataset)
+        return dataset
+
+    def get_dataset(self, id):
+        dataset = self._session.query(Dataset).get(id)
+        return dataset
+
+    def get_datasets(self, user_id, task=None):
+        query = self._session.query(Dataset) \
+            .filter(Dataset.owner_id == user_id)
+
+        if task is not None:
+            query = query.filter(Dataset.task == task)
+        
+        datasets = query.all()
+        return datasets
+    
     ####################################
     # Train Jobs
     ####################################
 
     def create_train_job(self, user_id, app, app_version, task, budget,
-                        train_dataset_uri, val_dataset_uri):
+                        train_dataset_id, val_dataset_id):
 
         train_job = TrainJob(
             user_id=user_id,
@@ -63,17 +110,17 @@ class MetaStore(object):
             app_version=app_version,
             task=task,
             budget=budget,
-            train_dataset_uri=train_dataset_uri,
-            val_dataset_uri=val_dataset_uri
+            train_dataset_id=train_dataset_id,
+            val_dataset_id=val_dataset_id
         )
         self._session.add(train_job)
         return train_job
 
-    def get_train_jobs_of_app(self, app):
+    def get_train_jobs_by_app(self, user_id, app):
         train_jobs = self._session.query(TrainJob) \
             .filter(TrainJob.app == app) \
-            .order_by(TrainJob.datetime_started.desc()) \
-            .all()
+            .filter(TrainJob.user_id == user_id) \
+            .order_by(TrainJob.app_version.desc()).all()
 
         return train_jobs
 
@@ -95,9 +142,10 @@ class MetaStore(object):
         return train_jobs
 
     # Returns for the latest app version unless specified
-    def get_train_job_by_app_version(self, app, app_version=-1):
+    def get_train_job_by_app_version(self, user_id, app, app_version=-1):
         # pylint: disable=E1111
         query = self._session.query(TrainJob) \
+            .filter(TrainJob.user_id == user_id) \
             .filter(TrainJob.app == app)
 
         if app_version == -1:
@@ -107,6 +155,19 @@ class MetaStore(object):
 
         return query.first()
     
+    def mark_train_job_as_running(self, train_job):
+        train_job.status = TrainJobStatus.RUNNING
+        self._session.add(train_job)
+
+    def mark_train_job_as_errored(self, train_job):
+        train_job.status = TrainJobStatus.ERRORED
+        self._session.add(train_job)
+
+    def mark_train_job_as_stopped(self, train_job):
+        train_job.status = TrainJobStatus.STOPPED
+        train_job.datetime_stopped = datetime.utcnow()
+        self._session.add(train_job)
+
     def mark_train_job_as_running(self, train_job):
         train_job.status = TrainJobStatus.RUNNING
         self._session.add(train_job)
@@ -145,11 +206,11 @@ class MetaStore(object):
         return sub_train_job
 
     ####################################
-    # Sub Train Job Worker
+    # Train Job Workers
     ####################################  
 
-    def create_sub_train_job_worker(self, sub_train_job_id, service_id):
-        worker = SubTrainJobWorker(
+    def create_train_job_worker(self, service_id, sub_train_job_id):
+        train_job_worker = TrainJobWorker(
             sub_train_job_id=sub_train_job_id,
             service_id=service_id
         )
@@ -170,6 +231,13 @@ class MetaStore(object):
         workers = self._session.query(SubTrainJobWorker) \
                     .join(SubTrainJob, SubTrainJob.id == SubTrainJobWorker.sub_train_job_id) \
                     .filter(SubTrainJob.train_job_id == train_job_id).all()
+        return workers
+
+    def get_workers_of_train_job(self, train_job_id):
+        workers = self._session.query(TrainJobWorker) \
+                    .join(SubTrainJob, SubTrainJob.id == TrainJobWorker.sub_train_job_id) \
+                    .filter(SubTrainJob.train_job_id == train_job_id).all()
+
         return workers
 
     ####################################
@@ -212,9 +280,27 @@ class MetaStore(object):
         self._session.add(inference_job)
         return inference_job
     
-    def get_inference_jobs_of_app(self, app):
+    def mark_inference_job_as_running(self, inference_job):
+        inference_job.status = InferenceJobStatus.RUNNING
+        inference_job.datetime_stopped = None
+        return inference_job
+
+    def mark_inference_job_as_stopped(self, inference_job):
+        inference_job.status = InferenceJobStatus.STOPPED
+        inference_job.datetime_stopped = datetime.utcnow()
+        self._session.add(inference_job)
+        return inference_job
+
+    def mark_inference_job_as_errored(self, inference_job):
+        inference_job.status = InferenceJobStatus.ERRORED
+        inference_job.datetime_stopped = datetime.utcnow()
+        self._session.add(inference_job)
+        return inference_job
+
+    def get_inference_jobs_of_app(self, user_id, app):
         inference_jobs = self._session.query(InferenceJob) \
             .join(TrainJob, InferenceJob.train_job_id == TrainJob.id) \
+            .filter(TrainJob.user_id == user_id) \
             .filter(TrainJob.app == app) \
             .order_by(InferenceJob.datetime_started.desc()).all()
         return inference_jobs
@@ -296,22 +382,22 @@ class MetaStore(object):
             service_type=service_type,
             docker_image=docker_image,
             container_manager_type=container_manager_type,
-            replicas=replicas, 
+            replicas=replicas,
             gpus=gpus
         )
         self._session.add(service)
         return service
 
-    def mark_service_as_deploying(self, service, container_service_id, 
-                                container_service_name, hostname,
-                                port, ext_hostname, ext_port, service_info):
-        service.container_service_id = container_service_id
+    def mark_service_as_deploying(self, service, container_service_name, 
+                                container_service_id, hostname,
+                                port, ext_hostname, ext_port, container_service_info):
         service.container_service_name = container_service_name
+        service.container_service_id = container_service_id
         service.hostname = hostname
         service.port = port
         service.ext_hostname = ext_hostname
         service.ext_port = ext_port
-        service.service_info = service_info
+        service.container_service_info = container_service_info
         service.status = ServiceStatus.DEPLOYING
         self._session.add(service)
 
@@ -351,6 +437,9 @@ class MetaStore(object):
 
     def create_model(self, user_id, name, task, model_file_bytes, 
                     model_class, docker_image, dependencies, access_right):
+        
+        self._validate_model_access_right(access_right)
+
         model = Model(
             user_id=user_id,
             name=name,
@@ -364,26 +453,28 @@ class MetaStore(object):
         self._session.add(model)
         return model
 
-    def get_models_of_task(self, user_id, task):
-        task_models = self._session.query(Model) \
-            .filter(Model.task == task) \
-            .all()
+    def delete_model(self, model):
+        # Ensure that model has no referencing jobs
+        sub_train_job = self._session.query(SubTrainJob) \
+            .filter(SubTrainJob.model_id == model.id).first()
 
-        public_models = self._filter_public_models(task_models)
-        private_models = self._filter_private_models(task_models, user_id)
-        models = public_models + private_models
+        if sub_train_job is not None:
+            raise ModelUsedError()
+
+        self._session.delete(model)
+
+    def get_available_models(self, user_id, task=None):
+        # Get public models or user's own models
+        query = self._session.query(Model) \
+            .filter(or_(Model.access_right == ModelAccessRight.PUBLIC, Model.user_id == user_id))
+        if task is not None:
+            query = query.filter(Model.task == task)
+        models = query.all()
         return models
 
-    def get_models(self, user_id):
-        all_models = self._session.query(Model).all()
-
-        public_models = self._filter_public_models(all_models)
-        private_models = self._filter_private_models(all_models, user_id)
-        models = public_models + private_models
-        return models
-
-    def get_model_by_name(self, name):
+    def get_model_by_name(self, user_id, name):
         model = self._session.query(Model) \
+            .filter(Model.user_id == user_id) \
             .filter(Model.name == name).first()
         
         return model
@@ -391,6 +482,10 @@ class MetaStore(object):
     def get_model(self, id):
         model = self._session.query(Model).get(id)
         return model
+
+    def _validate_model_access_right(self, access_right):
+        if access_right not in [ModelAccessRight.PUBLIC, ModelAccessRight.PRIVATE]:
+            raise InvalidModelAccessRightError()
 
     ####################################
     # Trials
@@ -510,6 +605,11 @@ class MetaStore(object):
             if '_sub_train_job_id_no_uc' in str(e):
                 self._session.rollback()
                 raise DuplicateTrialNoError()
+
+            # Check if error is due to duplicate model name
+            if 'model_name_user_id_key' in str(e):
+                self._session.rollback()
+                raise DuplicateModelNameError()
             else:
                 raise e
 
@@ -534,10 +634,3 @@ class MetaStore(object):
 
     def _define_tables(self):
         Base.metadata.create_all(bind=self._engine)
-
-    def _filter_public_models(self, models):
-        return list(filter(lambda model: model.access_right == ModelAccessRight.PUBLIC, models))
-    
-    def _filter_private_models(self, models, user_id):
-        return list(filter(lambda model: model.access_right == ModelAccessRight.PRIVATE and \
-                            model.user_id == user_id, models))

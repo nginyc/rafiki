@@ -1,8 +1,7 @@
 LOG_FILE_PATH=$PWD/logs/test.log
 
-# Read from shell configuration file
-source ./.env.sh
+pip install -r test/requirements.txt
 
-pip install -r rafiki/test/requirements.txt
-pytest -s --cov=rafiki $1 > $LOG_FILE_PATH || echo "Tests failed."
-echo "Test results at $LOG_FILE_PATH"
+echo 'Running tests...'
+echo "Check test results at $LOG_FILE_PATH"
+pytest -s -x $1 > $LOG_FILE_PATH || echo "Tests failed"

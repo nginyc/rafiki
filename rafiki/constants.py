@@ -25,6 +25,7 @@ class TrainJobStatus():
     RUNNING = 'RUNNING'
     ERRORED = 'ERRORED'
     STOPPED = 'STOPPED'
+    ERRORED = 'ERRORED'
 
 class TrialStatus():
     PENDING = 'PENDING'
@@ -50,8 +51,7 @@ class UserType():
     ADMIN = 'ADMIN'
     MODEL_DEVELOPER = 'MODEL_DEVELOPER'
     APP_DEVELOPER = 'APP_DEVELOPER'
-    USER = 'USER'
-    
+
 class DatasetType():
     IMAGE_FILES = 'IMAGE_FILES'
 

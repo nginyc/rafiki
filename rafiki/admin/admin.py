@@ -3,7 +3,6 @@ import logging
 import traceback
 import bcrypt
 import uuid
-import csv
 
 from rafiki.meta_store import MetaStore
 from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus, \
@@ -11,39 +10,37 @@ from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatu
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.model import LoggerUtils
 from rafiki.container import DockerSwarmContainerManager 
+from rafiki.data_store import Dataset, FileDataStore, DataStore
 
 from .services_manager import ServicesManager
 
 logger = logging.getLogger(__name__)
 
 class UserExistsError(Exception): pass
+class UserAlreadyBannedError(Exception): pass
 class InvalidUserError(Exception): pass
 class InvalidPasswordError(Exception): pass
 class InvalidRunningInferenceJobError(Exception): pass
 class InvalidModelError(Exception): pass
-class InvalidModelAccessError(Exception): pass
 class InvalidTrainJobError(Exception): pass
 class InvalidTrialError(Exception): pass
 class RunningInferenceJobExistsError(Exception): pass
 class NoModelsForTrainJobError(Exception): pass
+class InvalidDatasetError(Exception): pass
 
 class Admin(object):
-    def __init__(self, meta_store=None, container_manager=None):
-        if meta_store is None: 
-            meta_store = MetaStore()
-            
-        if container_manager is None: 
-            container_manager = DockerSwarmContainerManager()
-            
+    def __init__(self, meta_store=None, container_manager=None, data_store=None):
+        meta_store = meta_store or MetaStore()
+        data_folder_path = os.path.join(os.environ['WORKDIR_PATH'], os.environ['DATA_DIR_PATH'])
+        container_manager = container_manager or DockerSwarmContainerManager()
+        self._data_store: DataStore = data_store or FileDataStore(data_folder_path)
         self._base_worker_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_WORKER'],
                                                 os.environ['RAFIKI_VERSION'])
-
-        self._meta_store = meta_store
-        self._services_manager = ServicesManager(meta_store, container_manager)
+        self._services_manager = ServicesManager(self._meta_store, container_manager)
 
     def seed(self):
         with self._meta_store:
-            self._seed_users()
+            self._seed_superadmin()
 
     ####################################
     # Users
@@ -60,74 +57,147 @@ class Admin(object):
 
         return {
             'id': user.id,
-            'user_type': user.user_type
+            'email': user.email,
+            'user_type': user.user_type,
+            'banned_date': user.banned_date
         }
 
     def create_user(self, email, password, user_type):
         user = self._create_user(email, password, user_type)
         return {
-            'id': user.id
+            'id': user.id,
+            'email': user.email,
+            'user_type': user.user_type
         }
 
-    def create_users(self, csv_file_bytes):
-        temp_csv_file = '{}.csv'.format(str(uuid.uuid4()))
-
-        # Temporarily save the csv file to disk
-        with open(temp_csv_file, 'wb') as f:
-            f.write(csv_file_bytes)
-
-        users = []
-        with open(temp_csv_file, 'rt', encoding='utf-8-sig') as f:
-            reader = csv.DictReader(f)
-            reader.fieldnames = [name.lower() for name in reader.fieldnames]
-            for row in reader:
-                user = self._create_user(row['email'], row['password'], row['user_type'])
-                users.append(user)
-        os.remove(temp_csv_file)
+    def get_users(self):
+        users = self._meta_store.get_users()
         return [
             {
                 'id': user.id,
                 'email': user.email,
-                'user_type': user.user_type
+                'user_type': user.user_type,
+                'banned_date': user.banned_date
             }
             for user in users
+        ]
+        
+    def get_user_by_email(self, email):
+        user = self._meta_store.get_user_by_email(email)
+        if user is None:
+            return None
+
+        return {
+            'id': user.id,
+            'email': user.email,
+            'user_type': user.user_type,
+            'banned_date': user.banned_date
+        }
+
+    def ban_user(self, email):
+        user = self._meta_store.get_user_by_email(email)
+        if user is None:
+            raise InvalidUserError()
+        if user.banned_date is not None:
+            raise UserAlreadyBannedError()
+
+        self._meta_store.ban_user(user)
+        
+        return {
+            'id': user.id,
+            'email': user.email,
+            'user_type': user.user_type,
+            'banned_date': user.banned_date
+        }
+    
+    ####################################
+    # Datasets
+    ####################################
+
+    def create_dataset(self, user_id, name, task, data_file_path):
+        # Store dataset in data folder
+        store_dataset = self._data_store.save(data_file_path)
+
+        # Get metadata for dataset
+        store_dataset_id = store_dataset.id
+        size_bytes = store_dataset.size_bytes
+        owner_id = user_id
+
+        dataset = self._meta_store.create_dataset(name, task, size_bytes, store_dataset_id, owner_id)
+        self._meta_store.commit()
+
+        return {
+            'id': dataset.id,
+            'name': dataset.name,
+            'task': dataset.task,
+            'size_bytes': dataset.size_bytes
+        }
+
+    def get_dataset(self, dataset_id):
+        dataset = self._meta_store.get_dataset(dataset_id)
+        if dataset is None:
+            raise InvalidDatasetError()
+
+        return {
+            'id': dataset.id,
+            'name': dataset.name,
+            'task': dataset.task,
+            'datetime_created': dataset.datetime_created,
+            'size_bytes': dataset.size_bytes,
+            'owner_id': dataset.owner_id
+        }
+
+    def get_datasets(self, user_id, task=None):
+        datasets = self._meta_store.get_datasets(user_id, task)
+        return [
+            {
+                'id': x.id,
+                'name': x.name,
+                'task': x.task,
+                'datetime_created': x.datetime_created,
+                'size_bytes': x.size_bytes
+
+            }
+            for x in datasets
         ]
 
     ####################################
     # Train Job
     ####################################
 
-    def create_train_job(self, user_id, app, task, train_dataset_uri, 
-                        val_dataset_uri, budget, models=None):
+    def create_train_job(self, user_id, app, task, train_dataset_id, 
+                        val_dataset_id, budget, model_ids):
         
-        train_jobs = self._meta_store.get_train_jobs_of_app(app)
-
         # Ensure there is no existing train job for app
+        train_jobs = self._meta_store.get_train_jobs_of_app(app)
         if any([x.status in [TrainJobStatus.RUNNING, TrainJobStatus.STARTED] for x in train_jobs]):
             raise InvalidTrainJobError('Another train job for app "{}" is still running!'.format(app))
         
+        # Ensure at least 1 model
+        if len(model_ids) == 0:
+            raise NoModelsForTrainJobError()
+
         # Compute auto-incremented app version
+        train_jobs = self._meta_store.get_train_jobs_by_app(user_id, app)
         app_version = max([x.app_version for x in train_jobs], default=0) + 1
 
-        # Get models available to user
-        avail_models = self._meta_store.get_models_of_task(user_id, task)
-        
-        if models is None:
-            # Auto populate models with all available models if not specified
-            model_id_to_config = { db_model.id: {} for db_model in avail_models }
-        else:
-            model_id_to_config = {}
-            # Ensure all models are available
-            for (name, config) in models.items():
-                db_model = next((x for x in avail_models if x.name == name), None)
-                if db_model is None:
-                    raise InvalidModelAccessError('Model "{}" does not exist, or is not accessible to you!'.format(name))
+        avail_model_ids = [x.id for x in self._meta_store.get_available_models(user_id, task)]
 
-                model_id_to_config[db_model.id] = config
+        # Ensure all specified models are available
+        for model_id in model_ids:
+            if model_id not in avail_model_ids:
+                raise InvalidModelError(f'No model of ID "{model_id}" is available for task "{task}"')
 
-        # Ensure that models are specified
-        if len(model_id_to_config) == 0:
-            raise NoModelsForTrainJobError()
+        # Ensure that datasets are valid and of the correct task
+        try:
+            train_dataset = self._meta_store.get_dataset(train_dataset_id)
+            assert train_dataset is not None
+            assert train_dataset.task == task
+            val_dataset = self._meta_store.get_dataset(val_dataset_id)
+            assert val_dataset is not None
+            assert val_dataset.task == task
+        except AssertionError as e:
+            raise InvalidDatasetError(e)
 
         # Create train & sub train jobs in DB
         train_job = self._meta_store.create_train_job(
@@ -136,8 +206,8 @@ class Admin(object):
             app_version=app_version,
             task=task,
             budget=budget,
-            train_dataset_uri=train_dataset_uri,
-            val_dataset_uri=val_dataset_uri
+            train_dataset_id=train_dataset_id,
+            val_dataset_id=val_dataset_id
         )
         self._meta_store.commit()
 
@@ -161,8 +231,8 @@ class Admin(object):
             self._meta_store.mark_train_job_as_errored(train_job)
             raise e
 
-    def stop_train_job(self, app, app_version=-1):
-        train_job = self._meta_store.get_train_job_by_app_version(app, app_version=app_version)
+    def stop_train_job(self, user_id, app, app_version=-1):
+        train_job = self._meta_store.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidTrainJobError()
 
@@ -175,10 +245,15 @@ class Admin(object):
             'app_version': train_job.app_version
         }
             
-    def get_train_job(self, app, app_version=-1):
-        train_job = self._meta_store.get_train_job_by_app_version(app, app_version=app_version)
+    def get_train_job(self, user_id, app, app_version=-1):
+        train_job = self._meta_store.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidTrainJobError()
+
+        workers = self._meta_store.get_workers_of_train_job(train_job.id)
+        services = [self._meta_store.get_service(x.service_id) for x in workers]
+        worker_models = [self._meta_store.get_model(self._meta_store.get_sub_train_job(x.sub_train_job_id).model_id) \
+                         for x in workers]
 
         return {
             'id': train_job.id,
@@ -186,14 +261,14 @@ class Admin(object):
             'app': train_job.app,
             'app_version': train_job.app_version,
             'task': train_job.task,
-            'train_dataset_uri': train_job.train_dataset_uri,
-            'val_dataset_uri': train_job.val_dataset_uri,
+            'train_dataset_id': train_job.train_dataset_id,
+            'val_dataset_id': train_job.val_dataset_id,
             'datetime_started': train_job.datetime_started,
             'datetime_stopped': train_job.datetime_stopped
         }
 
-    def get_train_jobs_of_app(self, app):
-        train_jobs = self._meta_store.get_train_jobs_of_app(app)
+    def get_train_jobs_by_app(self, user_id, app):
+        train_jobs = self._meta_store.get_train_jobs_by_app(user_id, app)
         return [
             {
                 'id': x.id,
@@ -201,8 +276,8 @@ class Admin(object):
                 'app': x.app,
                 'app_version': x.app_version,
                 'task': x.task,
-                'train_dataset_uri': x.train_dataset_uri,
-                'val_dataset_uri': x.val_dataset_uri,
+                'train_dataset_id': x.train_dataset_id,
+                'val_dataset_id': x.val_dataset_id,
                 'datetime_started': x.datetime_started,
                 'datetime_stopped': x.datetime_stopped,
                 'budget': x.budget
@@ -210,8 +285,8 @@ class Admin(object):
             for x in train_jobs
         ]
 
-    def get_best_trials_of_train_job(self, app, app_version=-1, max_count=2):
-        train_job = self._meta_store.get_train_job_by_app_version(app, app_version=app_version)
+    def get_best_trials_of_train_job(self, user_id, app, app_version=-1, max_count=2):
+        train_job = self._meta_store.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidTrainJobError()
 
@@ -232,7 +307,6 @@ class Admin(object):
 
     def get_train_jobs_by_user(self, user_id):
         train_jobs = self._meta_store.get_train_jobs_by_user(user_id)
-
         return [
             {
                 'id': x.id,
@@ -240,8 +314,8 @@ class Admin(object):
                 'app': x.app,
                 'app_version': x.app_version,
                 'task': x.task,
-                'train_dataset_uri': x.train_dataset_uri,
-                'val_dataset_uri': x.val_dataset_uri,
+                'train_dataset_id': x.train_dataset_id,
+                'val_dataset_id': x.val_dataset_id,
                 'datetime_started': x.datetime_started,
                 'datetime_stopped': x.datetime_stopped,
                 'budget': x.budget
@@ -249,17 +323,34 @@ class Admin(object):
             for x in train_jobs
         ]
 
-    def stop_sub_train_job(self, sub_train_job_id):
-        sub_train_job = self._services_manager.stop_sub_train_job_services(sub_train_job_id)
-        return {
-            'id': sub_train_job.id,
-            'train_job_id': sub_train_job.train_job_id,
-        }
+    def get_trials_of_train_job(self, user_id, app, app_version=-1):
+        train_job = self._meta_store.get_train_job_by_app_version(user_id, app, app_version=app_version)
+        if train_job is None:
+            raise InvalidTrainJobError()
+
+        sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(train_job.id)
+        trials = []
+        for sub_train_job in sub_train_jobs:
+            trials_for_sub = self._meta_store.get_trials_of_sub_train_job(sub_train_job.id)
+            trials.extend(trials_for_sub)
+
+        trials_models = [self._meta_store.get_model(x.model_id) for x in trials]
+        
+        return [
+            {
+                'id': trial.id,
+                'knobs': trial.knobs,
+                'datetime_started': trial.datetime_started,
+                'status': trial.status,
+                'datetime_stopped': trial.datetime_stopped,
+                'model_name': model.name,
+                'score': trial.score
+            }
+            for (trial, model) in zip(trials, trials_models)
+        ]
 
     def stop_all_train_jobs(self):
-        train_jobs = self._meta_store.get_train_jobs_by_statuses(
-            [TrainJobStatus.STARTED, TrainJobStatus.RUNNING, TrainJobStatus.ERRORED]
-        )
+        train_jobs = self._meta_store.get_train_jobs_by_statuses([TrainJobStatus.STARTED, TrainJobStatus.RUNNING])
         for train_job in train_jobs:
             self._services_manager.stop_train_services(train_job.id)
             self.refresh_train_job_status(train_job.id)
@@ -317,7 +408,8 @@ class Admin(object):
             'status': trial.status,
             'datetime_stopped': trial.datetime_stopped,
             'model_name': model.name,
-            'score': trial.score
+            'score': trial.score,
+            'worker_id': trial.worker_id
         }
 
     def get_trial_logs(self, trial_id):
@@ -340,8 +432,10 @@ class Admin(object):
         if trial is None:
             raise InvalidTrialError()
 
-        # TODO: Fix
-        return None
+        with open(trial.params_file_path, 'rb') as f:
+            parameters = f.read()
+
+        return parameters
 
     def get_trials_of_train_job(self, app, app_version=-1, limit=1000, offset=0):
         train_job = self._meta_store.get_train_job_by_app_version(app, app_version=app_version)
@@ -371,12 +465,12 @@ class Admin(object):
     ####################################
 
     def create_inference_job(self, user_id, app, app_version):
-        train_job = self._meta_store.get_train_job_by_app_version(app, app_version=app_version)
+        train_job = self._meta_store.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidTrainJobError('Have you started a train job for this app?')
 
         if train_job.status != TrainJobStatus.STOPPED:
-            raise InvalidTrainJobError('Train job must be of status "STOPPED".')
+            raise InvalidTrainJobError('Train job must be of status `STOPPED`.')
 
         # Ensure only 1 running inference job for 1 train job
         inference_job = self._meta_store.get_deployed_inference_job_by_train_job(train_job.id)
@@ -419,8 +513,8 @@ class Admin(object):
             self._meta_store.mark_inference_job_as_errored(inference_job)
             raise e
 
-    def stop_inference_job(self, app, app_version=-1):
-        train_job = self._meta_store.get_train_job_by_app_version(app, app_version=app_version)
+    def stop_inference_job(self, user_id, app, app_version=-1):
+        train_job = self._meta_store.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidRunningInferenceJobError()
 
@@ -438,8 +532,8 @@ class Admin(object):
             'app_version': train_job.app_version
         }
 
-    def get_running_inference_job(self, app, app_version=-1):
-        train_job = self._meta_store.get_train_job_by_app_version(app, app_version=app_version)
+    def get_running_inference_job(self, user_id, app, app_version=-1):
+        train_job = self._meta_store.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidRunningInferenceJobError()
 
@@ -461,8 +555,8 @@ class Admin(object):
             'predictor_host': predictor_host
         }
 
-    def get_inference_jobs_of_app(self, app):
-        inference_jobs = self._meta_store.get_inference_jobs_of_app(app)
+    def get_inference_jobs_of_app(self, user_id, app):
+        inference_jobs = self._meta_store.get_inference_jobs_of_app(user_id, app)
         train_jobs = [self._meta_store.get_train_job(x.train_job_id) for x in inference_jobs]
         predictor_services = [self._meta_store.get_service(x.predictor_service_id) for x in inference_jobs]
         predictor_hosts = [self._get_service_host(x) for x in predictor_services]
@@ -593,8 +687,9 @@ class Admin(object):
     ####################################
 
     def create_model(self, user_id, name, task, model_file_bytes, 
-                    model_class, docker_image=None, dependencies={}, access_right=ModelAccessRight.PRIVATE):
-        
+                    model_class, docker_image=None, dependencies={}, 
+                    access_right=ModelAccessRight.PRIVATE):
+
         model = self._meta_store.create_model(
             user_id=user_id,
             name=name,
@@ -605,79 +700,116 @@ class Admin(object):
             dependencies=dependencies,
             access_right=access_right
         )
+        self._meta_store.commit()
 
         return {
+            'id': model.id,
+            'user_id': model.user_id,
             'name': model.name 
         }
 
-    def get_model(self, user_id, name):
-        model = self._meta_store.get_model_by_name(name)
+    def delete_model(self, model_id):
+        model = self._meta_store.get_model(model_id)
         if model is None:
             raise InvalidModelError()
 
-        if model.access_right == ModelAccessRight.PRIVATE and model.user_id != user_id:
-            raise InvalidModelAccessError()
+        self._meta_store.delete_model(model)
+        
+        return {
+            'id': model.id,
+            'user_id': model.user_id,
+            'name': model.name 
+        }
+
+    def get_model_by_name(self, user_id, name):
+        model = self._meta_store.get_model_by_name(user_id, name)
+        if model is None:
+            raise InvalidModelError()
 
         return {
+            'id': model.id,
+            'user_id': model.user_id,
             'name': model.name,
             'task': model.task,
             'model_class': model.model_class,
             'datetime_created': model.datetime_created,
-            'user_id': model.user_id,
             'docker_image': model.docker_image,
             'dependencies': model.dependencies,
             'access_right': model.access_right
         }
 
-    def get_model_file(self, user_id, name):
-        model = self._meta_store.get_model_by_name(name)
-        
+    def get_model(self, model_id):
+        model = self._meta_store.get_model(model_id)
         if model is None:
             raise InvalidModelError()
 
-        if model.access_right == ModelAccessRight.PRIVATE and model.user_id != user_id:
-            raise InvalidModelAccessError()
+        return {
+            'id': model.id,
+            'user_id': model.user_id,
+            'name': model.name,
+            'task': model.task,
+            'model_class': model.model_class,
+            'datetime_created': model.datetime_created,
+            'docker_image': model.docker_image,
+            'dependencies': model.dependencies,
+            'access_right': model.access_right
+        }
+
+    def get_model_file(self, model_id):
+        model = self._meta_store.get_model(model_id)
+        if model is None:
+            raise InvalidModelError()
 
         return model.model_file_bytes
 
-    def get_models(self, user_id):
-        models = self._meta_store.get_models(user_id)
+    def get_available_models(self, user_id, task=None):
+        models = self._meta_store.get_available_models(user_id, task)
         return [
             {
+                'id': model.id,
+                'user_id': model.user_id,
                 'name': model.name,
                 'task': model.task,
-                'model_class': model.model_class,
                 'datetime_created': model.datetime_created,
-                'user_id': model.user_id,
-                'docker_image': model.docker_image,
                 'dependencies': model.dependencies,
                 'access_right': model.access_right
             }
             for model in models
         ]
 
-    def get_models_of_task(self, user_id, task):
-        models = self._meta_store.get_models_of_task(user_id, task)
-        return [
-            {
-                'name': model.name,
-                'task': model.task,
-                'model_class': model.model_class,
-                'datetime_created': model.datetime_created,
-                'user_id': model.user_id,
-                'docker_image': model.docker_image,
-                'dependencies': model.dependencies,
-                'access_right': model.access_right
-            }
-            for model in models
-        ]
-        
+    ####################################
+    # Events
+    ####################################
+
+    def handle_event(self, name, **params):
+        event_to_method = {
+            'sub_train_job_budget_reached': self._on_sub_train_job_budget_reached,
+            'train_job_worker_started': self._on_train_job_worker_started,
+            'train_job_worker_stopped': self._on_train_job_worker_stopped
+        }
+
+        if name in event_to_method:
+            event_to_method[name](**params)
+        else:
+            logger.error('Unknown event: "{}"'.format(name))
+
+    def _on_sub_train_job_budget_reached(self, sub_train_job_id):
+        self._services_manager.stop_sub_train_job_services(sub_train_job_id)
+
+    def _on_train_job_worker_started(self, sub_train_job_id):
+        sub_train_job = self._meta_store.get_sub_train_job(sub_train_job_id)
+        self._services_manager.refresh_train_job_status(sub_train_job.train_job_id)
+
+    def _on_train_job_worker_stopped(self, sub_train_job_id):
+        sub_train_job = self._meta_store.get_sub_train_job(sub_train_job_id)
+        self._services_manager.refresh_train_job_status(sub_train_job.train_job_id)
+    
     ####################################
     # Private / Users
     ####################################
 
-    def _seed_users(self):
-        logger.info('Seeding users...')
+    def _seed_superadmin(self):
+        logger.info('Seeding superadmin...')
 
         # Seed superadmin
         try:

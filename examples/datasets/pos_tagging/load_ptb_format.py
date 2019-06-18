@@ -12,7 +12,20 @@ import zipfile
 
 from rafiki.model import utils
 
-def load(dataset_url, out_train_dataset_path, out_val_dataset_path, out_meta_tsv_path, validation_split=0.05):
+# Loads the Penn Treebank sample dataset for `POS_TAGGING` task
+def load_sample_ptb(out_train_dataset_path='data/ptb_for_pos_tagging_train.zip',
+                    out_val_dataset_path='data/ptb_for_pos_tagging_val.zip',
+                    out_meta_tsv_path='data/ptb_for_pos_tagging_meta.tsv',
+                    validation_split=0.05):
+    load(
+        dataset_url='https://raw.githubusercontent.com/nltk/nltk_data/gh-pages/packages/corpora/treebank.zip',
+        out_train_dataset_path=out_train_dataset_path,
+        out_val_dataset_path=out_val_dataset_path,
+        out_meta_tsv_path=out_meta_tsv_path
+    )
+
+
+def load(dataset_url, out_train_dataset_path, out_val_dataset_path, out_meta_tsv_path, validation_split):
     '''
         Loads and converts a dataset of the format of the Penn Treebank sample 
         at http://www.nltk.org/nltk_data/ to the DatasetType `CORPUS` for the Task `POS_TAGGING`.
@@ -48,7 +61,7 @@ def _convert_dataset(dataset_path, out_meta_tsv_path, out_train_dataset_path,
     train_tsv = open(os.path.join(train_d.name, TSV_FILENAME), 'w')
     train_tsv.write('token\ttag\n') 
 
-    # Same for val dataset
+    # Same for validation dataset
     val_d = tempfile.TemporaryDirectory()
     val_tsv = open(os.path.join(val_d.name, TSV_FILENAME), 'w')
     val_tsv.write('token\ttag\n')
@@ -75,7 +88,7 @@ def _convert_dataset(dataset_path, out_meta_tsv_path, out_train_dataset_path,
                     if len(sent) == 0: break
                     _write_next_sentence(train_tsv, sent)
 
-        # Convert sentences for val dataset
+        # Convert sentences for validation dataset
         for sents_filepath in tqdm(sents_filepaths[train_files_count:], unit='files'):
             with open(sents_filepath) as f:
                 while True:
@@ -83,7 +96,7 @@ def _convert_dataset(dataset_path, out_meta_tsv_path, out_train_dataset_path,
                     if len(sent) == 0: break
                     _write_next_sentence(val_tsv, sent)
 
-    # Zip train & val datasets
+    # Zip train & validation datasets
     val_tsv.close()
     train_tsv.close()
     out_path = shutil.make_archive(out_train_dataset_path, 'zip', train_d.name)
@@ -143,14 +156,5 @@ def _read_next_sentence(f, tag_to_index):
         
 
 if __name__ == '__main__':
-    # Loads the Penn Treebank sample dataset for `POS_TAGGING` task
-    load(
-        dataset_url='https://raw.githubusercontent.com/nltk/nltk_data/gh-pages/packages/corpora/treebank.zip',
-        out_train_dataset_path='data/ptb_for_pos_tagging_train.zip',
-        out_val_dataset_path='data/ptb_for_pos_tagging_val.zip',
-        out_meta_tsv_path='data/ptb_for_pos_tagging_meta.tsv'
-    )
-
-
-    
+    load_sample_ptb()    
     

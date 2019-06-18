@@ -11,7 +11,7 @@ def run_worker(meta_store, start_worker, stop_worker):
     service_id = os.environ['RAFIKI_SERVICE_ID']
     service_type = os.environ['RAFIKI_SERVICE_TYPE']
     container_id = os.environ.get('HOSTNAME', 'localhost')
-    configure_logging('service-id-{}-c-{}'.format(service_id, container_id))
+    configure_logging('service-{}-worker-{}'.format(service_id, container_id))
 
     def _sigterm_handler(_signo, _stack_frame):
         logger.warn("Terminal signal received: %s, %s" % (_signo, _stack_frame))

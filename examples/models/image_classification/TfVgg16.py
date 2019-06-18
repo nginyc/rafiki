@@ -21,7 +21,7 @@ class TfVgg16(BaseModel):
     def get_knob_config():
         return {
             'max_epochs': FixedKnob(100),
-            'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
+            'learning_rate': FloatKnob(1e-5, 1e-2, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
             'max_image_size': CategoricalKnob([32, 64, 128, 224]),
         }
@@ -34,7 +34,7 @@ class TfVgg16(BaseModel):
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph, config=config)
 
-    def train(self, dataset_uri):
+    def train(self, dataset_path):
         max_image_size = self._knobs.get('max_image_size')
         bs = self._knobs.get('batch_size')
         max_epochs = self._knobs.get('max_epochs')
@@ -44,7 +44,7 @@ class TfVgg16(BaseModel):
         # Define plot for loss against epochs
         utils.logger.define_plot('Loss Over Epochs', ['loss', 'early_stop_val_loss'], x_axis='epoch')
 
-        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, min_image_size=32, 
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, min_image_size=32, 
                                                             max_image_size=max_image_size, mode='RGB')
         self._image_size = dataset.image_size
         num_classes = dataset.classes
@@ -74,9 +74,9 @@ class TfVgg16(BaseModel):
         utils.logger.log('Train loss: {}'.format(loss))
         utils.logger.log('Train accuracy: {}'.format(accuracy))
 
-    def evaluate(self, dataset_uri):
+    def evaluate(self, dataset_path):
         max_image_size = self._knobs.get('max_image_size')
-        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, min_image_size=32, 
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, min_image_size=32, 
                                                             max_image_size=max_image_size, mode='RGB')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         (images, _, _) = utils.dataset.normalize_images(images, self._normalize_mean, self._normalize_std)
@@ -180,8 +180,8 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.TENSORFLOW: '1.12.0'
         },
-        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-        val_dataset_uri='data/fashion_mnist_for_image_classification_val.zip',
+        train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
+        val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

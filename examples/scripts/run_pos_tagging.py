@@ -1,16 +1,19 @@
-import pprint
+from pprint import pprint
 import time
 import argparse
 import requests
+import argparse
 import os
 
 from rafiki.client import Client
-from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
+from rafiki.config import SUPERADMIN_EMAIL
 from rafiki.constants import TaskType, BudgetType, UserType, ModelDependency, ModelAccessRight
 from examples.scripts.quickstart import get_predictor_host, \
     wait_until_train_job_has_stopped, make_predictions,  gen_id
 
-def run_pos_tagging(client, enable_gpu):
+from examples.datasets.pos_tagging.load_ptb_format import load_sample_ptb
+
+def run_pos_tagging(client, train_dataset_path, val_dataset_path, gpus):
     task = TaskType.POS_TAGGING
 
     # Randomly generate app & model names to avoid naming conflicts
@@ -20,21 +23,29 @@ def run_pos_tagging(client, enable_gpu):
     py_model_name = 'PyBiLstm_{}'.format(app_id)
 
     print('Adding models "{}" and "{}" to Rafiki...'.format(bihmm_model_name, py_model_name)) 
-    client.create_model(bihmm_model_name, task, 'examples/models/pos_tagging/BigramHmm.py', \
+    bihmm_model = client.create_model(bihmm_model_name, task, 'examples/models/pos_tagging/BigramHmm.py', \
                         'BigramHmm', dependencies={}) 
-    client.create_model(py_model_name, task, 'examples/models/pos_tagging/PyBiLstm.py', \
-                        'PyBiLstm', dependencies={ ModelDependency.TORCH: '0.4.1' })
+
+    pprint(bihmm_model)
+    py_model = client.create_model(py_model_name, task, 'examples/models/pos_tagging/PyBiLstm.py', \
+                        'PyBiLstm', dependencies={ ModelDependency.PYTORCH: '0.4.1' })
+    pprint(py_model)
+    model_ids = [bihmm_model['id'], py_model['id']]
+
+    print('Creating & uploading datasets onto Rafiki...')
+    train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
+    pprint(train_dataset)
+    val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_path)
+    pprint(val_dataset)
 
     print('Creating train job for app "{}" on Rafiki...'.format(app))
     budget = {
-        BudgetType.MODEL_TRIAL_COUNT: 2,
-        BudgetType.ENABLE_GPU: 1 if enable_gpu else 0
+        BudgetType.MODEL_TRIAL_COUNT: 5,
+        BudgetType.GPU_COUNT: gpus
     }
-    train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_train.zip?raw=true'
-    val_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/pos_tagging/ptb_for_pos_tagging_val.zip?raw=true'
-    train_job = client.create_train_job(app, task, train_dataset_uri, val_dataset_uri, 
-                                        budget, models=[bihmm_model_name, py_model_name])
-    pprint.pprint(train_job)
+    train_job = client.create_train_job(app, task, train_dataset['id'], val_dataset['id'], 
+                                        budget, models=model_ids)
+    pprint(train_job)
 
     print('Waiting for train job to complete...')
     print('This might take a few minutes')
@@ -42,10 +53,10 @@ def run_pos_tagging(client, enable_gpu):
     print('Train job has been stopped')
 
     print('Listing best trials of latest train job for app "{}"...'.format(app))
-    pprint.pprint(client.get_best_trials_of_train_job(app))
+    pprint(client.get_best_trials_of_train_job(app))
 
     print('Creating inference job for app "{}" on Rafiki...'.format(app))
-    pprint.pprint(client.create_inference_job(app))
+    pprint(client.create_inference_job(app))
     predictor_host = get_predictor_host(client, app)
     if not predictor_host: raise Exception('Inference job has errored or stopped')
     print('Inference job is running!')
@@ -61,21 +72,20 @@ def run_pos_tagging(client, enable_gpu):
     print(predictions)
 
     print('Stopping inference job...')
-    pprint.pprint(client.stop_inference_job(app))
+    pprint(client.stop_inference_job(app))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--enable_gpu', action='store_true', help='Whether to use GPU')
-    parser.add_argument('--host', type=str, default='localhost', help='Host of Rafiki instance')
-    parser.add_argument('--admin_port', type=int, default=3000, help='Port for Rafiki Admin on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
-    parser.add_argument('--password', type=str, default=SUPERADMIN_PASSWORD, help='Password of user')
+    parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
+    parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
     (args, _) = parser.parse_known_args()
+    out_train_dataset_path = 'data/ptb_for_pos_tagging_train.zip'
+    out_val_dataset_path = 'data/ptb_for_pos_tagging_val.zip'
 
     # Initialize client
-    client = Client(admin_host=args.host, admin_port=args.admin_port)
+    client = Client()
     client.login(email=args.email, password=args.password)
-
-    # Run training & inference
-    run_pos_tagging(client, args.enable_gpu)
-            
+    
+    # Run quickstart
+    run_pos_tagging(client, out_train_dataset_path, out_val_dataset_path, args.gpus)

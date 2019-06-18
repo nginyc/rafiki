@@ -16,6 +16,8 @@ export REDIS_EXT_PORT=6380
 export HOST_WORKDIR_PATH=$PWD
 export APP_MODE=DEV # DEV or PROD
 export POSTGRES_DUMP_FILE_PATH=$PWD/db_dump.sql # PostgreSQL database dump file
+export DOCKER_NODE_LABEL_AVAILABLE_GPUS=available_gpus # Docker node label for no. of services currently running on the node
+export DOCKER_NODE_LABEL_NUM_SERVICES=num_services # Docker node label for no. of services currently running on the node
 
 # Internal credentials for Rafiki's components
 export POSTGRES_USER=rafiki

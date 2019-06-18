@@ -19,26 +19,6 @@ app = Flask(__name__)
 def index():
     return 'Rafiki Advisor is up.'
 
-@app.route('/tokens', methods=['POST'])
-def generate_user_token():
-    params = get_request_params()
-
-    # Only superadmin can authenticate (other users must use Rafiki Admin)
-    if not (params['email'] == SUPERADMIN_EMAIL and \
-            params['password'] == SUPERADMIN_PASSWORD):
-        raise UnauthorizedError()
-    
-    auth = {
-        'user_type': UserType.SUPERADMIN
-    }
-    
-    token = generate_token(auth)
-
-    return jsonify({
-        'user_type': auth['user_type'],
-        'token': token
-    })
-
 @app.route('/advisors', methods=['POST'])
 @auth([UserType.ADMIN, UserType.APP_DEVELOPER])
 def create_advisor(auth):

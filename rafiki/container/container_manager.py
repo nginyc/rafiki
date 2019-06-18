@@ -1,7 +1,5 @@
 import abc
 import os
-from enum import Enum
-from collections import namedtuple
 from typing import List, Dict, Tuple
 
 class InvalidServiceRequestError(Exception): pass
@@ -23,7 +21,6 @@ class ContainerManager(abc.ABC):
                         gpus: int = 0) -> ContainerService:
         '''
             Creates a service with a set number of replicas. Replicas will be created *on the same node*.
-
             The service should regenerate replicas if they exit with a non-zero code. 
             However, if a replica exits with code 0, it should not regenerate the replica.
    

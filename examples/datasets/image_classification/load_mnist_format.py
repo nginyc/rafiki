@@ -13,9 +13,41 @@ import argparse
 
 from rafiki.model import utils
 
-def load(train_images_url, train_labels_url, test_images_url, test_labels_url, label_to_name, 
-        out_train_dataset_path, out_val_dataset_path, out_test_dataset_path, 
-        out_meta_csv_path, validation_split, limit=None):
+# Loads the official Fashion MNIST dataset for `IMAGE_CLASSIFICATION` task
+def load_fashion_mnist(out_train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
+                        out_val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
+                        out_meta_csv_path='data/fashion_mnist_for_image_classification_meta.csv',
+                        out_test_dataset_path='data/fashion_mnist_for_image_classification_test.zip',
+                        validation_split=0.1,
+                        limit=None):
+    
+    load(
+        train_images_url='http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz',
+        train_labels_url='http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz',
+        test_images_url='http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz',
+        test_labels_url='http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz',
+        label_to_name={
+            0: 'T-shirt/top',
+            1: 'Trouser',
+            2: 'Pullover',
+            3: 'Dress',
+            4: 'Coat',
+            5: 'Sandal',
+            6: 'Shirt',
+            7: 'Sneaker',
+            8: 'Bag',
+            9: 'Ankle boot'
+        },
+        out_train_dataset_path=out_train_dataset_path,
+        out_val_dataset_path=out_val_dataset_path,
+        out_test_dataset_path=out_test_dataset_path,
+        out_meta_csv_path=out_meta_csv_path,
+        validation_split=validation_split,
+        limit=limit
+    )
+
+def load(train_images_url, train_labels_url, test_images_url, test_labels_url, label_to_name, \
+        out_train_dataset_path, out_val_dataset_path, out_test_dataset_path, out_meta_csv_path, validation_split, limit=None):
     '''
         Loads and converts an image dataset of the MNIST format for IMAGE_CLASSIFICATION.
         Refer to http://yann.lecun.com/exdb/mnist/ for the MNIST dataset format for.
@@ -123,32 +155,5 @@ if __name__ == '__main__':
     parser.add_argument('--validation_split', type=float, default=0.1)
     args = parser.parse_args()
 
-    # Loads the official Fashion MNIST dataset as `IMAGE_FILES` DatasetType
-    load(
-        train_images_url='http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz',
-        train_labels_url='http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz',
-        test_images_url='http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz',
-        test_labels_url='http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz',
-        label_to_name={
-            0: 'T-shirt/top',
-            1: 'Trouser',
-            2: 'Pullover',
-            3: 'Dress',
-            4: 'Coat',
-            5: 'Sandal',
-            6: 'Shirt',
-            7: 'Sneaker',
-            8: 'Bag',
-            9: 'Ankle boot'
-        },
-        out_train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
-        out_val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
-        out_test_dataset_path='data/fashion_mnist_for_image_classification_test.zip',
-        out_meta_csv_path='data/fashion_mnist_for_image_classification_meta.csv',
-        validation_split=args.validation_split,
-        limit=args.limit
-    )
-
-
-    
+    load_fashion_mnist(limit=args.limit, validation_split=args.validation_split)    
     

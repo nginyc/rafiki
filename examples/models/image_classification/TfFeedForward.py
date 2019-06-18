@@ -35,7 +35,7 @@ class TfFeedForward(BaseModel):
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph, config=config)
         
-    def train(self, dataset_uri, *args):
+    def train(self, dataset_path, *args):
         max_image_size = self._knobs['max_image_size']
         bs = self._knobs['batch_size']
         max_epochs = self._knobs['max_epochs']
@@ -46,7 +46,7 @@ class TfFeedForward(BaseModel):
         utils.logger.define_plot('Loss Over Epochs', ['loss', 'early_stop_val_loss'], x_axis='epoch')
 
         # Load dataset
-        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, max_image_size=max_image_size, 
                                                             mode='RGB')
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
@@ -80,13 +80,14 @@ class TfFeedForward(BaseModel):
             'norm_std': norm_std
         }
 
-    def evaluate(self, dataset_uri):
+    def evaluate(self, dataset_path):
         max_image_size = self._knobs['max_image_size']
         norm_mean = self._train_params['norm_mean']
         norm_std = self._train_params['norm_std']
 
-        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, max_image_size=max_image_size, 
                                                             mode='RGB')
+
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         (images, _, _) = utils.dataset.normalize_images(images, norm_mean, norm_std)
         with self._graph.as_default():
@@ -193,8 +194,8 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.TENSORFLOW: '1.12.0'
         },
-        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-        val_dataset_uri='data/fashion_mnist_for_image_classification_val.zip',
+        train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
+        val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

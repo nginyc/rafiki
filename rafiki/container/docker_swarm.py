@@ -1,4 +1,3 @@
-import abc
 import os
 import time
 import docker
@@ -17,9 +16,14 @@ _Deployment = namedtuple('_Deployment', ['node_id', 'gpu_nos'])
 
 class DockerSwarmContainerManager(ContainerManager):
     def __init__(self,
-        network=os.environ.get('DOCKER_NETWORK', 'rafiki')):
+        network=os.environ.get('DOCKER_NETWORK', 'rafiki'),
+        label_num_services=os.environ.get('DOCKER_NODE_LABEL_NUM_SERVICES', 'num_services'), 
+        label_available_gpus=os.environ.get('DOCKER_NODE_LABEL_AVAILABLE_GPUS', 'available_gpus')):
+
         self._network = network
         self._client = docker.from_env()
+        self._label_num_services = label_num_services
+        self._label_available_gpus = label_available_gpus
 
     def create_service(self, service_name, docker_image, replicas, 
                         args, environment_vars, mounts={}, publish_port=None,
@@ -57,7 +61,7 @@ class DockerSwarmContainerManager(ContainerManager):
             nodes = [x for x in nodes if len(x.available_gpus) >= gpus]
         
         if len(nodes) == 0:
-            raise InvalidServiceRequestError('There are no valid nodes with at least {} gpus to deploy service'.format(gpus))
+            raise InvalidServiceRequestError('Insufficient GPUs to deploy service')
         
         # Choose the node with fewest services
         (_, node) = sorted([(x.num_services, x) for x in nodes])[0]
@@ -162,9 +166,9 @@ class DockerSwarmContainerManager(ContainerManager):
     def _parse_node(self, docker_node):
         spec = docker_node.attrs.get('Spec', {})
         spec_labels = spec.get('Labels', {})
-        available_gpus_str = spec_labels.get(LABEL_AVAILBLE_GPUS, '')
+        available_gpus_str = spec_labels.get(self._label_available_gpus, '')
         available_gpus = [int(x) for x in available_gpus_str.split(',') if len(x) > 0]
-        num_services = int(spec_labels.get(LABEL_NUM_SERVICES, 0))
+        num_services = int(spec_labels.get(self._label_num_services, 0))
         return _Node(docker_node.id, available_gpus, num_services)
 
     def _update_node(self, node_id, num_services, available_gpus):
@@ -175,7 +179,7 @@ class DockerSwarmContainerManager(ContainerManager):
             **spec,
             'Labels': {
                 **spec_labels,
-                LABEL_NUM_SERVICES: str(num_services),
-                LABEL_AVAILBLE_GPUS: ','.join([str(x) for x in available_gpus])
+                self._label_num_services: str(num_services),
+                self._label_available_gpus: ','.join([str(x) for x in available_gpus])
             }
         })

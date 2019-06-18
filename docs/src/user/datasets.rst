@@ -1,8 +1,6 @@
 Supported Dataset Types
 ====================================================================
 
-.. contents:: Table of Contents
-
 Dataset URIs must have the protocols of either ``http`` or ``https``.
 
 .. note::

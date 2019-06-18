@@ -6,4 +6,7 @@ else
 fi 
 
 pip install sphinx sphinx_rtd_theme
-sphinx-build -b html . docs/$DOCS_DIR/
+rm -rf docs/$DOCS_DIR/
+sphinx-build -b html docs/ docs/$DOCS_DIR/
+
+echo "Generated documentation site at $PWD/docs/$DOCS_DIR/index.html"

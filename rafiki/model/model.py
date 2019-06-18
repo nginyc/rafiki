@@ -62,24 +62,24 @@ class BaseModel(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def train(self, dataset_uri: str):
+    def train(self, dataset_path: str):
         '''
         Train this model instance with given dataset and initialized knob values.
         Additionally, a dictionary of trained shared parameters from previous trials is passed.
 
-        :param str dataset_uri: URI of the dataset in a format specified by the task
+        :param str dataset_path: File path of the train dataset file in the local file system, in a format specified by the task
         '''
         raise NotImplementedError()
 
     # TODO: Allow configuration of other metrics
     @abc.abstractmethod
-    def evaluate(self, dataset_uri: str) -> float:
+    def evaluate(self, dataset_path: str) -> float:
         '''
         Evaluate this model instance with given dataset after training. 
         This will be called only when model is *trained*.
 
-        :param str dataset_uri: URI of the dataset in a format specified by the task
-        :returns: Accuracy as float from 0-1 on the dataset
+        :param str dataset_path: File path of the validation dataset file in the local file system, in a format specified by the task
+        :returns: Accuracy as float from 0-1 on the validation dataset
         :rtype: float
         '''
         raise NotImplementedError()
@@ -98,14 +98,17 @@ class BaseModel(abc.ABC):
         '''
         raise NotImplementedError()
 
-    def dump_parameters(self) -> Union[None, Params]:
+    def dump_parameters(self) -> Params:
         '''
-        Returns a dictionary of model parameters for persistence and to share with future trials, 
-        after the model has been *trained*.
+        Returns a dictionary of model parameters for persistence and to share with future trials
+        This dictionary should be serializable by the Python's ``pickle`` module.
+        This will be used for trained model serialization within Rafiki.
+        This will be called only when model is *trained*.
+
         :returns: { <param_name>: <param_value> }
-        :rtype: Union[None, Params]
+        :rtype: Params
         '''
-        return None
+        raise NotImplementedError()
 
     def load_parameters(self, params: Params):
         '''
@@ -113,4 +116,4 @@ class BaseModel(abc.ABC):
         The model will be considered *trained* subsequently.
         :param Params params: { <param_name>: <param_value> }
         '''
-        pass
+        raise NotImplementedError()

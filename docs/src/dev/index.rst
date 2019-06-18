@@ -6,5 +6,6 @@ Developer Guide
    
    setup
    development
+   user-types
    architecture
    folder-structure

@@ -7,6 +7,7 @@ from typing import Type
 from datetime import datetime
 
 from rafiki.utils.auth import make_superadmin_client
+from rafiki.data_store import DataStore, FileDataStore
 from rafiki.client import Client
 from rafiki.constants import BudgetType, TrainJobStatus, TrialStatus, ServiceStatus
 from rafiki.meta_store import MetaStore, DuplicateTrialNoError
@@ -101,6 +102,7 @@ class TrainWorker(object):
                 self._job_monitor.mark_trial_as_completed(self._trial_id, score, params_file_path)
                 
             except Exception as e:
+
                 logger.error('Error while running trial:')
                 logger.error(traceback.format_exc())
                 self._job_monitor.mark_trial_as_errored(self._trial_id)
@@ -281,7 +283,7 @@ class TrainWorker(object):
         knob_config = clazz.get_knob_config()
 
         # Create advisor associated with sub train job
-        res = self._client.create_advisor(knob_config, advisor_id=job_info.sub_train_job_id)
+        res = self._get_client()._create_advisor(knob_config, advisor_id=job_info.sub_train_job_id)
         advisor_id = res['id']
         logger.info('Created advisor of ID "{}"'.format(advisor_id))
 
@@ -298,7 +300,7 @@ class TrainWorker(object):
             
         logger.info('Deleting advisor...')
         try:
-            self._client.delete_advisor(advisor_id)
+            self._get_client()._delete_advisor(advisor_id)
         except Exception:
             # Throw just a warning - maybe another worker deleted it
             logger.warning('Error while deleting advisor:')

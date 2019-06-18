@@ -1,3 +1,4 @@
+from pprint import pprint
 import time
 import pprint
 import requests
@@ -11,6 +12,26 @@ from rafiki.constants import TaskType, UserType, BudgetType, \
                                 InferenceJobStatus, ModelDependency, ModelAccessRight
 
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
+
+# Generates a random ID
+def gen_id(length=16):
+    return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
+
+def wait_until_train_job_has_stopped(client, app, timeout=60*20, tick=10):
+    length = 0
+    while True:
+        train_job = client.get_train_job(app)
+        status = train_job['status']
+        if status not in [TrainJobStatus.STARTED, TrainJobStatus.RUNNING]:
+            # Train job has stopped
+            return
+            
+        # Still running...
+        if length >= timeout:
+            raise TimeoutError('Train job is running for too long')
+
+        length += tick
+        time.sleep(tick)
 
 # Returns `predictor_host` of inference job
 def get_predictor_host(client, app):
@@ -46,25 +67,39 @@ def make_predictions(client, predictor_host, queries):
     return predictions
 
 
-def quickstart(client, gpus):
+def quickstart(client, train_dataset_path, val_dataset_path, gpus, trials):
     task = TaskType.IMAGE_CLASSIFICATION
 
     # Randomly generate app & model names to avoid naming conflicts
     app_id = gen_id()
     app = 'image_classification_app_{}'.format(app_id)
     sk_model_name = 'SkDt_{}'.format(app_id)
+    
 
-    print('Adding model "{}" to Rafiki...'.format(sk_model_name)) 
-    client.create_model(sk_model_name, task, 'examples/models/image_classification/SkDt.py', 
+    print('Adding models "{}" and "{}" to Rafiki...'.format(tf_model_name, sk_model_name)) 
+    tf_model = client.create_model(tf_model_name, task, 'examples/models/image_classification/TfFeedForward.py', 
+                        'TfFeedForward', dependencies={ ModelDependency.TENSORFLOW: '1.12.0' })
+    pprint(tf_model)
+    sk_model = client.create_model(sk_model_name, task, 'examples/models/image_classification/SkDt.py', 
                         'SkDt', dependencies={ ModelDependency.SCIKIT_LEARN: '0.20.0' })
+    pprint(sk_model)
+    model_ids = [tf_model['id'], sk_model['id']]
+
+    print('Creating & uploading datasets onto Rafiki...')
+    train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
+    pprint(train_dataset)
+    val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_path)
+    pprint(val_dataset)
                         
     print('Creating train job for app "{}" on Rafiki...'.format(app)) 
-    train_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true'
-    val_dataset_uri = 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_val.zip?raw=true'
-    train_job = client.create_train_job(app, task, train_dataset_uri, val_dataset_uri, 
-                                        budget={ BudgetType.GPU_COUNT: gpus, BudgetType.MODEL_TRIAL_COUNT: 5 },
-                                        models={ sk_model_name: {} })
-    pprint.pprint(train_job)
+
+    budget = {
+        BudgetType.MODEL_TRIAL_COUNT: trials,
+        BudgetType.GPU_COUNT: gpus
+    }
+    train_job = client.create_train_job(app, task, train_dataset['id'], val_dataset['id'], 
+                                        budget, models=model_ids)
+    pprint(train_job)
 
     print('Waiting for train job to complete...')
     print('This might take a few minutes')
@@ -72,10 +107,10 @@ def quickstart(client, gpus):
     print('Train job has been stopped')
 
     print('Listing best trials of latest train job for app "{}"...'.format(app))
-    pprint.pprint(client.get_best_trials_of_train_job(app))
+    pprint(client.get_best_trials_of_train_job(app))
 
     print('Creating inference job for app "{}" on Rafiki...'.format(app))
-    pprint.pprint(client.create_inference_job(app))
+    pprint(client.create_inference_job(app))
     predictor_host = get_predictor_host(client, app)
     if not predictor_host: raise Exception('Inference job has errored or stopped')
     print('Inference job is running!')
@@ -117,7 +152,7 @@ def quickstart(client, gpus):
     print(predictions)
 
     print('Stopping inference job...')
-    pprint.pprint(client.stop_inference_job(app))
+    pprint(client.stop_inference_job(app))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -126,7 +161,10 @@ if __name__ == '__main__':
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
+    parser.add_argument('--trials', type=int, default=5, help='How many trials to conduct for each model')
     (args, _) = parser.parse_known_args()
+    out_train_dataset_path = 'data/fashion_mnist_for_image_classification_train.zip'
+    out_val_dataset_path = 'data/fashion_mnist_for_image_classification_val.zip'
 
     # Initialize client
     client = Client()
@@ -136,4 +174,4 @@ if __name__ == '__main__':
     print('Login with email "{}" and password "{}"'.format(args.email, args.password)) 
     
     # Run quickstart
-    quickstart(client, args.gpus)
+    quickstart(client, out_train_dataset_path, out_val_dataset_path, args.gpus, args.trials)
