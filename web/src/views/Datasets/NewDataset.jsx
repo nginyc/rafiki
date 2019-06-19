@@ -73,6 +73,8 @@ class NewDataset extends React.Component {
       await rafikiClient.createDataset(name,task,file,dataset_url)
       alert("Create Dataset Succeed")
       this.setState({ "submit_status":"succeed" })
+      this.props.history.push('/admin/datasets')
+      debugger
     } catch (error) {
       this.setState({ "submit_status": "failed" })
       showError(error, 'Failed createDatabase');

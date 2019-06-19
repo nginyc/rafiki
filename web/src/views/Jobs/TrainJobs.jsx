@@ -100,10 +100,10 @@ class TrainJobs extends React.Component {
         "budget": this.state.budget,
         "model_ids": this.state.models.map(model=>model.id)
       }
-      debugger;
       await rafikiClient.createTrainJob(json_params)
       alert("Create Train Job succeed")
       this.setState({ "submit_status": "succeed" })
+      this.props.history.push('/admin/jobs')
     } catch (error) {
       this.setState({ "submit_status": "failed" })
       showError(error, 'Failed createJobs');
