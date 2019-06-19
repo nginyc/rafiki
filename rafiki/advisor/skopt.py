@@ -8,6 +8,7 @@ import numpy as np
 from rafiki.model import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob, PolicyKnob
 from rafiki.param_store import ParamsType
 
+from .development import inform_user
 from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal
 
 class ParamPolicy(Enum):
@@ -31,7 +32,7 @@ class SkoptAdvisor(BaseAdvisor):
         # Prompt user that Skopt search prefers having certain policies
         policies = [x.policy for (name, x) in knob_config.items() if isinstance(x, PolicyKnob)]
         if 'QUICK_TRAIN' not in policies:
-            print('To speed up hyperparameter search with Skopt, having `QUICK_TRAIN` policy is preferred.')
+            inform_user('To speed up hyperparameter search with Skopt, having `QUICK_TRAIN` policy is preferred.')
 
         return True
 

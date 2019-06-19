@@ -1,5 +1,3 @@
-import requests
-import pprint
 import os
 import tempfile
 import numpy as np
@@ -149,7 +147,7 @@ def _load_dataset_from_files(images_file_path, labels_file_path):
     return (images, labels)
 
 if __name__ == '__main__':
-    # Read args
+    # Read CLI args
     parser = argparse.ArgumentParser()
     parser.add_argument('--limit', type=int, default=None)
     parser.add_argument('--validation_split', type=float, default=0.1)

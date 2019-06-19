@@ -1,12 +1,11 @@
 import abc
 import numpy as np
-from enum import Enum
-from typing import Union, Dict, Type, List
+from typing import Union, Dict, Optional
 
 from .knob import BaseKnob
 
 KnobConfig = Dict[str, BaseKnob]
-Params = Dict[str, Union[str, np.ndarray]]
+Params = Dict[str, Union[str, int, float, np.ndarray]]
 
 class BaseModel(abc.ABC):
     '''
@@ -47,23 +46,9 @@ class BaseModel(abc.ABC):
         '''
         raise NotImplementedError()
 
-    @staticmethod
-    def setup():
-        '''
-        Runs class-wide setup logic (e.g. initialize a graph/session shared across trials).
-        '''
-        pass
-
-    @staticmethod
-    def teardown():
-        '''
-        Runs class-wide teardown logic (e.g. closes a session shared across trials).
-        '''
-        pass
-
     # TODO: Improve doc
     @abc.abstractmethod
-    def train(self, dataset_path: str, shared_params: Params = None):
+    def train(self, dataset_path: str, shared_params: Optional[Params] = None):
         '''
         Train this model instance with given dataset and initialized knob values.
         Additionally, a dictionary of trained parameters shared from previous trials could be passed.
@@ -128,4 +113,11 @@ class BaseModel(abc.ABC):
         Destroy this model instance, freeing any resources held by this model instance.
         No other instance methods will be called subsequently.
         '''
-        pass 
+        pass     
+        
+    @staticmethod
+    def teardown():
+        '''
+        Runs class-wide teardown logic (e.g. close a training session shared across trials).
+        '''
+        pass

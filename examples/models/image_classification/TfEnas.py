@@ -10,16 +10,21 @@ from collections import namedtuple
 import numpy as np
 import argparse
 
-from rafiki.advisor import tune_model, make_advisor, AdvisorType
+from rafiki.advisor import tune_model, test_model_class, make_advisor, AdvisorType
+from rafiki.constants import TaskType, ModelDependency
 from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
                             FixedKnob, ListKnob, KnobValue, PolicyKnob
 
-_Model = namedtuple('_Model', ['train_dataset_init_op', 'pred_dataset_init_op', 'train_op', 'summary_op',  
-                                'pred_probs', 'pred_corrects', 'train_corrects', 'step', 'vars_assign_op', 'ph', 'var_phs'])
-_ModelMemo = namedtuple('_ModelMemo', ['train_params', 'use_dynamic_arch', 'knobs', 
-                                        'model', 'graph', 'sess', 'saver', 'monitored_values'])
-_ModelPlaceholder = namedtuple('_ModelPlaceholder', ['train_images', 'train_classes', 'pred_images', 'pred_classes', 
-                                                    'normal_arch', 'reduction_arch'])
+_Model = namedtuple('_Model', 
+                    ['train_dataset_init_op', 'pred_dataset_init_op', 
+                    'train_op', 'summary_op', 'pred_probs', 'pred_corrects', 
+                    'train_corrects', 'step', 'vars_assign_op', 'ph', 'var_phs'])
+_ModelMemo = namedtuple('_ModelMemo', 
+                    ['train_params', 'use_dynamic_arch', 'knobs', 
+                    'model', 'graph', 'sess', 'saver', 'monitored_values'])
+_ModelPlaceholder = namedtuple('_ModelPlaceholder', 
+                                ['train_images', 'train_classes', 'pred_images', 
+                                'pred_classes', 'normal_arch', 'reduction_arch'])
 
 OPS = [0, 1, 2, 3, 4] 
 CELL_NUM_BLOCKS = 5 # No. of blocks in a cell
@@ -32,11 +37,11 @@ class TfEnas(BaseModel):
     Paper: https://arxiv.org/abs/1802.03268
     '''
     # Memoise across trials to speed up training
-    _datasets_memo = {}                 # { <dataset_uri> -> <dataset> }
+    _datasets_memo = {}                 # { <dataset_path> -> <dataset> }
     _model_memo = None                  # of class `_MemoModel`
     _loaded_tf_vars_id_memo = None      # ID of TF vars loaded
-    _loaded_train_dataset_memo = None   # Train dataset <dataset_uri> loaded into the graph
-    _loaded_pred_dataset_memo = None    # Predict dataset <dataset_uri> loaded into the graph
+    _loaded_train_dataset_memo = None   # Train dataset <dataset_path> loaded into the graph
+    _loaded_pred_dataset_memo = None    # Predict dataset <dataset_path> loaded into the graph
 
     @staticmethod
     def get_knob_config():
@@ -74,9 +79,12 @@ class TfEnas(BaseModel):
             'enas_drop_path_keep_prob': FixedKnob(0.9),
             'enas_drop_path_decay_epochs': FixedKnob(150),
 
-            # Affects whether training is shortened by reducing no. of epochs
+            # Affects whether training is shortened using a reduced no. of epochs
             'quick_train': PolicyKnob('QUICK_TRAIN'), 
             'enas_trial_epochs': FixedKnob(1),
+
+            # Affects whether training is skipped
+            'skip_train': PolicyKnob('SKIP_TRAIN'),
 
             # Affects whether evaluation happens only a subset of the dataset
             'quick_eval': PolicyKnob('QUICK_EVAL')
@@ -105,20 +113,15 @@ class TfEnas(BaseModel):
                 op_1_knob = CategoricalKnob(op_knob_values)
 
                 # Input 2 (same)
-                input_2_knob =  CategoricalKnob(input_knob_values[:(b + 2)])
-                op_2_knob =  CategoricalKnob(op_knob_values)
+                input_2_knob = CategoricalKnob(input_knob_values[:(b + 2)])
+                op_2_knob = CategoricalKnob(op_knob_values)
 
                 cell_archs_knobs.extend([input_1_knob, op_1_knob, input_2_knob, op_2_knob]) 
             
         return ListKnob(cell_archs_knobs)
     
-    @staticmethod
-    def teardown():
-        if TfEnas._model_memo is not None:
-            TfEnas._model_memo.sess.close()
-            TfEnas._model_memo = None
-
     def __init__(self, **knobs):
+        super().__init__(**knobs)
         self._model = None
         self._graph = None
         self._sess = None
@@ -127,23 +130,29 @@ class TfEnas(BaseModel):
         self._train_params = None
         self._knobs = self._process_knobs(knobs)
 
-    def train(self, dataset_uri):
+    def train(self, dataset_path, shared_params=None):
         knobs = self._knobs
 
-        (images, classes, self._train_params) = self._maybe_load_dataset(dataset_uri, **knobs)
+        # Load dataset
+        (images, classes, self._train_params) = self._maybe_load_dataset(dataset_path, **knobs)
         
         # Build model
-        if self._model is None:
-            (self._model, self._graph, self._sess, self._saver, 
-                self._monitored_values) = self._maybe_build_model(**knobs)
+        (self._model, self._graph, self._sess, self._saver, 
+            self._monitored_values) = self._maybe_build_model(**knobs)
+        
+        if not knobs['skip_train']:
+            # Maybe load shared variables, then train model
+            with self._graph.as_default():
+                if shared_params is not None:
+                    self._maybe_load_tf_vars(shared_params)
+                self._train_model(images, classes, dataset_path=dataset_path, **knobs)
+
+    def evaluate(self, dataset_path):
+        (images, classes, _) = self._maybe_load_dataset(dataset_path, train_params=self._train_params, **self._knobs)
         
         with self._graph.as_default():
-            self._train_model(images, classes, dataset_uri=dataset_uri, **knobs)
+            acc = self._evaluate_model(images, classes, dataset_path=dataset_path, **self._knobs)
 
-    def evaluate(self, dataset_uri):
-        (images, classes, _) = self._maybe_load_dataset(dataset_uri, train_params=self._train_params, **self._knobs)
-        with self._graph.as_default():
-            acc = self._evaluate_model(images, classes, dataset_uri=dataset_uri, **self._knobs)
         return acc
 
     def predict(self, queries):
@@ -188,18 +197,24 @@ class TfEnas(BaseModel):
         with self._graph.as_default():
             self._maybe_load_tf_vars(params)
 
+    @staticmethod
+    def teardown():
+        if TfEnas._model_memo is not None:
+            TfEnas._model_memo.sess.close()
+            TfEnas._model_memo = None
+
     ####################################
     # Memoized methods
     ####################################
 
-    def _maybe_load_dataset(self, dataset_uri, train_params=None, **knobs):
+    def _maybe_load_dataset(self, dataset_path, train_params=None, **knobs):
         # Try to use memoized dataset
-        if dataset_uri in TfEnas._datasets_memo:
-            dataset = TfEnas._datasets_memo[dataset_uri]
+        if dataset_path in TfEnas._datasets_memo:
+            dataset = TfEnas._datasets_memo[dataset_path]
             return dataset
 
-        dataset = self._load_dataset(dataset_uri, train_params, **knobs)
-        TfEnas._datasets_memo[dataset_uri] = dataset
+        dataset = self._load_dataset(dataset_path, train_params, **knobs)
+        TfEnas._datasets_memo[dataset_path] = dataset
         return dataset
 
     def _maybe_load_tf_vars(self, params):
@@ -214,15 +229,15 @@ class TfEnas(BaseModel):
         # Memo ID
         TfEnas._loaded_tf_vars_id_memo = vars_id
 
-    def _maybe_feed_dataset_to_model(self, images, classes=None, dataset_uri=None, is_train=False):
+    def _maybe_feed_dataset_to_model(self, images, classes=None, dataset_path=None, is_train=False):
         memo = TfEnas._loaded_train_dataset_memo if is_train else TfEnas._loaded_pred_dataset_memo
-        if dataset_uri is None or memo != dataset_uri:
+        if dataset_path is None or memo != dataset_path:
             # To load new dataset
             self._feed_dataset_to_model(images, classes, is_train=is_train)
             if is_train:
-                TfEnas._loaded_train_dataset_memo = dataset_uri
+                TfEnas._loaded_train_dataset_memo = dataset_path
             else:
-                TfEnas._loaded_pred_dataset_memo = dataset_uri
+                TfEnas._loaded_pred_dataset_memo = dataset_path
         else:
             # Otherwise, dataset has previously been loaded, so do nothing
             pass
@@ -256,7 +271,7 @@ class TfEnas(BaseModel):
 
         # Knobs must be the same except for some that doesn't affect model construction
         # If arch is dynamic, knobs can differ by `cell_archs`
-        ignored_knobs = ['quick_train', 'quick_eval', 'downscale', 'trial_epochs']
+        ignored_knobs = ['skip_train', 'quick_train', 'quick_eval', 'downscale', 'trial_epochs']
         if use_dynamic_arch:
             ignored_knobs.append('cell_archs')
         
@@ -293,12 +308,12 @@ class TfEnas(BaseModel):
 
         return knobs
 
-    def _load_dataset(self, dataset_uri, train_params=None, **knobs):
+    def _load_dataset(self, dataset_path, train_params=None, **knobs):
         max_image_size = knobs['max_image_size']
         image_size = train_params['image_size'] if train_params is not None else max_image_size
 
         utils.logger.log('Loading dataset...')    
-        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=image_size, 
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, max_image_size=image_size, 
                                                             mode='RGB')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         norm_mean = np.mean(images, axis=(0, 1, 2)).tolist() 
@@ -635,12 +650,12 @@ class TfEnas(BaseModel):
                 m.ph.pred_classes: classes,
             })
 
-    def _train_model(self, images, classes, dataset_uri=None, **knobs):
+    def _train_model(self, images, classes, dataset_path=None, **knobs):
         num_epochs = knobs['trial_epochs']
         m = self._model
         N = len(images)
         
-        self._maybe_feed_dataset_to_model(images, classes, dataset_uri=dataset_uri, is_train=True)
+        self._maybe_feed_dataset_to_model(images, classes, dataset_path=dataset_path, is_train=True)
 
         # Define plots
         # TODO: Investigate bug where plots for acc and loss are always 1 and 0
@@ -668,12 +683,12 @@ class TfEnas(BaseModel):
             mean_acc = np.mean(corrects)
             utils.logger.log(epoch=epoch, mean_acc=mean_acc)
 
-    def _evaluate_model(self, images, classes, dataset_uri=None, **knobs):
+    def _evaluate_model(self, images, classes, dataset_path=None, **knobs):
         batch_size = self._knobs['batch_size']
         m = self._model
         N = batch_size if self._knobs['quick_eval'] else len(images)
 
-        self._maybe_feed_dataset_to_model(images, classes, dataset_uri=dataset_uri)
+        self._maybe_feed_dataset_to_model(images, classes, dataset_path=dataset_path)
 
         corrects = []
         itr = self._get_dataset_iterator(N, [m.pred_corrects], **knobs)
@@ -1307,7 +1322,13 @@ class TimedRepeatCondition():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--enas_batch_size', type=int, default=10, help='Batch size for ENAS controller')
+    parser.add_argument('--tune', action='store_true', help='Whether to perform architecture tuning with ENAS, or simply test the model')
+    parser.add_argument('--train_path', type=str, default='data/cifar10_for_image_classification_train.zip', help='Path to train dataset')
+    parser.add_argument('--val_path', type=str, default='data/cifar10_for_image_classification_val.zip', help='Path to validation dataset')
+    parser.add_argument('--test_path', type=str, default='data/cifar10_for_image_classification_test.zip', help='Path to test dataset')
+
+    # Options for ENAS
+    parser.add_argument('--enas_batch_size', type=int, default=10, help='Batch size for the ENAS controller')
     parser.add_argument('--train_strategy', type=str, default='ISOLATED', help='Train strategy for ENAS controller')
     parser.add_argument('--num_eval_per_cycle', type=int, default=300, help='No. of evaluations in a cycle of train-eval in ENAS')
     parser.add_argument('--num_cycles', type=int, default=150, help='No. of cycles of train-eval in ENAS')
@@ -1316,25 +1337,69 @@ if __name__ == '__main__':
     parser.add_argument('--omit_final_train', action='store_true', help='Whether to omit training the final best architecture')
     (args, _) = parser.parse_known_args()
 
-    if not args.train_once:
-        num_final_train_trials = 0 if args.omit_final_train else 1
-        period = args.num_eval_per_cycle + 1
-        trial_count = period * args.num_cycles + args.num_final_evals + num_final_train_trials
+    if args.tune:
+        if not args.train_once:
+            num_final_train_trials = 0 if args.omit_final_train else 1
+            period = args.num_eval_per_cycle + 1
+            trial_count = period * args.num_cycles + args.num_final_evals + num_final_train_trials
+        else:
+            trial_count = 1
+
+        advisor_config = { 'num_eval_per_cycle': args.num_eval_per_cycle, 
+                            'num_final_evals': args.num_final_evals,
+                            'batch_size': args.enas_batch_size, 
+                            'train_strategy': args.train_strategy,
+                            'do_final_train': not args.omit_final_train }
+        knob_config = TfEnas.get_knob_config()
+        advisor = make_advisor(knob_config, advisor_type=AdvisorType.ENAS, **advisor_config)
+
+        tune_model(
+            TfEnas, 
+            train_dataset_path=args.train_path,
+            val_dataset_path=args.val_path,
+            test_dataset_path=args.test_path,
+            total_trials=trial_count,
+            advisor=advisor
+        )
     else:
-        trial_count = 1
-
-    advisor_config = { 'num_eval_per_cycle': args.num_eval_per_cycle, 
-                        'num_final_evals': args.num_final_evals,
-                        'batch_size': args.enas_batch_size, 
-                        'train_strategy': args.train_strategy,
-                        'do_final_train': not args.omit_final_train }
-    knob_config = TfEnas.get_knob_config()
-    advisor = make_advisor(knob_config, advisor_type=AdvisorType.ENAS, **advisor_config)
-
-    tune_model(
-        TfEnas, 
-        train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-        val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-        total_trials=trial_count,
-        advisor=advisor
-    )
+        test_model_class(
+            model_file_path=__file__,
+            model_class='TfEnas',
+            task=TaskType.IMAGE_CLASSIFICATION,
+            dependencies={
+                ModelDependency.TENSORFLOW: '1.12.0'
+            },
+            train_dataset_path=args.train_path,
+            val_dataset_path=args.val_path,
+            test_dataset_path=args.test_path,
+            queries=[
+                [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 7, 0, 37, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 27, 84, 11, 0, 0, 0, 0, 0, 0, 119, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 88, 143, 110, 0, 0, 0, 0, 22, 93, 106, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 53, 129, 120, 147, 175, 157, 166, 135, 154, 168, 140, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 11, 137, 130, 128, 160, 176, 159, 167, 178, 149, 151, 144, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 0, 3, 0, 0, 115, 114, 106, 137, 168, 153, 156, 165, 167, 143, 157, 158, 11, 0], 
+                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 89, 139, 90, 94, 153, 149, 131, 151, 169, 172, 143, 159, 169, 48, 0], 
+                [0, 0, 0, 0, 0, 0, 2, 4, 1, 0, 0, 0, 98, 136, 110, 109, 110, 162, 135, 144, 149, 159, 167, 144, 158, 169, 119, 0], 
+                [0, 0, 2, 2, 1, 2, 0, 0, 0, 0, 26, 108, 117, 99, 111, 117, 136, 156, 134, 154, 154, 156, 160, 141, 147, 156, 178, 0], 
+                [3, 0, 0, 0, 0, 0, 0, 21, 53, 92, 117, 111, 103, 115, 129, 134, 143, 154, 165, 170, 154, 151, 154, 143, 138, 150, 165, 43], 
+                [0, 0, 23, 54, 65, 76, 85, 118, 128, 123, 111, 113, 118, 127, 125, 139, 133, 136, 160, 140, 155, 161, 144, 155, 172, 161, 189, 62], 
+                [0, 68, 94, 90, 111, 114, 111, 114, 115, 127, 135, 136, 143, 126, 127, 151, 154, 143, 148, 125, 162, 162, 144, 138, 153, 162, 196, 58], 
+                [70, 169, 129, 104, 98, 100, 94, 97, 98, 102, 108, 106, 119, 120, 129, 149, 156, 167, 190, 190, 196, 198, 198, 187, 197, 189, 184, 36], 
+                [16, 126, 171, 188, 188, 184, 171, 153, 135, 120, 126, 127, 146, 185, 195, 209, 208, 255, 209, 177, 245, 252, 251, 251, 247, 220, 206, 49], 
+                [0, 0, 0, 12, 67, 106, 164, 185, 199, 210, 211, 210, 208, 190, 150, 82, 8, 0, 0, 0, 178, 208, 188, 175, 162, 158, 151, 11], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+            ]
+        )

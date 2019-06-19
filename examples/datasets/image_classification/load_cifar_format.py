@@ -1,11 +1,8 @@
 import tarfile
-import requests
-import pprint
 import os
 import tempfile
 import pickle
 import numpy as np
-import gzip
 import csv
 import shutil
 from tqdm import tqdm
@@ -15,11 +12,40 @@ import argparse
 
 from rafiki.model import utils
 
+# Loads the official CIFAR-10 dataset for `IMAGE_CLASSIFICATION` task
+def load_cifar10(out_train_dataset_path='data/cifar10_for_image_classification_train.zip',
+                out_val_dataset_path='data/cifar10_for_image_classification_val.zip',
+                out_test_dataset_path='data/cifar10_for_image_classification_test.zip',
+                out_meta_csv_path='data/cifar10_for_image_classification_meta.csv',
+                validation_split=0.1,
+                limit=None):
+    load(
+        dataset_url='https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
+        label_to_name={
+            0: 'airplane',
+            1: 'automobile',
+            2: 'bird',
+            3: 'cat',
+            4: 'deer',
+            5: 'dog',
+            6: 'frog',
+            7: 'horse',
+            8: 'ship',
+            9: 'truck'
+        },
+        out_train_dataset_path=out_train_dataset_path,
+        out_val_dataset_path=out_val_dataset_path,
+        out_test_dataset_path=out_test_dataset_path,
+        out_meta_csv_path=out_meta_csv_path,
+        validation_split=validation_split,
+        limit=limit
+    )
+
 def load(dataset_url, label_to_name, out_train_dataset_path, out_val_dataset_path, 
         out_test_dataset_path, out_meta_csv_path, validation_split, limit=None):
     '''
-        Loads and converts an image dataset of the CIFAR-10 format for IMAGE_CLASSIFICATION.
-        Refer to https://www.cs.toronto.edu/~kriz/cifar.html for the CIFAR-10 dataset format for.
+        Loads and converts an image dataset of the CIFAR format for IMAGE_CLASSIFICATION.
+        Refer to https://www.cs.toronto.edu/~kriz/cifar.html for the CIFAR dataset format.
 
         :param str dataset_url: URL to download the Python version of the dataset
         :param dict[int, str] label_to_name: Dictionary mapping label index to label name
@@ -146,33 +172,13 @@ def _cifar_images_to_images(cifar_images):
     return images
 
 if __name__ == '__main__':
+    # Read CLI args
     parser = argparse.ArgumentParser()
     parser.add_argument('--limit', type=int, default=None)
     parser.add_argument('--validation_split', type=float, default=0.1)
     args = parser.parse_args()
 
-    load(
-        dataset_url='https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
-        label_to_name={
-            0: 'airplane',
-            1: 'automobile',
-            2: 'bird',
-            3: 'cat',
-            4: 'deer',
-            5: 'dog',
-            6: 'frog',
-            7: 'horse',
-            8: 'ship',
-            9: 'truck'
-        },
-        out_train_dataset_path='data/cifar_10_for_image_classification_train.zip',
-        out_val_dataset_path='data/cifar_10_for_image_classification_val.zip',
-        out_test_dataset_path='data/cifar_10_for_image_classification_test.zip',
-        out_meta_csv_path='data/cifar_10_for_image_classification_meta.csv',
-        validation_split=args.validation_split,
-        limit=args.limit
-    )
-
-
+    load_cifar10(limit=args.limit, validation_split=args.validation_split)    
+    
     
     

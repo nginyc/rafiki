@@ -1,8 +1,6 @@
 import abc
-import numpy as np
 import random
-from collections import namedtuple
-from typing import Union, Dict, List, Tuple
+from typing import Dict, List
 from enum import Enum
 
 from rafiki.model import BaseKnob, IntegerKnob, CategoricalKnob, FloatKnob, \
@@ -48,13 +46,11 @@ class Proposal():
                 knobs: Dict[str, any], 
                 params_type: ParamsType = ParamsType.NONE, # Parameters to use for this trial
                 is_valid = True, # If a trial is invalid, the worker will sleep for a while before trying again
-                should_train = True, # Whether the model should be trained
                 should_eval = True, # Whether the model should be evaluated
                 should_save_to_disk = True): # Whether this trial's trained model should be saved to disk
         self.knobs = knobs
         self.params_type = ParamsType(params_type)
         self.is_valid = is_valid
-        self.should_train = should_train
         self.should_eval = should_eval
         self.should_save_to_disk = should_save_to_disk
 

@@ -35,7 +35,7 @@ class TrainWorker(object):
         self._redis_port = os.environ['REDIS_PORT']
         self._client = make_superadmin_client()
         self._trial_id = None
-        self._params_store: ParamStore = None
+        self._params_store: ParamStore = param_store or None
 
     def start(self):
         self._job_monitor.start()
@@ -56,9 +56,6 @@ class TrainWorker(object):
         # Get Rafiki advior train worker to propose knobs in trials
         advisor_id = self._maybe_create_advisor(job_info, clazz)
 
-        # Run model setup
-        has_setup = False
-
         while True:
             # Secure a trial from store
             (self._trial_id, trial_no) = self._create_trial()
@@ -72,12 +69,6 @@ class TrainWorker(object):
                 logger_info = self._start_logging_to_trial(
                     lambda log_line, log_lvl: 
                         self._job_monitor.log_to_trial(self._trial_id, log_line, log_lvl))
-
-                # Setup model if not
-                if not has_setup:
-                    logger.info('Running model class setup...')
-                    clazz.setup()
-                    has_setup = True
 
                 # Wait for a proposal from advisor for trial
                 proposal = self._wait_for_proposal(advisor_id, trial_no, job_info)
@@ -114,9 +105,8 @@ class TrainWorker(object):
                 self._trial_id = None
 
         # Run model teardown
-        if has_setup:
-            logger.info('Running model class teardown...')
-            clazz.teardown()
+        logger.info('Running model class teardown...')
+        clazz.teardown()
 
         # Train job must have finished, delete advisor & clear all params
         self._maybe_delete_advisor(advisor_id, job_info)
@@ -170,12 +160,10 @@ class TrainWorker(object):
             model_inst.load_parameters(params)
 
         # Train model
-        trial_params = None
-        if proposal.should_train:
-            logger.info('Training model...')
-            model_inst.train(train_dataset_uri)
-            trial_params = model_inst.dump_parameters()
-            logger.info('Trial produced {} parameters'.format(len(trial_params)))
+        logger.info('Training model...')
+        model_inst.train(train_dataset_uri)
+        trial_params = model_inst.dump_parameters()
+        logger.info('Trial produced {} parameters'.format(len(trial_params)))
 
         # Evaluate model
         score = None
@@ -305,6 +293,10 @@ class TrainWorker(object):
             # Throw just a warning - maybe another worker deleted it
             logger.warning('Error while deleting advisor:')
             logger.warning(traceback.format_exc())
+
+
+    def _get_client(self):
+        
 
 class _SubTrainJobMonitor():
     '''

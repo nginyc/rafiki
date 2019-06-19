@@ -8,23 +8,26 @@ import time
 from typing import Dict, Type
 
 from rafiki.model import BaseModel, BaseKnob, serialize_knob_config, deserialize_knob_config, \
-                        parse_model_install_command, load_model_class
+                        parse_model_install_command, load_model_class, Params
 from rafiki.constants import ModelDependency
 from rafiki.param_store import ParamStore
 from rafiki.predictor import ensemble_predictions
 
 from .advisor import make_advisor, BaseAdvisor
 
+# TODO: Better doc
 def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dataset_path: str, 
-                test_dataset_uri: str = None, total_trials: int = 25, params_root_dir: str = 'params/', 
-                advisor: BaseAdvisor = None, to_read_args: bool = True) -> (Dict[str, any], float, str):
+                test_dataset_path: str = None, total_trials: int = 20, params_root_dir: str = 'params/', 
+                advisor: BaseAdvisor = None) -> (Dict[str, any], float, str):
     '''
     Tunes a model on a given dataset in the current environment.
+
+    Additionally, reads fixed knob values from CLI arguments.
 
     :param BaseModel py_model_class: The Python class for the model
     :param str train_dataset_path: File path of the train dataset for training of the model
     :param str val_dataset_path: File path of the validation dataset for evaluating trained models
-    :param str test_dataset_uri: URI of the validation dataset for testing the final best trained model, if provided
+    :param str test_dataset_path: URI of the validation dataset for testing the final best trained model, if provided
     :param int total_trials: Total number of trials to tune the model over
     :param str params_root_dir: Root folder path to create subfolders to save each trial's model parameters
     :param BaseAdvisor advisor: A pre-created advisor to use for tuning the model
@@ -40,15 +43,8 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
     knob_config = py_model_class.get_knob_config()
     _check_knob_config(knob_config)
 
-    # Maybe read from args
-    if to_read_args:
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--total_trials', type=int)
-        (namespace_args, left_args) = parser.parse_known_args()
-        total_trials = namespace_args.total_trials if namespace_args.total_trials is not None else total_trials  
-        knobs_from_args = _maybe_read_knobs_from_args(knob_config, left_args)
-
-    _note('Total trial count: {}'.format(total_trials))
+    # Read any fixed knobs from CLI args
+    knobs_from_args = _maybe_read_knobs_from_args(knob_config)
 
     # Configure advisor
     if advisor is None:
@@ -65,11 +61,8 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
     best_proposal = None
     best_model_params_file_path = None
 
-    # Setup model class
-    print('Running model class setup...')
-    py_model_class.setup()
-
     # For every trial
+    inform_user('Total trial count: {}'.format(total_trials))
     for i in range(1, total_trials + 1):
         trial_id = str(uuid.uuid4())
         _print_header('Trial #{} (ID: "{}")'.format(i, trial_id))
@@ -82,24 +75,19 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
         proposal.knobs = { **proposal.knobs, **knobs_from_args } 
         print('Advisor proposed knobs:', proposal.knobs)
         print('Advisor proposed params:', proposal.params_type.name)
-        print('Advisor proposed whether to train:', proposal.should_train)
         print('Advisor proposed whether to evaluate:', proposal.should_eval)
 
         # Load model
         model_inst = py_model_class(**proposal.knobs)
 
-        # Train model
-        trial_params = None
-        if proposal.should_train:
-            # Retrieve shared params from store
-            print('Retrieving shared params...')
-            shared_params = param_store.retrieve_params(proposal.params_type)
+        print('Retrieving shared params...')
+        shared_params = param_store.retrieve_params(proposal.params_type)
 
-            print('Training model...')
-            model_inst.train(train_dataset_path, shared_params=shared_params)
-            trial_params = model_inst.dump_parameters()
-            if trial_params:
-                print('Model produced {} params'.format(len(trial_params)))
+        print('Training model...')
+        model_inst.train(train_dataset_path, shared_params=shared_params)
+        trial_params = model_inst.dump_parameters()
+        if trial_params:
+            print('Model produced {} params'.format(len(trial_params)))
 
         # Evaluate model
         score = None
@@ -115,20 +103,17 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
         if score is not None:
             # Update best model
             if score > best_model_score:
-                _note('Best model so far! Beats previous best of score {}!'.format(best_model_score))
+                inform_user('Best model so far! Beats previous best of score {}!'.format(best_model_score))
                        
                 # Save best model
                 params_file_path = None
                 if proposal.should_save_to_disk:
                     print('Saving trained model to disk...')
-                    if trial_params is None:
-                        trial_params = model_inst.dump_parameters()
-
                     params_bytes = ParamStore.serialize_params(trial_params)
                     params_file_path = os.path.join(params_root_dir, '{}.model'.format(trial_id))
                     with open(params_file_path, 'wb') as f:
                         f.write(params_bytes)
-                    _note('Model saved to {}'.format(params_file_path))
+                    inform_user('Model saved to {}'.format(params_file_path))
 
                 best_model_params_file_path = params_file_path
                 best_proposal = proposal
@@ -136,10 +121,10 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
                 best_trial_no = i
                         
                 # Test best model, if test dataset provided
-                if test_dataset_uri is not None:
+                if test_dataset_path is not None:
                     print('Evaluting model on test dataset...')
-                    best_model_test_score = model_inst.evaluate(test_dataset_uri)
-                    _note('Score on test dataset: {}'.format(best_model_test_score))
+                    best_model_test_score = model_inst.evaluate(test_dataset_path)
+                    inform_user('Score on test dataset: {}'.format(best_model_test_score))
                  
             # Feedback to advisor
             print('Giving feedback to advisor...')
@@ -154,11 +139,11 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
         model_inst.destroy()
     
     # Declare best model
-    _note('Best trial #{} has knobs {} with score of {}'.format(best_trial_no, best_proposal.knobs, best_model_score))
+    inform_user('Best trial #{} has knobs {} with score of {}'.format(best_trial_no, best_proposal.knobs, best_model_score))
     if best_model_test_score is not None:
-        _note('...with test score of {}'.format(best_model_test_score))
+        inform_user('...with test score of {}'.format(best_model_test_score))
     if best_model_params_file_path is not None:
-        _note('...saved at {}'.format(best_model_params_file_path)) 
+        inform_user('...saved at {}'.format(best_model_params_file_path)) 
         
     # Teardown model class
     print('Running model class teardown...')
@@ -172,11 +157,13 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
 
 
 # TODO: Fix method, more thorough testing of model API
-def test_model_class(model_file_path: str, model_class: str, task: str, dependencies: Dict[str, str],
-                    train_dataset_path: str, val_dataset_path: str, queries: list = None):
+def test_model_class(model_file_path: str, model_class: str, task: str, 
+                    dependencies: Dict[str, str], queries: list = None, **kwargs):
     '''
     Tests whether a model class is properly defined by running a full train-inference flow.
     The model instance's methods will be called in an order similar to that in Rafiki.
+
+    Refer to `tune_model` for additional parameters to be passed.
 
     :param str model_file_path: Path to a single Python file that contains the definition for the model class
     :param str model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
@@ -196,12 +183,10 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
     py_model_class = load_model_class(model_file_bytes, model_class, temp_mod_name=model_class)
     _check_model_class(py_model_class)
 
-    # Simulation of training
-    (proposal, _, params_file_path) = tune_model(py_model_class, train_dataset_path, val_dataset_path, total_trials=2)
+    # Simulation of training process
+    (proposal, _, params_file_path) = tune_model(py_model_class, total_trials=3, **kwargs)
    
-    # Simulation of serving
-    py_model_class.setup()
-
+    # Load best trained model's parameters
     _print_header('Checking loading of parameters from disk...')
     model_inst = py_model_class(**proposal.knobs)
     with open(params_file_path, 'rb') as f:
@@ -214,21 +199,28 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
         print('Using queries: {}'.format(queries))
         predictions = model_inst.predict(queries)
 
+        # Verify format of predictions
+        for prediction in predictions:
+            _assert_jsonable(prediction, Exception('Each `prediction` should be JSON serializable'))
+
+        # Ensemble predictions in predictor
+        predictions = ensemble_predictions([predictions], task)
+
+        print('Predictions: {}'.format(predictions))
+
     py_model_class.teardown()
 
-    for prediction in predictions:
-        _assert_jsonable(prediction, Exception('Each `prediction` should be JSON serializable'))
-
-    # Ensembling predictions in predictor
-    predictions = ensemble_predictions([predictions], task)
-
-    print('Predictions: {}'.format(predictions))
-
-    _note('The model definition is valid!')
+    inform_user('No errors encountered while testing model!')
 
     return model_inst
 
-def _maybe_read_knobs_from_args(knob_config, args):
+def warn_user(msg):
+    print(f'\033[93mWARNING: {msg}\033[0m')
+
+def inform_user(msg):
+    print(f'\033[94m{msg}\033[0m')
+
+def _maybe_read_knobs_from_args(knob_config):
     parser = argparse.ArgumentParser()
 
     for (name, knob) in knob_config.items():
@@ -237,7 +229,7 @@ def _maybe_read_knobs_from_args(knob_config, args):
         elif knob.value_type in [list, bool]:
             parser.add_argument('--{}'.format(name), type=str)
         
-    args_namespace = vars(parser.parse_known_args(args)[0])
+    args_namespace = vars(parser.parse_known_args()[0])
     knobs_from_args = {}
     for (name, knob) in knob_config.items():
         if name in args_namespace and args_namespace[name] is not None:
@@ -245,7 +237,7 @@ def _maybe_read_knobs_from_args(knob_config, args):
             if knob.value_type in [list, bool]:
                 value = eval(value)
             knobs_from_args[name] = value
-            _note('Setting knob "{}" to be fixed value of "{}"...'.format(name, value))
+            inform_user('Setting knob "{}" to be fixed value of "{}"...'.format(name, value))
 
     return knobs_from_args
 
@@ -254,11 +246,11 @@ def _check_model_class(py_model_class):
         raise Exception('Model should extend `rafiki.model.BaseModel`')
 
     if inspect.isfunction(getattr(py_model_class, 'init', None)):
-        _warn('`init` has been deprecated - use `__init__` for your model\'s initialization logic instead')
+        warn_user('`init` has been deprecated - use `__init__` for your model\'s initialization logic instead')
 
     if inspect.isfunction(getattr(py_model_class, 'get_knob_config', None)) and \
         not isinstance(py_model_class.__dict__.get('get_knob_config', None), staticmethod):
-        _warn('`get_knob_config` has been changed to a `@staticmethod`')
+        warn_user('`get_knob_config` has been changed to a `@staticmethod`')
 
 
 def _check_dependencies(dependencies):
@@ -268,21 +260,21 @@ def _check_dependencies(dependencies):
     for (dep, ver) in dependencies.items():
         if dep == ModelDependency.KERAS:
             # Warn that Keras models should additionally depend on TF for GPU usage
-            _note('Keras models can enable GPU usage with by adding a `tensorflow` dependency.')
+            inform_user('Keras models can enable GPU usage with by adding a `tensorflow` dependency.')
         elif dep in [ModelDependency.TORCH, ModelDependency.TORCHVISION]:
             pass
         elif dep == ModelDependency.SCIKIT_LEARN:
             pass
         elif dep == ModelDependency.TENSORFLOW:
-            _warn('TensorFlow models must cater for GPU-sharing with ' \
+            warn_user('TensorFlow models must cater for GPU-sharing with ' \
                     + '`config.gpu_options.allow_growth = True` (ref: https://www.tensorflow.org/guide/using_gpu#allowing_gpu_memory_growth).')
         elif dep == ModelDependency.SINGA:
             pass
     
     install_command = parse_model_install_command(dependencies, enable_gpu=False)
     install_command_with_gpu = parse_model_install_command(dependencies, enable_gpu=True)
-    _note(f'Install command (without GPU): `{install_command}`')
-    _note(f'Install command (with GPU): `{install_command_with_gpu}`')
+    inform_user(f'Install command (without GPU): `{install_command}`')
+    inform_user(f'Install command (with GPU): `{install_command_with_gpu}`')
 
 
 def _check_knob_config(knob_config):
@@ -300,7 +292,6 @@ def _assert_jsonable(jsonable, exception=None):
     except Exception as e:
         traceback.print_stack()
         raise exception or e 
-
 
 def _check_model_inst(model_inst):
     # Throw error when deprecated methods are called
@@ -327,9 +318,3 @@ def _print_header(msg):
     print('-' * (len(msg) + 4))
     print('| {} |'.format(msg))
     print('-' * (len(msg) + 4))
-
-def _warn(msg):
-    print(f'\033[93mWARNING: {msg}\033[0m')
-
-def _note(msg):
-    print(f'\033[94m{msg}\033[0m')

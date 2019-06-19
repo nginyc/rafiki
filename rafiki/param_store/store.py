@@ -1,4 +1,3 @@
-import os
 import json
 import numpy as np
 from typing import Dict
@@ -8,7 +7,7 @@ import logging
 from collections import namedtuple
 import msgpack
 from datetime import datetime
-import sys
+import traceback
 from enum import Enum
 
 from rafiki.model import Params
@@ -18,6 +17,7 @@ from .cache import Cache
 logger = logging.getLogger(__name__)
 
 class InvalidParamsError(Exception): pass
+class InvalidParamsFormatError(Exception): pass
 
 class ParamsType(Enum):
     LOCAL_RECENT = 'LOCAL_RECENT'
@@ -29,6 +29,8 @@ class ParamsType(Enum):
 REDIS_NAMESPACE = 'PARAMS'
 REDIS_LOCK_EXPIRE_SECONDS = 60
 REDIS_LOCK_WAIT_SLEEP_SECONDS = 0.1
+PARAM_DATA_TYPE_SEPARATOR = '//'
+PARAM_DATA_TYPE_NUMPY = 'np'
 
 _ParamMeta = namedtuple('_ParamMeta', ('param_id', 'score', 'time'))
 
@@ -36,26 +38,56 @@ class ParamStore(object):
     
     @staticmethod
     def serialize_params(params):
-        # Convert numpy arrays to lists
-        params_simple = { 
-            name: value.tolist() if isinstance(value, np.ndarray) else value
-            for (name, value) in params.items() 
-        }
-
         # Serialize as `msgpack`
+        params_simple = ParamStore._simplify_params(params)
         params_bytes = msgpack.packb(params_simple, use_bin_type=True)
         return params_bytes
 
     @staticmethod
     def deserialize_params(params_bytes):
         # Deserialize as `msgpack`
-        params = msgpack.unpackb(params_bytes, raw=False)
+        params_simple = msgpack.unpackb(params_bytes, raw=False)
+        params = ParamStore._unsimplify_params(params_simple)
+        return params
 
-        # Convert lists to numpy arrays
-        for (name, value) in params.items():
-            if isinstance(value, list):
-                params[name] = np.asarray(value)
-        
+    @staticmethod
+    def _simplify_params(params):
+        try:
+            params_simple = {}
+
+            assert isinstance(params, dict)
+            for (name, value) in params.items():
+                assert isinstance(name, str)
+                assert PARAM_DATA_TYPE_SEPARATOR not in name # Internally used as separator for types
+
+                # If value is a numpy array, prefix it with type
+                # Otherwise, it must be one of the basic types
+                if isinstance(value, np.ndarray):
+                    name = f'{PARAM_DATA_TYPE_NUMPY}{PARAM_DATA_TYPE_SEPARATOR}{name}'
+                    value = value.tolist()
+                else:
+                    assert isinstance(value, (str, float, int))
+
+                params_simple[name] = value
+
+            return params_simple
+
+        except Exception:
+            traceback.print_stack()
+            raise InvalidParamsFormatError()
+
+    @staticmethod
+    def _unsimplify_params(params_simple):
+        params = {}
+
+        for (name, value) in params_simple.items():
+            if PARAM_DATA_TYPE_SEPARATOR in name:
+                (type_id, name) = name.split(PARAM_DATA_TYPE_SEPARATOR)
+                if type_id == PARAM_DATA_TYPE_NUMPY:
+                    value = np.array(value)
+
+            params[name] = value
+
         return params
 
     '''

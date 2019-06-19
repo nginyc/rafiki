@@ -27,8 +27,8 @@ class PyDenseNetBc(BaseModel):
 
     Credits to https://github.com/gpleiss/efficient_densenet_pytorch
     '''
-
     def __init__(self, **knobs):
+        super().__init__(**knobs)
         self._knobs = knobs
         self._model = None
 
@@ -51,14 +51,15 @@ class PyDenseNetBc(BaseModel):
             'early_stop_patience_epochs': FixedKnob(5)
         }
 
-    def train(self, dataset_uri):
-        (train_dataset, train_val_dataset, self._train_params) = self._load_train_dataset(dataset_uri)
-        if self._model is None:
-            self._model = self._build_model()
+    def train(self, dataset_path, shared_params=None):
+        (train_dataset, train_val_dataset, self._train_params) = self._load_train_dataset(dataset_path)
+        self._model = self._build_model()
+        if shared_params is not None:
+            self._model = self._load_model_parameters(self._model, shared_params)
         self._model = self._train_model(self._model, train_dataset, train_val_dataset)
 
-    def evaluate(self, dataset_uri):
-        dataset = self._load_val_dataset(dataset_uri, self._train_params)
+    def evaluate(self, dataset_path):
+        dataset = self._load_val_dataset(dataset_path, self._train_params)
         (_, acc) = self._predict(dataset)
         return acc
 
@@ -70,45 +71,34 @@ class PyDenseNetBc(BaseModel):
     def dump_parameters(self):
         (net, step) = self._model
 
-        params = {}
-
-        # Add train params
-        params['train_params'] = json.dumps(self._train_params)
-
-        # Add net's params
-        def merge_params(prefix, state_dict):
-            for (name, value) in state_dict.items():
-                params['{}:{}'.format(prefix, name)] = value.cpu().numpy()
-
-        merge_params('net', net.state_dict())
+        net_params = self._state_dict_to_params(net.state_dict())
+        net_params = self._namespace_params(net_params, 'net')
         
-        # Add step
-        params['step'] = np.asarray(step)
+        params = {
+            **net_params,
+            'train_params': json.dumps(self._train_params),
+            'step': step
+        }
 
         return params
 
     def load_parameters(self, params):
-        # Add train params
         self._train_params = json.loads(params['train_params'])
-
-        # Add net
-        def extract_params(prefix):
-            return { ':'.join(name.split(':')[1:]): torch.from_numpy(value) 
-                    for (name, value) in params.items() if name.startswith(prefix + ':') }    
-
         model = self._build_model()
-        net = model.net
-        net_state_dict = extract_params('net')
-        net.load_state_dict(net_state_dict, strict=False)
-
-        # Add step
-        step = int(params['step'])
-
-        self._model = (net, step)
+        self._model = self._load_model_parameters(model, params)
 
     ####################################
     # Private methods
     ####################################
+
+    def _load_model_parameters(self, model, params):
+        step = params['step']
+        net_params = self._extract_namespace_from_params(params, 'net')
+        net_state_dict = self._params_to_state_dict(net_params)
+        net = model.net
+        net.load_state_dict(net_state_dict, strict=False)
+        model = _Model(net, step)
+        return model
 
     def _predict(self, dataset):
         batch_size = self._knobs['batch_size']
@@ -219,7 +209,7 @@ class PyDenseNetBc(BaseModel):
         model = _Model(net, step)
         return model
 
-    def _load_train_dataset(self, dataset_uri):
+    def _load_train_dataset(self, dataset_path):
         early_stop_train_val_samples = self._knobs['early_stop_train_val_samples']
         max_image_size = self._knobs['max_image_size']
         quick_train = self._knobs['quick_train']
@@ -229,7 +219,7 @@ class PyDenseNetBc(BaseModel):
 
         utils.logger.log('Loading train dataset...')
 
-        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=max_image_size, 
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, max_image_size=max_image_size, 
                                                         mode='RGB', if_shuffle=True)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         train_val_samples = min(dataset.size // 5, train_val_samples) # up to 1/5 of samples for train-val
@@ -257,14 +247,14 @@ class PyDenseNetBc(BaseModel):
         
         return (train_dataset, train_val_dataset, train_params)
 
-    def _load_val_dataset(self, dataset_uri, train_params):
+    def _load_val_dataset(self, dataset_path, train_params):
         image_size = train_params['image_size']
         norm_mean = train_params['norm_mean']
         norm_std = train_params['norm_std']
 
         utils.logger.log('Loading val dataset...')
 
-        dataset = utils.dataset.load_dataset_of_image_files(dataset_uri, max_image_size=image_size, 
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, max_image_size=image_size, 
                                                         mode='RGB')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         val_dataset = ImageDataset(images, classes, dataset.image_size, 
@@ -310,6 +300,45 @@ class PyDenseNetBc(BaseModel):
         sums = np.sum(nums_exp, axis=1)
         nums = (nums_exp.transpose() / sums).transpose()
         return nums.tolist()
+
+    def _state_dict_to_params(self, state_dict):
+        params = {}
+        # For each tensor, convert into numpy array
+        for (name, value) in state_dict.items():
+            if isinstance(value, torch.Tensor):
+                value = value.cpu().numpy()
+            else:
+                raise Exception(f'Param not supported: {value}')
+
+            params[name] = value
+              
+        return params 
+
+    def _params_to_state_dict(self, params):
+        state_dict = {}
+        # For each tensor, convert into numpy array
+        for (name, value) in params.items():
+            state_dict[name] = torch.from_numpy(value)
+                
+        return state_dict 
+
+    def _namespace_params(self, params, namespace):
+        # For each param, add namespace prefix
+        out_params = {}
+        for (name, value) in params.items():
+            out_params[f'{namespace}:{name}'] = value
+        
+        return out_params
+
+    def _extract_namespace_from_params(self, params, namespace):
+        out_params = {}
+        # For each param, check for matching namespace, adding to out params without namespace prefix if matching 
+        for (name, value) in params.items():
+            if name.startswith(f'{namespace}:'):
+                param_name = name[(len(namespace)+1):]
+                out_params[param_name] = value
+        
+        return out_params
 
 #####################################################################################
 # Implementation of DenseNet
@@ -553,13 +582,29 @@ class EarlyStopCondition():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test', action='store_true', help='Whether to test the model class instead')
+    parser.add_argument('--tune', action='store_true', help='Whether to perform hyperparameter tuning, or simply test the model')
+    parser.add_argument('--train_path', type=str, default='data/cifar10_for_image_classification_train.zip', help='Path to train dataset')
+    parser.add_argument('--val_path', type=str, default='data/cifar10_for_image_classification_val.zip', help='Path to validation dataset')
+    parser.add_argument('--test_path', type=str, default='data/cifar10_for_image_classification_test.zip', help='Path to test dataset')
+
+    # Options for hyperparameter tuning
     parser.add_argument('--total_trials', type=int, default=100, help='No. of trials to tune model over')
-    parser.add_argument('--param_policy', type=str, default='EXP_GREEDY', 
-                    help='Param policy for advisor') 
+    parser.add_argument('--param_policy', type=str, default='EXP_GREEDY', help='Parameter policy for `SkoptAdvisor` for hyperparameter tuning') 
     (args, _) = parser.parse_known_args()
 
-    if args.test:
+    if args.tune:
+        knob_config = PyDenseNetBc.get_knob_config()
+        advisor = make_advisor(knob_config, advisor_type=AdvisorType.SKOPT, param_policy=args.param_policy)
+        tune_model(
+            PyDenseNetBc, 
+            train_dataset_path=args.train_path,
+            val_dataset_path=args.val_path,
+            test_dataset_path=args.test_path,
+            total_trials=args.total_trials,
+            advisor=advisor
+        )
+
+    else:
         test_model_class(
             model_file_path=__file__,
             model_class='PyDenseNetBc',
@@ -568,8 +613,9 @@ if __name__ == '__main__':
                 ModelDependency.TORCH: '1.0.1',
                 ModelDependency.TORCHVISION: '0.2.2'
             },
-            train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-            val_dataset_uri='data/fashion_mnist_for_image_classification_val.zip',
+            train_dataset_path=args.train_path,
+            val_dataset_path=args.val_path,
+            test_dataset_path=args.test_path,
             queries=[
                 [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
@@ -600,16 +646,4 @@ if __name__ == '__main__':
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
             ]
-        )
-
-    else:
-        knob_config = PyDenseNetBc.get_knob_config()
-        advisor = make_advisor(knob_config, advisor_type=AdvisorType.SKOPT, param_policy=args.param_policy)
-        tune_model(
-            PyDenseNetBc, 
-            train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-            val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-            test_dataset_uri='data/cifar_10_for_image_classification_test.zip',
-            total_trials=args.total_trials,
-            advisor=advisor
         )

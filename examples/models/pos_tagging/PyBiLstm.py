@@ -66,8 +66,8 @@ class PyBiLstm(BaseModel):
 
     def load_parameters(self, params):
         self._tag_count = params['tag_count']
-        (self._word_dict, params) = self._extract_namespace_from_params(params, 'word_dict')
-        (net_params, params) = self._extract_namespace_from_params(params, 'net')
+        self._word_dict = self._extract_namespace_from_params(params, 'word_dict')
+        net_params = self._extract_namespace_from_params(params, 'net')
         net_state_dict = self._params_to_state_dict(net_params)
         (self._net, self._optimizer) = self._create_model()
         self._net.load_state_dict(net_state_dict)
@@ -218,7 +218,7 @@ class PyBiLstm(BaseModel):
         lr = self._knobs.get('learning_rate')
 
         word_count = len(self._word_dict)
-        net =  PyNet(word_count + 1, self._tag_count + 1, \
+        net = PyNet(word_count + 1, self._tag_count + 1, \
                 word_embed_dims, word_rnn_hidden_size, word_dropout)
         optimizer = optim.Adam(net.parameters(), lr=lr)
         return (net, optimizer)
@@ -240,7 +240,7 @@ class PyBiLstm(BaseModel):
         state_dict = {}
         # For each tensor, convert into numpy array
         for (name, value) in params.items():
-            state_dict[name] = torch.Tensor(value)
+            state_dict[name] = torch.from_numpy(value)
                 
         return state_dict 
 
@@ -260,7 +260,7 @@ class PyBiLstm(BaseModel):
                 param_name = name[(len(namespace)+1):]
                 out_params[param_name] = value
         
-        return (out_params, params)
+        return out_params
 
 
 class PyNet(nn.Module):

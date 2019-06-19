@@ -85,9 +85,6 @@ class InferenceWorker(object):
         logger.info('Loading model class...')
         clazz = load_model_class(model.model_file_bytes, model.model_class)
 
-        logger.info('Running model class setup...')
-        clazz.setup()
-
         logger.info('Loading trained model...')
         model_inst = clazz(**proposal.knobs)
                     

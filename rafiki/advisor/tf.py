@@ -1,14 +1,13 @@
 import tensorflow as tf
 import numpy as np
-import bisect
 from enum import Enum
-import math
 import logging
 from collections import defaultdict
 
 from rafiki.model import ListKnob, CategoricalKnob, FixedKnob, PolicyKnob
 from rafiki.param_store import ParamsType
 
+from .development import inform_user
 from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal
 
 logger = logging.getLogger(__name__)
@@ -17,6 +16,7 @@ class EnasTrainStrategy(Enum):
     ORIGINAL = 'ORIGINAL' # Cycle between 1 train - X evals, always use GLOBAL_RECENT 
     ISOLATED = 'ISOLATED' # Perform original ENAS locally at each worker, always use LOCAL_RECENT
 
+# TODO: Handle low trial counts
 class EnasAdvisor(BaseAdvisor):
     '''
     Implements the controller of "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
@@ -36,8 +36,8 @@ class EnasAdvisor(BaseAdvisor):
 
         # Prompt user that ENAS prefers having certain policies
         policies = [x.policy for (name, x) in knob_config.items() if isinstance(x, PolicyKnob)]
-        if not all([(x in policies) for x in ['QUICK_TRAIN', 'QUICK_EVAL', 'DOWNSCALE']]):
-            print('To speed up ENAS, `QUICK_TRAIN`, `QUICK_EVAL` & `DOWNSCALE` policies are preferred.')
+        if not all([(x in policies) for x in ['QUICK_TRAIN', 'SKIP_TRAIN', 'QUICK_EVAL', 'DOWNSCALE']]):
+            inform_user('To speed up ENAS, `QUICK_TRAIN`, `SKIP_TRAIN`, `QUICK_EVAL` & `DOWNSCALE` policies are preferred.')
 
         return True
         
@@ -79,16 +79,14 @@ class EnasAdvisor(BaseAdvisor):
                             should_eval=False,
                             should_save_to_disk=False)
         elif trial_type == 'EVAL':
-            knobs = self._propose_knobs(['DOWNSCALE', 'QUICK_EVAL'])
+            knobs = self._propose_knobs(['DOWNSCALE', 'QUICK_EVAL', 'SKIP_TRAIN'])
             return Proposal(knobs,
                             params_type=params_type, 
-                            should_train=False, 
                             should_save_to_disk=False)
         elif trial_type == 'FINAL_EVAL':
-            knobs = self._propose_knobs(['DOWNSCALE'])
+            knobs = self._propose_knobs(['DOWNSCALE', 'SKIP_TRAIN'])
             return Proposal(knobs,
                             params_type=params_type, 
-                            should_train=False, 
                             should_save_to_disk=True)
         elif trial_type == 'FINAL_TRAIN':
             # Do standard model training from scratch with final knobs
