@@ -47,7 +47,6 @@ class TfEnas(BaseModel):
     def get_knob_config():
         return {
             'cell_archs': TfEnas.make_arch_knob(),
-            'use_cell_arch_type': FixedKnob(''), # '' | 'ENAS' | 'NASNET-A',
             'max_image_size': FixedKnob(32),
             'trial_epochs': FixedKnob(310), # Total no. of epochs during a standard train
             'batch_size': FixedKnob(128),
@@ -68,7 +67,6 @@ class TfEnas(BaseModel):
             'cutout_size': FixedKnob(0),
             'grad_clip_norm': FixedKnob(0),
             'use_aux_head': FixedKnob(False),
-            'summaries_dir': FixedKnob(''), # Directory to save summaries & runtime metadata to
 
             # Affects whether model constructed is a scaled-down version with fewer layers
             'downscale': PolicyKnob('DOWNSCALE'), 
@@ -86,7 +84,7 @@ class TfEnas(BaseModel):
             # Affects whether training is skipped
             'skip_train': PolicyKnob('SKIP_TRAIN'),
 
-            # Affects whether evaluation happens only a subset of the dataset
+            # Affects whether evaluation is done on only a batch of the validation dataset
             'quick_eval': PolicyKnob('QUICK_EVAL')
         }
 
@@ -716,7 +714,6 @@ class TfEnas(BaseModel):
 
     def _get_dataset_iterator(self, N, run_ops, **knobs):
         batch_size = knobs['batch_size']
-        summaries_dir = knobs['summaries_dir']
         steps_per_epoch = math.ceil(N / batch_size)
         m = self._model
 
@@ -726,63 +723,13 @@ class TfEnas(BaseModel):
             m.ph.reduction_arch: reduction_arch
         }
 
-        writer = None
-        if summaries_dir:
-            writer = tf.summary.FileWriter(summaries_dir, tf.get_default_graph())
-
         for itr_step in range(steps_per_epoch):
-            if writer and itr_step % 100 == 0:
-                run_options = tf.RunOptions(trace_level=tf.RunOptions.SOFTWARE_TRACE)
-                run_metadata = tf.RunMetadata()
-                run_args = { 'options': run_options, 'run_metadata': run_metadata }
-                [summary, step, *results] = self._sess.run([m.summary_op, m.step, *run_ops], feed_dict=feed_dict, **run_args)
-                writer.add_summary(summary, step)
-                writer.add_run_metadata(run_metadata, '[{}] Step {}'.format(datetime.now(), step))
-            else:
-                results = self._sess.run(run_ops, feed_dict=feed_dict)
-
+            results = self._sess.run(run_ops, feed_dict=feed_dict)
             yield results
 
     def _get_fixed_cell_archs(self, **knobs):
-        use_cell_arch_type = knobs['use_cell_arch_type']
         cell_archs = knobs['cell_archs']
         b = CELL_NUM_BLOCKS
-        
-        # Use special architectures if specified
-        if use_cell_arch_type:
-            if use_cell_arch_type == 'ENAS':
-                cell_archs = [
-                    # Normal
-                    0, 2, 0, 0, 
-                    0, 4, 0, 1, 
-                    0, 4, 1, 1, 
-                    1, 0, 0, 1, 
-                    0, 2, 1, 1,
-                    # Reduction
-                    1, 0, 1, 0,
-                    0, 3, 0, 2,
-                    1, 1, 3, 1,
-                    1, 0, 0, 4,
-                    0, 3, 1, 1
-                ]
-            elif use_cell_arch_type == 'NASNET-A':
-                cell_archs = [
-                     # Normal
-                    1, 0, 1, 4,
-                    0, 0, 1, 1,
-                    1, 2, 0, 4,
-                    0, 2, 0, 2,
-                    0, 1, 0, 0,
-                    # Reduction
-                    0, 5, 1, 1,
-                    1, 3, 0, 5,
-                    1, 2, 0, 1,
-                    1, 3, 2, 1,
-                    2, 2, 3, 4
-                ]
-            else:
-                raise Exception('Invalid `use_cell_arch_type`: "{}"'.format(use_cell_arch_type))
-
         normal_arch = [cell_archs[(4 * i):(4 * i + 4)] for i in range(b)]
         reduction_arch = [cell_archs[(4 * i):(4 * i + 4)] for i in range(b, b + b)]
         return (normal_arch, reduction_arch)
