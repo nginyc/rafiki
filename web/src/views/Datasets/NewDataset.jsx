@@ -137,7 +137,7 @@ class NewDataset extends React.Component {
                   </GridItem>
                   <GridItem xs={12} sm={12} md={12}>
                     <h4 className={classes.cardCategory}>Upload from your computer</h4>
-                    <FormHelperText id="component-helper-text"><p>*The datasets file must be in <b>.zip</b> archive format. inside which each sub-folder corresponds to a category. The train & test dataset's images should have the <b>same dimensions W x H</b>, accepted formats are  <b>JPEG or PNG</b></p></FormHelperText>
+                    <FormHelperText id="component-helper-text"><p>*The dataset file must be of the <b>.zip archive</b> format with a <b>images.csv </b>at the root of the directory. The <b>images.csv</b> should be of a <b>.CSV</b> format with 2 columns of <b>path and class</b>. Please refer to more detail here <a href="https://nginyc.github.io/rafiki/docs/latest/src/user/datasets.html">https://nginyc.github.io/rafiki/docs/latest/src/user/datasets.html</a></p></FormHelperText>
                     <input
                       accept="zip/*"
                       name="file"
