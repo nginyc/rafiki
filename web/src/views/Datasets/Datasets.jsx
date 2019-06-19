@@ -134,14 +134,12 @@ class Dataset extends React.Component {
                     </Popover>
                   </CardHeader>
                   <CardBody>
-                    <Link to="/admin/datasets/details">
                     <TableDatasets
                       tableHeaderColor="primary"
                       tableHead={["ID","Name","Task", "Size", "Uploaded At"]}
                       tableData={this.state.datasets}
                       appUtils={appUtils}
                     />
-                    </Link>
                   </CardBody>
                 </Card>
               </GridItem>

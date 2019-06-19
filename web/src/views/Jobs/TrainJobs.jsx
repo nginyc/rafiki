@@ -4,6 +4,17 @@ import { Link } from "react-router-dom";
 import withStyles from "@material-ui/core/styles/withStyles";
 import Icon from "@material-ui/core/Icon";
 import TextField from '@material-ui/core/TextField';
+import Input from "@material-ui/core/Input";
+import InputLabel from "@material-ui/core/InputLabel";
+import MenuItem from "@material-ui/core/MenuItem";
+import FormControl from "@material-ui/core/FormControl";
+import ListItemText from "@material-ui/core/ListItemText";
+import Select from "@material-ui/core/Select";
+import Checkbox from "@material-ui/core/Checkbox";
+import Chip from "@material-ui/core/Chip";
+import FormHelperText from '@material-ui/core/FormHelperText';
+import NativeSelect from '@material-ui/core/NativeSelect';
+
 
 // core components
 import GridItem from "components/Grid/GridItem.jsx";
@@ -39,29 +50,40 @@ class TrainJobs extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      "app":"fashion_mnist_app",
+      "app": "fashion_mnist_app",
       "task": "IMAGE_CLASSIFICATION",
-      "train_dataset_uri":"https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true",
-      "test_dataset_uri":"https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true",
+      "train_dataset": "",
+      "val_dataset": "",
+      "availableDatasets": [],
       "budget": { "MODEL_TRIAL_COUNT": 2 },
-      "models": ["TfFeedForward"],
+      "models": [],
+      "availableModels": [],
       "submit_status": "none" // "none", "submitting", "success", "failed"
     }
     this.handleClickButton = this.handleClickButton.bind(this)
   }
 
-  handleInputChange = (event) => {
-    const target = event.target;
-    const value = target.type === 'checkbox' ? target.checked : target.value;
-    const name = target.name;
-    if (name === "modelName") { // need to make it an array
-        this.setState({"models": target.value.split(",") })
-    } else {
-      this.setState({
-        [name]: value
-      });
+  async componentDidMount() {
+    const { appUtils: { rafikiClient, showError } } = this.props;
+    try {
+      const availableModels = await rafikiClient.getAvailableModels()
+      const availableDatasets = await rafikiClient.getDatasets({"task": this.state.task})
+      this.setState({availableModels, availableDatasets})
+    } catch(error) {
+      showError(error, 'Failed to load available models and datasets');
     }
   }
+
+  handleInputChange = (event) => {
+    const target = event.target;
+    const value = target.value;
+    const name = target.name;
+    this.setState({
+      [name]: value
+    })
+  }
+
+
 
   async handleClickButton(event) {
     event.preventDefault();
@@ -69,31 +91,42 @@ class TrainJobs extends React.Component {
 
     try {
       console.log("button clicked")
-      this.setState({ "submit_status":"submitting" })
-      const json_params = { 
+      this.setState({ "submit_status": "submitting" })
+      const json_params = {
         "app": this.state.app,
-        "task": this.state.task, 
-        "train_dataset_uri": this.state.train_dataset_uri,
-        "test_dataset_uri": this.state.test_dataset_uri,
+        "task": this.state.task,
+        "train_dataset_id": this.state.train_dataset.id,
+        "val_dataset_id": this.state.val_dataset.id,
         "budget": this.state.budget,
-        "models": this.state.models
+        "model_ids": this.state.models.map(model=>model.id)
       }
+      debugger;
       await rafikiClient.createTrainJob(json_params)
       alert("Create Train Job succeed")
-      this.setState({ "submit_status":"succeed" })
+      this.setState({ "submit_status": "succeed" })
     } catch (error) {
       this.setState({ "submit_status": "failed" })
       showError(error, 'Failed createJobs');
     }
   }
 
+
+  // Utils: use to check if obj is in Array
+  containsObject(obj, list) {
+    var i;
+    for (i = 0; i < list.length; i++) {
+        if (list[i] === obj) {
+            return true;
+        }
+    }
+
+    return false;
+  }
+
   render() {
-    /* const models = ["SkDt_RY0DI2PV26UMPJ2L", "TfFeedForward_GOZ9JANFQVVQT6LX",
-    "SkDt_GOZ9JANFQVVQT6LX"
-    ] */
-    
+
     let SubmitButton = null
-    
+
     switch (this.state.submit_status) {
       case "submitting":
         SubmitButton = <CircularProgress />
@@ -107,23 +140,24 @@ class TrainJobs extends React.Component {
         SubmitButton = (
           <Button onClick={this.handleClickButton} color="primary">Create Jobs</Button>
         )
-      break;
+        break;
     }
 
     const { classes } = this.props;
+    const availableDatasets = this.state.availableDatasets;
 
     return (
-    <div>
-      <GridContainer justify="center" alignContent="center">
-        <GridItem xs={12} sm={12} md={12} lg={12} xl={12}>
-          <Card>
-            <CardHeader color="primary">
-              <h4 className={classes.cardTitleWhite}><Icon>add_photo_alternate</Icon>New Train Jobs</h4>
-              <p className={classes.cardCategoryWhite}>Image Classification</p>
-            </CardHeader>
-            <CardBody>
-              <GridContainer justify="center" alignContent="center">
-                <GridItem xs={12} sm={12} md={12} lg={8} xl={6}>
+      <div>
+        <GridContainer justify="center" alignContent="center">
+          <GridItem xs={12} sm={12} md={12} lg={12} xl={12}>
+            <Card>
+              <CardHeader color="primary">
+                <h4 className={classes.cardTitleWhite}><Icon>add_photo_alternate</Icon>New Train Jobs</h4>
+                <p className={classes.cardCategoryWhite}>Image Classification</p>
+              </CardHeader>
+              <CardBody>
+                <GridContainer justify="center" alignContent="center">
+                  <GridItem xs={12} sm={12} md={12} lg={8} xl={6}>
                     <TextField
                       name="app"
                       id="standard-full-width"
@@ -145,54 +179,75 @@ class TrainJobs extends React.Component {
                       disabled
                       margin="normal"
                     />
-                    <TextField
-                      name="train_dataset_uri"
-                      onChange={this.handleInputChange}
-                      id="standard-full-width"
-                      label="Train Dataset URI"
-                      defaultValue="https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true"
-                      placeholder="https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true"
-                      fullWidth
-                      margin="normal"
-                    />
-                    <TextField
-                      name="test_dataset_uri"
-                      onChange={this.handleInputChange}
-                      id="test_dataset_uri"
-                      label="Test Dataset URI"
-                      defaultValue="https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true"
-                      placeholder="https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true"
-                      fullWidth
-                      margin="normal"
-                    />
-                     <TextField
-                      name="modelName"
-                      onChange={this.handleInputChange}
-                      id="models"
-                      label="Models"
-                      helperText="Separate with ',' for mutiple models"
-                      defaultValue="TfFeedForward"
-                      placeholder="TfFeedForward"
-                      fullWidth
-                      margin="normal"
-                    />
-                </GridItem>
-              </GridContainer>
-              <GridContainer justify="center" alignContent="center">
-                <GridItem xs={12} sm={12} md={12} lg={8} xl={6}>
-               
-                </GridItem>
-              </GridContainer>
-            </CardBody>
-            <CardFooter>
-              {SubmitButton}
-            </CardFooter>
-          </Card>
-        </GridItem>
-      </GridContainer>
-    </div>
-  );
-           }
+                    <FormControl fullWidth>
+                      <InputLabel htmlFor="train_dataset">Training Datasets</InputLabel>
+                      <Select
+                        value={this.state.train_dataset}
+                        onChange={this.handleInputChange}
+                        input={<Input name="train_dataset" id="train_dataset" />}
+                        fullWidth
+                        defaultValue=""
+                      >
+                        <option value="" />
+                        { availableDatasets.map( dataset => (<option value={dataset}> { dataset.name } </option>))}
+                      </Select>
+                      <FormHelperText>Datasets for Training</FormHelperText>
+                    </FormControl>
+                    <FormControl fullWidth>
+                      <InputLabel htmlFor="val_dataset">Test Datasets</InputLabel>
+                      <Select
+                        value={this.state.val_dataset}
+                        onChange={this.handleInputChange}
+                        input={<Input name="val_dataset" id="val_dataset" />}
+                        defaultValue=""
+                        fullWidth
+                      >
+                        <option value="" />
+                        { availableDatasets.map( dataset => (<option value={dataset}> { dataset.name } </option>))}
+                      </Select>
+                      <FormHelperText>Datasets for Validation</FormHelperText>
+                    </FormControl>
+                    <FormControl fullWidth>
+                      <InputLabel htmlFor="model-multiple-checkbox">Models</InputLabel>
+                      <Select
+                        name="models"
+                        multiple
+                        value={this.state.models}
+                        onChange={this.handleInputChange}
+                        input={<Input id="model-multiple-checkbox" />}
+                        renderValue={selected => (
+                          <div>
+                            {selected.map(value => (
+                              <Chip key={value.id} label={value.name} />
+                            ))}
+                          </div>
+                        )}
+                      >
+                        {this.state.availableModels.map(model => (
+                          <MenuItem key={model.name} value={model}>
+                            <Checkbox checked={this.state.models.indexOf(model) > -1} />
+                            <ListItemText primary={model.name} />
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </GridItem>
+                </GridContainer>
+                <GridContainer justify="center" alignContent="center">
+                  <GridItem xs={12} sm={12} md={12} lg={8} xl={6}>
+
+                  </GridItem>
+                </GridContainer>
+              </CardBody>
+              <CardFooter>
+                {SubmitButton}
+              </CardFooter>
+            </Card>
+          </GridItem>
+        </GridContainer>
+      </div>
+    );
+  }
 }
 
 export default withStyles(styles)(TrainJobs);

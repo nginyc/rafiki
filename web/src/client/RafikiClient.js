@@ -82,9 +82,23 @@ class RafikiClient {
     return dataset 
   }
 
-  async getDatasets() {
-    const datasets = await this._get('/datasets')
+  async getDatasets(task) {
+    let datasets = []
+    if (task !== undefined) {
+      datasets = await this._get('/datasets', task)
+    } else {
+      datasets = await this._get('/datasets')
+    }
     return datasets
+  }
+
+   /* ***************************************
+   * Models
+   * ***************************************/
+
+  async getAvailableModels() {
+    const models = await this._get('/models/available')
+    return models
   }
 
   /* ***************************************

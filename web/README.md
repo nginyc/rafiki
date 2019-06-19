@@ -70,19 +70,26 @@ header: content_type = 'application/json'
 }
 ```
 
+
+## Datasets
+
+### get `/datasets`
+
+```
+
+```
+
+### psot `datasets`
+
+```
+
+```
+
 ## models
 
-### post `models` (not working)
+### post `models` (working)
 
-``` json
-{
-    "name":"TfFeedForward",
-    "task":"IMAGE_CLASSIFICATION",
-    "model_file_path":"examples/models/image_classification/TfFeedForward.py",
-    "model_class":"TfFeedForward",
-    "dependencies": { "tensorflow": "1.12.0"}
-}
-```
+should use muitlform but does not need to set it because the browser would set it automatically.
 
 ### get `models`
 

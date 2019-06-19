@@ -45,7 +45,7 @@ class NewDataset extends React.Component {
     super(props)
     this.state = {
       name: "",
-      task: "IMAGE_CLASSFICATION",
+      task: "IMAGE_CLASSIFICATION",
       datasets_url: "",
       "submit_status": "none" // "none", "submitting", "success", "failed"
     }
@@ -126,8 +126,8 @@ class NewDataset extends React.Component {
                       name="task"
                       id="standard-full-width"
                       label="Task"
-                      placeholder="IMAGE_CLASSFICATION"
-                      defaultValue="IMAGE_CLASSFICATION"
+                      placeholder="IMAGE_CLASSIFICATION"
+                      defaultValue="IMAGE_CLASSIFICATION"
                       helperText="Task Type"
                       fullWidth
                       disabled

@@ -10,7 +10,7 @@
     "chartist": "0.10.1",
     "classnames": "2.2.6",
     "echarts": "^4.2.1",
-    "ejs": "^2.6.1",	
+    "ejs": "^2.6.1",
     "express": "^4.17.1",
     "history": "4.7.2",
     "moment": "^2.24.0",
@@ -37,7 +37,8 @@
     "lint:check": "eslint . --ext=js,jsx;  exit 0",
     "lint:fix": "eslint . --ext=js,jsx --fix;  exit 0",
     "build-package-css": "cp src/assets/css/material-dashboard-react.css dist/material-dashboard-react.css",
-    "build-package": "npm run build-package-css && babel src --out-dir dist"
+    "build-package": "npm run build-package-css && babel src --out-dir dist",
+    "start_remote": "REACT_APP_API_POINT_HOST=172.26.186.210 REACT_APP_API_POINT_PORT=3000 react-scripts start"
   },
   "browserslist": [
     ">0.2%",
@@ -49,5 +50,42 @@
     "eslint-config-prettier": "4.0.0",
     "eslint-plugin-prettier": "3.0.1",
     "jest-dom": "^3.5.0"
+  },
+  "eslintConfig": 
+  {
+    "parserOptions": {
+      "ecmaVersion": 2018,
+      "ecmaFeatures": {
+        "jsx": true
+      },
+      "sourceType": "module"
+    },
+  
+    "settings": {
+      "react": {
+        "version": "16.0"
+      }
+    },
+  
+    "plugins": [
+      "react"
+    ],
+  
+    "extends": [
+      "standard-jsx"
+    ],
+  
+    "rules": {
+      "react/jsx-no-bind": ["error", {
+        "allowArrowFunctions": true,
+        "allowBind": false,
+        "ignoreRefs": true
+      }],
+      "react/no-did-update-set-state": "error",
+      "react/no-unknown-property": "error",
+      "react/no-unused-prop-types": "error",
+      "react/prop-types": "error",
+      "react/react-in-jsx-scope": "error"
+    }
   }
 }
