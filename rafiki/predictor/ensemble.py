@@ -12,6 +12,8 @@ def ensemble_predictions(predictions_list, task):
         predictions = []
         for preds in np.transpose(predictions_list, axes=[1, 0, 2]):
             predictions.append(np.mean(preds, axis=0))
+    elif task == TaskType.SPEECH_RECOGNITION:
+        return predictions_list
     else:
         # By default, just return some trial's predictions
         index = 0

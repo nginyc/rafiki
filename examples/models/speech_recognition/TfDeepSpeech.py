@@ -1,9 +1,13 @@
+from __future__ import absolute_import, division, print_function
+
 import os
 import sys
 import time
 
 import tensorflow as tf
+from tensorflow.python.tools import freeze_graph
 from tensorflow.python.client import device_lib
+from tensorflow.python.framework.ops import Tensor, Operation
 from tensorflow.contrib.framework.python.ops import audio_ops as contrib_audio
 
 import numpy as np
@@ -14,7 +18,7 @@ import itertools
 import tempfile
 import base64
 
-from ds_ctcdecoder import ctc_beam_search_decoder_batch, Scorer
+from ds_ctcdecoder import ctc_beam_search_decoder_batch, ctc_beam_search_decoder, Scorer
 
 from rafiki.model import BaseModel, FixedKnob, FloatKnob, CategoricalKnob, dataset_utils, logger, test_model_class, InvalidModelParamsException
 # IntegerKnob
@@ -51,9 +55,9 @@ class TfDeepSpeech(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': FixedKnob(3),
+            'epochs': FixedKnob(1),
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
-            'batch_size': CategoricalKnob([16]),
+            'batch_size': CategoricalKnob([1]),
         }
 
     @staticmethod
@@ -129,17 +133,12 @@ class TfDeepSpeech(BaseModel):
 
         # Exporting
 
-        f.DEFINE_string('export_dir', '',
-                        'directory in which exported models are stored - if omitted, the model won\'t get exported')
         f.DEFINE_integer('export_version', 1, 'version number of the exported model')
-        f.DEFINE_boolean('remove_export', False, 'whether to remove old exported models')
         f.DEFINE_boolean('export_tflite', False, 'export a graph ready for TF Lite engine')
         f.DEFINE_boolean('use_seq_length', True,
                          'have sequence_length in the exported graph(will make tfcompile unhappy)')
         f.DEFINE_integer('n_steps', 16,
                          'how many timesteps to process at once by the export graph, higher values mean more latency')
-        f.DEFINE_string('export_language', '',
-                        'language the model was trained on e.g. "en" or "English". Gets embedded into exported model.')
 
         # Reporting
 
@@ -280,6 +279,7 @@ class TfDeepSpeech(BaseModel):
         self.initialize_globals()
 
     def samples_to_mfccs(self, samples, sample_rate):
+        Config = self.c
         spectrogram = contrib_audio.audio_spectrogram(samples,
                                                       window_size=Config.audio_window_samples,
                                                       stride=Config.audio_step_samples,
@@ -406,7 +406,7 @@ class TfDeepSpeech(BaseModel):
         return batch_x
 
     def create_model(self, batch_x, seq_length, dropout, reuse=False, previous_state=None, overlap=True,
-                     rnn_impl=rnn_impl_lstmblockfusedcell):
+                     rnn_impl=None):
 
         def dense(name, x, units, dropout_rate=None, relu=True):
             with tf.variable_scope(name):
@@ -419,7 +419,7 @@ class TfDeepSpeech(BaseModel):
                 output = tf.minimum(tf.nn.relu(output), FLAGS.relu_clip)
 
             if dropout_rate is not None:
-                output = tf.nn.dropout(output, rate=dropout_rate)
+                output = tf.nn.dropout(output, keep_prob=1-dropout_rate)
 
             return output
 
@@ -455,7 +455,8 @@ class TfDeepSpeech(BaseModel):
 
         # Run through parametrized RNN implementation, as we use different RNNs
         # for training and inference
-        output, output_state = rnn_impl(self, layer_3, seq_length, previous_state, reuse)
+        rnn_impl = self.rnn_impl_lstmblockfusedcell
+        output, output_state = rnn_impl(layer_3, seq_length, previous_state, reuse)
 
         # Reshape output from a tensor of shape [n_steps, batch_size, n_cell_dim]
         # to a tensor of shape [n_steps*batch_size, n_cell_dim]
@@ -675,13 +676,13 @@ class TfDeepSpeech(BaseModel):
         # Create feature computation graph
         input_samples = tf.placeholder(tf.float32, [Config.audio_window_samples], 'input_samples')
         samples = tf.expand_dims(input_samples, -1)
-        mfccs, _ = self.samples_to_mfcc(samples, FLAGS.audio_sample_rate)
+        mfccs, _ = self.samples_to_mfccs(samples, FLAGS.audio_sample_rate)
         mfccs = tf.identity(mfccs, name='mfccs')
 
         input_tensor = tf.placeholder(tf.float32, [batch_size, n_steps if n_steps > 0 else None, 2 * Config.n_context + 1, Config.n_input], name='input_node')
         seq_length = tf.placeholder(tf.int32, [batch_size], name='input_lengths')
 
-        if batch_size <= 0:
+        if not batch_size or batch_size <= 0:
             # No statement management since n_step is expected to be dynamic too (see below)
             previous_state = previous_state_c = previous_state_h = None
         else:
@@ -704,7 +705,7 @@ class TfDeepSpeech(BaseModel):
         # Apply softmax for CTC decoder
         logits = tf.nn.softmax(logits)
 
-        if batch_size <= 0:
+        if not batch_size or batch_size <= 0:
             if n_steps > 0:
                 logger.log('Dynamic batch_size expect n_steps to be dynamic too')
             return (
@@ -803,60 +804,61 @@ class TfDeepSpeech(BaseModel):
         initializer = tf.global_variables_initializer()
 
         # with self._sess.as_default():
-        with tf.Session(config=self._sess_config) as session:
-            # session = tf.get_default_session()
-            tf.get_default_graph().finalize()
+        # with tf.Session(config=self._sess_config) as session:
+        session = tf.Session(config=self._sess_config)
+        # session = tf.get_default_session()
+        self._sess = session
+        tf.get_default_graph().finalize()
 
-            # Initializing
-            logger.log('Initializing variables...')
-            session.run(initializer)
+        # Initializing
+        logger.log('Initializing variables...')
+        session.run(initializer)
 
-            def run_set(set_name, epoch, init_op, dataset=None):
-                is_train = set_name == 'train'
-                train_op = apply_gradient_op if is_train else []
-                feed_dict = dropout_feed_dict if is_train else no_dropout_feed_dict
+        def run_set(set_name, epoch, init_op, dataset=None):
+            is_train = set_name == 'train'
+            train_op = apply_gradient_op if is_train else []
+            feed_dict = dropout_feed_dict if is_train else no_dropout_feed_dict
 
-                total_loss = 0.0
-                step_count = 0
-                checkpoint_time = time.time()
+            total_loss = 0.0
+            step_count = 0
+            checkpoint_time = time.time()
 
-                # Initialize iterator to the appropriate dataset
-                session.run(init_op)
+            # Initialize iterator to the appropriate dataset
+            session.run(init_op)
 
-                # Batch loop
-                while True:
-                    try:
-                        _, current_step, batch_loss, step_summary = \
-                            session.run([train_op, global_step, loss, step_summaries_op], feed_dict=feed_dict)
-                    except tf.errors.OutOfRangeError:
-                        break
+            # Batch loop
+            while True:
+                try:
+                    _, current_step, batch_loss, step_summary = \
+                        session.run([train_op, global_step, loss, step_summaries_op], feed_dict=feed_dict)
+                except tf.errors.OutOfRangeError:
+                    break
 
-                    total_loss += batch_loss
-                    step_count += 1
+                total_loss += batch_loss
+                step_count += 1
 
-                    if is_train and FLAGS.checkpoint_secs > 0 and time.time() - checkpoint_time > FLAGS.checkpoint_secs:
-                        checkpoint_saver.save(session, checkpoint_path, global_step=current_step)
-                        checkpoint_time = time.time()
+                if is_train and FLAGS.checkpoint_secs > 0 and time.time() - checkpoint_time > FLAGS.checkpoint_secs:
+                    checkpoint_saver.save(session, checkpoint_path, global_step=current_step)
+                    checkpoint_time = time.time()
 
-                mean_loss = total_loss / step_count if step_count > 0 else 0.0
-                return mean_loss, step_count
+            mean_loss = total_loss / step_count if step_count > 0 else 0.0
+            return mean_loss, step_count
 
-            logger.log('STARTING OPTIMIZATION')
-            train_start_time = datetime.utcnow()
-            try:
-                for epoch in range(ep):
-                    # Training
-                    logger.log('Training epoch %d...' % epoch)
-                    train_loss, _ = run_set('train', epoch, train_init_op)
-                    logger.log('Finished training epoch %d - loss: %f' % (epoch, train_loss))
-                    checkpoint_saver.save(session, checkpoint_path, global_step=global_step)
+        logger.log('STARTING OPTIMIZATION')
+        train_start_time = datetime.utcnow()
+        try:
+            for epoch in range(ep):
+                # Training
+                logger.log('Training epoch %d...' % epoch)
+                train_loss, _ = run_set('train', epoch, train_init_op)
+                logger.log('Finished training epoch %d - loss: %f' % (epoch, train_loss))
+                checkpoint_saver.save(session, checkpoint_path, global_step=global_step)
 
-            except KeyboardInterrupt:
-                pass
-            logger.log('FINISHED optimization in {}'.format(datetime.utcnow() - train_start_time))
+        except KeyboardInterrupt:
+            pass
+        logger.log('FINISHED optimization in {}'.format(datetime.utcnow() - train_start_time))
 
     def evaluate(self, dataset_uri):
-        return float(1)
         Config = self.c
         tf.reset_default_graph()
 
@@ -901,180 +903,192 @@ class TfDeepSpeech(BaseModel):
         # Create a saver using variables from the above newly created graph
         saver = tf.train.Saver()
 
-        with tf.Session(config=self._sess_config) as session:
+        # with tf.Session(config=self._sess_config) as session:
+        session = tf.Session(config=self._sess_config)
+        self._sess = session
 
-            # Restore variables from training checkpoint
-            loaded = self.try_loading(session, saver, 'checkpoint', 'most recent')
-            if not loaded:
-                logger.log('Checkpoint directory ({}) does not contain a valid checkpoint state.'
-                           .format(FLAGS.checkpoint_dir))
-                sys.exit(1)
+        # Restore variables from training checkpoint
+        loaded = self.try_loading(session, saver, 'checkpoint', 'most recent')
+        if not loaded:
+            logger.log('Checkpoint directory ({}) does not contain a valid checkpoint state.'
+                       .format(FLAGS.checkpoint_dir))
+            sys.exit(1)
 
-            def sparse_tuple_to_texts(sp_tuple, alphabet):
-                indices = sp_tuple[0]
-                values = sp_tuple[1]
-                results = [''] * sp_tuple[2][0]
-                for i, index in enumerate(indices):
-                    results[index[0]] += alphabet.string_from_label(values[i])
-                # List of strings
+        def sparse_tuple_to_texts(sp_tuple, alphabet):
+            indices = sp_tuple[0]
+            values = sp_tuple[1]
+            results = [''] * sp_tuple[2][0]
+            for i, index in enumerate(indices):
+                results[index[0]] += alphabet.string_from_label(values[i])
+            # List of strings
+            return results
+
+        def sparse_tensor_value_to_texts(value, alphabet):
+            r"""
+            Given a :class:`tf.SparseTensor` ``value``, return an array of Python strings
+            representing its values, converting tokens to strings using ``alphabet``.
+            """
+            return sparse_tuple_to_texts((value.indices, value.values, value.dense_shape), alphabet)
+
+        def calculate_report(labels, decodings, losses):
+            r'''
+            This routine will calculate a WER report.
+            It'll compute the `mean` WER and create ``Sample`` objects of the ``report_count`` top lowest
+            loss items from the provided WER results tuple (only items with WER!=0 and ordered by their WER).
+            '''
+
+            def pmap(fun, iterable):
+                pool = Pool()
+                results = pool.map(fun, iterable)
+                pool.close()
                 return results
 
-            def sparse_tensor_value_to_texts(value, alphabet):
+            def wer_cer_batch(samples):
                 r"""
-                Given a :class:`tf.SparseTensor` ``value``, return an array of Python strings
-                representing its values, converting tokens to strings using ``alphabet``.
+                The WER is defined as the edit/Levenshtein distance on word level divided by
+                the amount of words in the original text.
+                In case of the original having more words (N) than the result and both
+                being totally different (all N words resulting in 1 edit operation each),
+                the WER will always be 1 (N / N = 1).
                 """
-                return sparse_tuple_to_texts((value.indices, value.values, value.dense_shape), alphabet)
+                wer = sum(s.word_distance for s in samples) / sum(s.word_length for s in samples)
+                cer = sum(s.char_distance for s in samples) / sum(s.char_length for s in samples)
 
-            def calculate_report(labels, decodings, losses):
-                r'''
-                This routine will calculate a WER report.
-                It'll compute the `mean` WER and create ``Sample`` objects of the ``report_count`` top lowest
-                loss items from the provided WER results tuple (only items with WER!=0 and ordered by their WER).
-                '''
+                wer = min(wer, 1.0)
+                cer = min(cer, 1.0)
 
-                def pmap(fun, iterable):
-                    pool = Pool()
-                    results = pool.map(fun, iterable)
-                    pool.close()
-                    return results
+                return wer, cer
 
-                def wer_cer_batch(samples):
-                    r"""
-                    The WER is defined as the edit/Levenshtein distance on word level divided by
-                    the amount of words in the original text.
-                    In case of the original having more words (N) than the result and both
-                    being totally different (all N words resulting in 1 edit operation each),
-                    the WER will always be 1 (N / N = 1).
-                    """
-                    wer = sum(s.word_distance for s in samples) / sum(s.word_length for s in samples)
-                    cer = sum(s.char_distance for s in samples) / sum(s.char_length for s in samples)
+            def levenshtein(a, b):
+                "Calculates the Levenshtein distance between a and b."
+                n, m = len(a), len(b)
+                if n > m:
+                    # Make sure n <= m, to use O(min(n,m)) space
+                    a, b = b, a
+                    n, m = m, n
 
-                    wer = min(wer, 1.0)
-                    cer = min(cer, 1.0)
+                current = list(range(n + 1))
+                for i in range(1, m + 1):
+                    previous, current = current, [i] + [0] * n
+                    for j in range(1, n + 1):
+                        add, delete = previous[j] + 1, current[j - 1] + 1
+                        change = previous[j - 1]
+                        if a[j - 1] != b[i - 1]:
+                            change = change + 1
+                        current[j] = min(add, delete, change)
 
-                    return wer, cer
+                return current[n]
 
-                def levenshtein(a, b):
-                    "Calculates the Levenshtein distance between a and b."
-                    n, m = len(a), len(b)
-                    if n > m:
-                        # Make sure n <= m, to use O(min(n,m)) space
-                        a, b = b, a
-                        n, m = m, n
+            def process_decode_result(item):
+                ground_truth, prediction, loss = item
+                char_distance = levenshtein(ground_truth, prediction)
+                char_length = len(ground_truth)
+                word_distance = levenshtein(ground_truth.split(), prediction.split())
+                word_length = len(ground_truth.split())
+                return AttrDict({
+                    'src': ground_truth,
+                    'res': prediction,
+                    'loss': loss,
+                    'char_distance': char_distance,
+                    'char_length': char_length,
+                    'word_distance': word_distance,
+                    'word_length': word_length,
+                    'cer': char_distance / char_length,
+                    'wer': word_distance / word_length,
+                })
 
-                    current = list(range(n + 1))
-                    for i in range(1, m + 1):
-                        previous, current = current, [i] + [0] * n
-                        for j in range(1, n + 1):
-                            add, delete = previous[j] + 1, current[j - 1] + 1
-                            change = previous[j - 1]
-                            if a[j - 1] != b[i - 1]:
-                                change = change + 1
-                            current[j] = min(add, delete, change)
+            samples = pmap(process_decode_result, zip(labels, decodings, losses))
 
-                    return current[n]
+            # Getting the WER and CER from the accumulated edit distances and lengths
+            samples_wer, samples_cer = wer_cer_batch(samples)
 
-                def process_decode_result(item):
-                    ground_truth, prediction, loss = item
-                    char_distance = levenshtein(ground_truth, prediction)
-                    char_length = len(ground_truth)
-                    word_distance = levenshtein(ground_truth.split(), prediction.split())
-                    word_length = len(ground_truth.split())
-                    return AttrDict({
-                        'src': ground_truth,
-                        'res': prediction,
-                        'loss': loss,
-                        'char_distance': char_distance,
-                        'char_length': char_length,
-                        'word_distance': word_distance,
-                        'word_length': word_length,
-                        'cer': char_distance / char_length,
-                        'wer': word_distance / word_length,
-                    })
+            # Order the remaining items by their loss (lowest loss on top)
+            samples.sort(key=lambda s: s.loss)
 
-                samples = pmap(process_decode_result, zip(labels, decodings, losses))
+            # Then order by WER (highest WER on top)
+            samples.sort(key=lambda s: s.wer, reverse=False)
 
-                # Getting the WER and CER from the accumulated edit distances and lengths
-                samples_wer, samples_cer = wer_cer_batch(samples)
+            return samples_wer, samples_cer, samples
 
-                # Order the remaining items by their loss (lowest loss on top)
-                samples.sort(key=lambda s: s.loss)
+        def run_test(init_op, dataset):
+            losses = []
+            predictions = []
+            ground_truths = []
 
-                # Then order by WER (highest WER on top)
-                samples.sort(key=lambda s: s.wer, reverse=False)
+            logger.log('Running the test set...')
 
-                return samples_wer, samples_cer, samples
+            # Initialize iterator to the appropriate dataset
+            session.run(init_op)
 
-            def run_test(init_op, dataset):
-                losses = []
-                predictions = []
-                ground_truths = []
+            # First pass, compute losses and transposed logits for decoding
+            while True:
+                try:
+                    batch_logits, batch_loss, batch_lengths, batch_transcripts = \
+                        session.run([transposed, loss, batch_x_len, batch_y])
+                except tf.errors.OutOfRangeError:
+                    break
 
-                logger.log('Running the test set...')
+                decoded = ctc_beam_search_decoder_batch(batch_logits, batch_lengths,
+                                                        Config.alphabet, FLAGS.beam_width,
+                                                        num_processes=num_processes, scorer=scorer)
 
-                # Initialize iterator to the appropriate dataset
-                session.run(init_op)
+                predictions.extend(d[0][1] for d in decoded)
+                ground_truths.extend(sparse_tensor_value_to_texts(batch_transcripts, Config.alphabet))
+                losses.extend(batch_loss)
 
-                # First pass, compute losses and transposed logits for decoding
-                while True:
-                    try:
-                        batch_logits, batch_loss, batch_lengths, batch_transcripts = \
-                            session.run([transposed, loss, batch_x_len, batch_y])
-                    except tf.errors.OutOfRangeError:
-                        break
+            wer, cer, samples = calculate_report(ground_truths, predictions, losses)
+            mean_loss = np.mean(losses)
 
-                    decoded = ctc_beam_search_decoder_batch(batch_logits, batch_lengths,
-                                                            Config.alphabet, FLAGS.beam_width,
-                                                            num_processes=num_processes, scorer=scorer)
+            # Take only the first report_count items
+            report_samples = itertools.islice(samples, FLAGS.report_count)
 
-                    predictions.extend(d[0][1] for d in decoded)
-                    ground_truths.extend(sparse_tensor_value_to_texts(batch_transcripts, Config.alphabet))
-                    losses.extend(batch_loss)
+            logger.log('Test on %s - WER: %f, CER: %f, loss: %f' % (dataset, wer, cer, mean_loss))
+            logger.log('-' * 80)
+            for sample in report_samples:
+                print('WER: %f, CER: %f, loss: %f' %\
+                      (sample.wer, sample.cer, sample.loss))
+                print(' - src: "%s"' % sample.src)
+                print(' - res: "%s"' % sample.res)
+                print('-' * 80)
 
-                wer, cer, samples = calculate_report(ground_truths, predictions, losses)
-                mean_loss = np.mean(losses)
+            return samples, mean_loss
 
-                # Take only the first report_count items
-                report_samples = itertools.islice(samples, FLAGS.report_count)
+        samples, mean_loss = run_test(test_init_op, dataset=dataset_uri)
 
-                logger.log('Test on %s - WER: %f, CER: %f, loss: %f' % (dataset, wer, cer, mean_loss))
-                logger.log('-' * 80)
-                for sample in report_samples:
-                    print('WER: %f, CER: %f, loss: %f' %\
-                          (sample.wer, sample.cer, sample.loss))
-                    print(' - src: "%s"' % sample.src)
-                    print(' - res: "%s"' % sample.res)
-                    print('-' * 80)
+        return float(mean_loss)
 
-                return samples, mean_loss
-
-            samples, mean_loss = run_test(test_init_op, dataset=dataset_uri)
-
-            return float(mean_loss)
-
-    def predict(self, queries):
+    def predict(self, queries, n_steps=16):
+        # Load from graph_def saved in the class attribute
         Config = self.c
+
+        new_input_tensor = tf.placeholder(tf.float32, [None, None, 2 * Config.n_context + 1, Config.n_input], name='input_node')
+        new_seq_length = tf.placeholder(tf.int32, [None], name='input_lengths')
+
+        tf.import_graph_def(self._loaded_graph_def,
+                            {'input_node:0': new_input_tensor, 'input_lengths:0': new_seq_length},
+                            name='')
+
+        input = self.graph.get_tensor_by_name('input_node:0')
+        input_lengths = self.graph.get_tensor_by_name('input_lengths:0')
+        output = self.graph.get_tensor_by_name('logits:0')
+
         session = self._sess
-        predictions = {}
 
-        inputs, outputs, _ = self.create_inference_graph(batch_size=1, n_steps=-1)
-        session.run(outputs['initialize_state'])
-
+        predictions = []
         for input_file_path in queries:
-            features, feature_len = self.audiofile_to_features(input_file_path)
+            features, features_len = self.audiofile_to_features(input_file_path)
 
-            # Add batch dimensin
+            # Add batch dimension
             features = tf.expand_dims(features, 0)
-            features_len = tf.expand_dims(feature_len, 0)
+            features_len = tf.expand_dims(features_len, 0)
 
             # Evaluate
             features = self.create_overlapping_windows(features).eval(session=session)
-            feature_len = feature_len.eval(session=session)
+            features_len = features_len.eval(session=session)
 
-            logits = outputs['outputs'].eval(feed_dict={
-                inputs['input']: features,
-                inputs['input_lengths']: feature_len,
+            logits = output.eval(feed_dict={
+                input: features,
+                input_lengths: features_len,
             }, session=session)
 
             logits = np.squeeze(logits)
@@ -1082,9 +1096,9 @@ class TfDeepSpeech(BaseModel):
             scorer = Scorer(FLAGS.lm_alpha, FLAGS.lm_beta,
                             FLAGS.lm_binary_path, FLAGS.lm_trie_path,
                             Config.alphabet)
-            decoded = ctc_beam_search_decoder_batch(logits, Config.alphabet, FLAGS.beam_width, scorer=scorer)
+            decoded = ctc_beam_search_decoder(logits, Config.alphabet, FLAGS.beam_width, scorer=scorer)
 
-            predictions[input_file_path] = decoded[0][1]
+            predictions.append(decoded[0][1])
 
         return predictions
 
@@ -1096,47 +1110,80 @@ class TfDeepSpeech(BaseModel):
         pass
 
     def dump_parameters(self):
-        params = {}
-        # Read from temp pb file & encode it to base64 string
-        with open('/tmp/model/output_graph.pb', 'rb') as f:
-            pb_model_bytes = f.read()
+        r'''
+        Export the trained variables into a Protocol Buffers (.pb) file and dump into the DB
+        Use a structure optimal for inference
+        '''
 
-        params['pb_model_base64'] = base64.b64encode(pb_model_bytes).decode('utf-8')
-        return params
+        tf.reset_default_graph()
+        batch_size = self._knobs.get('batch_size')
+        input, outputs, _ = self.create_inference_graph(batch_size=-1, n_steps=-1)
+        output_names_tensor = [tensor.op.name for tensor in outputs.values() if isinstance(tensor, Tensor)]
+        output_names_ops = [op.name for op in outputs.values() if isinstance(op, Operation)]
+        output_names = ','.join(output_names_tensor + output_names_ops)
+
+        mapping = {v.op.name: v for v in tf.global_variables() if not v.op.name.startswith('previous_state_')}
+        saver = tf.train.Saver(mapping)
+
+        # Restore variables from training checkpoint
+        checkpoint = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
+        checkpoint_path = checkpoint.model_checkpoint_path
+
+        output_filename = 'output_graph.pb'
+        export_temp_dir = tempfile.TemporaryDirectory()
+        export_dir = export_temp_dir.name
+
+        try:
+            output_graph_path = os.path.join(export_dir, output_filename)
+
+            def do_graph_freeze(output_file=None, output_node_names=None, variables_blacklist=None):
+                return freeze_graph.freeze_graph_with_def_protos(
+                    input_graph_def=tf.get_default_graph().as_graph_def(),
+                    input_saver_def=saver.as_saver_def(),
+                    input_checkpoint=checkpoint_path,
+                    output_node_names=output_node_names,
+                    restore_op_name=None,
+                    filename_tensor_name=None,
+                    output_graph=output_file,
+                    clear_devices=False,
+                    variable_names_blacklist=variables_blacklist,
+                    initializer_nodes='')
+
+            frozen_graph = do_graph_freeze(output_node_names=output_names, variables_blacklist='previous_state_c,previous_state_h')
+            frozen_graph.version = 1
+
+            with tf.gfile.GFile(output_graph_path, 'wb') as fout:
+                fout.write(frozen_graph.SerializeToString())
+
+            params = {}
+            # Read from temp pb file & encode it to base64 string
+            with open(output_graph_path, 'rb') as f:
+                pb_model_bytes = f.read()
+
+            params['pb_model_base64'] = base64.b64encode(pb_model_bytes).decode('utf-8')
+            return params
+
+        except RuntimeError as e:
+            logger.log('Error occured! {}'.format(e))
 
     def load_parameters(self, params):
+        # Load the Protocol Buffers into graph def
+        tf.reset_default_graph()
+        self.graph = tf.Graph()
+        self._sess = tf.InteractiveSession(graph=self.graph)
+
         # Load model parameters
         pb_model_base64 = params.get('pb_model_base64', None)
         if pb_model_base64 is None:
             raise InvalidModelParamsException()
+        pb_model_bytes = base64.b64decode(pb_model_base64.encode('utf-8'))
 
-        with tempfile.NamedTemporaryFile() as tmp:
-            # Convert back to bytes & write to temp file
-            pb_model_bytes = base64.b64decode(pb_model_base64.encode('utf-8'))
-            with open(tmp.name, 'wb') as f:
-                f.write(pb_model_bytes)
-
-            # Load model from temp file
-            with tf.gfile.FastGFile('/tmp/model/output_graph.pb', 'rb') as f:
-                graph_def = tf.GraphDef()
-                graph_def.ParseFromString(f.read())
-                g_in = tf.import_graph_def(graph_def, name='')
-
-            session = tf.Session(graph=g_in)
-            self._sess = session
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(pb_model_bytes)
+        self._loaded_graph_def = graph_def
 
 
 if __name__ == '__main__':
-
-    # FLAGS = tf.app.flags.FLAGS
-    # create_flags()
-    # initialize_globals()
-    # print('initialised', c.cpu_device)
-    # TfDeepSpeech.train(TfDeepSpeech,'data/ldc93s1/ldc93s1.zip')
-    pass
-
-    print(os.path.abspath('data/ldc93s1/ldc93s1.zip'))
-
     test_model_class(
         model_file_path=__file__,
         model_class='TfDeepSpeech',
@@ -1145,10 +1192,9 @@ if __name__ == '__main__':
             # ModelDependency.TENSORFLOW: '1.12.0',
             ModelDependency.DS_CTCDECODER: os.path.abspath('examples/models/speech_recognition/utils/taskcluster.py')
         },
-        # Demonstrative only, this dataset only contains one sample, use batch_size = 1 to run
+        # Demonstrative only, this dataset only contains one sample, we use batch_size = 1 to run
         # Replace with larger test data and larger batch_size in practice
         train_dataset_uri=os.path.abspath('data/ldc93s1/ldc93s1.zip'),
         test_dataset_uri=os.path.abspath('data/ldc93s1/ldc93s1.zip'),
-        # test_dataset_uri=os.path.abspath('data/libri/test-clean.zip'),
         queries=[os.path.abspath('data/ldc93s1/ldc93s1/LDC93S1.wav')]
     )
