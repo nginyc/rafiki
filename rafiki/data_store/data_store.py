@@ -13,14 +13,14 @@ class DataStore(abc.ABC):
         Persistent store for datasets.
     '''
 
-    @abc.abstractclassmethod
+    @abc.abstractmethod
     def save(self, data_file_path: str) -> Dataset:
         '''
             Persists a dataset in the local filesystem at file path, returning a ``Dataset`` abstraction containing a unique ID for the dataset.
         '''
         raise NotImplementedError()
 
-    @abc.abstractclassmethod
+    @abc.abstractmethod
     def load(self, dataset_id: str) -> str:
         '''
             Loads a persisted dataset to the local filesystem, identified by ID, returning the file path to the dataset.
