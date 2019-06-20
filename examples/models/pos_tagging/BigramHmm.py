@@ -1,11 +1,9 @@
 import math
+import json
 
-from rafiki.model import BaseModel, utils
+from rafiki.model import BaseModel, utils, FixedKnob
 from rafiki.constants import TaskType
 from rafiki.advisor import test_model_class
-
-# Min numeric value
-MIN_VALUE = -9999999999
 
 class BigramHmm(BaseModel):
     '''
@@ -13,10 +11,13 @@ class BigramHmm(BaseModel):
     '''
     @staticmethod
     def get_knob_config():
-        return {}
+        return {
+            'min_value': FixedKnob(-9999999999) # Min numeric value
+        }
 
     def __init__(self, **knobs):
         super().__init__(**knobs)
+        self._min_value = knobs['min_value']
 
     def train(self, dataset_path, **kwargs):
         dataset = utils.dataset.load_dataset_of_corpus(dataset_path)
@@ -39,14 +40,14 @@ class BigramHmm(BaseModel):
 
     def dump_parameters(self):
         params = {}
-        params['emiss_probs'] = self._emiss_probs
-        params['trans_probs'] = self._trans_probs
+        params['emiss_probs'] = json.dumps(self._emiss_probs)
+        params['trans_probs'] = json.dumps(self._trans_probs)
         params['num_tags'] = self._num_tags
         return params
 
     def load_parameters(self, params):
-        self._emiss_probs = params['emiss_probs']
-        self._trans_probs = params['trans_probs']
+        self._emiss_probs = json.loads(params['emiss_probs'])
+        self._trans_probs = json.loads(params['trans_probs'])
         self._num_tags = params['num_tags']
 
     def _compute_accuracy(self, sents_tags, sents_pred_tags):
@@ -61,6 +62,7 @@ class BigramHmm(BaseModel):
         return correct / total
 
     def _compute_probs(self, num_tags, sents_tokens, sents_tags):
+
         # Total number of states in HMM as tags
         T = num_tags + 2 # Last 2 for START & END tags
         START = num_tags # <s>
@@ -103,7 +105,7 @@ class BigramHmm(BaseModel):
         for i in range(T):
             for j in range(T):
                 if bi_counts[i][j] == 0:
-                    trans_probs[i][j] = MIN_VALUE
+                    trans_probs[i][j] = self._min_value
                 else:
                     trans_probs[i][j] = math.log(bi_counts[i][j] / uni_counts[i])
 
@@ -135,7 +137,7 @@ class BigramHmm(BaseModel):
             # Process 1st word that is conditioned on <s>
             for i in range(T):
                 trans = trans_probs[START][i]
-                emiss = emiss_probs[i].get(tokens[0], MIN_VALUE)
+                emiss = emiss_probs[i].get(tokens[0], self._min_value)
                 log_probs[0][i] = trans + emiss
 
             # For each word w after the 1st word
@@ -146,7 +148,7 @@ class BigramHmm(BaseModel):
                     for j in range(T):
                         # Compute probability for (tag j, tag i) for sentence up to word w
                         trans = trans_probs[j][i]
-                        emiss = emiss_probs[i].get(tokens[w], MIN_VALUE)
+                        emiss = emiss_probs[i].get(tokens[w], self._min_value)
                         prob = log_probs[w - 1][j] + trans + emiss
                         if log_probs[w][i] is None or prob > log_probs[w][i]:
                             log_probs[w][i] = prob
