@@ -1,7 +1,3 @@
-class BudgetType():
-    MODEL_TRIAL_COUNT = 'MODEL_TRIAL_COUNT'
-    GPU_COUNT = 'GPU_COUNT'
-
 class ModelDependency():
     TENSORFLOW = 'tensorflow'
     KERAS = 'Keras'

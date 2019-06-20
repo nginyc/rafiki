@@ -260,6 +260,7 @@ def _maybe_read_budget_from_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--GPU_COUNT', type=int, default=0)
     parser.add_argument('--TIME_HOURS', type=float, default=0.1) # 6 min
+    parser.add_argument('--MODEL_TRIAL_COUNT', type=int, default=-1) # 6 min
     budget_from_args = vars(parser.parse_known_args()[0])
     return budget_from_args
 

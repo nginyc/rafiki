@@ -34,7 +34,7 @@ class BayesOptAdvisor(BaseAdvisor):
             inform_user('To speed up hyperparameter search with Bayesian Optimization, having `QUICK_TRAIN` policy is preferred.')
 
     def propose(self, worker_id, trial_no, concurrent_trial_nos):
-        proposal_type = self._get_proposal_type()
+        proposal_type = self._get_proposal_type(trial_no)
         meta = {'proposal_type': proposal_type}
 
         if proposal_type == 'SEARCH':
@@ -103,9 +103,13 @@ class BayesOptAdvisor(BaseAdvisor):
 
         return knobs
 
-    def _get_proposal_type(self):
+    def _get_proposal_type(self, trial_no):
         # If time's up, stop
         if self.get_train_hours_left() <= 0:
+            return 'STOP'
+
+        # If trial's up, stop
+        if self.get_trials_left(trial_no) <= 0:
             return 'STOP'
 
         # If `QUICK_TRAIN` is not supported, just keep searching
@@ -143,7 +147,7 @@ class BayesOptWithParamSharingAdvisor(BaseAdvisor):
             inform_user('To speed up hyperparameter search with Bayesian Optimization, having `QUICK_TRAIN` policy is preferred.')
 
     def propose(self, worker_id, trial_no, concurrent_trial_nos):
-        proposal_type = self._get_proposal_type()
+        proposal_type = self._get_proposal_type(trial_no)
         meta = {'proposal_type': proposal_type}
 
         if proposal_type == 'SEARCH':
@@ -194,9 +198,13 @@ class BayesOptWithParamSharingAdvisor(BaseAdvisor):
         hours_spent = total_hours - self.get_train_hours_left()
         return _propose_exp_greedy_param(hours_spent, total_hours)
 
-    def _get_proposal_type(self):
+    def _get_proposal_type(self, trial_no):
         # If time's up, stop
         if self.get_train_hours_left() <= 0:
+            return 'STOP'
+
+        # If trial's up, stop
+        if self.get_trials_left(trial_no) <= 0:
             return 'STOP'
             
         # Keep conducting search trials

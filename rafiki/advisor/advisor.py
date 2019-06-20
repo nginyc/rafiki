@@ -1,6 +1,6 @@
 import abc
 import random
-from typing import Dict, List, Type
+from typing import List, Type, Dict
 from enum import Enum
 from datetime import datetime, timedelta
 
@@ -9,7 +9,9 @@ from rafiki.model import IntegerKnob, CategoricalKnob, FloatKnob, ArchKnob, \
 from rafiki.param_store import ParamsType
 
 DEFAULT_TRAIN_HOURS = 0.1
+DEFAULT_MAX_TRIALS = -1
 
+BUDGET_OPTIONS = ['TIME_HOURS', 'GPU_COUNT', 'MODEL_TRIAL_COUNT'] 
 Budget = Dict[str, any]
 
 class UnsupportedKnobConfigError(Exception): pass
@@ -100,6 +102,7 @@ class BaseAdvisor(abc.ABC):
     def __init__(self, knob_config: KnobConfig, budget: Budget, **kwargs):
         self.knob_config = knob_config
         self.total_train_hours = budget.get('TIME_HOURS', DEFAULT_TRAIN_HOURS)
+        self.max_trials = budget.get('MODEL_TRIAL_COUNT', DEFAULT_MAX_TRIALS)
 
         # Keep track of time budget
         self._start_time = datetime.now()
@@ -123,6 +126,12 @@ class BaseAdvisor(abc.ABC):
     def get_train_hours_left(self) -> float:
         time_left = self._stop_time - datetime.now()
         return time_left.total_seconds() / (60 * 60)
+
+    # Returns no. of hours left for training based on allocated budget (excluding current trial)
+    def get_trials_left(self, trial_no) -> int:
+        if self.max_trials < 0:
+            return 9999999
+        return self.max_trials - trial_no + 1
 
     # Helps detect presence of policies in knob config
     @staticmethod
@@ -200,6 +209,10 @@ class RandomAdvisor(BaseAdvisor):
         # If time's up, stop
         if self.get_train_hours_left() <= 0:
             return Proposal(should_stop=True)
+
+        # If trial's up, stop
+        if self.get_trials_left(trial_no) <= 0:
+            return Proposal(should_stop=True) 
 
         # Randomly propose knobs
         knobs = {

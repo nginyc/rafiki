@@ -4,9 +4,8 @@ import pickle
 import os
 from functools import wraps
 
-from rafiki.constants import BudgetType, ModelAccessRight
-from rafiki.model import serialize_knob_config, KnobConfig
-from rafiki.advisor import AdvisorType, Proposal
+from rafiki.constants import ModelAccessRight
+from rafiki.advisor import Proposal, Budget
 
 class RafikiConnectionError(ConnectionError): pass
 
@@ -367,7 +366,7 @@ class Client(object):
     # Train Jobs
     ####################################
     
-    def create_train_job(self, app, task, train_dataset_id, val_dataset_id, budget, models=None):
+    def create_train_job(self, app, task, train_dataset_id, val_dataset_id, budget: Budget, models=None):
         '''
         Creates and starts a train job on Rafiki. 
 
@@ -395,9 +394,10 @@ class Client(object):
 
         =====================       =====================
         **Budget Type**             **Description**
-        ---------------------       ---------------------        
-        ``TIME_HOURS``              No. of hours to train (defaults to 0.1)
-        ``GPU_COUNT``               No. of GPUs to exclusively allocate for training, across all models (defaults to 0)
+        ---------------------       ---------------------
+        ``TIME_HOURS``              Max no. of hours to train (soft target). Defaults to 0.1.
+        ``GPU_COUNT``               No. of GPUs to allocate for training, across all models. Defaults to 0.
+        ``MODEL_TRIAL_COUNT``       Max no. of trials to conduct for each model (soft target). -1 for unlimited. Defaults to -1.
         =====================       =====================
         '''
         _note('`create_train_job` now requires `models` as a list of model IDs instead of a list of model names')
@@ -645,31 +645,25 @@ class Client(object):
     # Advisors
     ####################################
 
-    def _create_advisor(self, knob_config_str, advisor_id: str = None, 
-                        advisor_type: str = None, advisor_config={}) -> dict:
+    def _create_advisor(self, knob_config_str, advisor_id: str = None) -> dict:
         '''
         Creates a Rafiki advisor. If `advisor_id` is passed, it will create an advisor
         of that ID, or do nothing if an advisor of that ID has already been created.
 
         :param KnobConfig knob_config: Knob configuration for advisor session
         :param str advisor_id: ID of advisor to create
-        :param AdvisorType advisor_type: Type of advisor
-        :param dict advisor_config: Additional configuration for the advisor
         :returns: Created advisor as dictionary
         :rtype: dict[str, any]
         '''
-        knob_config_str = serialize_knob_config(knob_config)
-        json = {
+        data = {
             'advisor_id': advisor_id,
-            'knob_config_str': knob_config_str,
-            'advisor_type': advisor_type.value if advisor_type is not None else None,
-            'advisor_config': advisor_config
+            'knob_config_str': knob_config_str
         }
 
-        data = self._post('/advisors', target='advisor', json=json)
+        data = self._post('/advisors', target='advisor', json=data)
         return data
 
-    def _get_proposal_from_advisor(self,  advisor_id: str, worker_id: str, trial_no: int, 
+    def _get_proposal_from_advisor(self, advisor_id: str, worker_id: str, trial_no: int, 
                                 total_trials: int, concurrent_trial_nos=[]) -> Proposal:
         '''
         Get a proposal from an advisor.
@@ -682,13 +676,13 @@ class Client(object):
         :returns: Proposal from advisor 
         :rtype: Proposal
         '''
-        json = {
+        data = {
             'worker_id': worker_id,
             'trial_no': trial_no,
             'total_trials': total_trials,
             'concurrent_trial_nos': concurrent_trial_nos
         }
-        data = self._post('/advisors/{}/propose'.format(advisor_id), target='advisor', json=json)
+        data = self._post('/advisors/{}/propose'.format(advisor_id), target='advisor', json=data)
         proposal = Proposal.from_jsonable(data)
         return proposal
 
@@ -700,11 +694,11 @@ class Client(object):
         :param float score: Score of the knobs, the higher the number, the better the set of knobs
         :param Proposal proposal: Proposal to give feedback on
         '''
-        json = {
+        data = {
             'score': score,
             'proposal': proposal.to_jsonable()
         }
-        self._post('/advisors/{}/feedback'.format(advisor_id), target='advisor', json=json)
+        self._post('/advisors/{}/feedback'.format(advisor_id), target='advisor', json=data)
 
     def _delete_advisor(self, advisor_id: str) -> dict:
         '''
