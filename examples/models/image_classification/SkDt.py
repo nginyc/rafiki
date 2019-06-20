@@ -1,7 +1,5 @@
 from sklearn import tree
-import json
 import pickle
-import os
 import base64
 import numpy as np
 

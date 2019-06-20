@@ -1,7 +1,6 @@
 from skopt.space import Real, Integer, Categorical
 from skopt.optimizer import Optimizer
 from collections import OrderedDict
-from enum import Enum
 import math
 import numpy as np
 
@@ -11,59 +10,151 @@ from rafiki.param_store import ParamsType
 from .development import inform_user
 from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal
 
-class ParamPolicy(Enum):
-    NONE = 'NONE'
-    GREEDY = 'GREEDY' # Always wants global best
-    LINEAR_GREEDY = 'LINEAR_GREEDY' # (1 - p) probability of wanting global best, p decreases linearly
-    EXP_GREEDY = 'EXP_GREEDY' # (1 - p) probability of wanting global best, p decays exponentially
+FINAL_TRAIN_HOURS = 1 # No. of hours to conduct final train trials
 
-class SkoptAdvisor(BaseAdvisor):
+class BayesOptAdvisor(BaseAdvisor):
     '''
-    Performs general hyperparameter tuning of models using Bayesian Optimization 
-        using Gaussian Processes as implemented by `skopt`.
+        Performs standard hyperparameter tuning of models using Bayesian Optimization with Gaussian Processes.
     '''   
     @staticmethod
-    def is_compatible(knob_config):
-        # Supports only CategoricalKnob, FixedKnob, IntegerKnob and FloatKnob
-        for (name, knob) in knob_config.items():
-            if not isinstance(knob, (CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob, PolicyKnob)):
-                return False
+    def is_compatible(knob_config, budget):
+        # Supports only CategoricalKnob, FixedKnob, IntegerKnob & FloatKnob
+        return BaseAdvisor.has_only_knob_types(knob_config, [CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob, PolicyKnob])
 
-        # Prompt user that Skopt search prefers having certain policies
-        policies = [x.policy for (name, x) in knob_config.items() if isinstance(x, PolicyKnob)]
-        if 'QUICK_TRAIN' not in policies:
-            inform_user('To speed up hyperparameter search with Skopt, having `QUICK_TRAIN` policy is preferred.')
-
-        return True
-
-    def __init__(self, knob_config, param_policy=ParamPolicy.EXP_GREEDY):
+    def __init__(self, knob_config, budget):
+        super().__init__(knob_config, budget)
         (self._fixed_knob_config, knob_config) = self.extract_knob_type(knob_config, FixedKnob)
         (self._policy_knob_config, knob_config) = self.extract_knob_type(knob_config, PolicyKnob)
         self._dimensions = self._get_dimensions(knob_config)
         self._optimizer = self._make_optimizer(self._dimensions)
-        self._param_policy = ParamPolicy(param_policy)
-        self._recent_feedback = [] # [(score, proposal)]
+        self._search_results: (float, Proposal) = [] 
 
-    def propose(self, worker_id, trial_no, total_trials, concurrent_trial_nos=[]):
-        trial_type = self._get_trial_type(trial_no, total_trials, concurrent_trial_nos)
+        # Prefer having certain policies
+        if not self.has_policies(self.knob_config, ['QUICK_TRAIN']):
+            inform_user('To speed up hyperparameter search with Bayesian Optimization, having `QUICK_TRAIN` policy is preferred.')
 
-        if trial_type is None:
-            return Proposal({}, is_valid=False)
-        elif trial_type == 'SEARCH':
-            param = self._propose_param(trial_no, total_trials)
+    def propose(self, worker_id, trial_no, concurrent_trial_nos):
+        proposal_type = self._get_proposal_type()
+        meta = {'proposal_type': proposal_type}
+
+        if proposal_type == 'SEARCH':
             knobs = self._propose_knobs(['QUICK_TRAIN'])
-            return Proposal(knobs, params_type=param)
-        elif trial_type == 'FINAL_TRAIN':
-            knobs = self._propose_best_recent_knobs()
-            return Proposal(knobs, params_type=ParamsType.NONE)
+            return Proposal(knobs, meta=meta)
+        elif proposal_type == 'FINAL_TRAIN':
+            knobs = self._propose_search_knobs()
+            return Proposal(knobs, meta=meta)
+        elif proposal_type == 'STOP':
+            return Proposal(should_stop=True, meta=meta)
 
     def feedback(self, score, proposal):
-        num_sample_trials = 10
         knobs = proposal.knobs
 
-        # Keep track of last X trials' knobs & scores (for final train trials)
-        self._recent_feedback = [(score, proposal), *self._recent_feedback[:(num_sample_trials - 1)]]
+        # Keep track of `SEARCH` trials' scores & proposals (for final train trials)
+        if proposal.meta.get('proposal_type') == 'SEARCH':
+            self._search_results.append((score, proposal))
 
+        point = [knobs[name] for name in self._dimensions.keys()]
+        self._optimizer.tell(point, -score)
+
+    def _make_optimizer(self, dimensions):
+        n_initial_points = 10
+        return Optimizer(
+            list(dimensions.values()),
+            n_initial_points=n_initial_points,
+            base_estimator='gp'
+        )
+
+    def _get_dimensions(self, knob_config):
+        dimensions = OrderedDict({
+            name: _knob_to_dimension(x)
+                for (name, x)
+                in knob_config.items()
+        })
+        return dimensions
+
+    def _propose_knobs(self, policies=None):
+        # Ask skopt
+        point = self._optimizer.ask()
+        knobs = { 
+            name: _simplify_value(value) 
+            for (name, value) 
+            in zip(self._dimensions.keys(), point) 
+        }
+
+        # Add fixed & policy knobs
+        knobs = self.merge_fixed_knobs(knobs, self._fixed_knob_config)
+        knobs = self.merge_policy_knobs(knobs, self._policy_knob_config, policies or [])
+
+        return knobs
+
+    def _propose_search_knobs(self, policies=None):
+        search_results = self._search_results
+        # If no more search results, propose from model
+        if len(search_results) == 0:
+            return self._propose_knobs(policies)
+
+        # Otherwise, determine best proposal and use it
+        search_results.sort(key=lambda x: x[0])
+        (score, proposal) = search_results.pop()
+        knobs = proposal.knobs
+
+        # Add policy knobs
+        knobs = self.merge_policy_knobs(knobs, self._policy_knob_config, policies or [])
+
+        return knobs
+
+    def _get_proposal_type(self):
+        # If time's up, stop
+        if self.get_train_hours_left() <= 0:
+            return 'STOP'
+
+        # If `QUICK_TRAIN` is not supported, just keep searching
+        if not self.has_policies(self.knob_config, ['QUICK_TRAIN']):
+            return 'SEARCH'
+
+        # Schedule: |--<search>---||--<final train>--|
+        # Check if final train trial
+        # Otherwise, it is a search trial
+        if self.get_train_hours_left() <= FINAL_TRAIN_HOURS:
+            return 'FINAL_TRAIN'
+        else:
+            return 'SEARCH'
+
+class BayesOptWithParamSharingAdvisor(BaseAdvisor):
+    '''
+        Performs hyperparameter tuning of models using Bayesian Optimization with Gaussian Processes,
+        sharing globally best-scoring parameters in a greedy way.
+    '''
+    @staticmethod
+    def is_compatible(knob_config, budget):
+        # Supports only CategoricalKnob, FixedKnob, IntegerKnob & FloatKnob, and must have param sharing
+        return BaseAdvisor.has_only_knob_types(knob_config, [CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob, PolicyKnob]) and \
+            BaseAdvisor.has_policies(knob_config, ['SHARE_PARAMS'])
+
+    def __init__(self, knob_config, budget):
+        super().__init__(knob_config, budget)
+        (self._fixed_knob_config, knob_config) = self.extract_knob_type(knob_config, FixedKnob)
+        (self._policy_knob_config, knob_config) = self.extract_knob_type(knob_config, PolicyKnob)
+        self._dimensions = self._get_dimensions(knob_config)
+        self._optimizer = self._make_optimizer(self._dimensions)
+        
+        # Prefer having certain policies
+        if not self.has_policies(self.knob_config, ['QUICK_TRAIN']):
+            inform_user('To speed up hyperparameter search with Bayesian Optimization, having `QUICK_TRAIN` policy is preferred.')
+
+    def propose(self, worker_id, trial_no, concurrent_trial_nos):
+        proposal_type = self._get_proposal_type()
+        meta = {'proposal_type': proposal_type}
+
+        if proposal_type == 'SEARCH':
+            param = self._propose_param()
+            knobs = self._propose_knobs(['SHARE_PARAMS', 'QUICK_TRAIN'])
+            return Proposal(knobs, params_type=param, meta=meta)
+        elif proposal_type == 'STOP':
+            return Proposal(should_stop=True, meta=meta)
+
+    def feedback(self, score, proposal):
+        knobs = proposal.knobs
         point = [ knobs[name] for name in self._dimensions.keys() ]
         self._optimizer.tell(point, -score)
 
@@ -83,7 +174,7 @@ class SkoptAdvisor(BaseAdvisor):
         })
         return dimensions
 
-    def _propose_knobs(self, policies=[]):
+    def _propose_knobs(self, policies=None):
         # Ask skopt
         point = self._optimizer.ask()
         knobs = { 
@@ -94,86 +185,30 @@ class SkoptAdvisor(BaseAdvisor):
 
         # Add fixed & policy knobs
         knobs = self.merge_fixed_knobs(knobs, self._fixed_knob_config)
-        knobs = self.merge_policy_knobs(knobs, self._policy_knob_config, policies)
+        knobs = self.merge_policy_knobs(knobs, self._policy_knob_config, policies or [])
 
         return knobs
 
-    def _propose_best_recent_knobs(self, policies=[]):
-        recent_feedback = self._recent_feedback
-        # If hasn't collected feedback, propose from model
-        if len(recent_feedback) == 0:
-            return self._propose_knobs(policies)
+    def _propose_param(self):
+        total_hours = self.total_train_hours 
+        hours_spent = total_hours - self.get_train_hours_left()
+        return _propose_exp_greedy_param(hours_spent, total_hours)
 
-        # Otherwise, determine best recent proposal and use it
-        (score, proposal) = sorted(recent_feedback)[-1]
-        knobs = proposal.knobs
-
-        # Add policy knobs
-        knobs = self.merge_policy_knobs(knobs, self._policy_knob_config, policies)
-
-        return knobs
-
-    def _propose_param(self, trial_no, total_trials):
-        policy = self._param_policy
-        if policy == ParamPolicy.NONE:
-            return ParamsType.NONE
-        elif policy == ParamPolicy.GREEDY:
-            return ParamsType.GLOBAL_BEST
-        elif policy == ParamPolicy.EXP_GREEDY:
-            return self._propose_exp_greedy_param(trial_no, total_trials)
-        elif policy == ParamPolicy.LINEAR_GREEDY:
-            return self._propose_linear_greedy_param(trial_no, total_trials)
-
-    def _get_trial_type(self, trial_no, total_trials, concurrent_trial_nos):
-        num_final_train_trials = 1
-        policy = self._param_policy
-
-        # If param policy is param sharing
-        if policy in [ParamPolicy.EXP_GREEDY, ParamPolicy.LINEAR_GREEDY]:
-            # Keep conducting search trials
-            return 'SEARCH'
-        
-        # Otherwise, there is no param sharing
-        # Schedule: |--<search>---||--<final train>--|
-
-        # Check if final train trial
-        if trial_no > total_trials - num_final_train_trials:
-            # Wait for all search trials to finish 
-            if self._if_preceding_trials_are_running(trial_no, concurrent_trial_nos):
-                return None
-
-            return 'FINAL_TRAIN'
-
-        # Otherwise, it is a search trial
+    def _get_proposal_type(self):
+        # If time's up, stop
+        if self.get_train_hours_left() <= 0:
+            return 'STOP'
+            
+        # Keep conducting search trials
         return 'SEARCH'
-        
-    def _propose_exp_greedy_param(self, trial_no, total_trials):
-        t = trial_no
-        t_div = total_trials
-        e = math.exp(-4 * t / t_div) # e ^ (-4x) => 1 -> 0 exponential decay
-        # No params with decreasing probability
-        if np.random.random() < e:
-            return ParamsType.NONE
-        else:
-            return ParamsType.GLOBAL_BEST
-
-    def _propose_linear_greedy_param(self, trial_no, total_trials):
-        t = trial_no
-        t_div = total_trials
-        e = 0.5 - 0.5 * t / t_div # 0.5 -> 0 linearly
-        # No params with decreasing probability
-        if np.random.random() < e:
-            return ParamsType.NONE
-        else:
-            return ParamsType.GLOBAL_BEST
-
-    def _if_preceding_trials_are_running(self, trial_no, concurrent_trial_nos):
-        if len(concurrent_trial_nos) == 0:
-            return False
-
-        min_trial_no = min(concurrent_trial_nos)
-        return min_trial_no < trial_no
-
+    
+def _propose_exp_greedy_param(t, t_div):
+    e = math.exp(-4 * t / t_div) # e ^ (-4x) => 1 -> 0 exponential decay
+    # No params with decreasing probability
+    if np.random.random() < e:
+        return ParamsType.NONE
+    else:
+        return ParamsType.GLOBAL_BEST
 
 def _knob_to_dimension(knob):
     if isinstance(knob, CategoricalKnob):
@@ -190,12 +225,6 @@ def _knob_to_dimension(knob):
             return Real(knob.value_min, knob.value_max, 'uniform')
     else:
         raise UnsupportedKnobError(knob.__class__)
-
-def _unzeroify(value):
-    if value == 0:
-        return 1e-9
-
-    return value
 
 def _simplify_value(value):
     if isinstance(value, (np.int64)):

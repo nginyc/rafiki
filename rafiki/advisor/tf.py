@@ -1,134 +1,115 @@
 import tensorflow as tf
 import numpy as np
-from enum import Enum
 import logging
 from collections import defaultdict
 
-from rafiki.model import ListKnob, CategoricalKnob, FixedKnob, PolicyKnob
+from rafiki.model import ArchKnob, FixedKnob, PolicyKnob
 from rafiki.param_store import ParamsType
 
-from .development import inform_user
-from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal
+from .advisor import BaseAdvisor, Proposal
 
 logger = logging.getLogger(__name__)
 
-class EnasTrainStrategy(Enum):
-    ORIGINAL = 'ORIGINAL' # Cycle between 1 train - X evals, always use GLOBAL_RECENT 
-    ISOLATED = 'ISOLATED' # Perform original ENAS locally at each worker, always use LOCAL_RECENT
+ENAS_BATCH_SIZE = 10
+ENAS_NUM_EVAL_PER_CYCLE = 300
+ENAS_NUM_FINAL_EVALS = 10
+ENAS_FINAL_HOURS = 0.05 # Last X hours to conduct final evals & final trains
+ENAS_NUM_FINAL_TRAINS = 1
 
-# TODO: Handle low trial counts
 class EnasAdvisor(BaseAdvisor):
     '''
-    Implements the controller of "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
+    Performs cell-based "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
+    In a distributed setting, performs ENAS locally at each worker using LOCAL_RECENT parameters.
     
-    Paper: https://arxiv.org/abs/1802.03268
+    Original paper: https://arxiv.org/abs/1802.03268
     '''
     @staticmethod
-    def is_compatible(knob_config):
-        # Supports only ListKnob of CategoricalKnobs, FixedKnob, and PolicyKnob
-        for knob in knob_config.values():
-            if isinstance(knob, ListKnob):
-                for knob in knob.items:
-                    if not isinstance(knob, CategoricalKnob):
-                        return False
-            elif not isinstance(knob, (FixedKnob, PolicyKnob)):
-                return False
+    def is_compatible(knob_config, budget):
+        # Supports only FixedKnob, ArchKnob and PolicyKnob
+        # And must have param sharing, quick train, quick eval, skip train & downscale
+        # And time budget must be sufficient to cover final evals & final trains
+        time_hours = budget.get('TIME_HOURS', 0)
+        return BaseAdvisor.has_only_knob_types(knob_config, [FixedKnob, ArchKnob, PolicyKnob]) and \
+            BaseAdvisor.has_policies(knob_config, ['SHARE_PARAMS', 'DOWNSCALE', 'QUICK_TRAIN', 'QUICK_EVAL', 'SKIP_TRAIN']) and \
+            time_hours >= ENAS_FINAL_HOURS 
 
-        # Prompt user that ENAS prefers having certain policies
-        policies = [x.policy for (name, x) in knob_config.items() if isinstance(x, PolicyKnob)]
-        if not all([(x in policies) for x in ['QUICK_TRAIN', 'SKIP_TRAIN', 'QUICK_EVAL', 'DOWNSCALE']]):
-            inform_user('To speed up ENAS, `QUICK_TRAIN`, `SKIP_TRAIN`, `QUICK_EVAL` & `DOWNSCALE` policies are preferred.')
-
-        return True
-        
-    def __init__(self, knob_config, train_strategy=EnasTrainStrategy.ISOLATED, 
-                batch_size=10, num_eval_per_cycle=300, num_final_evals=10, 
-                do_final_train=True):
-        self._batch_size = batch_size
-        self._num_eval_per_cycle = num_eval_per_cycle
-        self._num_final_evals = num_final_evals
-        self._evals = [] # [(score, proposal)]
-        self._do_final_train = do_final_train
+    def __init__(self, knob_config, budget):
+        super().__init__(knob_config, budget)
+        self._batch_size = ENAS_BATCH_SIZE
+        self._num_eval_per_cycle = ENAS_NUM_EVAL_PER_CYCLE
+        self._num_final_evals = ENAS_NUM_FINAL_EVALS
+        self._num_final_trains = ENAS_NUM_FINAL_TRAINS
+        self._final_hours = ENAS_FINAL_HOURS
+        self._final_evals = [] # [(score, proposal)]
+        self._final_trains = []  # [(score, proposal)]
         self._worker_to_trial_nos = defaultdict(list) # { <worker_id>: [<trial no>]}
-        self._train_strategy = EnasTrainStrategy(train_strategy)
-        
-        if self._train_strategy == EnasTrainStrategy.ORIGINAL:
-            self._get_trial_type = self._get_trial_type_original
-        elif self._train_strategy == EnasTrainStrategy.ISOLATED:
-            self._get_trial_type = self._get_trial_type_isolated
-        else:
-            raise NotImplementedError()
-
         (self._fixed_knob_config, knob_config) = self.extract_knob_type(knob_config, FixedKnob)
         (self._policy_knob_config, knob_config) = self.extract_knob_type(knob_config, PolicyKnob)
-        self._list_knob_models = self._build_models(knob_config, batch_size)
+        self._list_knob_models = self._build_models(knob_config, self._batch_size)
 
-    def propose(self, worker_id, trial_no, total_trials, concurrent_trial_nos=[]):
-        (params_type, trial_type) = self._get_trial_type(worker_id, trial_no, total_trials, concurrent_trial_nos)
-        
-        if trial_type is None:
-            return Proposal({}, is_valid=False)
+    def propose(self, worker_id, trial_no, concurrent_trial_nos):
+        proposal_type = self._get_proposal_type(worker_id)
+        meta = {'proposal_type': proposal_type}
 
         # Keep track of trial nos at each worker
         self._worker_to_trial_nos[worker_id].append(trial_no)
 
-        if trial_type == 'TRAIN':
+        if proposal_type == 'TRAIN':
             knobs = self._propose_knobs(['DOWNSCALE', 'QUICK_TRAIN'])
-            return Proposal(knobs, 
-                            params_type=params_type, 
-                            should_eval=False,
-                            should_save_to_disk=False)
-        elif trial_type == 'EVAL':
+            return Proposal(knobs, params_type=ParamsType.LOCAL_RECENT, 
+                            should_eval=False, should_save_to_disk=False, meta=meta)
+        elif proposal_type == 'EVAL':
             knobs = self._propose_knobs(['DOWNSCALE', 'QUICK_EVAL', 'SKIP_TRAIN'])
-            return Proposal(knobs,
-                            params_type=params_type, 
-                            should_save_to_disk=False)
-        elif trial_type == 'FINAL_EVAL':
+            return Proposal(knobs, params_type=ParamsType.LOCAL_RECENT, 
+                            should_save_to_disk=False, meta=meta)
+        elif proposal_type == 'FINAL_EVAL':
             knobs = self._propose_knobs(['DOWNSCALE', 'SKIP_TRAIN'])
-            return Proposal(knobs,
-                            params_type=params_type, 
-                            should_save_to_disk=True)
-        elif trial_type == 'FINAL_TRAIN':
+            return Proposal(knobs, params_type=ParamsType.LOCAL_RECENT, meta=meta)
+        elif proposal_type == 'FINAL_TRAIN':
             # Do standard model training from scratch with final knobs
             knobs = self._propose_final_knobs()
-            return Proposal(knobs, 
-                            params_type=params_type,
-                            should_save_to_disk=True)
+            return Proposal(knobs, meta=meta)
+        elif proposal_type == 'STOP':
+            return Proposal(should_stop=True, meta=meta)
 
     def feedback(self, score, proposal: Proposal):
         knobs = proposal.knobs
-        num_final_evals = self._num_final_evals
 
-        # Keep track of last X evals' scores
-        self._evals = [*self._evals[:(num_final_evals-1)], (score, proposal)]
+        # Keep track of results of final evals & trains
+        if proposal.meta.get('proposal_type') == 'FINAL_EVAL':
+            self._final_evals.append((score, proposal))
+        elif proposal.meta.get('proposal_type') == 'FINAL_TRAIN':
+            self._final_trains.append((score, proposal))
 
         for (name, list_knob_model) in self._list_knob_models.items():
             knob_value = knobs[name]
             list_knob_model.feedback(knob_value, score)
 
-    def _propose_final_knobs(self, policies=[]):
+    def _propose_final_knobs(self, policies=None):
+        final_evals = self._final_evals
+
         # If hasn't collected any evals, propose from model
-        if len(self._evals) == 0:
+        if len(final_evals) == 0:
             return self._propose_knobs(policies)
 
-        # Otherwise, determine best eval and use it
-        self._evals = sorted(self._evals, key=lambda x: x[0])
-        (_, proposal) = self._evals.pop()
+        # Otherwise, determine best recent proposal and use it
+        final_evals.sort(key=lambda x: x[0])
+        (score, proposal) = final_evals.pop()
         knobs = proposal.knobs
 
         # Add policy knobs
-        knobs = self.merge_policy_knobs(knobs, self._policy_knob_config, policies)
+        knobs = self.merge_policy_knobs(knobs, self._policy_knob_config, policies or [])
 
         return knobs
 
-    def _propose_knobs(self, policies=[]):
+    def _propose_knobs(self, policies=None):
         knobs = {}
         for (name, list_knob_model) in self._list_knob_models.items():
             knobs[name] = list_knob_model.propose()
 
         # Add fixed & policy knobs
         knobs = self.merge_fixed_knobs(knobs, self._fixed_knob_config)
-        knobs = self.merge_policy_knobs(knobs, self._policy_knob_config, policies)
+        knobs = self.merge_policy_knobs(knobs, self._policy_knob_config, policies or [])
         
         return knobs
 
@@ -139,75 +120,30 @@ class EnasAdvisor(BaseAdvisor):
         list_knob_models = {}
         for (name, list_knob) in list_knobs:
             with tf.variable_scope(name):
-                list_knob_models[name] = EnasListKnobAdvisor(list_knob, batch_size)
+                list_knob_models[name] = EnasArchAdvisor(list_knob, batch_size)
 
         return list_knob_models
 
-    def _get_trial_type_original(self, worker_id, trial_no, total_trials, concurrent_trial_nos):
-        num_final_trains = 1 if self._do_final_train else 0
-        num_final_evals = self._num_final_evals
-        num_eval_per_cycle = self._num_eval_per_cycle
-        E = self._batch_size
-        T = num_eval_per_cycle + 1 # Period
-
-        # Schedule: |--<train & eval cycles>---||--<final evals> ---||--<final train>--|
-        # Final trains & evals can be parallelized
-        
-        is_final_train = trial_no > total_trials - num_final_trains
-        final_train_preceding_trial_no = total_trials - num_final_trains + 1 
-
-        is_final_eval = trial_no > total_trials - num_final_trains - num_final_evals
-        final_eval_preceding_trial_no = total_trials - num_final_trains - num_final_evals + 1 
-
-        # If not final eval or train, it is in the <train + eval> phase
-        # Every (X + 1) trials, only train 1 epoch for the first trial
-        # The other X trials is for training the controller
-        # For a "train" trial, wait until previous trials to finish
-        # Within a batch, "eval" trials can be done in parallel
-        # But must wait for the previous "eval" batch to finish
-        is_train = ((trial_no - 1) % T == 0)
-        train_trial_no = ((trial_no - 1) // T) * T + 1 # Corresponding train trial
-        minibatch_head_trial_no = train_trial_no + (trial_no - train_trial_no - 1) // E * E + 1  # Corresponding head trial for minibatch
-        train_preceding_trial_no = train_trial_no
-        eval_preceding_trial_no = minibatch_head_trial_no
-
-        if is_final_train:
-            if self._if_preceding_trials_are_running(final_train_preceding_trial_no, concurrent_trial_nos):
-                return (None, None)
-            return (ParamsType.NONE, 'FINAL_TRAIN')
-        
-        if is_final_eval:
-            if self._if_preceding_trials_are_running(final_eval_preceding_trial_no, concurrent_trial_nos):
-                return (None, None)
-            return (ParamsType.GLOBAL_RECENT, 'FINAL_EVAL')
-
-        if is_train:
-            if self._if_preceding_trials_are_running(train_preceding_trial_no, concurrent_trial_nos):
-                return (None, None)
-            
-            return (ParamsType.GLOBAL_RECENT, 'TRAIN')
-        else:            
-            if self._if_preceding_trials_are_running(eval_preceding_trial_no, concurrent_trial_nos):
-                return (None, None)
-
-            return (ParamsType.GLOBAL_RECENT, 'EVAL')
-
-    def _get_trial_type_isolated(self, worker_id, trial_no, total_trials, concurrent_trial_nos):
-        num_final_trains = 1 if self._do_final_train else 0
-        num_final_evals = self._num_final_evals
-        num_eval_per_cycle = self._num_eval_per_cycle
-        T = num_eval_per_cycle + 1 # Period
+    def _get_proposal_type(self, worker_id):
+        T = self._num_eval_per_cycle + 1 # Period
         trial_nos = self._worker_to_trial_nos[worker_id]
         local_trial_no = len(trial_nos) + 1
 
         # Schedule: |--<train & eval cycles>---||--<final evals> ---||--<final train>--|
-        # Final trains & evals can be parallelized
-        
-        is_final_train = trial_no > total_trials - num_final_trains
-        final_train_preceding_trial_no = total_trials - num_final_trains + 1 
 
-        is_final_eval = trial_no > total_trials - num_final_trains - num_final_evals
-        final_eval_preceding_trial_no = total_trials - num_final_trains - num_final_evals + 1 
+        # If it's final hours, perform final evals & trains
+        if self.get_train_hours_left() <= self._final_hours:
+
+            # If we have enough final trains, we stop
+            if len(self._final_trains) >= self._num_final_trains:
+                return 'STOP'
+
+            # If we have enough final evals, we perform final trains
+            # Otherwise, perform more final evals
+            if len(self._final_evals) >= self._num_final_evals:
+                return 'FINAL_TRAIN'
+            else:
+                return 'FINAL_EVAL'
 
         # If not final eval or train, it is in the <train + eval> phase
         # Every (X + 1) trials, only train 1 epoch for the first trial
@@ -216,36 +152,20 @@ class EnasAdvisor(BaseAdvisor):
         # Since trials on each worker are executed relatively sequentially, no need to check validity
         is_train_trial = ((local_trial_no - 1) % T == 0)
 
-        if is_final_train:
-            if self._if_preceding_trials_are_running(final_train_preceding_trial_no, concurrent_trial_nos):
-                return (None, None)
-            return (ParamsType.NONE, 'FINAL_TRAIN')
-        
-        if is_final_eval:
-            if self._if_preceding_trials_are_running(final_eval_preceding_trial_no, concurrent_trial_nos):
-                return (None, None)
-            return (ParamsType.LOCAL_RECENT, 'FINAL_EVAL')
-        
         if is_train_trial:
-            return (ParamsType.LOCAL_RECENT, 'TRAIN')
+            return 'TRAIN'
         else:
-            return (ParamsType.LOCAL_RECENT, 'EVAL')
+            return 'EVAL'
 
-    def _if_preceding_trials_are_running(self, trial_no, concurrent_trial_nos):
-        if len(concurrent_trial_nos) == 0:
-            return False
 
-        min_trial_no = min(concurrent_trial_nos)
-        return min_trial_no < trial_no
-
-class EnasListKnobAdvisor():
+class EnasArchAdvisor():
     def __init__(self, knob, batch_size):
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph)
         self._knob = knob
         self._batch_size = batch_size
-        self._batch_items = [] # A running batch of items for feedback
-        self._batch_scores = [] # A running batch of corresponding scores for feedback
+        self._items_batch = [] # A running batch of items for feedback
+        self._scores_batch = [] # A running batch of corresponding scores for feedback
 
         with self._graph.as_default():
             (self._item_logits, self._out_item_idxs, 
@@ -258,30 +178,30 @@ class EnasListKnobAdvisor():
         return items
 
     def feedback(self, items, score):
-        self._batch_items.append(items)
-        self._batch_scores.append(score)
+        self._items_batch.append(items)
+        self._scores_batch.append(score)
         
-        if len(self._batch_items) < self._batch_size:
+        if len(self._items_batch) < self._batch_size:
             return
 
-        self._train_model(self._batch_items, self._batch_scores)
-        self._batch_items = []
-        self._batch_scores = []
+        self._train_model(self._items_batch, self._scores_batch)
+        self._items_batch = []
+        self._scores_batch = []
 
     def _predict_with_model(self):
-        item_knobs = self._knob.items
+        knob_items = self._knob.items
         out_item_idxs = self._out_item_idxs
 
         with self._graph.as_default():
             item_idxs_real = self._sess.run(out_item_idxs)
-            items = [item_knob.values[idx].value for (item_knob, idx) in zip(item_knobs, item_idxs_real)]
+            items = [values[idx].value for (values, idx) in zip(knob_items, item_idxs_real)]
             return items
 
-    def _train_model(self, batch_items, batch_scores):
-        item_knobs = self._knob.items
+    def _train_model(self, items_batch, batch_scores):
+        knob_items = self._knob.items
 
         # Convert item values to indexes
-        batch_item_idxs = [[[x.value for x in item_knob.values].index(value) for (item_knob, value) in zip(item_knobs, items)] for items in batch_items]
+        batch_item_idxs = [[[x.value for x in values].index(value) for (values, value) in zip(knob_items, items)] for items in items_batch]
 
         logger.info('Training controller...')
 
@@ -301,7 +221,7 @@ class EnasListKnobAdvisor():
         self._sess.run(tf.global_variables_initializer())
 
     def _build_model(self, knob):
-        assert isinstance(knob, ListKnob)
+        assert isinstance(knob, ArchKnob)
 
         batch_size = self._batch_size
         N = len(knob) # Length of list
@@ -324,15 +244,15 @@ class EnasListKnobAdvisor():
     def _convert_values_to_reps(self, knob):
         knob_value_to_rep = {}
         max_rep = 0
-        for item_knob in knob.items:
-            for knob_value in item_knob.values:
+        for values in knob.items:
+            for knob_value in values:
                 if knob_value in knob_value_to_rep:
                     continue
 
                 knob_value_to_rep[knob_value] = max_rep
                 max_rep += 1
 
-        value_reps_by_item = [[knob_value_to_rep[x] for x in item_knob.values] for item_knob in knob.items]
+        value_reps_by_item = [[knob_value_to_rep[x] for x in values] for values in knob.items]
         return (value_reps_by_item, len(knob_value_to_rep))
       
     def _make_train_op(self, item_logits, item_idxs, scores):

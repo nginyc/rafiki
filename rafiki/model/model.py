@@ -5,6 +5,7 @@ from typing import Union, Dict, Optional
 from .knob import BaseKnob
 
 KnobConfig = Dict[str, BaseKnob]
+Knobs = Dict[str, any]
 Params = Dict[str, Union[str, int, float, np.ndarray]]
 
 class BaseModel(abc.ABC):

@@ -1,14 +1,12 @@
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.python.client import device_lib
 import json
-import os
 import tempfile
 import numpy as np
 import base64
 
 from rafiki.advisor import test_model_class
-from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob
+from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, PolicyKnob
 from rafiki.constants import TaskType, ModelDependency
 
 class TfFeedForward(BaseModel):
@@ -19,12 +17,13 @@ class TfFeedForward(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'max_epochs': FixedKnob(100),
+            'max_epochs': FixedKnob(10),
             'hidden_layer_count': IntegerKnob(1, 2),
             'hidden_layer_units': IntegerKnob(2, 128),
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
             'max_image_size': CategoricalKnob([16, 32, 48]),
+            'quick_train': PolicyKnob('QUICK_TRAIN') # Whether early stopping would be used
         }
 
     def __init__(self, **knobs):
@@ -34,13 +33,14 @@ class TfFeedForward(BaseModel):
         config.gpu_options.allow_growth = True
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph, config=config)
+        self._model = None
+        self._train_params = None
         
     def train(self, dataset_path, **kwargs):
         max_image_size = self._knobs['max_image_size']
         bs = self._knobs['batch_size']
         max_epochs = self._knobs['max_epochs']
-
-        utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
+        quick_train = self._knobs['quick_train']
 
         # Define plot for loss against epochs
         utils.logger.define_plot('Loss Over Epochs', ['loss', 'early_stop_val_loss'], x_axis='epoch')
@@ -51,6 +51,11 @@ class TfFeedForward(BaseModel):
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         (images, norm_mean, norm_std) = utils.dataset.normalize_images(images)
+
+        # Setup callbacks, adding early stopping if quick train
+        callbacks = [tf.keras.callbacks.LambdaCallback(on_epoch_end=self._on_train_epoch_end)]
+        if quick_train:
+            callbacks.append(tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2))
         
         with self._graph.as_default():
             with self._sess.as_default():
@@ -62,10 +67,7 @@ class TfFeedForward(BaseModel):
                     epochs=max_epochs,
                     validation_split=0.05,
                     batch_size=bs,
-                    callbacks=[
-                        tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2),
-                        tf.keras.callbacks.LambdaCallback(on_epoch_end=self._on_train_epoch_end)
-                    ]
+                    callbacks=callbacks
                 )
 
                 # Compute train accuracy

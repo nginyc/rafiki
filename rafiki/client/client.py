@@ -1,6 +1,5 @@
 import requests
 import json
-import pprint
 import pickle
 import os
 from functools import wraps
@@ -397,7 +396,7 @@ class Client(object):
         =====================       =====================
         **Budget Type**             **Description**
         ---------------------       ---------------------        
-        ``MODEL_TRIAL_COUNT``       No. of trials to conduct for each model (defaults to 5)
+        ``TIME_HOURS``              No. of hours to train (defaults to 0.1)
         ``GPU_COUNT``               No. of GPUs to exclusively allocate for training, across all models (defaults to 0)
         =====================       =====================
         '''

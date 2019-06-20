@@ -17,7 +17,7 @@ from collections import OrderedDict
 
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.model import BaseModel, utils, FixedKnob, FloatKnob, CategoricalKnob, PolicyKnob
-from rafiki.advisor import tune_model, make_advisor, AdvisorType, test_model_class
+from rafiki.advisor import tune_model, AdvisorType, test_model_class
 
 _Model = namedtuple('_Model', ['net', 'step'])
 
@@ -43,10 +43,10 @@ class PyDenseNetBc(BaseModel):
             'batch_size': CategoricalKnob([32, 64, 128]),
             'drop_rate': FloatKnob(0, 0.4),
             'max_image_size': FixedKnob(32),
+            'share_params': PolicyKnob('SHARE_PARAMS'),
 
             # Affects whether training is shortened by using early stopping
             'quick_train': PolicyKnob('QUICK_TRAIN'), 
-            'early_stop_trial_epochs': FixedKnob(200),
             'early_stop_train_val_samples': FixedKnob(1024),
             'early_stop_patience_epochs': FixedKnob(5)
         }
@@ -54,7 +54,8 @@ class PyDenseNetBc(BaseModel):
     def train(self, dataset_path, shared_params=None):
         (train_dataset, train_val_dataset, self._train_params) = self._load_train_dataset(dataset_path)
         self._model = self._build_model()
-        if shared_params is not None:
+        if self._knobs['share_params'] and shared_params is not None:
+            utils.logger.log('Loading shared parameters...')
             self._model = self._load_model_parameters(self._model, shared_params)
         self._model = self._train_model(self._model, train_dataset, train_val_dataset)
 
@@ -137,11 +138,9 @@ class PyDenseNetBc(BaseModel):
 
     def _train_model(self, model, train_dataset, train_val_dataset):
         trial_epochs = self._knobs['trial_epochs']
-        early_stop_trial_epochs = self._knobs['early_stop_trial_epochs']
         batch_size = self._knobs['batch_size']
         early_stop_patience = self._knobs['early_stop_patience_epochs']
         quick_train = self._knobs['quick_train']
-        num_epochs = early_stop_trial_epochs if quick_train else trial_epochs
         (net, step) = model
 
         # Define plots
@@ -152,13 +151,13 @@ class PyDenseNetBc(BaseModel):
 
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         train_val_dataloader = DataLoader(train_val_dataset, batch_size=batch_size)
-        (optimizer, scheduler) = self._get_optimizer(net, num_epochs)
+        (optimizer, scheduler) = self._get_optimizer(net, trial_epochs)
 
         net.train()
         [net] = self._set_device([net])
 
         early_stop_condition = EarlyStopCondition(patience=early_stop_patience)
-        for epoch in range(num_epochs):
+        for epoch in range(trial_epochs):
             utils.logger.log('Running epoch {}...'.format(epoch))
 
             scheduler.step()
@@ -582,68 +581,50 @@ class EarlyStopCondition():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--tune', action='store_true', help='Whether to perform hyperparameter tuning, or simply test the model')
     parser.add_argument('--train_path', type=str, default='data/cifar10_for_image_classification_train.zip', help='Path to train dataset')
     parser.add_argument('--val_path', type=str, default='data/cifar10_for_image_classification_val.zip', help='Path to validation dataset')
     parser.add_argument('--test_path', type=str, default='data/cifar10_for_image_classification_test.zip', help='Path to test dataset')
-
-    # Options for hyperparameter tuning
-    parser.add_argument('--total_trials', type=int, default=100, help='No. of trials to tune model over')
-    parser.add_argument('--param_policy', type=str, default='EXP_GREEDY', help='Parameter policy for `SkoptAdvisor` for hyperparameter tuning') 
     (args, _) = parser.parse_known_args()
 
-    if args.tune:
-        knob_config = PyDenseNetBc.get_knob_config()
-        advisor = make_advisor(knob_config, advisor_type=AdvisorType.SKOPT, param_policy=args.param_policy)
-        tune_model(
-            PyDenseNetBc, 
-            train_dataset_path=args.train_path,
-            val_dataset_path=args.val_path,
-            test_dataset_path=args.test_path,
-            total_trials=args.total_trials,
-            advisor=advisor
-        )
-
-    else:
-        test_model_class(
-            model_file_path=__file__,
-            model_class='PyDenseNetBc',
-            task=TaskType.IMAGE_CLASSIFICATION,
-            dependencies={ 
-                ModelDependency.TORCH: '1.0.1',
-                ModelDependency.TORCHVISION: '0.2.2'
-            },
-            train_dataset_path=args.train_path,
-            val_dataset_path=args.val_path,
-            test_dataset_path=args.test_path,
-            queries=[
-                [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 7, 0, 37, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 27, 84, 11, 0, 0, 0, 0, 0, 0, 119, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 88, 143, 110, 0, 0, 0, 0, 22, 93, 106, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 53, 129, 120, 147, 175, 157, 166, 135, 154, 168, 140, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 11, 137, 130, 128, 160, 176, 159, 167, 178, 149, 151, 144, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 0, 3, 0, 0, 115, 114, 106, 137, 168, 153, 156, 165, 167, 143, 157, 158, 11, 0], 
-                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 89, 139, 90, 94, 153, 149, 131, 151, 169, 172, 143, 159, 169, 48, 0], 
-                [0, 0, 0, 0, 0, 0, 2, 4, 1, 0, 0, 0, 98, 136, 110, 109, 110, 162, 135, 144, 149, 159, 167, 144, 158, 169, 119, 0], 
-                [0, 0, 2, 2, 1, 2, 0, 0, 0, 0, 26, 108, 117, 99, 111, 117, 136, 156, 134, 154, 154, 156, 160, 141, 147, 156, 178, 0], 
-                [3, 0, 0, 0, 0, 0, 0, 21, 53, 92, 117, 111, 103, 115, 129, 134, 143, 154, 165, 170, 154, 151, 154, 143, 138, 150, 165, 43], 
-                [0, 0, 23, 54, 65, 76, 85, 118, 128, 123, 111, 113, 118, 127, 125, 139, 133, 136, 160, 140, 155, 161, 144, 155, 172, 161, 189, 62], 
-                [0, 68, 94, 90, 111, 114, 111, 114, 115, 127, 135, 136, 143, 126, 127, 151, 154, 143, 148, 125, 162, 162, 144, 138, 153, 162, 196, 58], 
-                [70, 169, 129, 104, 98, 100, 94, 97, 98, 102, 108, 106, 119, 120, 129, 149, 156, 167, 190, 190, 196, 198, 198, 187, 197, 189, 184, 36], 
-                [16, 126, 171, 188, 188, 184, 171, 153, 135, 120, 126, 127, 146, 185, 195, 209, 208, 255, 209, 177, 245, 252, 251, 251, 247, 220, 206, 49], 
-                [0, 0, 0, 12, 67, 106, 164, 185, 199, 210, 211, 210, 208, 190, 150, 82, 8, 0, 0, 0, 178, 208, 188, 175, 162, 158, 151, 11], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-            ]
-        )
+    test_model_class(
+        model_file_path=__file__,
+        model_class='PyDenseNetBc',
+        task=TaskType.IMAGE_CLASSIFICATION,
+        dependencies={ 
+            ModelDependency.TORCH: '1.0.1',
+            ModelDependency.TORCHVISION: '0.2.2'
+        },
+        train_dataset_path=args.train_path,
+        val_dataset_path=args.val_path,
+        test_dataset_path=args.test_path,
+        queries=[
+            [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 7, 0, 37, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 27, 84, 11, 0, 0, 0, 0, 0, 0, 119, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 88, 143, 110, 0, 0, 0, 0, 22, 93, 106, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 53, 129, 120, 147, 175, 157, 166, 135, 154, 168, 140, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 11, 137, 130, 128, 160, 176, 159, 167, 178, 149, 151, 144, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 0, 3, 0, 0, 115, 114, 106, 137, 168, 153, 156, 165, 167, 143, 157, 158, 11, 0], 
+            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 89, 139, 90, 94, 153, 149, 131, 151, 169, 172, 143, 159, 169, 48, 0], 
+            [0, 0, 0, 0, 0, 0, 2, 4, 1, 0, 0, 0, 98, 136, 110, 109, 110, 162, 135, 144, 149, 159, 167, 144, 158, 169, 119, 0], 
+            [0, 0, 2, 2, 1, 2, 0, 0, 0, 0, 26, 108, 117, 99, 111, 117, 136, 156, 134, 154, 154, 156, 160, 141, 147, 156, 178, 0], 
+            [3, 0, 0, 0, 0, 0, 0, 21, 53, 92, 117, 111, 103, 115, 129, 134, 143, 154, 165, 170, 154, 151, 154, 143, 138, 150, 165, 43], 
+            [0, 0, 23, 54, 65, 76, 85, 118, 128, 123, 111, 113, 118, 127, 125, 139, 133, 136, 160, 140, 155, 161, 144, 155, 172, 161, 189, 62], 
+            [0, 68, 94, 90, 111, 114, 111, 114, 115, 127, 135, 136, 143, 126, 127, 151, 154, 143, 148, 125, 162, 162, 144, 138, 153, 162, 196, 58], 
+            [70, 169, 129, 104, 98, 100, 94, 97, 98, 102, 108, 106, 119, 120, 129, 149, 156, 167, 190, 190, 196, 198, 198, 187, 197, 189, 184, 36], 
+            [16, 126, 171, 188, 188, 184, 171, 153, 135, 120, 126, 127, 146, 185, 195, 209, 208, 255, 209, 177, 245, 252, 251, 251, 247, 220, 206, 49], 
+            [0, 0, 0, 12, 67, 106, 164, 185, 199, 210, 211, 210, 208, 190, 150, 82, 8, 0, 0, 0, 178, 208, 188, 175, 162, 158, 151, 11], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+        ]
+    )

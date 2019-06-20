@@ -30,7 +30,7 @@ class TfVgg16(BaseModel):
         self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph, config=config)
 
-    def train(self, dataset_path, ***kwargs):
+    def train(self, dataset_path, **kwargs):
         max_image_size = self._knobs.get('max_image_size')
         bs = self._knobs.get('batch_size')
         max_epochs = self._knobs.get('max_epochs')

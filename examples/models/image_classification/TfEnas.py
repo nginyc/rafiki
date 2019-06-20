@@ -10,10 +10,10 @@ from collections import namedtuple
 import numpy as np
 import argparse
 
-from rafiki.advisor import tune_model, test_model_class, make_advisor, AdvisorType
+from rafiki.advisor import tune_model, test_model_class
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
-                            FixedKnob, ListKnob, KnobValue, PolicyKnob
+                            FixedKnob, ArchKnob, KnobValue, PolicyKnob
 
 _Model = namedtuple('_Model', 
                     ['train_dataset_init_op', 'pred_dataset_init_op', 
@@ -32,9 +32,9 @@ TF_COLLECTION_MONITORED = 'MONITORED'
 
 class TfEnas(BaseModel):
     '''
-    Implements the child model of "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
+    Implements the child model of cell-based "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
     
-    Paper: https://arxiv.org/abs/1802.03268
+    Original paper: https://arxiv.org/abs/1802.03268
     '''
     # Memoise across trials to speed up training
     _datasets_memo = {}                 # { <dataset_path> -> <dataset> }
@@ -67,6 +67,7 @@ class TfEnas(BaseModel):
             'cutout_size': FixedKnob(0),
             'grad_clip_norm': FixedKnob(0),
             'use_aux_head': FixedKnob(False),
+            'share_params': PolicyKnob('SHARE_PARAMS'),
 
             # Affects whether model constructed is a scaled-down version with fewer layers
             'downscale': PolicyKnob('DOWNSCALE'), 
@@ -93,10 +94,10 @@ class TfEnas(BaseModel):
         # Make knob values for ops
         # Operations across blocks are considered identical for the purposes of architecture search
         # E.g. operation "conv3x3" with op code 0 has the same meaning across blocks 
-        op_knob_values = [KnobValue(i) for i in OPS]
+        ops = [KnobValue(i) for i in OPS]
 
         # Build list of knobs for ``cell_archs``
-        cell_archs_knobs = []
+        cell_archs = []
         for c in range(2): # 1 for normal cell, 1 for reduction cell
             
             # Make knob values for inputs
@@ -106,17 +107,11 @@ class TfEnas(BaseModel):
 
             # For each block
             for b in range(CELL_NUM_BLOCKS): 
-                # Input 1 (only can take input from prev prev cell, prev cell, or one of prev blocks)
-                input_1_knob = CategoricalKnob(input_knob_values[:(b + 2)])
-                op_1_knob = CategoricalKnob(op_knob_values)
-
-                # Input 2 (same)
-                input_2_knob = CategoricalKnob(input_knob_values[:(b + 2)])
-                op_2_knob = CategoricalKnob(op_knob_values)
-
-                cell_archs_knobs.extend([input_1_knob, op_1_knob, input_2_knob, op_2_knob]) 
+                # Input 1 & input 2 can only can take input from prev prev cell, prev cell, or one of prev blocks
+                inputs = input_knob_values[:(b + 2)]
+                cell_archs.extend([inputs, ops, inputs, ops]) 
             
-        return ListKnob(cell_archs_knobs)
+        return ArchKnob(cell_archs)
     
     def __init__(self, **knobs):
         super().__init__(**knobs)
@@ -141,7 +136,7 @@ class TfEnas(BaseModel):
         if not knobs['skip_train']:
             # Maybe load shared variables, then train model
             with self._graph.as_default():
-                if shared_params is not None:
+                if knobs['share_params'] and shared_params is not None:
                     self._maybe_load_tf_vars(shared_params)
                 self._train_model(images, classes, dataset_path=dataset_path, **knobs)
 
@@ -633,9 +628,10 @@ class TfEnas(BaseModel):
 
     def _feed_dataset_to_model(self, images, classes=None, is_train=False):
         m = self._model
-        
-        # Initialize dataset (mock classes if required)
         utils.logger.log('Feeding dataset to model...')
+
+        # Mock classes if required
+        classes = [0 for _ in range(len(images))]
         
         if is_train:
             self._sess.run(m.train_dataset_init_op, feed_dict={
@@ -1269,84 +1265,49 @@ class TimedRepeatCondition():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--tune', action='store_true', help='Whether to perform architecture tuning with ENAS, or simply test the model')
     parser.add_argument('--train_path', type=str, default='data/cifar10_for_image_classification_train.zip', help='Path to train dataset')
     parser.add_argument('--val_path', type=str, default='data/cifar10_for_image_classification_val.zip', help='Path to validation dataset')
     parser.add_argument('--test_path', type=str, default='data/cifar10_for_image_classification_test.zip', help='Path to test dataset')
-
-    # Options for ENAS
-    parser.add_argument('--enas_batch_size', type=int, default=10, help='Batch size for the ENAS controller')
-    parser.add_argument('--train_strategy', type=str, default='ISOLATED', help='Train strategy for ENAS controller')
-    parser.add_argument('--num_eval_per_cycle', type=int, default=300, help='No. of evaluations in a cycle of train-eval in ENAS')
-    parser.add_argument('--num_cycles', type=int, default=150, help='No. of cycles of train-eval in ENAS')
-    parser.add_argument('--num_final_evals', type=int, default=10, help='No. of final evaluations for ENAS')
-    parser.add_argument('--train_once', action='store_true', help='Whether to just train 1 (fixed) architecture')
-    parser.add_argument('--omit_final_train', action='store_true', help='Whether to omit training the final best architecture')
     (args, _) = parser.parse_known_args()
 
-    if args.tune:
-        if not args.train_once:
-            num_final_train_trials = 0 if args.omit_final_train else 1
-            period = args.num_eval_per_cycle + 1
-            trial_count = period * args.num_cycles + args.num_final_evals + num_final_train_trials
-        else:
-            trial_count = 1
-
-        advisor_config = { 'num_eval_per_cycle': args.num_eval_per_cycle, 
-                            'num_final_evals': args.num_final_evals,
-                            'batch_size': args.enas_batch_size, 
-                            'train_strategy': args.train_strategy,
-                            'do_final_train': not args.omit_final_train }
-        knob_config = TfEnas.get_knob_config()
-        advisor = make_advisor(knob_config, advisor_type=AdvisorType.ENAS, **advisor_config)
-
-        tune_model(
-            TfEnas, 
-            train_dataset_path=args.train_path,
-            val_dataset_path=args.val_path,
-            test_dataset_path=args.test_path,
-            total_trials=trial_count,
-            advisor=advisor
-        )
-    else:
-        test_model_class(
-            model_file_path=__file__,
-            model_class='TfEnas',
-            task=TaskType.IMAGE_CLASSIFICATION,
-            dependencies={
-                ModelDependency.TENSORFLOW: '1.12.0'
-            },
-            train_dataset_path=args.train_path,
-            val_dataset_path=args.val_path,
-            test_dataset_path=args.test_path,
-            queries=[
-                [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 7, 0, 37, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 27, 84, 11, 0, 0, 0, 0, 0, 0, 119, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 88, 143, 110, 0, 0, 0, 0, 22, 93, 106, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 53, 129, 120, 147, 175, 157, 166, 135, 154, 168, 140, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 11, 137, 130, 128, 160, 176, 159, 167, 178, 149, 151, 144, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 0, 3, 0, 0, 115, 114, 106, 137, 168, 153, 156, 165, 167, 143, 157, 158, 11, 0], 
-                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 89, 139, 90, 94, 153, 149, 131, 151, 169, 172, 143, 159, 169, 48, 0], 
-                [0, 0, 0, 0, 0, 0, 2, 4, 1, 0, 0, 0, 98, 136, 110, 109, 110, 162, 135, 144, 149, 159, 167, 144, 158, 169, 119, 0], 
-                [0, 0, 2, 2, 1, 2, 0, 0, 0, 0, 26, 108, 117, 99, 111, 117, 136, 156, 134, 154, 154, 156, 160, 141, 147, 156, 178, 0], 
-                [3, 0, 0, 0, 0, 0, 0, 21, 53, 92, 117, 111, 103, 115, 129, 134, 143, 154, 165, 170, 154, 151, 154, 143, 138, 150, 165, 43], 
-                [0, 0, 23, 54, 65, 76, 85, 118, 128, 123, 111, 113, 118, 127, 125, 139, 133, 136, 160, 140, 155, 161, 144, 155, 172, 161, 189, 62], 
-                [0, 68, 94, 90, 111, 114, 111, 114, 115, 127, 135, 136, 143, 126, 127, 151, 154, 143, 148, 125, 162, 162, 144, 138, 153, 162, 196, 58], 
-                [70, 169, 129, 104, 98, 100, 94, 97, 98, 102, 108, 106, 119, 120, 129, 149, 156, 167, 190, 190, 196, 198, 198, 187, 197, 189, 184, 36], 
-                [16, 126, 171, 188, 188, 184, 171, 153, 135, 120, 126, 127, 146, 185, 195, 209, 208, 255, 209, 177, 245, 252, 251, 251, 247, 220, 206, 49], 
-                [0, 0, 0, 12, 67, 106, 164, 185, 199, 210, 211, 210, 208, 190, 150, 82, 8, 0, 0, 0, 178, 208, 188, 175, 162, 158, 151, 11], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-            ]
-        )
+    test_model_class(
+        model_file_path=__file__,
+        model_class='TfEnas',
+        task=TaskType.IMAGE_CLASSIFICATION,
+        dependencies={
+            ModelDependency.TENSORFLOW: '1.12.0'
+        },
+        train_dataset_path=args.train_path,
+        val_dataset_path=args.val_path,
+        test_dataset_path=args.test_path,
+        queries=[
+            [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 7, 0, 37, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 27, 84, 11, 0, 0, 0, 0, 0, 0, 119, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 88, 143, 110, 0, 0, 0, 0, 22, 93, 106, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 53, 129, 120, 147, 175, 157, 166, 135, 154, 168, 140, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 11, 137, 130, 128, 160, 176, 159, 167, 178, 149, 151, 144, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 0, 3, 0, 0, 115, 114, 106, 137, 168, 153, 156, 165, 167, 143, 157, 158, 11, 0], 
+            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 89, 139, 90, 94, 153, 149, 131, 151, 169, 172, 143, 159, 169, 48, 0], 
+            [0, 0, 0, 0, 0, 0, 2, 4, 1, 0, 0, 0, 98, 136, 110, 109, 110, 162, 135, 144, 149, 159, 167, 144, 158, 169, 119, 0], 
+            [0, 0, 2, 2, 1, 2, 0, 0, 0, 0, 26, 108, 117, 99, 111, 117, 136, 156, 134, 154, 154, 156, 160, 141, 147, 156, 178, 0], 
+            [3, 0, 0, 0, 0, 0, 0, 21, 53, 92, 117, 111, 103, 115, 129, 134, 143, 154, 165, 170, 154, 151, 154, 143, 138, 150, 165, 43], 
+            [0, 0, 23, 54, 65, 76, 85, 118, 128, 123, 111, 113, 118, 127, 125, 139, 133, 136, 160, 140, 155, 161, 144, 155, 172, 161, 189, 62], 
+            [0, 68, 94, 90, 111, 114, 111, 114, 115, 127, 135, 136, 143, 126, 127, 151, 154, 143, 148, 125, 162, 162, 144, 138, 153, 162, 196, 58], 
+            [70, 169, 129, 104, 98, 100, 94, 97, 98, 102, 108, 106, 119, 120, 129, 149, 156, 167, 190, 190, 196, 198, 198, 187, 197, 189, 184, 36], 
+            [16, 126, 171, 188, 188, 184, 171, 153, 135, 120, 126, 127, 146, 185, 195, 209, 208, 255, 209, 177, 245, 252, 251, 251, 247, 220, 206, 49], 
+            [0, 0, 0, 12, 67, 106, 164, 185, 199, 210, 211, 210, 208, 190, 150, 82, 8, 0, 0, 0, 178, 208, 188, 175, 162, 158, 151, 11], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+        ]
+    )
