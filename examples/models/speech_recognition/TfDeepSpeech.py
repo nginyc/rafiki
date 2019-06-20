@@ -20,8 +20,8 @@ import base64
 
 from ds_ctcdecoder import ctc_beam_search_decoder_batch, ctc_beam_search_decoder, Scorer
 
-from rafiki.model import BaseModel, FixedKnob, FloatKnob, CategoricalKnob, dataset_utils, logger, test_model_class, InvalidModelParamsException
-# IntegerKnob
+from rafiki.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, \
+    dataset_utils, logger, test_model_class, InvalidModelParamsException
 
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.utils.text import Alphabet
@@ -55,9 +55,15 @@ class TfDeepSpeech(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': FixedKnob(1),
-            'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
+            'epochs': FixedKnob(3),
             'batch_size': CategoricalKnob([1]),
+            'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
+            'n_hidden': CategoricalKnob([128, 256, 512, 1024, 2048]),
+            # lm_alpha and lm_beta can be used for further hyperparameter tuning
+            # the alpha hyperparameter of the CTC decoder. Language Model weight
+            'lm_alpha': FloatKnob(0.75, 0.75),
+            # the beta hyperparameter of the CTC decoder. Word insertion weight.'
+            'lm_beta': FloatKnob(1.85, 1.85)
         }
 
     @staticmethod
@@ -67,24 +73,12 @@ class TfDeepSpeech(BaseModel):
 
         f = tf.app.flags
 
-        f.DEFINE_string('train_files', '',
-                        'comma separated list of files specifying the dataset used for training. Multiple files will get merged. If empty, training will not be run.')
-        f.DEFINE_string('dev_files', '',
-                        'comma separated list of files specifying the dataset used for validation. Multiple files will get merged. If empty, validation will not be run.')
-        f.DEFINE_string('test_files', '',
-                        'comma separated list of files specifying the dataset used for testing. Multiple files will get merged. If empty, the model will not be tested.')
-
-        f.DEFINE_string('feature_cache', '',
-                        'path where cached features extracted from --train_files will be saved. If empty, caching will be done in memory and no files will be written.')
-
         f.DEFINE_integer('feature_win_len', 32, 'feature extraction audio window length in milliseconds')
         f.DEFINE_integer('feature_win_step', 20, 'feature extraction window step length in milliseconds')
         f.DEFINE_integer('audio_sample_rate', 16000, 'sample rate value expected by model')
 
         # Global Constants
         # ================
-
-        f.DEFINE_integer('epochs', 75, 'how many epochs (complete runs through the train files) to train for')
 
         f.DEFINE_float('dropout_rate', 0.05, 'dropout rate for feedforward layers')
         f.DEFINE_float('dropout_rate2', -1.0, 'dropout rate for layer 2 - defaults to dropout_rate')
@@ -100,81 +94,31 @@ class TfDeepSpeech(BaseModel):
         f.DEFINE_float('beta1', 0.9, 'beta 1 parameter of Adam optimizer')
         f.DEFINE_float('beta2', 0.999, 'beta 2 parameter of Adam optimizer')
         f.DEFINE_float('epsilon', 1e-8, 'epsilon parameter of Adam optimizer')
-        f.DEFINE_float('learning_rate', 0.001, 'learning rate of Adam optimizer')
-
-        # Batch sizes
-
-        f.DEFINE_integer('train_batch_size', 1, 'number of elements in a training batch')
-        f.DEFINE_integer('dev_batch_size', 1, 'number of elements in a validation batch')
-        f.DEFINE_integer('test_batch_size', 1, 'number of elements in a test batch')
-
-        f.DEFINE_integer('export_batch_size', 1, 'number of elements per batch on the exported graph')
-
-        # Performance(UNSUPPORTED)
-        f.DEFINE_integer('inter_op_parallelism_threads', 0,
-                         'number of inter-op parallelism threads - see tf.ConfigProto for more details')
-        f.DEFINE_integer('intra_op_parallelism_threads', 0,
-                         'number of intra-op parallelism threads - see tf.ConfigProto for more details')
-
-        # Sample limits
-
-        f.DEFINE_integer('limit_train', 0, 'maximum number of elements to use from train set - 0 means no limit')
-        f.DEFINE_integer('limit_dev', 0, 'maximum number of elements to use from validation set- 0 means no limit')
-        f.DEFINE_integer('limit_test', 0, 'maximum number of elements to use from test set- 0 means no limit')
 
         # Checkpointing
 
         f.DEFINE_string('checkpoint_dir', '',
-                        'directory in which checkpoints are stored - defaults to directory "/tmp/deepspeech/checkpoints" within user\'s data home specified by the XDG Base Directory Specification')
+                        'directory in which checkpoints are stored - defaults to directory "/tmp/deepspeech/checkpoints" within user\'s home')
         f.DEFINE_integer('checkpoint_secs', 600, 'checkpoint saving interval in seconds')
         f.DEFINE_integer('max_to_keep', 3, 'number of checkpoint files to keep - default value is 5')
-        f.DEFINE_string('load', 'auto',
-                        '"last" for loading most recent epoch checkpoint, "best" for loading best validated checkpoint, "init" for initializing a fresh model, "auto" for trying the other options in order last > best > init')
 
         # Exporting
 
-        f.DEFINE_integer('export_version', 1, 'version number of the exported model')
-        f.DEFINE_boolean('export_tflite', False, 'export a graph ready for TF Lite engine')
         f.DEFINE_boolean('use_seq_length', True,
                          'have sequence_length in the exported graph(will make tfcompile unhappy)')
-        f.DEFINE_integer('n_steps', 16,
-                         'how many timesteps to process at once by the export graph, higher values mean more latency')
 
         # Reporting
 
-        f.DEFINE_integer('log_level', 1, 'log level for console logs - 0: INFO, 1: WARN, 2: ERROR, 3: FATAL')
-        f.DEFINE_boolean('show_progressbar', True,
-                         'Show progress for training, validation and testing processes. Log level should be > 0.')
-
-        f.DEFINE_boolean('log_placement', False, 'whether to log device placement of the operators to the console')
         f.DEFINE_integer('report_count', 10,
                          'number of phrases with lowest WER(best matching) to print out during a WER report')
-
-        f.DEFINE_string('summary_dir', '',
-                        'target directory for TensorBoard summaries - defaults to directory "deepspeech/summaries" within user\'s data home specified by the XDG Base Directory Specification')
-
-        # Geometry
-
-        f.DEFINE_integer('n_hidden', 2048, 'layer width to use when initialising layers')
 
         # Initialization
 
         f.DEFINE_integer('random_seed', 4568, 'default random seed that is used to initialize variables')
 
-        # Early Stopping
-
-        f.DEFINE_boolean('early_stop', True,
-                         'enable early stopping mechanism over validation dataset. If validation is not being run, early stopping is disabled.')
-        f.DEFINE_integer('es_steps', 4,
-                         'number of validations to consider for early stopping. Loss is not stored in the checkpoint so when checkpoint is revived it starts the loss calculation from start at that point')
-        f.DEFINE_float('es_mean_th', 0.5,
-                       'mean threshold for loss to determine the condition if early stopping is required')
-        f.DEFINE_float('es_std_th', 0.5,
-                       'standard deviation threshold for loss to determine the condition if early stopping is required')
-
         # Decoder
 
-        f.DEFINE_string('alphabet_config_path', 'data/alphabet.txt',
+        f.DEFINE_string('alphabet_config_path', 'examples/datasets/speech_recognition/alphabet.txt',
                         'path to the configuration file specifying the alphabet used by the network. See the comment in data/alphabet.txt for a description of the format.')
         f.DEFINE_string('lm_binary_path', 'data/lm.binary',
                         'path to the language model binary file created with KenLM')
@@ -185,13 +129,7 @@ class TfDeepSpeech(BaseModel):
         f.DEFINE_float('lm_alpha', 0.75, 'the alpha hyperparameter of the CTC decoder. Language Model weight.')
         f.DEFINE_float('lm_beta', 1.85, 'the beta hyperparameter of the CTC decoder. Word insertion weight.')
 
-        # Inference mode
-
-        f.DEFINE_string('one_shot_infer', '',
-                        'one-shot inference mode: specify a wav file and the script will load the checkpoint and perform inference on it.')
-
-    @staticmethod
-    def initialize_globals():
+    def initialize_globals(self):
 
         def get_available_gpus():
             r"""
@@ -227,18 +165,15 @@ class TfDeepSpeech(BaseModel):
         if not os.path.isdir(FLAGS.checkpoint_dir):
             os.makedirs(FLAGS.checkpoint_dir)
 
-        if FLAGS.load not in ['last', 'best', 'init', 'auto']:
-            FLAGS.load = 'auto'
-
-        c.alphabet = Alphabet(os.path.abspath(os.path.abspath('examples/datasets/speech_recognition/alphabet.txt')))
+        c.alphabet = Alphabet(os.path.abspath(os.path.abspath(FLAGS.alphabet_config_path)))
 
         c.n_input = 26
 
-        # The number of frames in the context
+        # The number of frames in theinitialize_globals context
         c.n_context = 9
 
         # Number of units in hidden layers
-        c.n_hidden = FLAGS.n_hidden
+        c.n_hidden = self._knobs.get('n_hidden')
 
         c.n_hidden_1 = c.n_hidden
 
@@ -357,7 +292,8 @@ class TfDeepSpeech(BaseModel):
         # we will use the Adam method for optimization (http://arxiv.org/abs/1412.6980),
         # because, generally, it requires less fine-tuning.
 
-        optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate,
+        learning_rate = self._knobs.get('learning_rate')
+        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate,
                                            beta1=FLAGS.beta1,
                                            beta2=FLAGS.beta2,
                                            epsilon=FLAGS.epsilon)
@@ -840,7 +776,6 @@ class TfDeepSpeech(BaseModel):
                 if is_train and FLAGS.checkpoint_secs > 0 and time.time() - checkpoint_time > FLAGS.checkpoint_secs:
                     checkpoint_saver.save(session, checkpoint_path, global_step=current_step)
                     checkpoint_time = time.time()
-
             mean_loss = total_loss / step_count if step_count > 0 else 0.0
             return mean_loss, step_count
 
@@ -851,6 +786,9 @@ class TfDeepSpeech(BaseModel):
                 # Training
                 logger.log('Training epoch %d...' % epoch)
                 train_loss, _ = run_set('train', epoch, train_init_op)
+                if train_loss == float('inf'):
+                    logger.log('No valid CTC path found due to shorter input sequence than label. '
+                               '(Try other learning_rate and n_hidden combinations)')
                 logger.log('Finished training epoch %d - loss: %f' % (epoch, train_loss))
                 checkpoint_saver.save(session, checkpoint_path, global_step=global_step)
 
@@ -862,7 +800,7 @@ class TfDeepSpeech(BaseModel):
         Config = self.c
         tf.reset_default_graph()
 
-        scorer = Scorer(FLAGS.lm_alpha, FLAGS.lm_beta,
+        scorer = Scorer(self._knobs.get('lm_alpha'), self._knobs.get('lm_beta'),
                         FLAGS.lm_binary_path, FLAGS.lm_trie_path,
                         Config.alphabet)
 
@@ -1093,7 +1031,7 @@ class TfDeepSpeech(BaseModel):
 
             logits = np.squeeze(logits)
 
-            scorer = Scorer(FLAGS.lm_alpha, FLAGS.lm_beta,
+            scorer = Scorer(self._knobs.get('lm_alpha'), self._knobs.get('lm_beta'),
                             FLAGS.lm_binary_path, FLAGS.lm_trie_path,
                             Config.alphabet)
             decoded = ctc_beam_search_decoder(logits, Config.alphabet, FLAGS.beam_width, scorer=scorer)
@@ -1189,7 +1127,7 @@ if __name__ == '__main__':
         model_class='TfDeepSpeech',
         task=TaskType.SPEECH_RECOGNITION,
         dependencies={
-            # ModelDependency.TENSORFLOW: '1.12.0',
+            ModelDependency.TENSORFLOW: '1.12.0',
             ModelDependency.DS_CTCDECODER: os.path.abspath('examples/models/speech_recognition/utils/taskcluster.py')
         },
         # Demonstrative only, this dataset only contains one sample, we use batch_size = 1 to run
