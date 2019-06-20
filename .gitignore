@@ -10,6 +10,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# PIP cache
+.cache/
+
 # MacOS
 .DS_Store
 
@@ -27,6 +30,13 @@ data/*
 logs/*
 !logs/.gitkeep
 
+# Params
+params/*
+!params/.gitkeep
+
 # IPython notebooks
 .ipynb_checkpoints/*
 *.ipynb
+
+# SQL dump files
+*.sql

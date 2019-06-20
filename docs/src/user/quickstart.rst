@@ -3,8 +3,6 @@
 Quick Start
 ====================================================================
 
-.. contents:: Table of Contents
-
 This guide assumes you have deployed your own empty instance of Rafiki and you want to try a *full* train-inference flow as the *Super Admin*, 
 including adding of models, submitting model training & serving jobs, and making predictions on Rafiki.
 
@@ -56,7 +54,7 @@ Creating models
 .. include:: ./client-create-models.include.rst
 
 
-Listing models by task
+Listing available models by task
 --------------------------------------------------------------------
 
 .. include:: ./client-list-models.include.rst

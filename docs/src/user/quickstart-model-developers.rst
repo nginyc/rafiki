@@ -3,8 +3,6 @@
 Quick Start (Model Developers)
 ====================================================================
 
-.. contents:: Table of Contents
-
 As a Model Developer, you can manage models and manage train & inference jobs on Rafiki.
 
 This quickstart only highlights the key methods available to manage models.
@@ -40,7 +38,19 @@ Creating models
 .. include:: ./client-create-models.include.rst
 
 
-Listing models by task
+Listing available models by task
 --------------------------------------------------------------------
 
 .. include:: ./client-list-models.include.rst
+
+
+Deleting a model
+--------------------------------------------------------------------
+
+Example:
+
+    .. code-block:: python
+
+        client.delete_model('fb5671f1-c673-40e7-b53a-9208eb1ccc50')
+
+.. seealso:: :meth:`rafiki.client.Client.delete_model`        

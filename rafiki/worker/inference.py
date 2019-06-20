@@ -85,7 +85,9 @@ class InferenceWorker(object):
         model_inst = clazz(**trial.knobs)
 
         # Unpickle model parameters and load it
-        parameters = pickle.loads(trial.parameters)
+        with open(trial.params_file_path, 'rb') as f:
+            parameters = f.read()
+        parameters = pickle.loads(parameters)
         model_inst.load_parameters(parameters)
 
         return model_inst

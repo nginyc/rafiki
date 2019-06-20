@@ -109,7 +109,7 @@ class FixedKnob(BaseKnob):
 
 class IntegerKnob(BaseKnob):
     '''
-    Knob type epresenting `any` ``int`` value within a specific interval [``value_min``, ``value_max``].
+    Knob type representing `any` ``int`` value within a specific interval [``value_min``, ``value_max``].
     ``is_exp`` specifies whether the knob value should be scaled exponentially.
     '''
 

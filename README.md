@@ -20,11 +20,11 @@ Prerequisites: MacOS or Linux environment
     bash scripts/start.sh
     ```
 
-To destroy Rafiki's complete stack:
+To completely destroy Rafiki's stack:
 
-    ```sh
-    bash scripts/stop.sh
-    ```
+```sh
+bash scripts/stop.sh
+```
 
 More instructions are available in [Rafiki's Developer Guide](https://nginyc.github.io/rafiki/docs/latest/docs/src/dev).
 
