@@ -4,7 +4,7 @@ import logging
 from collections import defaultdict
 
 from rafiki.model import ArchKnob, FixedKnob, PolicyKnob
-from rafiki.param_store import ParamsType
+from rafiki.param_cache import ParamsType
 
 from .advisor import BaseAdvisor, Proposal
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 ENAS_BATCH_SIZE = 10
 ENAS_NUM_EVAL_PER_CYCLE = 300
 ENAS_NUM_FINAL_EVALS = 10
-ENAS_FINAL_HOURS = 0.05 # Last X hours to conduct final evals & final trains
+ENAS_FINAL_HOURS = 12 # Last X hours to conduct final evals & final trains
 ENAS_NUM_FINAL_TRAINS = 1
 
 class EnasAdvisor(BaseAdvisor):
@@ -33,8 +33,8 @@ class EnasAdvisor(BaseAdvisor):
             BaseAdvisor.has_policies(knob_config, ['SHARE_PARAMS', 'DOWNSCALE', 'QUICK_TRAIN', 'QUICK_EVAL', 'SKIP_TRAIN']) and \
             time_hours >= ENAS_FINAL_HOURS 
 
-    def __init__(self, knob_config, budget):
-        super().__init__(knob_config, budget)
+    def __init__(self, knob_config, budget, workers):
+        super().__init__(knob_config, budget, workers)
         self._batch_size = ENAS_BATCH_SIZE
         self._num_eval_per_cycle = ENAS_NUM_EVAL_PER_CYCLE
         self._num_final_evals = ENAS_NUM_FINAL_EVALS
@@ -42,43 +42,57 @@ class EnasAdvisor(BaseAdvisor):
         self._final_hours = ENAS_FINAL_HOURS
         self._final_evals = [] # [(score, proposal)]
         self._final_trains = []  # [(score, proposal)]
-        self._worker_to_trial_nos = defaultdict(list) # { <worker_id>: [<trial no>]}
+        self._worker_to_num_trials = defaultdict(int) # { <worker_id>: <how many trials has worker run?> }
         (self._fixed_knob_config, knob_config) = self.extract_knob_type(knob_config, FixedKnob)
         (self._policy_knob_config, knob_config) = self.extract_knob_type(knob_config, PolicyKnob)
         self._list_knob_models = self._build_models(knob_config, self._batch_size)
 
-    def propose(self, worker_id, trial_no, concurrent_trial_nos):
+    def propose(self, worker_id, num_trials):
         proposal_type = self._get_proposal_type(worker_id)
         meta = {'proposal_type': proposal_type}
 
-        # Keep track of trial nos at each worker
-        self._worker_to_trial_nos[worker_id].append(trial_no)
+        # Keep track of trial at each worker
+        self._worker_to_num_trials[worker_id] += 1
 
         if proposal_type == 'TRAIN':
             knobs = self._propose_knobs(['DOWNSCALE', 'QUICK_TRAIN'])
-            return Proposal(knobs, params_type=ParamsType.LOCAL_RECENT, 
-                            should_eval=False, should_save_to_disk=False, meta=meta)
+            return Proposal(knobs,
+                            worker_id=worker_id, 
+                            params_type=ParamsType.LOCAL_RECENT, 
+                            to_eval=False, 
+                            to_cache_params=True, 
+                            to_save_params=False, 
+                            meta=meta)
         elif proposal_type == 'EVAL':
             knobs = self._propose_knobs(['DOWNSCALE', 'QUICK_EVAL', 'SKIP_TRAIN'])
-            return Proposal(knobs, params_type=ParamsType.LOCAL_RECENT, 
-                            should_save_to_disk=False, meta=meta)
+            return Proposal(knobs, 
+                            worker_id=worker_id,
+                            params_type=ParamsType.LOCAL_RECENT, 
+                            to_save_params=False, 
+                            meta=meta)
         elif proposal_type == 'FINAL_EVAL':
             knobs = self._propose_knobs(['DOWNSCALE', 'SKIP_TRAIN'])
-            return Proposal(knobs, params_type=ParamsType.LOCAL_RECENT, meta=meta)
+            return Proposal(knobs, 
+                            worker_id=worker_id,
+                            params_type=ParamsType.LOCAL_RECENT, 
+                            meta=meta)
         elif proposal_type == 'FINAL_TRAIN':
             # Do standard model training from scratch with final knobs
             knobs = self._propose_final_knobs()
-            return Proposal(knobs, meta=meta)
-        elif proposal_type == 'STOP':
-            return Proposal(should_stop=True, meta=meta)
+            return Proposal(knobs, worker_id=worker_id, meta=meta)
+        elif proposal_type is None:
+            return None
 
-    def feedback(self, score, proposal: Proposal):
+    def feedback(self, result):
+        proposal = result.proposal
         knobs = proposal.knobs
+        score = result.score
+        proposal_type = proposal.meta.get('proposal_type') 
 
         # Keep track of results of final evals & trains
-        if proposal.meta.get('proposal_type') == 'FINAL_EVAL':
+        if proposal_type == 'FINAL_EVAL':
             self._final_evals.append((score, proposal))
-        elif proposal.meta.get('proposal_type') == 'FINAL_TRAIN':
+        elif proposal_type == 'FINAL_TRAIN':
             self._final_trains.append((score, proposal))
 
         for (name, list_knob_model) in self._list_knob_models.items():
@@ -125,19 +139,18 @@ class EnasAdvisor(BaseAdvisor):
         return list_knob_models
 
     def _get_proposal_type(self, worker_id):
+        # If we have enough final trains, we stop
+        if len(self._final_trains) >= self._num_final_trains:
+            return None
+
         T = self._num_eval_per_cycle + 1 # Period
-        trial_nos = self._worker_to_trial_nos[worker_id]
-        local_trial_no = len(trial_nos) + 1
+        worker_num_trials = self._worker_to_num_trials[worker_id]
+        local_trial_no = worker_num_trials + 1
 
         # Schedule: |--<train & eval cycles>---||--<final evals> ---||--<final train>--|
 
         # If it's final hours, perform final evals & trains
         if self.get_train_hours_left() <= self._final_hours:
-
-            # If we have enough final trains, we stop
-            if len(self._final_trains) >= self._num_final_trains:
-                return 'STOP'
-
             # If we have enough final evals, we perform final trains
             # Otherwise, perform more final evals
             if len(self._final_evals) >= self._num_final_evals:

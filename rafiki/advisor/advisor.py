@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from rafiki.model import IntegerKnob, CategoricalKnob, FloatKnob, ArchKnob, \
                         FixedKnob, PolicyKnob, KnobConfig, Knobs, BaseKnob
-from rafiki.param_store import ParamsType
+from rafiki.param_cache import ParamsType
 
 DEFAULT_TRAIN_HOURS = 0.1
 DEFAULT_MAX_TRIALS = -1
@@ -24,6 +24,49 @@ class AdvisorType(Enum):
     RANDOM = 'RANDOM'
     ENAS = 'ENAS'
 
+class TrainWorker():
+    def __init__(self, 
+                worker_id: str, 
+                gpus: int = 0): # No. of GPUs allocated to worker
+        self.worker_id = worker_id
+        self.gpus = gpus
+
+    def __str__(self):
+        return str(self.__dict__)
+
+class Proposal():
+    def __init__(self, 
+                knobs: Knobs = None, 
+                worker_id: str = None, # Worker to run this proposal
+                params_type: ParamsType = ParamsType.NONE, # Parameters to use for this trial
+                to_eval=True, # Whether the model should be evaluated
+                to_cache_params=False, # Whether this trial's parameters should be cached
+                to_save_params=True, # Whether this trial's parameters should be persisted
+                meta: dict = None): # Extra metadata associated with proposal
+        self.knobs = knobs
+        self.worker_id = worker_id
+        self.params_type = ParamsType(params_type)
+        self.to_eval = to_eval
+        self.to_cache_params = to_cache_params
+        self.to_save_params = to_save_params
+        self.meta = meta or {}
+
+    def __str__(self):
+        return str(self.__dict__)
+
+class ProposalResult():
+    def __init__(self, 
+                proposal: Proposal, 
+                score: float, # Score for the proposal
+                worker_id: str): # ID of worker that ran the proposal
+        self.proposal = proposal
+        self.score = score
+        self.worker_id = worker_id
+
+    def __str__(self):
+        return str(self.__dict__)
+
+
 # Advisor to use, in descending priority
 ADVISOR_TYPES = [AdvisorType.FIXED, 
                 AdvisorType.ENAS, 
@@ -31,19 +74,13 @@ ADVISOR_TYPES = [AdvisorType.FIXED,
                 AdvisorType.BAYES_OPT,
                 AdvisorType.RANDOM]
 
-def make_advisor(knob_config: KnobConfig, budget: Budget, advisor_type=None, **kwargs):
-    if advisor_type is None:
-        for advisor_type in ADVISOR_TYPES:
-            clazz = _get_advisor_class_from_type(advisor_type)
-            if clazz.is_compatible(knob_config, budget):
-                return clazz(knob_config, budget, **kwargs)
-        
-        raise UnsupportedKnobConfigError()
-    else:
-        advisor_type = AdvisorType(advisor_type)
+def make_advisor(knob_config: KnobConfig, budget: Budget, workers: List[TrainWorker]):
+    for advisor_type in ADVISOR_TYPES:
         clazz = _get_advisor_class_from_type(advisor_type)
-        assert clazz.is_compatible(knob_config, budget)
-        return clazz(knob_config, budget, **kwargs)
+        if clazz.is_compatible(knob_config, budget):
+            return clazz(knob_config, budget, workers)
+    
+    raise UnsupportedKnobConfigError()
 
 def _get_advisor_class_from_type(advisor_type):
     if advisor_type == AdvisorType.ENAS:
@@ -60,35 +97,6 @@ def _get_advisor_class_from_type(advisor_type):
     elif advisor_type == AdvisorType.FIXED:
         return FixedAdvisor
 
-class Proposal():
-    def __init__(self, 
-                knobs: Knobs = None, 
-                params_type: ParamsType = ParamsType.NONE, # Parameters to use for this trial
-                should_wait=False, # Tells the worker to sleep for a while before trying again
-                should_stop=False, # Tells the worker to stop 
-                should_eval=True, # Whether the model should be evaluated
-                should_save_to_disk=True, # Whether this trial's trained model should be saved to disk
-                meta: dict = None): # Extra metadata associated with proposal
-        self.knobs = knobs
-        self.params_type = ParamsType(params_type)
-        self.should_wait = should_wait
-        self.should_stop = should_stop
-        self.should_eval = should_eval
-        self.should_save_to_disk = should_save_to_disk
-        self.meta = meta or {}
-
-    def to_jsonable(self):
-        return {
-            **self.__dict__,
-            'params_type': self.params_type.value,
-        }
-
-    @staticmethod
-    def from_jsonable(jsonable):
-        return Proposal(**jsonable)
-
-    def __str__(self):
-        return str(self.to_jsonable())
 
 class BaseAdvisor(abc.ABC):
     '''
@@ -99,8 +107,9 @@ class BaseAdvisor(abc.ABC):
     def is_compatible(knob_config: KnobConfig, budget: Budget) -> bool:
         raise NotImplementedError()
     
-    def __init__(self, knob_config: KnobConfig, budget: Budget, **kwargs):
+    def __init__(self, knob_config: KnobConfig, budget: Budget, workers: List[TrainWorker]):
         self.knob_config = knob_config
+        self.workers = workers
         self.total_train_hours = budget.get('TIME_HOURS', DEFAULT_TRAIN_HOURS)
         self.max_trials = budget.get('MODEL_TRIAL_COUNT', DEFAULT_MAX_TRIALS)
 
@@ -108,18 +117,21 @@ class BaseAdvisor(abc.ABC):
         self._start_time = datetime.now()
         self._stop_time = self._start_time + timedelta(hours=self.total_train_hours)
 
-    # TODO: Advisor to read train job progress from DB directly instead of being told by workers 
     @abc.abstractmethod
-    def propose(self, worker_id: str, trial_no: int, concurrent_trial_nos: List[int]) -> Proposal:
+    def propose(self, worker_id: str, num_trials: int) -> Proposal:
         '''
-        :param int trial_no: Upcoming trial no to get proposal for
-        :param list[int] concurrent_trial_nos: Trial nos of other trials that are currently concurrently running 
-        :param str worker_id: ID of worker to get proposal for 
+        Returns a proposal or None if there are currently no proposals. 
+
+        :param str worker_id: Worker to make a proposal for
+        :param int num_trials: Total no. of trials that has been started
         '''
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def feedback(self, score: float, proposal: Proposal):
+    def feedback(self, result: ProposalResult):
+        '''
+        Ingests feedback for the result of a proposal.
+        '''
         raise NotImplementedError()
 
     # Returns no. of hours left for training based on allocated budget
@@ -127,11 +139,11 @@ class BaseAdvisor(abc.ABC):
         time_left = self._stop_time - datetime.now()
         return time_left.total_seconds() / (60 * 60)
 
-    # Returns no. of hours left for training based on allocated budget (excluding current trial)
-    def get_trials_left(self, trial_no) -> int:
+    # Returns no. of trials left for training based on allocated budget (excluding current trial)
+    def get_trials_left(self, num_trials) -> int:
         if self.max_trials < 0:
             return 9999999
-        return self.max_trials - trial_no + 1
+        return self.max_trials - num_trials
 
     # Helps detect presence of policies in knob config
     @staticmethod
@@ -166,7 +178,8 @@ class BaseAdvisor(abc.ABC):
 
     # Merge policy knobs into `knobs`, activating `policies`
     @staticmethod
-    def merge_policy_knobs(knobs, policy_knob_config, policies=[]):
+    def merge_policy_knobs(knobs, policy_knob_config, policies):
+        policies = policies or []
         policy_knobs = {name: (True if x.policy in policies else False) for (name, x) in policy_knob_config.items()}
         return {**knobs, **policy_knobs} 
 
@@ -180,18 +193,17 @@ class FixedAdvisor(BaseAdvisor):
         # Must only have fixed knobs
         return BaseAdvisor.has_only_knob_types(knob_config, [FixedKnob])
 
-    def propose(self, worker_id, trial_no, concurrent_trial_nos):
-        # If one trial has run, stop
-        if trial_no > 1:
-            return Proposal(should_stop=True)
-        
+    def propose(self, worker_id, num_trials):
+        if num_trials >= 1:
+            return None
+
         # Propose fixed knob values
         knobs = {name: knob.value.value for (name, knob) in self.knob_config.items()}
 
         proposal = Proposal(knobs)
         return proposal 
 
-    def feedback(self, score, proposal):
+    def feedback(self, result):
         # Ignore feedback
         pass
 
@@ -205,14 +217,14 @@ class RandomAdvisor(BaseAdvisor):
         # Compatible with all knobs
         return True
 
-    def propose(self, worker_id, trial_no, concurrent_trial_nos):
+    def propose(self, worker_id, num_trials):
         # If time's up, stop
         if self.get_train_hours_left() <= 0:
-            return Proposal(should_stop=True)
+            return None
 
         # If trial's up, stop
-        if self.get_trials_left(trial_no) <= 0:
-            return Proposal(should_stop=True) 
+        if self.get_trials_left(num_trials) <= 0:
+            return None 
 
         # Randomly propose knobs
         knobs = {
@@ -249,6 +261,6 @@ class RandomAdvisor(BaseAdvisor):
         else:
             raise UnsupportedKnobError(knob.__class__)
 
-    def feedback(self, score, proposal):
+    def feedback(self, result):
         # Ignore feedback - not relevant for a random advisor
         pass

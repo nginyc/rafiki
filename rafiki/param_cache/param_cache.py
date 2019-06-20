@@ -30,65 +30,12 @@ REDIS_NAMESPACE = 'PARAMS'
 REDIS_LOCK_EXPIRE_SECONDS = 60
 REDIS_LOCK_WAIT_SLEEP_SECONDS = 0.1
 PARAM_DATA_TYPE_SEPARATOR = '//'
-PARAM_DATA_TYPE_NUMPY = 'np'
+PARAM_DATA_TYPE_NUMPY = 'NP'
 
 _ParamMeta = namedtuple('_ParamMeta', ('param_id', 'score', 'time'))
 
-class ParamStore(object):
+class ParamCache(object):
     
-    @staticmethod
-    def serialize_params(params):
-        # Serialize as `msgpack`
-        params_simple = ParamStore._simplify_params(params)
-        params_bytes = msgpack.packb(params_simple, use_bin_type=True)
-        return params_bytes
-
-    @staticmethod
-    def deserialize_params(params_bytes):
-        # Deserialize as `msgpack`
-        params_simple = msgpack.unpackb(params_bytes, raw=False)
-        params = ParamStore._unsimplify_params(params_simple)
-        return params
-
-    @staticmethod
-    def _simplify_params(params):
-        try:
-            params_simple = {}
-
-            assert isinstance(params, dict)
-            for (name, value) in params.items():
-                assert isinstance(name, str)
-                assert PARAM_DATA_TYPE_SEPARATOR not in name # Internally used as separator for types
-
-                # If value is a numpy array, prefix it with type
-                # Otherwise, it must be one of the basic types
-                if isinstance(value, np.ndarray):
-                    name = f'{PARAM_DATA_TYPE_NUMPY}{PARAM_DATA_TYPE_SEPARATOR}{name}'
-                    value = value.tolist()
-                else:
-                    assert isinstance(value, (str, float, int))
-
-                params_simple[name] = value
-
-            return params_simple
-
-        except Exception:
-            traceback.print_stack()
-            raise InvalidParamsFormatError()
-
-    @staticmethod
-    def _unsimplify_params(params_simple):
-        params = {}
-
-        for (name, value) in params_simple.items():
-            if PARAM_DATA_TYPE_SEPARATOR in name:
-                (type_id, name) = name.split(PARAM_DATA_TYPE_SEPARATOR)
-                if type_id == PARAM_DATA_TYPE_NUMPY:
-                    value = np.array(value)
-
-            params[name] = value
-
-        return params
 
     '''
         Internally, organises data into these Redis namespaces:
@@ -360,7 +307,7 @@ class ParamStore(object):
     def _push_params_to_redis(self, param_id: str, params: Params):
         logger.info('Pushing params: "{}"...'.format(param_id))
         param_name = self._get_redis_name('param:{}'.format(param_id))
-        params_bytes = self.serialize_params(params)
+        params_bytes = _serialize_params(params)
         self._redis.set(param_name, params_bytes)
 
     def _pull_params_from_redis(self, param_id: str) -> Params:
@@ -370,7 +317,7 @@ class ParamStore(object):
         if params_bytes is None:
             return None
             
-        params = self.deserialize_params(params_bytes)
+        params = _deserialize_params(params_bytes)
         return params
 
     def _make_redis_client(self, host, port):
@@ -426,3 +373,53 @@ class ParamStore(object):
     def _get_redis_name(self, suffix):
         return '{}:{}:{}'.format(REDIS_NAMESPACE, self._sid, suffix)
 
+
+def _serialize_params(params):
+    # Serialize as `msgpack`
+    params_simple = _simplify_params(params)
+    params_bytes = msgpack.packb(params_simple, use_bin_type=True)
+    return params_bytes
+
+def _deserialize_params(params_bytes):
+    # Deserialize as `msgpack`
+    params_simple = msgpack.unpackb(params_bytes, raw=False)
+    params = _unsimplify_params(params_simple)
+    return params
+
+def _simplify_params(params):
+    try:
+        params_simple = {}
+
+        assert isinstance(params, dict)
+        for (name, value) in params.items():
+            assert isinstance(name, str)
+            assert PARAM_DATA_TYPE_SEPARATOR not in name # Internally used as separator for types
+
+            # If value is a numpy array, prefix it with type
+            # Otherwise, it must be one of the basic types
+            if isinstance(value, np.ndarray):
+                name = f'{PARAM_DATA_TYPE_NUMPY}{PARAM_DATA_TYPE_SEPARATOR}{name}'
+                value = value.tolist()
+            else:
+                assert isinstance(value, (str, float, int))
+
+            params_simple[name] = value
+
+        return params_simple
+
+    except Exception:
+        traceback.print_stack()
+        raise InvalidParamsFormatError()
+
+def _unsimplify_params(params_simple):
+    params = {}
+
+    for (name, value) in params_simple.items():
+        if PARAM_DATA_TYPE_SEPARATOR in name:
+            (type_id, name) = name.split(PARAM_DATA_TYPE_SEPARATOR)
+            if type_id == PARAM_DATA_TYPE_NUMPY:
+                value = np.array(value)
+
+        params[name] = value
+
+    return params

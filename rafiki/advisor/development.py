@@ -10,10 +10,11 @@ from typing import Dict, Type
 from rafiki.model import BaseModel, BaseKnob, serialize_knob_config, deserialize_knob_config, \
                         parse_model_install_command, load_model_class
 from rafiki.constants import ModelDependency
-from rafiki.param_store import ParamStore
+from rafiki.param_cache import ParamCache
+from rafiki.param_store import FileParamStore, ParamStore
 from rafiki.predictor import ensemble_predictions
 
-from .advisor import make_advisor, ParamsType
+from .advisor import make_advisor, ParamsType, TrainWorker, ProposalResult
 
 # TODO: Better doc
 def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dataset_path: str, 
@@ -32,6 +33,8 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
     :rtype: (dict, float, str)
     :returns: (<knobs for best model>, <test score for best model>, <params directory for best model>)
     ''' 
+    worker_id = 'local'
+
     # Note start time
     start_time = time.time()
 
@@ -50,42 +53,39 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
     inform_user(f'Using budget {budget}...')
 
     # Make advisor
-    advisor = make_advisor(knob_config, budget)
+    workers = [TrainWorker(worker_id)]
+    advisor = make_advisor(knob_config, budget, workers)
     inform_user(f'Using advisor "{type(advisor).__name__}"...')
 
-    # Create params store
-    param_store = ParamStore()
+    # Create params cache & store
+    param_store: ParamStore = FileParamStore(params_root_dir)
+    param_cache: ParamCache = ParamCache()
     
     # Variables to track over trials
     best_model_score = 0
     best_trial_no = 0 
     best_model_test_score = None
     best_proposal = None
-    best_model_params_file_path = None
+    best_store_params_id = None
 
-    # Until a proposal telling worker to stop, keep conducting trials
-    trial_no = 0
+    # Until there's no more proposals, keep conducting trials
+    num_trials = 0
     while True:
         trial_id = str(uuid.uuid4())
-        trial_no += 1
+        trial_no = num_trials + 1
 
         # Get proposal from advisor, overriding knobs from args & trial config
-        proposal = advisor.propose('localhost', trial_no, [])
-        print('Proposal from advisor:', proposal)
-        if proposal.should_stop:
-            print('Advisor proposed to stop training')
+        proposal = advisor.propose(worker_id, num_trials)
+        if proposal is None:
+            print('No more proposals from advisor - to stop training')
             break
-        _assert_jsonable(proposal.to_jsonable())
-        assert not proposal.should_wait
+
+        print('Proposal from advisor:', proposal)
 
         _print_header('Trial #{} (ID: "{}")'.format(trial_no, trial_id))
         
         proposal.knobs = { **proposal.knobs, **knobs_from_args } 
         print('Advisor proposed knobs:', proposal.knobs)
-        if proposal.params_type != ParamsType.NONE:
-            print('Advisor proposed params:', proposal.params_type.name)
-        if not proposal.should_eval:
-            print('Advisor proposed whether to evaluate:', proposal.should_eval)
 
         # Load model
         model_inst = py_model_class(**proposal.knobs)
@@ -93,71 +93,72 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
         shared_params = None
         if proposal.params_type != ParamsType.NONE:
             print('Retrieving shared params...')
-            shared_params = param_store.retrieve_params(proposal.params_type)
+            shared_params = param_cache.retrieve_params(proposal.params_type)
 
         print('Training model...')
         model_inst.train(train_dataset_path, shared_params=shared_params)
-        trial_params = model_inst.dump_parameters()
-        if trial_params:
-            print('Model produced {} params'.format(len(trial_params)))
 
         # Evaluate model
         score = None
-        if proposal.should_eval:
+        if proposal.to_eval:
             print('Evaluating model...')
             score = model_inst.evaluate(val_dataset_path)
             if not isinstance(score, float):
                 raise Exception('`evaluate()` should return a float!')
-
+            
             print('Score on validation dataset:', score)
+   
+        # If to cache or to save params, dump parameters
+        if proposal.to_cache_params or proposal.to_save_params:
+            print('Dumping params...')
+            trial_params = model_inst.dump_parameters()
+            if trial_params:
+                print('Model produced {} params'.format(len(trial_params)))
 
-        if score is not None:
-            # Feedback to advisor
-            print('Giving feedback to advisor...')
-            advisor.feedback(score, proposal)
+                if proposal.to_cache_params:
+                    print('Caching params...')
+                    param_cache.store_params(trial_params, score)
 
-            if proposal.should_save_to_disk:
-                # Save model
-                print('Saving trained model to disk...')
-                params_bytes = ParamStore.serialize_params(trial_params)
-                params_file_path = os.path.join(params_root_dir, '{}.model'.format(trial_id))
-                with open(params_file_path, 'wb') as f:
-                    f.write(params_bytes)
-                inform_user('Model saved to {}'.format(params_file_path))
+                if proposal.to_save_params:
+                    print('Saving params...')
+                    store_params_id = param_store.save(trial_params)
 
+                    # Update best saved model
 
-                # Update best saved model
-                if score > best_model_score and proposal.should_save_to_disk:
-                    inform_user('Best saved model so far! Beats previous best of score {}!'.format(best_model_score))
-                        
-                    best_model_params_file_path = params_file_path
-                    best_proposal = proposal
-                    best_model_score = score
-                    best_trial_no = trial_no
+                    if score > best_model_score:
+                        inform_user('Best saved model so far! Beats previous best of score {}!'.format(best_model_score))
+                        best_store_params_id = store_params_id
+                        best_proposal = proposal
+                        best_model_score = score
+                        best_trial_no = trial_no
 
-                    # Test best model, if test dataset provided
-                    if test_dataset_path is not None:
-                        print('Evaluting new best model on test dataset...')
-                        best_model_test_score = model_inst.evaluate(test_dataset_path)
-                        inform_user('Score on test dataset: {}'.format(best_model_test_score))
-                 
+                        # Test best model, if test dataset provided
+                        if test_dataset_path is not None:
+                            print('Evaluting new best model on test dataset...')
+                            best_model_test_score = model_inst.evaluate(test_dataset_path)
+                            inform_user('Score on test dataset: {}'.format(best_model_test_score))
 
-        # Update params store
-        if trial_params:
-            print('Storing trial\'s params...')
-            param_store.store_params(trial_params, score)
+        # Feedback to advisor
+        print('Giving feedback to advisor...')
+        result = ProposalResult(proposal, score, worker_id)
+        advisor.feedback(result)
 
         # Destroy model
         model_inst.destroy()
-    
+
+        num_trials += 1
+
     # Declare best model
     if best_proposal is not None:
         inform_user('Best trial #{} has knobs {} with score of {}'.format(best_trial_no, best_proposal.knobs, best_model_score))
         if best_model_test_score is not None:
             inform_user('...with test score of {}'.format(best_model_test_score))
-        if best_model_params_file_path is not None:
-            inform_user('...saved at {}'.format(best_model_params_file_path)) 
-        
+
+    # Load params for best model
+    best_params = None
+    if best_store_params_id is not None:
+        best_params = param_store.load(best_store_params_id)
+
     # Teardown model class
     print('Running model class teardown...')
     py_model_class.teardown()
@@ -166,7 +167,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
     duration = time.time() - start_time
     print('Tuning took a total of {}s'.format(duration))
 
-    return (best_proposal, best_model_test_score, best_model_params_file_path)
+    return (best_proposal, best_model_test_score, best_params)
 
 
 # TODO: Fix method, more thorough testing of model API
@@ -197,17 +198,14 @@ def test_model_class(model_file_path: str, model_class: str, task: str,
     _check_model_class(py_model_class)
 
     # Simulation of training process
-    (proposal, _, params_file_path) = tune_model(py_model_class, **kwargs)
+    (best_proposal, _, best_params) = tune_model(py_model_class, **kwargs)
    
     # Load best trained model's parameters
     model_inst = None
-    if proposal is not None:
-        _print_header('Checking loading of parameters from disk...')
-        model_inst = py_model_class(**proposal.knobs)
-        with open(params_file_path, 'rb') as f:
-            params_bytes = f.read()
-        params = ParamStore.deserialize_params(params_bytes)
-        model_inst.load_parameters(params)
+    if best_proposal is not None:
+        _print_header('Checking loading of best model...')
+        model_inst = py_model_class(**best_proposal.knobs)
+        model_inst.load_parameters(best_params)
 
         if queries is not None:
             _print_header('Checking predictions...')
