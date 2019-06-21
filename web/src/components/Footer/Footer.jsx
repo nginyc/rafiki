@@ -15,13 +15,13 @@ function Footer({ ...props }) {
         <div className={classes.left}>
           <List className={classes.list}>
             <ListItem className={classes.inlineBlock}>
-              <a href="#Aboutus" className={classes.block}>
+              <a href="https://singa.incubator.apache.org" target="_blank" className={classes.block}>
                 About Singa
               </a>
             </ListItem>
             <ListItem className={classes.inlineBlock}>
-              <a href="#Documentation" className={classes.block}>
-                Rafiki Doc
+              <a href="https://nginyc.github.io/rafiki/docs/latest/" target="_blank" className={classes.block}>
+                About Rafiki
               </a>
             </ListItem>
           </List>
@@ -29,7 +29,7 @@ function Footer({ ...props }) {
         <p className={classes.right}>
           <span>
             &copy; {1900 + new Date().getYear()}{" "} made with love by&nbsp;
-            <a href="https://www.comp.nus.edu.sg/~dbsystem/#" className={classes.a}>
+            <a href="https://www.comp.nus.edu.sg/~dbsystem/#" target="_blank" className={classes.a}>
                DBSystem
             </a>
           
