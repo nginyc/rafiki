@@ -8,7 +8,7 @@ To learn about how to manage models, go to :ref:`quickstart-model-developers`.
 To learn about how to manage train & inference jobs, go to :ref:`quickstart-app-developers`.
 
 This guide assumes that you have access to a running instance of *Rafiki Admin* at ``<rafiki_host>:<admin_port>``
-and *Rafiki Admin Web* at ``<rafiki_host>:<admin_web_port>``.
+and *Rafiki Web Admin* at ``<rafiki_host>:<web_admin_port>``.
 
 Installation
 --------------------------------------------------------------------

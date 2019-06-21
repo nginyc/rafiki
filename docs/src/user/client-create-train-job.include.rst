@@ -1,6 +1,6 @@
 To create a model training job, you'll specify the train & validation datasets by their IDs, together with your application's name and its associated task.
 
-After creating a train job, you can monitor it on Rafiki Admin Web (see :ref:`using-admin-web`).
+After creating a train job, you can monitor it on Rafiki Web Admin (see :ref:`using-web-admin`).
 
 Refer to the parameters of :meth:`rafiki.client.Client.create_train_job()` for configuring how your train job runs on Rafiki, such as enabling GPU usage & specifying which models to use.
 

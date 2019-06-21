@@ -48,11 +48,11 @@ Logging in Models
 
 By importing the global ``logger`` instance in the ``rafiki.model`` module, 
 you can log messages and metrics while your model is being trained, and you can 
-define plots to visualize your model's training on Rafiki's Admin Web interface.
+define plots to visualize your model's training on Rafiki's Web Admin interface.
 
 Refer to :class:`rafiki.model.ModelLogger` for full usage instructions.
 
-.. seealso:: :ref:`using-admin-web` 
+.. seealso:: :ref:`using-web-admin` 
 
 Dataset Loading in Models
 --------------------------------------------------------------------

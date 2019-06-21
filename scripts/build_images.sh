@@ -18,7 +18,7 @@ title "Building Rafiki Predictor's image..."
 docker build -t $RAFIKI_IMAGE_PREDICTOR:$RAFIKI_VERSION -f ./dockerfiles/predictor.Dockerfile \
     --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH \
     --build-arg CONDA_ENVIORNMENT=$CONDA_ENVIORNMENT $PWD || exit 1 
-title "Building Rafiki Admin Web's image..."
-docker build -t $RAFIKI_IMAGE_ADMIN_WEB:$RAFIKI_VERSION -f ./dockerfiles/admin_web.Dockerfile \
+title "Building Rafiki Web Admin's image..."
+docker build -t $RAFIKI_IMAGE_WEB_ADMIN:$RAFIKI_VERSION -f ./dockerfiles/web_admin.Dockerfile \
     --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH $PWD || exit 1 
 echo "Finished building all Rafiki's images successfully!"
