@@ -121,7 +121,7 @@ class Details extends React.Component {
         <GridItem xs={12} sm={12} md={12}>
           <Card plain>
             <CardHeader color="primary">
-              <h4 className={classes.cardTitleWhite}>Selected Job</h4>
+              <h4 className={classes.cardTitleWhite}>Selected Train Job</h4>
             </CardHeader>
             { app !== null && appVersion !== null &&
             (<CardBody>
@@ -137,7 +137,7 @@ class Details extends React.Component {
         <GridItem xs={12} sm={12} md={12}>
           <Card>
             <CardHeader color="warning">
-              <h4 className={classes.cardTitleWhite}>Trials for this Job</h4> 
+              <h4 className={classes.cardTitleWhite}>Trials for this Train Job</h4> 
             </CardHeader>
             <CardBody>
               { !this.state.trials ? <CircularProgress /> : 

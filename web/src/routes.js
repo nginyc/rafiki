@@ -20,7 +20,7 @@ import NewDataset from "./views/Datasets/NewDataset";
 const dashboardRoutes = [
   {
     path: "/datasets/new",
-    name: "New Datasets",
+    name: "New Dataset",
     rtlName: "قائمة الجدول",
     icon: "playlist_add",
     component: NewDataset,

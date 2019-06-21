@@ -101,12 +101,12 @@ class TrainJobs extends React.Component {
         "model_ids": this.state.models.map(model=>model.id)
       }
       await rafikiClient.createTrainJob(json_params)
-      alert("Create Train Job succeed")
+      alert("Successfully created the train job!")
       this.setState({ "submit_status": "succeed" })
       this.props.history.push('/admin/jobs')
     } catch (error) {
       this.setState({ "submit_status": "failed" })
-      showError(error, 'Failed createJobs');
+      showError(error, 'Failed to create the train job');
     }
   }
 
@@ -138,7 +138,7 @@ class TrainJobs extends React.Component {
         break;
       default:
         SubmitButton = (
-          <Button onClick={this.handleClickButton} color="primary">Create Jobs</Button>
+          <Button onClick={this.handleClickButton} color="primary">Create Job</Button>
         )
         break;
     }
@@ -152,7 +152,7 @@ class TrainJobs extends React.Component {
           <GridItem xs={12} sm={12} md={12} lg={12} xl={12}>
             <Card>
               <CardHeader color="primary">
-                <h4 className={classes.cardTitleWhite}><Icon>add_photo_alternate</Icon>New Train Jobs</h4>
+                <h4 className={classes.cardTitleWhite}><Icon>add_photo_alternate</Icon>New Train Job</h4>
                 <p className={classes.cardCategoryWhite}>Image Classification</p>
               </CardHeader>
               <CardBody>
@@ -163,7 +163,7 @@ class TrainJobs extends React.Component {
                       id="standard-full-width"
                       label="App"
                       onChange={this.handleInputChange}
-                      placeholder="fashion_mnist_app"
+                      placeholder="fashion_mnist"
                       helperText="Application Name"
                       fullWidth
                       margin="normal"
@@ -180,7 +180,7 @@ class TrainJobs extends React.Component {
                       margin="normal"
                     />
                     <FormControl fullWidth>
-                      <InputLabel htmlFor="train_dataset">Training Datasets</InputLabel>
+                      <InputLabel htmlFor="train_dataset">Choose dataset...</InputLabel>
                       <Select
                         value={this.state.train_dataset}
                         onChange={this.handleInputChange}
@@ -191,10 +191,10 @@ class TrainJobs extends React.Component {
                         <option value="" />
                         { availableDatasets.map( dataset => (<option value={dataset}> { dataset.name } </option>))}
                       </Select>
-                      <FormHelperText>Datasets for Training</FormHelperText>
+                      <FormHelperText>Dataset for Training</FormHelperText>
                     </FormControl>
                     <FormControl fullWidth>
-                      <InputLabel htmlFor="val_dataset">Test Datasets</InputLabel>
+                      <InputLabel htmlFor="val_dataset">Choose dataset..</InputLabel>
                       <Select
                         value={this.state.val_dataset}
                         onChange={this.handleInputChange}
@@ -205,7 +205,7 @@ class TrainJobs extends React.Component {
                         <option value="" />
                         { availableDatasets.map( dataset => (<option value={dataset}> { dataset.name } </option>))}
                       </Select>
-                      <FormHelperText>Datasets for Validation</FormHelperText>
+                      <FormHelperText>Dataset for Validation</FormHelperText>
                     </FormControl>
                     <FormControl fullWidth>
                       <InputLabel htmlFor="model-multiple-checkbox">Models</InputLabel>

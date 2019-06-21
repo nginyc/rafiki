@@ -71,13 +71,13 @@ class NewDataset extends React.Component {
       this.setState({ "submit_status":"submitting" })
       const {name, task, file, dataset_url } = this.state
       await rafikiClient.createDataset(name,task,file,dataset_url)
-      alert("Create Dataset Succeed")
+      alert("Successfully created the dataset!")
       this.setState({ "submit_status":"succeed" })
       this.props.history.push('/admin/datasets')
       debugger
     } catch (error) {
       this.setState({ "submit_status": "failed" })
-      showError(error, 'Failed createDatabase');
+      showError(error, 'Failed to create the dataset');
     }
   }
 
@@ -97,7 +97,7 @@ class NewDataset extends React.Component {
         break;
       default:
         SubmitButton = (
-          <Button onClick={this.handleClickButton} color="primary">CREATE NEW DATASETS</Button>
+          <Button onClick={this.handleClickButton} color="primary">CREATE NEW DATASET</Button>
         )
       break;
     }
@@ -108,8 +108,8 @@ class NewDataset extends React.Component {
           <GridItem xs={12} sm={12} md={12} lg={12} xl={12}>
             <Card>
               <CardHeader color="info">
-                <h4 className={classes.cardTitleWhite}><Icon>add_photo_alternate</Icon>New Datasets</h4>
-                <p className={classes.cardCategoryWhite}>Image Claasification</p>
+                <h4 className={classes.cardTitleWhite}><Icon>add_photo_alternate</Icon>New Dataset</h4>
+                <p className={classes.cardCategoryWhite}>Image Classification</p>
               </CardHeader>
               <CardBody>
                 <GridContainer justify="center" alignContent="center">
@@ -118,8 +118,8 @@ class NewDataset extends React.Component {
                       name="name"
                       id="name"
                       label="Name"
-                      placeholder="fashion_mnist_app"
-                      helperText="Datasets Name"
+                      placeholder="fashion_mnist"
+                      helperText="Dataset Name"
                       fullWidth
                       margin="normal"
                       onChange={this.handleInputChange}
@@ -139,7 +139,7 @@ class NewDataset extends React.Component {
                   </GridItem>
                   <GridItem xs={12} sm={12} md={12}>
                     <h4 className={classes.cardCategory}>Upload from your computer</h4>
-                    <FormHelperText id="component-helper-text"><p>*The dataset file must be of the <b>.zip archive</b> format with a <b>images.csv </b>at the root of the directory. The <b>images.csv</b> should be of a <b>.CSV</b> format with 2 columns of <b>path and class</b>. Please refer to more detail here <a href="https://nginyc.github.io/rafiki/docs/latest/src/user/datasets.html">https://nginyc.github.io/rafiki/docs/latest/src/user/datasets.html</a></p></FormHelperText>
+                    <FormHelperText id="component-helper-text"><p>*The dataset file must be of the <b>.zip archive</b> format with a <b>images.csv </b>at the root of the directory. The <b>images.csv</b> should be of a <b>.CSV</b> format with 2 columns of <b>path and class</b>. Please refer to more details <a href="https://nginyc.github.io/rafiki/docs/latest/src/user/datasets.html#dataset-type-image-files">here</a></p></FormHelperText>
                     <input
                       accept="zip/*"
                       name="file"
@@ -157,16 +157,12 @@ class NewDataset extends React.Component {
                     <TextField
                       className={classes.uploadUrl}
                       name="dataset_url"
-                      label="Datasets from a url"
+                      label="Upload dataset from a URL"
                       placeholder=""
                       margin="none"
                       variant="outlined"
                       onChange= {this.handleInputChange}
                     />
-                  </GridItem>
-                  <GridItem xs={12} sm={12} md={12}>
-                    <h6 className={classes.cardCategory}>Data Distributuion</h6>
-                    <FormHelperText id="component-helper-text">*On Traning, Rafiki system will set aside 5% for validation</FormHelperText>
                   </GridItem>
                 </GridContainer>
               </CardBody>
