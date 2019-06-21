@@ -57,7 +57,6 @@ class EnasAdvisor(BaseAdvisor):
         if proposal_type == 'TRAIN':
             knobs = self._propose_knobs(['DOWNSCALE', 'QUICK_TRAIN'])
             return Proposal(knobs,
-                            worker_id=worker_id, 
                             params_type=ParamsType.LOCAL_RECENT, 
                             to_eval=False, 
                             to_cache_params=True, 
@@ -66,20 +65,18 @@ class EnasAdvisor(BaseAdvisor):
         elif proposal_type == 'EVAL':
             knobs = self._propose_knobs(['DOWNSCALE', 'QUICK_EVAL', 'SKIP_TRAIN'])
             return Proposal(knobs, 
-                            worker_id=worker_id,
                             params_type=ParamsType.LOCAL_RECENT, 
                             to_save_params=False, 
                             meta=meta)
         elif proposal_type == 'FINAL_EVAL':
             knobs = self._propose_knobs(['DOWNSCALE', 'SKIP_TRAIN'])
             return Proposal(knobs, 
-                            worker_id=worker_id,
                             params_type=ParamsType.LOCAL_RECENT, 
                             meta=meta)
         elif proposal_type == 'FINAL_TRAIN':
             # Do standard model training from scratch with final knobs
             knobs = self._propose_final_knobs()
-            return Proposal(knobs, worker_id=worker_id, meta=meta)
+            return Proposal(knobs, meta=meta)
         elif proposal_type is None:
             return None
 

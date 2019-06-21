@@ -1,10 +1,10 @@
 import pytest
 import numpy as np
 from datetime import datetime, timedelta
-import redis
 
-from rafiki.test.utils import global_setup, mock_redis
-from rafiki.param_store import ParamStore, ParamsType
+from rafiki.advisor import ParamsType
+from rafiki.cache import ParamCache
+from test.utils import global_setup
 
 class TestStore():    
     
@@ -28,9 +28,9 @@ class TestStore():
         Initializes params stores for testing
         '''
         return {
-            '1': ParamStore(worker_id='1', redis_host=True),
-            '2': ParamStore(worker_id='2', redis_host=True),
-            '3': ParamStore(worker_id='3', redis_host=True)
+            '1': ParamCache(),
+            '2': ParamCache(),
+            '3': ParamCache()
         }
 
     def test_get_local_recent(self, params, stores):

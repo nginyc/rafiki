@@ -5,10 +5,9 @@ import math
 import numpy as np
 
 from rafiki.model import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob, PolicyKnob
-from rafiki.param_cache import ParamsType
 
 from .development import inform_user
-from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal
+from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, ParamsType
 
 FINAL_TRAIN_HOURS = 1 # No. of hours to conduct final train trials
 

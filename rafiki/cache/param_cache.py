@@ -2,65 +2,54 @@ import json
 import numpy as np
 from typing import Dict
 import uuid
-import time
 import logging
 from collections import namedtuple
 import msgpack
 from datetime import datetime
 import traceback
-from enum import Enum
 
 from rafiki.model import Params
+from rafiki.advisor import ParamsType
 
-from .cache import Cache
+from .local_cache import LocalCache
+from .redis import RedisSession
 
 logger = logging.getLogger(__name__)
 
 class InvalidParamsError(Exception): pass
 class InvalidParamsFormatError(Exception): pass
 
-class ParamsType(Enum):
-    LOCAL_RECENT = 'LOCAL_RECENT'
-    LOCAL_BEST = 'LOCAL_BEST'
-    GLOBAL_RECENT = 'GLOBAL_RECENT'
-    GLOBAL_BEST = 'GLOBAL_BEST'
-    NONE = 'NONE'
-    
 REDIS_NAMESPACE = 'PARAMS'
-REDIS_LOCK_EXPIRE_SECONDS = 60
-REDIS_LOCK_WAIT_SLEEP_SECONDS = 0.1
 PARAM_DATA_TYPE_SEPARATOR = '//'
 PARAM_DATA_TYPE_NUMPY = 'NP'
 
 _ParamMeta = namedtuple('_ParamMeta', ('param_id', 'score', 'time'))
 
 class ParamCache(object):
-    
-
     '''
-        Internally, organises data into these Redis namespaces:
-
-        <session_id>:lock                | 0-1 lock for this session, 1 for acquired                
-        <session_id>:param:<param_id>    | Params by ID
-        <session_id>:meta                | Aggregate of all global metadata: 
-                                            { params:   { GLOBAL_BEST:     { score, time, param_id }, 
-                                                        { GLOBAL_RECENT:   { score, time, param_id }   }            
-    '''
-    
-    '''
-    Store API that retrieves and stores parameters for a session & a worker, backed by an in-memory cache and Redis for cross-worker sharing (optional).
+    Retrieves and caches parameters for a session & a worker, backed by an in-memory cache and Redis for cross-worker sharing (optional).
 
     :param str session_id: Session ID associated with the parameters
-    :param str worker_id: Worker ID associated with the parameters
     '''
-    def __init__(self, session_id='local', worker_id='local', cache_size=4, redis_host=None, redis_port=6379):
-        self._uid = str(uuid.uuid4()) # Process identifier for distributed locking
+
+    '''
+        Internally, organises data into these namespaces:
+            
+        params:<param_id>   | Params by ID
+        meta                | Aggregate of all global metadata: 
+                            { params:   { GLOBAL_BEST:     { score, time, param_id }, 
+                                        { GLOBAL_RECENT:   { score, time, param_id }   }            
+    '''
+    
+    def __init__(self, 
+                session_id='local', 
+                cache_size=4, 
+                redis_host=None,
+                redis_port=None):
         self._params: Dict[str, _ParamMeta] = {} # Stores params metadata
-        self._sid = session_id
-        self._worker_id = worker_id
-        self._redis = self._make_redis_client(redis_host, redis_port) if redis_host is not None else None
-        self._params_cache = Cache(cache_size)
-        logger.info('Initializing params store of session "{}" for worker "{}"...'.format(session_id, worker_id))
+        redis_namespace = f'{REDIS_NAMESPACE}:{session_id}'
+        self._redis = RedisSession(redis_namespace, redis_host, redis_port)
+        self._local_cache = LocalCache(cache_size)
 
     '''
     Stores parameters into underlying storage.
@@ -73,27 +62,21 @@ class ParamCache(object):
         if params is None:
             raise InvalidParamsError('`params` cannot be `None`')   
 
-        # Acquire lock to prevent race conditions
-        if self._redis:
-            self._acquire_redis_lock() 
-
+        self._redis.acquire_lock() 
         try:
             # With redis, sync in-memory metadata with Redis'
-            if self._redis:
-                self._pull_from_redis()
+            self._pull_from_redis()
 
             param_meta = self._update_params_meta(score, time)
             if param_meta:
                 # Store input params in in-memory cache
-                self._params_cache.put(param_meta.param_id, params)
+                self._local_cache.put(param_meta.param_id, params)
 
             if self._redis:
                 self._push_to_redis()
 
         finally:
-            # Release lock
-            if self._redis:
-                self._release_redis_lock()
+            self._redis.release_lock() 
 
     '''
     Retrieves parameters from underlying storage.
@@ -103,14 +86,10 @@ class ParamCache(object):
     :rtype: Params
     '''
     def retrieve_params(self, params_type: ParamsType) -> Params:
-        # Acquire lock to prevent race conditions
-        if self._redis:
-            self._acquire_redis_lock()
-            
+        self._redis.acquire_lock() 
         try:
             # With redis, sync in-memory metadata with Redis'
-            if self._redis:
-                self._pull_from_redis()
+            self._pull_from_redis()
 
             # Get param id to fetch
             param_id = self._get_params_by_type(params_type)
@@ -120,33 +99,27 @@ class ParamCache(object):
             logger.info('To use params "{}"'.format(param_id))
 
             # Check in cache first
-            params = self._params_cache.get(param_id)
+            params = self._local_cache.get(param_id)
             if params is not None:
                 return params
 
             # Check in redis next, and store it in cache
-            if self._redis:
-                params = self._pull_params_from_redis(param_id)
-                if params is None:
-                    logger.error('Params don\'t exist in Redis!')
-                    return None
+            params = self._pull_params_from_redis(param_id)
+            if params is None:
+                logger.error('Params don\'t exist in Redis!')
+                return None
 
-                self._params_cache.put(param_id, params)
-                return params
-            
-            return None
+            self._local_cache.put(param_id, params)
+            return params
 
         finally:
-            # Release lock
-            if self._redis:
-                self._release_redis_lock()
+            self._redis.release_lock() 
 
     '''
     Clears all parameters for this session from underlying storage.
     '''
     def clear_all_params(self):
-        if self._redis:
-            self._clear_all_from_redis()
+        self._clear_all_from_redis()
 
     ####################################
     # Policies for params storage
@@ -252,7 +225,7 @@ class ParamCache(object):
 
         # For each param to add, push it
         for param_id in to_add:
-            params = self._params_cache.get(param_id)
+            params = self._local_cache.get(param_id)
             if params:
                 self._push_params_to_redis(param_id, params)
         
@@ -264,7 +237,6 @@ class ParamCache(object):
         self._push_metadata_to_redis(params_shared)
     
     def _push_metadata_to_redis(self, params):
-        meta_name = self._get_redis_name('meta')
         redis_params = { param_type: self._param_meta_to_jsonable(param_meta) for (param_type, param_meta) in params.items() }
         metadata = {
             'params': redis_params
@@ -272,11 +244,10 @@ class ParamCache(object):
         logger.info('Pushing metadata to Redis: {}...'.format(metadata))
 
         metadata_str = json.dumps(metadata)
-        self._redis.set(meta_name, metadata_str)
+        self._redis.set('meta', metadata_str)
 
     def _pull_metadata_from_redis(self):
-        meta_name = self._get_redis_name('meta')
-        metadata_str = self._get_from_redis(meta_name)
+        metadata_str = self._redis.get('meta')
 
         # Pull metadata from redis
         if metadata_str is not None:
@@ -292,74 +263,31 @@ class ParamCache(object):
 
     def _delete_params_from_redis(self, *param_ids):
         logger.info('Deleting params: {}...'.format(param_ids))
-        param_names = [self._get_redis_name('param:{}'.format(x)) for x in param_ids]
+        param_names = ['params:{}'.format(x) for x in param_ids]
         self._redis.delete(*param_names)
 
     # Clears ALL metadata and params for session from Redis
     def _clear_all_from_redis(self):       
-        params_name_patt = self._get_redis_name('*') 
-        meta_name = self._get_redis_name('meta')
-        params_keys = self._redis.keys(params_name_patt)
-        if len(params_keys) > 0:
-            logger.info('Clearing metadata and {} sets of params from Redis...'.format(len(params_keys)))
-            self._redis.delete(meta_name, *params_keys)
+        logger.info('Clearing metadata and params from Redis...')
+        self._redis.delete('meta')
+        self._redis.delete_pattern('params:*')
 
     def _push_params_to_redis(self, param_id: str, params: Params):
         logger.info('Pushing params: "{}"...'.format(param_id))
-        param_name = self._get_redis_name('param:{}'.format(param_id))
+        param_name = 'params:{}'.format(param_id)
         params_bytes = _serialize_params(params)
         self._redis.set(param_name, params_bytes)
 
     def _pull_params_from_redis(self, param_id: str) -> Params:
         logger.info('Pulling params: "{}"...'.format(param_id))
-        param_name = self._get_redis_name('param:{}'.format(param_id))
-        params_bytes = self._get_from_redis(param_name, value_type=bytes)
+        param_name = 'params:{}'.format(param_id)
+        params_bytes = self._redis.get(param_name)
         if params_bytes is None:
             return None
             
         params = _deserialize_params(params_bytes)
         return params
 
-    def _make_redis_client(self, host, port):
-        import redis
-        cache_connection_url = 'redis://{}:{}'.format(host, port)
-        connection_pool = redis.ConnectionPool.from_url(cache_connection_url)
-        client = redis.StrictRedis(connection_pool=connection_pool, decode_responses=True)
-        return client
-
-    def _acquire_redis_lock(self):
-        lock_value = self._uid        
-        lock_name = self._get_redis_name('lock')
-
-        # Keep trying to acquire lock
-        res = None
-        while not res:        
-            res = self._redis.set(lock_name, lock_value, nx=True, ex=REDIS_LOCK_EXPIRE_SECONDS)
-            if not res:
-                sleep_secs = REDIS_LOCK_WAIT_SLEEP_SECONDS 
-                logger.info('Waiting for lock to be released, sleeping for {}s...'.format(sleep_secs))
-                time.sleep(sleep_secs)
-
-        # Lock acquired
-        logger.info('Acquired lock')
-
-    def _release_redis_lock(self):
-        lock_value = self._uid        
-        lock_name = self._get_redis_name('lock')
-
-        # Only release lock if it's confirmed to be the one I acquired
-        # Possible that it was a lock acquired by someone else after my lock expired
-        cur_lock_value = self._get_from_redis(lock_name)
-        if cur_lock_value == lock_value: 
-            self._redis.delete(lock_name)
-            logger.info('Released lock')
-
-    def _get_from_redis(self, key, value_type=str):
-        value = self._redis.get(key)
-        if value and value_type is str:
-            return value.decode()
-        return value
-    
     def _param_meta_to_jsonable(self, param_meta: _ParamMeta):
         jsonable = param_meta._asdict()
         jsonable['time'] = str(jsonable['time'])
@@ -370,10 +298,7 @@ class ParamCache(object):
         param_meta = _ParamMeta(**jsonable)
         return param_meta
 
-    def _get_redis_name(self, suffix):
-        return '{}:{}:{}'.format(REDIS_NAMESPACE, self._sid, suffix)
-
-
+ 
 def _serialize_params(params):
     # Serialize as `msgpack`
     params_simple = _simplify_params(params)

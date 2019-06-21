@@ -1,10 +1,11 @@
 import pytest
 
-from rafiki.test.utils import global_setup
-from rafiki.param_store.cache import Cache
+from rafiki.cache.local_cache import LocalCache
+
+from test.utils import global_setup
 import numpy as np
 
-class TestCache():
+class TestLocalCache():
     @pytest.fixture(scope='class', autouse=True)
     def params(self):
         return {
@@ -16,23 +17,23 @@ class TestCache():
         }
 
     def test_store_value(self, params):
-        cache = Cache(size=4)
+        cache = LocalCache(size=4)
         cache.put('1', params['1'])
         assert cache.get('1') is params['1']
 
     def test_replace_value(self, params):
-        cache = Cache(size=4)
+        cache = LocalCache(size=4)
         cache.put('1', params['1'])
         cache.put('1', params['2'])
         assert cache.get('1') is params['2']
 
     def test_get_missing_value(self, params):
-        cache = Cache(size=4)
+        cache = LocalCache(size=4)
         cache.put('1', params['1'])
         assert cache.get('2') is None
 
     def test_evict_value(self, params):
-        cache = Cache(size=4)
+        cache = LocalCache(size=4)
         cache.put('1', params['1'])
         cache.put('2', params['2'])
         cache.put('3', params['3'])
@@ -43,7 +44,7 @@ class TestCache():
         assert cache.get('1') is None
 
     def test_get_and_put_values(self, params):
-        cache = Cache(size=4)
+        cache = LocalCache(size=4)
         assert cache.get('1') is None
         cache.put('1', params['1'])
         cache.put('2', params['2'])
@@ -57,7 +58,7 @@ class TestCache():
         assert cache.get('5') is params['5']
     
     def test_repeatedly_evict_values(self, params):
-        cache = Cache(size=2)
+        cache = LocalCache(size=2)
         cache.put('1', params['1'])
         cache.put('2', params['2'])
         cache.put('3', params['3'])
@@ -72,7 +73,7 @@ class TestCache():
         assert cache.get('3') is params['3']
     
     def test_evict_least_recently_used_value(self, params):
-        cache = Cache(size=4)
+        cache = LocalCache(size=4)
         cache.put('1', params['1'])
         cache.put('2', params['2'])
         cache.put('3', params['3'])

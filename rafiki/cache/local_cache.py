@@ -5,7 +5,7 @@ class _CacheNode():
         self.prev = None
         self.next = None
 
-class Cache():
+class LocalCache():
     def __init__(self, size: int):
         assert size > 0
         self._size = size

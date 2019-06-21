@@ -1,1 +1,2 @@
-from .store import ParamStore, ParamsType
+from .param_store import ParamStore
+from .file import FileParamStore

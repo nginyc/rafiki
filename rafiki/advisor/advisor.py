@@ -1,77 +1,24 @@
 import abc
 import random
-from typing import List, Type, Dict
-from enum import Enum
+from typing import List, Type
 from datetime import datetime, timedelta
 
 from rafiki.model import IntegerKnob, CategoricalKnob, FloatKnob, ArchKnob, \
-                        FixedKnob, PolicyKnob, KnobConfig, Knobs, BaseKnob
-from rafiki.param_cache import ParamsType
+                        FixedKnob, PolicyKnob, KnobConfig, BaseKnob
+
+from .constants import AdvisorType, TrainWorker, Proposal, ProposalResult, Budget, ParamsType
 
 DEFAULT_TRAIN_HOURS = 0.1
 DEFAULT_MAX_TRIALS = -1
 
-BUDGET_OPTIONS = ['TIME_HOURS', 'GPU_COUNT', 'MODEL_TRIAL_COUNT'] 
-Budget = Dict[str, any]
-
 class UnsupportedKnobConfigError(Exception): pass
 class UnsupportedKnobError(Exception): pass
 
-class AdvisorType(Enum):
-    FIXED = 'FIXED'
-    BAYES_OPT_WITH_PARAM_SHARING = 'BAYES_OPT_WITH_PARAM_SHARING'
-    BAYES_OPT = 'BAYES_OPT'
-    RANDOM = 'RANDOM'
-    ENAS = 'ENAS'
-
-class TrainWorker():
-    def __init__(self, 
-                worker_id: str, 
-                gpus: int = 0): # No. of GPUs allocated to worker
-        self.worker_id = worker_id
-        self.gpus = gpus
-
-    def __str__(self):
-        return str(self.__dict__)
-
-class Proposal():
-    def __init__(self, 
-                knobs: Knobs = None, 
-                worker_id: str = None, # Worker to run this proposal
-                params_type: ParamsType = ParamsType.NONE, # Parameters to use for this trial
-                to_eval=True, # Whether the model should be evaluated
-                to_cache_params=False, # Whether this trial's parameters should be cached
-                to_save_params=True, # Whether this trial's parameters should be persisted
-                meta: dict = None): # Extra metadata associated with proposal
-        self.knobs = knobs
-        self.worker_id = worker_id
-        self.params_type = ParamsType(params_type)
-        self.to_eval = to_eval
-        self.to_cache_params = to_cache_params
-        self.to_save_params = to_save_params
-        self.meta = meta or {}
-
-    def __str__(self):
-        return str(self.__dict__)
-
-class ProposalResult():
-    def __init__(self, 
-                proposal: Proposal, 
-                score: float, # Score for the proposal
-                worker_id: str): # ID of worker that ran the proposal
-        self.proposal = proposal
-        self.score = score
-        self.worker_id = worker_id
-
-    def __str__(self):
-        return str(self.__dict__)
-
-
 # Advisor to use, in descending priority
 ADVISOR_TYPES = [AdvisorType.FIXED, 
-                AdvisorType.ENAS, 
                 AdvisorType.BAYES_OPT_WITH_PARAM_SHARING, 
                 AdvisorType.BAYES_OPT,
+                AdvisorType.ENAS, 
                 AdvisorType.RANDOM]
 
 def make_advisor(knob_config: KnobConfig, budget: Budget, workers: List[TrainWorker]):

@@ -7,7 +7,7 @@ RUNNING_INFERENCE_WORKERS = 'INFERENCE_WORKERS'
 QUERIES_QUEUE = 'QUERIES'
 PREDICTIONS_QUEUE = 'PREDICTIONS'
 
-class Cache(object):
+class InferenceCache(object):
     def __init__(self,
         redis_host=os.environ.get('REDIS_HOST', 'localhost'),
         redis_port=os.environ.get('REDIS_PORT', 6379)):
