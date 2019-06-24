@@ -7,7 +7,8 @@ import numpy as np
 from rafiki.model import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob, PolicyKnob
 
 from .development import inform_user
-from .advisor import BaseAdvisor, UnsupportedKnobError, Proposal, ParamsType
+from .constants import ParamsType, Proposal
+from .advisor import BaseAdvisor, UnsupportedKnobError
 
 FINAL_TRAIN_HOURS = 1 # No. of hours to conduct final train trials
 
@@ -20,8 +21,8 @@ class BayesOptAdvisor(BaseAdvisor):
         # Supports only CategoricalKnob, FixedKnob, IntegerKnob & FloatKnob
         return BaseAdvisor.has_only_knob_types(knob_config, [CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob, PolicyKnob])
 
-    def __init__(self, knob_config, budget, workers):
-        super().__init__(knob_config, budget, workers)
+    def __init__(self, knob_config, budget):
+        super().__init__(knob_config, budget)
         (self._fixed_knob_config, knob_config) = self.extract_knob_type(knob_config, FixedKnob)
         (self._policy_knob_config, knob_config) = self.extract_knob_type(knob_config, PolicyKnob)
         self._dimensions = self._get_dimensions(knob_config)
@@ -32,20 +33,20 @@ class BayesOptAdvisor(BaseAdvisor):
         if not self.has_policies(self.knob_config, ['QUICK_TRAIN']):
             inform_user('To speed up hyperparameter search with Bayesian Optimization, having `QUICK_TRAIN` policy is preferred.')
 
-    def propose(self, worker_id, num_trials):
-        proposal_type = self._get_proposal_type(num_trials)
+    def propose(self, worker_id, trial_no):
+        proposal_type = self._get_proposal_type(trial_no)
         meta = {'proposal_type': proposal_type}
 
         if proposal_type == 'SEARCH':
             knobs = self._propose_knobs(['QUICK_TRAIN'])
-            return Proposal(knobs, meta=meta)
+            return Proposal(trial_no, knobs, meta=meta)
         elif proposal_type == 'FINAL_TRAIN':
             knobs = self._propose_search_knobs()
-            return Proposal(knobs, meta=meta)
+            return Proposal(trial_no, knobs, meta=meta)
         elif proposal_type is None:
             return None
 
-    def feedback(self, result):
+    def feedback(self, worker_id, result):
         proposal = result.proposal
         score = result.score
         proposal_type = proposal.meta.get('proposal_type') 
@@ -105,13 +106,13 @@ class BayesOptAdvisor(BaseAdvisor):
 
         return knobs
 
-    def _get_proposal_type(self, num_trials):
+    def _get_proposal_type(self, trial_no):
         # If time's up, stop
         if self.get_train_hours_left() <= 0:
             return None
 
         # If trial's up, stop
-        if self.get_trials_left(num_trials) <= 0:
+        if self.get_trials_left(trial_no) <= 0:
             return None
 
         # If `QUICK_TRAIN` is not supported, just keep searching
@@ -137,8 +138,8 @@ class BayesOptWithParamSharingAdvisor(BaseAdvisor):
         return BaseAdvisor.has_only_knob_types(knob_config, [CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob, PolicyKnob]) and \
             BaseAdvisor.has_policies(knob_config, ['SHARE_PARAMS'])
 
-    def __init__(self, knob_config, budget, workers):
-        super().__init__(knob_config, budget, workers)
+    def __init__(self, knob_config, budget):
+        super().__init__(knob_config, budget)
         (self._fixed_knob_config, knob_config) = self.extract_knob_type(knob_config, FixedKnob)
         (self._policy_knob_config, knob_config) = self.extract_knob_type(knob_config, PolicyKnob)
         self._dimensions = self._get_dimensions(knob_config)
@@ -148,18 +149,18 @@ class BayesOptWithParamSharingAdvisor(BaseAdvisor):
         if not self.has_policies(self.knob_config, ['QUICK_TRAIN']):
             inform_user('To speed up hyperparameter search with Bayesian Optimization, having `QUICK_TRAIN` policy is preferred.')
 
-    def propose(self, worker_id, num_trials):
-        proposal_type = self._get_proposal_type(num_trials)
+    def propose(self, worker_id, trial_no):
+        proposal_type = self._get_proposal_type(trial_no)
         meta = {'proposal_type': proposal_type}
 
         if proposal_type == 'SEARCH':
             param = self._propose_param()
             knobs = self._propose_knobs(['SHARE_PARAMS', 'QUICK_TRAIN'])
-            return Proposal(knobs, params_type=param, meta=meta)
+            return Proposal(trial_no, knobs, params_type=param, meta=meta)
         elif proposal_type is None:
             return None
 
-    def feedback(self, result):
+    def feedback(self, worker_id, result):
         proposal = result.proposal
         score = result.score
         knobs = proposal.knobs
@@ -202,13 +203,13 @@ class BayesOptWithParamSharingAdvisor(BaseAdvisor):
         hours_spent = total_hours - self.get_train_hours_left()
         return _propose_exp_greedy_param(hours_spent, total_hours)
 
-    def _get_proposal_type(self, num_trials):
+    def _get_proposal_type(self, trial_no):
         # If time's up, stop
         if self.get_train_hours_left() <= 0:
             return None
 
         # If trial's up, stop
-        if self.get_trials_left(num_trials) <= 0:
+        if self.get_trials_left(trial_no) <= 0:
             return None
             
         # Keep conducting search trials

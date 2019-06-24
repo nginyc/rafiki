@@ -9,8 +9,8 @@ class FileDataStore(DataStore):
        Stores datasets in the local filesystem.
     '''
 
-    def __init__(self, data_dir):
-        self._data_dir = data_dir
+    def __init__(self, data_dir=None):
+        self._data_dir = data_dir or os.path.join(os.environ['WORKDIR_PATH'], os.environ['DATA_DIR_PATH'])
 
     def save(self, data_file_path):
         # Copy file to data dir

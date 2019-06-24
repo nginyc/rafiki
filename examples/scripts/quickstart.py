@@ -1,37 +1,15 @@
 from pprint import pprint
 import time
-import pprint
 import requests
 import argparse
-import traceback
 import os
 
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL
-from rafiki.constants import TaskType, UserType, BudgetType, \
-                                InferenceJobStatus, ModelDependency, ModelAccessRight
+from rafiki.constants import TaskType, BudgetOption, InferenceJobStatus, ModelDependency
 
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
-
-# Generates a random ID
-def gen_id(length=16):
-    return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
-
-def wait_until_train_job_has_stopped(client, app, timeout=60*20, tick=10):
-    length = 0
-    while True:
-        train_job = client.get_train_job(app)
-        status = train_job['status']
-        if status not in [TrainJobStatus.STARTED, TrainJobStatus.RUNNING]:
-            # Train job has stopped
-            return
-            
-        # Still running...
-        if length >= timeout:
-            raise TimeoutError('Train job is running for too long')
-
-        length += tick
-        time.sleep(tick)
+from examples.datasets.image_classification.load_mnist_format import load_fashion_mnist
 
 # Returns `predictor_host` of inference job
 def get_predictor_host(client, app):
@@ -67,14 +45,23 @@ def make_predictions(client, predictor_host, queries):
     return predictions
 
 
-def quickstart(client, train_dataset_path, val_dataset_path, gpus, trials):
+def quickstart(client, train_dataset_path, val_dataset_path, gpus, hours):
     task = TaskType.IMAGE_CLASSIFICATION
 
     # Randomly generate app & model names to avoid naming conflicts
     app_id = gen_id()
     app = 'image_classification_app_{}'.format(app_id)
+    tf_model_name = 'TfFeedForward_{}'.format(app_id)
     sk_model_name = 'SkDt_{}'.format(app_id)
+
+    print('Preprocessing datasets...')
+    load_fashion_mnist(train_dataset_path, val_dataset_path)
     
+    print('Creating & uploading datasets onto Rafiki...')
+    train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
+    pprint(train_dataset)
+    val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_path)
+    pprint(val_dataset)
 
     print('Adding models "{}" and "{}" to Rafiki...'.format(tf_model_name, sk_model_name)) 
     tf_model = client.create_model(tf_model_name, task, 'examples/models/image_classification/TfFeedForward.py', 
@@ -85,17 +72,11 @@ def quickstart(client, train_dataset_path, val_dataset_path, gpus, trials):
     pprint(sk_model)
     model_ids = [tf_model['id'], sk_model['id']]
 
-    print('Creating & uploading datasets onto Rafiki...')
-    train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
-    pprint(train_dataset)
-    val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_path)
-    pprint(val_dataset)
-                        
     print('Creating train job for app "{}" on Rafiki...'.format(app)) 
 
     budget = {
-        BudgetType.MODEL_TRIAL_COUNT: trials,
-        BudgetType.GPU_COUNT: gpus
+        BudgetOption.TIME_HOURS: hours,
+        BudgetOption.GPU_COUNT: gpus
     }
     train_job = client.create_train_job(app, task, train_dataset['id'], val_dataset['id'], 
                                         budget, models=model_ids)
@@ -161,7 +142,7 @@ if __name__ == '__main__':
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
-    parser.add_argument('--trials', type=int, default=5, help='How many trials to conduct for each model')
+    parser.add_argument('--hours', type=float, default=0.1, help='How long the train job should run for (in hours)') # 6min
     (args, _) = parser.parse_known_args()
     out_train_dataset_path = 'data/fashion_mnist_for_image_classification_train.zip'
     out_val_dataset_path = 'data/fashion_mnist_for_image_classification_val.zip'
@@ -174,4 +155,4 @@ if __name__ == '__main__':
     print('Login with email "{}" and password "{}"'.format(args.email, args.password)) 
     
     # Run quickstart
-    quickstart(client, out_train_dataset_path, out_val_dataset_path, args.gpus, args.trials)
+    quickstart(client, out_train_dataset_path, out_val_dataset_path, args.gpus, args.hours)

@@ -5,7 +5,7 @@ import os
 from functools import wraps
 
 from rafiki.constants import ModelAccessRight
-from rafiki.advisor import Proposal, Budget
+from rafiki.constants import Budget, BudgetOption
 
 class RafikiConnectionError(ConnectionError): pass
 
@@ -34,17 +34,11 @@ class Client(object):
 
     :param str admin_host: Host of Rafiki Admin
     :param int admin_port: Port of Rafiki Admin
-    :param str advisor_host: Host of Rafiki Advisor
-    :param int advisor_port: Port of Rafiki Advisor
     '''
     def __init__(self, admin_host=os.environ.get('RAFIKI_ADDR', 'localhost'),
-                    admin_port=os.environ.get('ADMIN_EXT_PORT', 3000),
-                    advisor_host=os.environ.get('RAFIKI_ADDR', 'localhost'),
-                    advisor_port=os.environ.get('ADVISOR_EXT_PORT', 3002)):
+                    admin_port=os.environ.get('ADMIN_EXT_PORT', 3000)):
         self._admin_host = admin_host
         self._admin_port = admin_port
-        self._advisor_host = advisor_host
-        self._advisor_port = advisor_port
         self._token = None
         self._user = None
 
@@ -387,7 +381,7 @@ class Client(object):
         If ``models`` is unspecified, all models accessible to the user for the specified task will be used.
 
         ``budget`` should be a dictionary of ``{ <budget_type>: <budget_amount> }``, where 
-        ``<budget_type>`` is one of :class:`rafiki.constants.BudgetType` and 
+        ``<budget_type>`` is one of :class:`rafiki.constants.BudgetOption` and 
         ``<budget_amount>`` specifies the amount for the associated budget type.
         
         The following describes the budget types available:
@@ -412,8 +406,8 @@ class Client(object):
 
         # Have defaults for budget
         budget = {
-            BudgetType.GPU_COUNT: 1,
-            BudgetType.MODEL_TRIAL_COUNT: 20,
+            BudgetOption.TIME_HOURS: 0.1,
+            BudgetOption.GPU_COUNT: 1,
             **budget
         }
 
@@ -642,76 +636,6 @@ class Client(object):
         return data
 
     ####################################
-    # Advisors
-    ####################################
-
-    def _create_advisor(self, knob_config_str, advisor_id: str = None) -> dict:
-        '''
-        Creates a Rafiki advisor. If `advisor_id` is passed, it will create an advisor
-        of that ID, or do nothing if an advisor of that ID has already been created.
-
-        :param KnobConfig knob_config: Knob configuration for advisor session
-        :param str advisor_id: ID of advisor to create
-        :returns: Created advisor as dictionary
-        :rtype: dict[str, any]
-        '''
-        data = {
-            'advisor_id': advisor_id,
-            'knob_config_str': knob_config_str
-        }
-
-        data = self._post('/advisors', target='advisor', json=data)
-        return data
-
-    def _get_proposal_from_advisor(self, advisor_id: str, worker_id: str, trial_no: int, 
-                                total_trials: int, concurrent_trial_nos=[]) -> Proposal:
-        '''
-        Get a proposal from an advisor.
-
-        :param str worker_id: ID of worker
-        :param str advisor_id: ID of target advisor
-        :param int trial_no: Trial no to get proposal for
-        :param int total_trials: Expected total no. of trials for this tuning session
-        :param List[int] concurrent_trial_nos: Trial nos that are concurrently running
-        :returns: Proposal from advisor 
-        :rtype: Proposal
-        '''
-        data = {
-            'worker_id': worker_id,
-            'trial_no': trial_no,
-            'total_trials': total_trials,
-            'concurrent_trial_nos': concurrent_trial_nos
-        }
-        data = self._post('/advisors/{}/propose'.format(advisor_id), target='advisor', json=data)
-        proposal = Proposal.from_jsonable(data)
-        return proposal
-
-    def _feedback_to_advisor(self, advisor_id: str, score: float, proposal: Proposal):
-        '''
-        Feedbacks to the advisor on the score of a set of knobs.
-
-        :param str advisor_id: ID of target advisor
-        :param float score: Score of the knobs, the higher the number, the better the set of knobs
-        :param Proposal proposal: Proposal to give feedback on
-        '''
-        data = {
-            'score': score,
-            'proposal': proposal.to_jsonable()
-        }
-        self._post('/advisors/{}/feedback'.format(advisor_id), target='advisor', json=data)
-
-    def _delete_advisor(self, advisor_id: str) -> dict:
-        '''
-        Deletes a Rafiki advisor.
-
-        :param str advisor_id: ID of target advisor
-        :returns: Deleted advisor as dictionary
-        :rtype: dict[str, any]
-        '''
-        data = self._delete('/advisors/{}'.format(advisor_id), target='advisor')
-        return data
-
-    ####################################
     # Administrative
     ####################################
 
@@ -736,50 +660,44 @@ class Client(object):
     # Private
     ####################################
 
-    def _get(self, path, params={}, target='admin'):
-        url = self._make_url(path, target=target)
+    def _get(self, path, params=None):
+        url = self._make_url(path)
         headers = self._get_headers()
         res = requests.get(
             url,
             headers=headers,
-            params=params
+            params=params or {}
         )
         return self._parse_response(res)
 
-    def _post(self, path, params={}, files={}, form_data=None, json=None, target='admin'):
-        url = self._make_url(path, target=target)
+    def _post(self, path, params=None, files=None, form_data=None, json=None):
+        url = self._make_url(path)
         headers = self._get_headers()
         res = requests.post(
             url, 
             headers=headers,
-            params=params, 
+            params=params or {}, 
             data=form_data,
             json=json,
-            files=files
+            files=files or {}
         )
         return self._parse_response(res)
 
-    def _delete(self, path, params={}, files={}, form_data=None, json=None, target='admin'):
-        url = self._make_url(path, target=target)
+    def _delete(self, path, params=None, files=None, form_data=None, json=None):
+        url = self._make_url(path)
         headers = self._get_headers()
         res = requests.delete(
             url, 
             headers=headers,
-            params=params, 
-            data=form_data,
+            params=params or {}, 
+            data=form_data or {},
             json=json,
             files=files
         )
         return self._parse_response(res)
 
-    def _make_url(self, path, target='admin'):
-        if target == 'admin':
-            url = 'http://{}:{}{}'.format(self._admin_host, self._admin_port, path)
-        elif target == 'advisor':
-            url = 'http://{}:{}{}'.format(self._advisor_host, self._advisor_port, path)
-        else:
-            raise RafikiConnectionError('Invalid URL target: {}'.format(target))
-
+    def _make_url(self, path):
+        url = 'http://{}:{}{}'.format(self._admin_host, self._admin_port, path)
         return url
 
     def _parse_response(self, res):

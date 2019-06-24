@@ -59,15 +59,11 @@ def extract_token_from_header(header):
     token = parts[1]
     return token
 
-def make_superadmin_client():
+def superadmin_client():
     from rafiki.client import Client
     admin_host = os.environ['ADMIN_HOST']
     admin_port = os.environ['ADMIN_PORT']
-    advisor_host = os.environ['ADVISOR_HOST']
-    advisor_port = os.environ['ADVISOR_PORT']
     client = Client(admin_host=admin_host, 
-                    admin_port=admin_port, 
-                    advisor_host=advisor_host,
-                    advisor_port=advisor_port)
+                    admin_port=admin_port)
     client.login(email=SUPERADMIN_EMAIL, password=os.environ['SUPERADMIN_PASSWORD'])
     return client

@@ -1,7 +1,8 @@
 import os
+
+from rafiki.constants import ServiceType
 from rafiki.utils.service import run_worker
 from rafiki.meta_store import MetaStore
-from rafiki.constants import ServiceType
 
 # Run install command
 install_command = os.environ.get('WORKER_INSTALL_COMMAND', '')
@@ -21,6 +22,10 @@ def start_worker(service_id, service_type, container_id):
     elif service_type == ServiceType.INFERENCE:
         from rafiki.worker.inference import InferenceWorker
         worker = InferenceWorker(service_id)
+        worker.start()
+    elif service_type == ServiceType.ADVISOR:
+        from rafiki.worker.advisor import AdvisorWorker
+        worker = AdvisorWorker(service_id)
         worker.start()
     else:
         raise Exception('Invalid service type: {}'.format(service_type))

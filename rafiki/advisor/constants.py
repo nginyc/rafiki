@@ -1,10 +1,7 @@
 from enum import Enum
-from typing import Dict
+from typing import Union
 
 from rafiki.model import Knobs
-
-BUDGET_OPTIONS = ['TIME_HOURS', 'GPU_COUNT', 'MODEL_TRIAL_COUNT'] 
-Budget = Dict[str, any]
 
 class AdvisorType(Enum):
     FIXED = 'FIXED'
@@ -26,7 +23,7 @@ class Jsonable():
         return cls(**jsonable)
 
     def to_jsonable(self) -> any:
-        jsonable = self.__dict__
+        jsonable = self.__dict__.copy()
 
         # Convert all nested jsonables & enums
         for (name, value) in jsonable.items():
@@ -40,33 +37,28 @@ class Jsonable():
     def __str__(self):
         return str(self.to_jsonable())
 
-class TrainWorker(Jsonable):
-    def __init__(self, 
-                worker_id: str, 
-                gpus: int = 0): # No. of GPUs allocated to worker
-        self.worker_id = worker_id
-        self.gpus = gpus
-
 class Proposal(Jsonable):
     def __init__(self, 
-                knobs: Knobs = None, 
+                trial_no: int, # Trial no.
+                knobs: Knobs, # Knobs for this trial
                 params_type: ParamsType = ParamsType.NONE, # Parameters to use for this trial
                 to_eval=True, # Whether the model should be evaluated
                 to_cache_params=False, # Whether this trial's parameters should be cached
                 to_save_params=True, # Whether this trial's parameters should be persisted
-                meta: dict = None): # Extra metadata associated with proposal
+                meta: dict = None, # Extra metadata associated with proposal
+                trial_id: str = None): # ID of trial associated with proposal, to be set by worker
+        self.trial_no = trial_no
         self.knobs = knobs
         self.params_type = ParamsType(params_type)
         self.to_eval = to_eval
         self.to_cache_params = to_cache_params
         self.to_save_params = to_save_params
         self.meta = meta or {}
+        self.trial_id = trial_id 
 
-class ProposalResult(Jsonable):
+class TrialResult(Jsonable):
     def __init__(self, 
                 proposal: Proposal, 
-                score: float, # Score for the proposal
-                worker_id: str): # ID of worker that ran the proposal
+                score: Union[float, None] = None): # Score for the proposal
         self.proposal = proposal if isinstance(proposal, Proposal) else Proposal(**proposal)
         self.score = score
-        self.worker_id = worker_id

@@ -15,8 +15,6 @@ class DuplicateModelNameError(Exception): pass
 class ModelUsedError(Exception): pass
 class InvalidUserTypeError(Exception): pass
 
-class DuplicateTrialNoError(Exception): pass
-
 class MetaStore(object):
     def __init__(self, **kwargs):
         host = kwargs.get('postgres_host', os.environ.get('POSTGRES_HOST', 'localhost'))
@@ -168,28 +166,15 @@ class MetaStore(object):
         train_job.datetime_stopped = datetime.utcnow()
         self._session.add(train_job)
 
-    def mark_train_job_as_running(self, train_job):
-        train_job.status = TrainJobStatus.RUNNING
-        self._session.add(train_job)
-
-    def mark_train_job_as_errored(self, train_job):
-        train_job.status = TrainJobStatus.ERRORED
-        self._session.add(train_job)
-
-    def mark_train_job_as_stopped(self, train_job):
-        train_job.status = TrainJobStatus.STOPPED
-        train_job.datetime_stopped = datetime.utcnow()
-        self._session.add(train_job)
 
     ####################################
     # Sub Train Jobs
     ####################################  
 
-    def create_sub_train_job(self, train_job_id, model_id, config):
+    def create_sub_train_job(self, train_job_id, model_id):
         sub_train_job = SubTrainJob(
             train_job_id=train_job_id,
-            model_id=model_id,
-            config=config
+            model_id=model_id
         )
         self._session.add(sub_train_job)
         return sub_train_job
@@ -201,42 +186,54 @@ class MetaStore(object):
 
         return sub_train_jobs 
 
+    def update_sub_train_job(self, sub_train_job, advisor_service_id=None):
+        sub_train_job.advisor_service_id = advisor_service_id
+        self._session.add(sub_train_job)
+        return sub_train_job
+
     def get_sub_train_job(self, id):
         sub_train_job = self._session.query(SubTrainJob).get(id)
         return sub_train_job
+
+    def get_sub_train_job_by_advisor(self, advisor_service_id):
+        sub_train_job = self._session.query(SubTrainJob) \
+                                    .filter(SubTrainJob.advisor_service_id == advisor_service_id) \
+                                    .first()
+        return sub_train_job
+
+    def mark_sub_train_job_as_running(self, sub_train_job):
+        sub_train_job.status = TrainJobStatus.RUNNING
+        self._session.add(sub_train_job)
+
+    def mark_sub_train_job_as_errored(self, sub_train_job):
+        sub_train_job.status = TrainJobStatus.ERRORED
+        self._session.add(sub_train_job)
+
+    def mark_sub_train_job_as_stopped(self, sub_train_job):
+        sub_train_job.status = TrainJobStatus.STOPPED
+        sub_train_job.datetime_stopped = datetime.utcnow()
+        self._session.add(sub_train_job)
 
     ####################################
     # Train Job Workers
     ####################################  
 
     def create_train_job_worker(self, service_id, sub_train_job_id):
-        train_job_worker = TrainJobWorker(
+        worker = TrainJobWorker(
             sub_train_job_id=sub_train_job_id,
             service_id=service_id
         )
         self._session.add(worker)
         return worker
 
-    def get_sub_train_job_worker(self, service_id):
-        worker = self._session.query(SubTrainJobWorker) \
-            .filter(SubTrainJobWorker.service_id == service_id).first()
+    def get_train_job_worker(self, service_id):
+        worker = self._session.query(TrainJobWorker) \
+            .filter(TrainJobWorker.service_id == service_id).first()
         return worker
 
-    def get_sub_train_job_workers(self, sub_train_job_id):
-        workers = self._session.query(SubTrainJobWorker) \
-                    .filter(SubTrainJobWorker.sub_train_job_id == sub_train_job_id).all()
-        return workers
-
-    def get_sub_train_job_workers_of_train_job(self, train_job_id):
-        workers = self._session.query(SubTrainJobWorker) \
-                    .join(SubTrainJob, SubTrainJob.id == SubTrainJobWorker.sub_train_job_id) \
-                    .filter(SubTrainJob.train_job_id == train_job_id).all()
-        return workers
-
-    def get_workers_of_train_job(self, train_job_id):
+    def get_workers_of_sub_train_job(self, sub_train_job_id):
         workers = self._session.query(TrainJobWorker) \
-                    .join(SubTrainJob, SubTrainJob.id == TrainJobWorker.sub_train_job_id) \
-                    .filter(SubTrainJob.train_job_id == train_job_id).all()
+                    .filter(TrainJobWorker.sub_train_job_id == sub_train_job_id).all()
 
         return workers
 
@@ -283,19 +280,16 @@ class MetaStore(object):
     def mark_inference_job_as_running(self, inference_job):
         inference_job.status = InferenceJobStatus.RUNNING
         inference_job.datetime_stopped = None
-        return inference_job
 
     def mark_inference_job_as_stopped(self, inference_job):
         inference_job.status = InferenceJobStatus.STOPPED
         inference_job.datetime_stopped = datetime.utcnow()
         self._session.add(inference_job)
-        return inference_job
 
     def mark_inference_job_as_errored(self, inference_job):
         inference_job.status = InferenceJobStatus.ERRORED
         inference_job.datetime_stopped = datetime.utcnow()
         self._session.add(inference_job)
-        return inference_job
 
     def get_inference_jobs_of_app(self, user_id, app):
         inference_jobs = self._session.query(InferenceJob) \
@@ -310,67 +304,18 @@ class MetaStore(object):
             .filter(InferenceJob.status.in_(statuses)).all()
         return inference_jobs
 
-    def mark_inference_job_as_running(self, inference_job):
-        inference_job.status = InferenceJobStatus.RUNNING
-        self._session.add(inference_job)
-
-    def mark_inference_job_as_errored(self, inference_job):
-        inference_job.status = InferenceJobStatus.ERRORED
-        self._session.add(inference_job)
-
-    def mark_inference_job_as_stopped(self, inference_job):
-        inference_job.status = InferenceJobStatus.STOPPED
-        inference_job.datetime_stopped = datetime.utcnow()
-        self._session.add(inference_job)
-
     ####################################
-    # Sub Inference Jobs
-    ####################################
+    # Inference Job Workers
+    ####################################  
 
-    def create_sub_inference_job(self, inference_job_id, trial_id):
-        sub_inference_job = SubInferenceJob(
+    def create_inference_job_worker(self, service_id, inference_job_id, trial_id):
+        worker = TrainJobWorker(
+            service_id=service_id,
             inference_job_id=inference_job_id,
             trial_id=trial_id
         )
-        self._session.add(sub_inference_job)
-        return sub_inference_job
-
-    def get_sub_inference_job(self, id):
-        sub_inference_job = self._session.query(SubInferenceJob).get(id)
-        return sub_inference_job
-
-    def get_sub_inference_jobs_of_inference_job(self, inference_job_id):
-        sub_inference_jobs = self._session.query(SubInferenceJob) \
-            .filter(SubInferenceJob.inference_job_id == inference_job_id).all()
-        return sub_inference_jobs
-
-    ####################################
-    # Sub Inference Job Worker
-    ####################################  
-
-    def create_sub_inference_job_worker(self, sub_inference_job_id, service_id):
-        worker = SubInferenceJobWorker(
-            sub_inference_job_id=sub_inference_job_id,
-            service_id=service_id
-        )
         self._session.add(worker)
         return worker
-
-    def get_sub_inference_job_worker(self, service_id):
-        worker = self._session.query(SubInferenceJobWorker) \
-            .filter(SubInferenceJobWorker.service_id == service_id).first()
-        return worker
-
-    def get_sub_inference_job_workers_of_inference_job(self, inference_job_id):
-        workers = self._session.query(SubInferenceJobWorker) \
-                    .join(SubInferenceJob, SubInferenceJob.id == SubInferenceJobWorker.sub_inference_job_id) \
-                    .filter(SubInferenceJob.inference_job_id == inference_job_id).all()
-        return workers
-
-    def get_sub_inference_job_workers(self, sub_inference_job_id):
-        workers = self._session.query(SubInferenceJobWorker) \
-                    .filter(SubInferenceJobWorker.sub_inference_job_id == sub_inference_job_id).all()
-        return workers
 
     ####################################
     # Services
@@ -538,7 +483,7 @@ class MetaStore(object):
 
         return trials
 
-    def get_trials_of_sub_train_job(self, sub_train_job_id, min_trial_no):
+    def get_trials_of_sub_train_job(self, sub_train_job_id, min_trial_no=None):
         query = self._session.query(Trial) \
             .filter(Trial.sub_train_job_id == sub_train_job_id)
 
@@ -563,10 +508,10 @@ class MetaStore(object):
         self._session.add(trial)
         return trial
 
-    def mark_trial_as_completed(self, trial, score, params_file_path):
+    def mark_trial_as_completed(self, trial, score, store_params_id):
         trial.status = TrialStatus.COMPLETED
         trial.score = score
-        trial.params_file_path = params_file_path
+        trial.store_params_id = store_params_id
         trial.datetime_stopped = datetime.utcnow()
         trial.datetime_updated = datetime.utcnow()
         self._session.add(trial)
@@ -601,11 +546,6 @@ class MetaStore(object):
         try:
             self._session.commit()
         except Exception as e:
-            # Check if error is due to duplicate trial no
-            if '_sub_train_job_id_no_uc' in str(e):
-                self._session.rollback()
-                raise DuplicateTrialNoError()
-
             # Check if error is due to duplicate model name
             if 'model_name_user_id_key' in str(e):
                 self._session.rollback()

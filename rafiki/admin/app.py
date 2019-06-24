@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify, g, make_response
 from flask_cors import CORS
-import os
 import traceback
 import json
 import tempfile
@@ -204,12 +203,12 @@ def get_trials_of_train_job(auth, app, app_version):
             params['max_count'] = int(params['max_count'])
 
         with admin:
-            return jsonify(admin.get_best_trials_of_train_job(auth['user_id'], app, app_version=int(app_version), **params ))
+            return jsonify(admin.get_best_trials_of_train_job(auth['user_id'], app, app_version=int(app_version), **params))
     
     # Return all trials by train job
     else:
         with admin:
-            return jsonify(admin.get_trials_of_train_job(auth['user_id'], app, app_version=int(app_version), **params ))
+            return jsonify(admin.get_trials_of_train_job(auth['user_id'], app, app_version=int(app_version), **params))
 
 ####################################
 # Trials

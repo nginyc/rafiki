@@ -7,8 +7,8 @@ class FileParamStore(ParamStore):
     '''
        Stores parameters in the local filesystem.
     '''
-    def __init__(self, params_dir):
-        self._params_dir = params_dir
+    def __init__(self, params_dir=None):
+        self._params_dir = params_dir or os.path.join(os.environ['WORKDIR_PATH'], os.environ['PARAMS_DIR_PATH'])
 
     def save(self, params: Params):
         # Serialize params and save bytes to params dir

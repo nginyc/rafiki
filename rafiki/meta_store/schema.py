@@ -4,8 +4,7 @@ from sqlalchemy.dialects.postgresql import JSON, ARRAY
 import uuid
 from datetime import datetime
 
-from rafiki.constants import InferenceJobStatus, ServiceStatus, TrainJobStatus, \
-    TrialStatus, ModelAccessRight
+from rafiki.constants import InferenceJobStatus, ServiceStatus, TrainJobStatus, TrialStatus, ModelAccessRight
 
 Base = declarative_base()
 
@@ -103,12 +102,18 @@ class SubTrainJob(Base):
     id = Column(String, primary_key=True, default=generate_uuid)
     train_job_id = Column(String, ForeignKey('train_job.id'))
     model_id = Column(String, ForeignKey('model.id'))
-    user_id = Column(String, ForeignKey('user.id'), nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     train_job_id = Column(String, ForeignKey('train_job.id'))
-    user_id = Column(String, ForeignKey('user.id'), nullable=False)
-    predictor_service_id = Column(String, ForeignKey('service.id'))
+    status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     datetime_stopped = Column(DateTime, default=None)
+    advisor_service_id = Column(String, ForeignKey('service.id'))
+
+class TrainJobWorker(Base):
+    __tablename__ = 'train_job_worker'
+
+    service_id = Column(String, ForeignKey('service.id'), primary_key=True)
+    sub_train_job_id = Column(String, ForeignKey('sub_train_job.id'), nullable=False)
+
 
 class Trial(Base):
     __tablename__ = 'trial'
@@ -120,11 +125,11 @@ class Trial(Base):
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     datetime_updated = Column(DateTime, nullable=False, default=generate_datetime)
     datetime_stopped = Column(DateTime, default=None)
-    status = Column(String, nullable=False, default=TrialStatus.STARTED)
+    status = Column(String, nullable=False, default=TrialStatus.PENDING)
     worker_id = Column(String, nullable=False)
     knobs = Column(JSON, default=None)
     score = Column(Float, default=None)
-    params_file_path = Column(String, default=None)
+    store_params_id = Column(String, default=None)
     proposal = Column(JSON, default=None)
 
     __table_args__ = (UniqueConstraint('sub_train_job_id', 'no', name='_sub_train_job_id_no_uc'),) # Unique by (sub train job, trial no)

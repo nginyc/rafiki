@@ -1,12 +1,9 @@
 import os
 import logging
-import traceback
 import bcrypt
-import uuid
 
 from rafiki.meta_store import MetaStore
-from rafiki.constants import ServiceStatus, UserType, ServiceType, TrainJobStatus, \
-                            ModelAccessRight, BudgetType, InferenceJobStatus
+from rafiki.constants import ServiceStatus, UserType, TrainJobStatus, ModelAccessRight, InferenceJobStatus
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.model import LoggerUtils
 from rafiki.container import DockerSwarmContainerManager 
@@ -30,7 +27,7 @@ class InvalidDatasetError(Exception): pass
 
 class Admin(object):
     def __init__(self, meta_store=None, container_manager=None, data_store=None):
-        meta_store = meta_store or MetaStore()
+        self._meta_store = meta_store or MetaStore()
         data_folder_path = os.path.join(os.environ['WORKDIR_PATH'], os.environ['DATA_DIR_PATH'])
         container_manager = container_manager or DockerSwarmContainerManager()
         self._data_store: DataStore = data_store or FileDataStore(data_folder_path)
@@ -169,7 +166,7 @@ class Admin(object):
                         val_dataset_id, budget, model_ids):
         
         # Ensure there is no existing train job for app
-        train_jobs = self._meta_store.get_train_jobs_of_app(app)
+        train_jobs = self._meta_store.get_train_jobs_by_app(user_id, app)
         if any([x.status in [TrainJobStatus.RUNNING, TrainJobStatus.STARTED] for x in train_jobs]):
             raise InvalidTrainJobError('Another train job for app "{}" is still running!'.format(app))
         
@@ -178,10 +175,14 @@ class Admin(object):
             raise NoModelsForTrainJobError()
 
         # Compute auto-incremented app version
-        train_jobs = self._meta_store.get_train_jobs_by_app(user_id, app)
         app_version = max([x.app_version for x in train_jobs], default=0) + 1
 
+        # Get models available to user
         avail_model_ids = [x.id for x in self._meta_store.get_available_models(user_id, task)]
+
+        # Warn if there are no models for task  
+        if len(avail_model_ids) == 0:
+            raise InvalidModelError(f'No models are available for task "{task}"')
 
         # Ensure all specified models are available
         for model_id in model_ids:
@@ -211,25 +212,21 @@ class Admin(object):
         )
         self._meta_store.commit()
 
-        try:
-            for (model_id, config) in model_id_to_config.items():
-                self._meta_store.create_sub_train_job(
-                    train_job_id=train_job.id,
-                    model_id=model_id,
-                    config=config
-                )
-            self._meta_store.commit()
-            self._services_manager.create_train_services(train_job.id)
-            self.refresh_train_job_status(train_job.id)
+        for model_id in model_ids:
+            self._meta_store.create_sub_train_job(
+                train_job_id=train_job.id,
+                model_id=model_id
+            )
 
-            return {
-                'id': train_job.id,
-                'app': train_job.app,
-                'app_version': train_job.app_version
-            }
-        except Exception as e:
-            self._meta_store.mark_train_job_as_errored(train_job)
-            raise e
+        self._meta_store.commit()
+
+        self._services_manager.create_train_services(train_job.id)
+
+        return {
+            'id': train_job.id,
+            'app': train_job.app,
+            'app_version': train_job.app_version
+        }
 
     def stop_train_job(self, user_id, app, app_version=-1):
         train_job = self._meta_store.get_train_job_by_app_version(user_id, app, app_version=app_version)
@@ -237,23 +234,24 @@ class Admin(object):
             raise InvalidTrainJobError()
 
         self._services_manager.stop_train_services(train_job.id)
-        self.refresh_train_job_status(train_job.id)
 
         return {
             'id': train_job.id,
             'app': train_job.app,
             'app_version': train_job.app_version
         }
+
+    def stop_sub_train_job(self, sub_train_job_id):
+        self._services_manager.stop_sub_train_job_services(sub_train_job_id)
+
+        return {
+            'id': sub_train_job_id
+        }
             
     def get_train_job(self, user_id, app, app_version=-1):
         train_job = self._meta_store.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidTrainJobError()
-
-        workers = self._meta_store.get_workers_of_train_job(train_job.id)
-        services = [self._meta_store.get_service(x.service_id) for x in workers]
-        worker_models = [self._meta_store.get_model(self._meta_store.get_sub_train_job(x.sub_train_job_id).model_id) \
-                         for x in workers]
 
         return {
             'id': train_job.id,
@@ -322,38 +320,10 @@ class Admin(object):
             }
             for x in train_jobs
         ]
-
-    def get_trials_of_train_job(self, user_id, app, app_version=-1):
-        train_job = self._meta_store.get_train_job_by_app_version(user_id, app, app_version=app_version)
-        if train_job is None:
-            raise InvalidTrainJobError()
-
-        sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(train_job.id)
-        trials = []
-        for sub_train_job in sub_train_jobs:
-            trials_for_sub = self._meta_store.get_trials_of_sub_train_job(sub_train_job.id)
-            trials.extend(trials_for_sub)
-
-        trials_models = [self._meta_store.get_model(x.model_id) for x in trials]
-        
-        return [
-            {
-                'id': trial.id,
-                'knobs': trial.knobs,
-                'datetime_started': trial.datetime_started,
-                'status': trial.status,
-                'datetime_stopped': trial.datetime_stopped,
-                'model_name': model.name,
-                'score': trial.score
-            }
-            for (trial, model) in zip(trials, trials_models)
-        ]
-
     def stop_all_train_jobs(self):
         train_jobs = self._meta_store.get_train_jobs_by_statuses([TrainJobStatus.STARTED, TrainJobStatus.RUNNING])
         for train_job in train_jobs:
             self._services_manager.stop_train_services(train_job.id)
-            self.refresh_train_job_status(train_job.id)
 
         return [
             {
@@ -361,32 +331,6 @@ class Admin(object):
             }
             for train_job in train_jobs
         ]
-
-    def refresh_train_job_status(self, train_job_id):
-        train_job = self._meta_store.get_train_job(train_job_id)
-        workers = self._meta_store.get_sub_train_job_workers_of_train_job(train_job_id)
-        services = [self._meta_store.get_service(x.service_id) for x in workers]
-
-        count = {
-            ServiceStatus.STARTED: 0,
-            ServiceStatus.DEPLOYING: 0,
-            ServiceStatus.RUNNING: 0,
-            ServiceStatus.ERRORED: 0,
-            ServiceStatus.STOPPED: 0
-        }
-
-        for service in services:
-            if service is None:
-                continue
-            count[service.status] += 1
-
-        # Determine status of train job based on sub-jobs
-        if count[ServiceStatus.ERRORED] > 0:
-            self._meta_store.mark_train_job_as_errored(train_job)
-        elif count[ServiceStatus.STOPPED] == len(services):
-            self._meta_store.mark_train_job_as_stopped(train_job)
-        elif count[ServiceStatus.RUNNING] > 0:
-            self._meta_store.mark_train_job_as_running(train_job)
 
     ####################################
     # Trials
@@ -437,8 +381,8 @@ class Admin(object):
 
         return parameters
 
-    def get_trials_of_train_job(self, app, app_version=-1, limit=1000, offset=0):
-        train_job = self._meta_store.get_train_job_by_app_version(app, app_version=app_version)
+    def get_trials_of_train_job(self, user_id, app, app_version=-1, limit=1000, offset=0):
+        train_job = self._meta_store.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidTrainJobError()
 
@@ -647,40 +591,32 @@ class Admin(object):
 
     def handle_event(self, name, **params):
         event_to_method = {
-            'sub_train_job_budget_reached': self._on_sub_train_job_budget_reached,
-            'sub_train_job_worker_started': self._on_sub_train_job_worker_started,
-            'sub_train_job_worker_stopped': self._on_sub_train_job_worker_stopped,
-            'sub_inference_job_worker_started': self._on_sub_inference_job_worker_started,
-            'sub_inference_job_worker_stopped': self._on_sub_inference_job_worker_stopped,
-            'inference_job_predictor_started': self._on_inference_job_predictor_started
+            'sub_train_job_advisor_started': self._on_sub_train_job_advisor_started,
+            'sub_train_job_advisor_stopped': self._on_sub_train_job_advisor_stopped,
+            'train_job_worker_started': self._on_train_job_worker_started,
+            'train_job_worker_stopped': self._on_train_job_worker_stopped,
         }
 
         if name in event_to_method:
             event_to_method[name](**params)
         else:
-            logger.log('Unknown event: "{}"'.format(name))
+            logger.error('Unknown event: "{}"'.format(name))
 
-    def _on_sub_train_job_budget_reached(self, sub_train_job_id):
-        self.stop_sub_train_job(sub_train_job_id)
+    def _on_sub_train_job_advisor_started(self, sub_train_job_id):
+        assert sub_train_job_id is not None
+        self._services_manager.refresh_sub_train_job_status(sub_train_job_id)
 
-    def _on_sub_train_job_worker_started(self, sub_train_job_id):
-        sub_train_job = self._meta_store.get_sub_train_job(sub_train_job_id)
-        self.refresh_train_job_status(sub_train_job.train_job_id)
+    def _on_sub_train_job_advisor_stopped(self, sub_train_job_id):
+        assert sub_train_job_id is not None
+        self._services_manager.stop_sub_train_job_services(sub_train_job_id)
 
-    def _on_sub_train_job_worker_stopped(self, sub_train_job_id):
-        sub_train_job = self._meta_store.get_sub_train_job(sub_train_job_id)
-        self.refresh_train_job_status(sub_train_job.train_job_id)
-    
-    def _on_sub_inference_job_worker_started(self, sub_inference_job_id):
-        sub_inference_job = self._meta_store.get_sub_inference_job(sub_inference_job_id)
-        self.refresh_inference_job_status(sub_inference_job.inference_job_id)
+    def _on_train_job_worker_started(self, sub_train_job_id):
+        assert sub_train_job_id is not None
+        self._services_manager.refresh_sub_train_job_status(sub_train_job_id)
 
-    def _on_sub_inference_job_worker_stopped(self, sub_inference_job_id):
-        sub_inference_job = self._meta_store.get_sub_inference_job(sub_inference_job_id)
-        self.refresh_inference_job_status(sub_inference_job.inference_job_id)
-
-    def _on_inference_job_predictor_started(self, inference_job_id):
-        self.refresh_inference_job_status(inference_job_id)
+    def _on_train_job_worker_stopped(self, sub_train_job_id):
+        assert sub_train_job_id is not None
+        self._services_manager.refresh_sub_train_job_status(sub_train_job_id)
 
     ####################################
     # Models
@@ -776,41 +712,12 @@ class Admin(object):
             }
             for model in models
         ]
-
-    ####################################
-    # Events
-    ####################################
-
-    def handle_event(self, name, **params):
-        event_to_method = {
-            'sub_train_job_budget_reached': self._on_sub_train_job_budget_reached,
-            'train_job_worker_started': self._on_train_job_worker_started,
-            'train_job_worker_stopped': self._on_train_job_worker_stopped
-        }
-
-        if name in event_to_method:
-            event_to_method[name](**params)
-        else:
-            logger.error('Unknown event: "{}"'.format(name))
-
-    def _on_sub_train_job_budget_reached(self, sub_train_job_id):
-        self._services_manager.stop_sub_train_job_services(sub_train_job_id)
-
-    def _on_train_job_worker_started(self, sub_train_job_id):
-        sub_train_job = self._meta_store.get_sub_train_job(sub_train_job_id)
-        self._services_manager.refresh_train_job_status(sub_train_job.train_job_id)
-
-    def _on_train_job_worker_stopped(self, sub_train_job_id):
-        sub_train_job = self._meta_store.get_sub_train_job(sub_train_job_id)
-        self._services_manager.refresh_train_job_status(sub_train_job.train_job_id)
     
     ####################################
     # Private / Users
     ####################################
 
     def _seed_superadmin(self):
-        logger.info('Seeding superadmin...')
-
         # Seed superadmin
         try:
             self._create_user(
@@ -818,6 +725,7 @@ class Admin(object):
                 password=SUPERADMIN_PASSWORD,
                 user_type=UserType.SUPERADMIN
             )
+            logger.info('Seeded superadmin...')
         except UserExistsError:
             logger.info('Skipping superadmin creation as it already exists...')
 

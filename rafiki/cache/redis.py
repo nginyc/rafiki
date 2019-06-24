@@ -39,9 +39,6 @@ class RedisSession(object):
                 logger.info('Waiting for lock to be released, sleeping for {}s...'.format(sleep_secs))
                 time.sleep(sleep_secs)
 
-        # Lock acquired
-        logger.info('Acquired lock')
-
     def release_lock(self):
         lock_value = self._uid     
         lock_name = self._get_redis_name('lock')   
@@ -52,7 +49,6 @@ class RedisSession(object):
         cur_lock_value = cur_lock_value.decode() if cur_lock_value is not None else None
         if cur_lock_value == lock_value: 
             self._redis.delete(lock_name)
-            logger.info('Released lock')
         else:
             logger.info('Lock is not mine - not releasing...')
 
@@ -74,7 +70,8 @@ class RedisSession(object):
     def delete_pattern(self, pattern):
         key_patt = self._get_redis_name(pattern)
         keys = self._redis.keys(key_patt)
-        self._redis.delete(*keys)
+        if len(keys) > 0:
+            self._redis.delete(*keys)
 
     def _encode_value(self, value):
         value = msgpack.packb(value, use_bin_type=True)
@@ -101,7 +98,6 @@ class RedisSession(object):
             logger.info('Using mock Redis...')
 
         return client
-
 
 class MockRedis():
     data = {}

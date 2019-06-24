@@ -21,8 +21,6 @@ title "Starting Rafiki's Admin..."
   -e SUPERADMIN_PASSWORD=$SUPERADMIN_PASSWORD \
   -e ADMIN_HOST=$ADMIN_HOST \
   -e ADMIN_PORT=$ADMIN_PORT \
-  -e ADVISOR_HOST=$ADVISOR_HOST \
-  -e ADVISOR_PORT=$ADVISOR_PORT \
   -e REDIS_HOST=$REDIS_HOST \
   -e REDIS_PORT=$REDIS_PORT \
   -e PREDICTOR_PORT=$PREDICTOR_PORT \
@@ -43,4 +41,4 @@ title "Starting Rafiki's Admin..."
   $RAFIKI_IMAGE_ADMIN:$RAFIKI_VERSION \
   &> $LOG_FILE_PATH) &
 
-ensure_stable "Rafiki's Admin" $LOG_FILE_PATH 10
+ensure_stable "Rafiki's Admin" $LOG_FILE_PATH 20

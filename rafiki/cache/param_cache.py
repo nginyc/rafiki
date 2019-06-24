@@ -43,9 +43,9 @@ class ParamCache(object):
     
     def __init__(self, 
                 session_id='local', 
-                cache_size=4, 
                 redis_host=None,
-                redis_port=None):
+                redis_port=None, 
+                cache_size=4):
         self._params: Dict[str, _ParamMeta] = {} # Stores params metadata
         redis_namespace = f'{REDIS_NAMESPACE}:{session_id}'
         self._redis = RedisSession(redis_namespace, redis_host, redis_port)
@@ -332,7 +332,7 @@ def _simplify_params(params):
 
         return params_simple
 
-    except Exception:
+    except:
         traceback.print_stack()
         raise InvalidParamsFormatError()
 

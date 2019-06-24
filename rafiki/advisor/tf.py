@@ -3,9 +3,10 @@ import numpy as np
 import logging
 from collections import defaultdict
 
+from rafiki.constants import BudgetOption
 from rafiki.model import ArchKnob, FixedKnob, PolicyKnob
-from rafiki.param_cache import ParamsType
 
+from .constants import ParamsType
 from .advisor import BaseAdvisor, Proposal
 
 logger = logging.getLogger(__name__)
@@ -28,13 +29,13 @@ class EnasAdvisor(BaseAdvisor):
         # Supports only FixedKnob, ArchKnob and PolicyKnob
         # And must have param sharing, quick train, quick eval, skip train & downscale
         # And time budget must be sufficient to cover final evals & final trains
-        time_hours = budget.get('TIME_HOURS', 0)
+        time_hours = budget.get(BudgetOption.TIME_HOURS, 0)
         return BaseAdvisor.has_only_knob_types(knob_config, [FixedKnob, ArchKnob, PolicyKnob]) and \
             BaseAdvisor.has_policies(knob_config, ['SHARE_PARAMS', 'DOWNSCALE', 'QUICK_TRAIN', 'QUICK_EVAL', 'SKIP_TRAIN']) and \
             time_hours >= ENAS_FINAL_HOURS 
 
-    def __init__(self, knob_config, budget, workers):
-        super().__init__(knob_config, budget, workers)
+    def __init__(self, knob_config, budget):
+        super().__init__(knob_config, budget)
         self._batch_size = ENAS_BATCH_SIZE
         self._num_eval_per_cycle = ENAS_NUM_EVAL_PER_CYCLE
         self._num_final_evals = ENAS_NUM_FINAL_EVALS
@@ -47,7 +48,7 @@ class EnasAdvisor(BaseAdvisor):
         (self._policy_knob_config, knob_config) = self.extract_knob_type(knob_config, PolicyKnob)
         self._list_knob_models = self._build_models(knob_config, self._batch_size)
 
-    def propose(self, worker_id, num_trials):
+    def propose(self, worker_id, trial_no):
         proposal_type = self._get_proposal_type(worker_id)
         meta = {'proposal_type': proposal_type}
 
@@ -56,7 +57,7 @@ class EnasAdvisor(BaseAdvisor):
 
         if proposal_type == 'TRAIN':
             knobs = self._propose_knobs(['DOWNSCALE', 'QUICK_TRAIN'])
-            return Proposal(knobs,
+            return Proposal(trial_no, knobs,
                             params_type=ParamsType.LOCAL_RECENT, 
                             to_eval=False, 
                             to_cache_params=True, 
@@ -64,23 +65,23 @@ class EnasAdvisor(BaseAdvisor):
                             meta=meta)
         elif proposal_type == 'EVAL':
             knobs = self._propose_knobs(['DOWNSCALE', 'QUICK_EVAL', 'SKIP_TRAIN'])
-            return Proposal(knobs, 
+            return Proposal(trial_no, knobs, 
                             params_type=ParamsType.LOCAL_RECENT, 
                             to_save_params=False, 
                             meta=meta)
         elif proposal_type == 'FINAL_EVAL':
             knobs = self._propose_knobs(['DOWNSCALE', 'SKIP_TRAIN'])
-            return Proposal(knobs, 
+            return Proposal(trial_no, knobs, 
                             params_type=ParamsType.LOCAL_RECENT, 
                             meta=meta)
         elif proposal_type == 'FINAL_TRAIN':
             # Do standard model training from scratch with final knobs
             knobs = self._propose_final_knobs()
-            return Proposal(knobs, meta=meta)
+            return Proposal(trial_no, knobs, meta=meta)
         elif proposal_type is None:
             return None
 
-    def feedback(self, result):
+    def feedback(self, worker_id, result):
         proposal = result.proposal
         knobs = proposal.knobs
         score = result.score

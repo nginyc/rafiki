@@ -29,9 +29,6 @@ docker rm -f $REDIS_HOST || echo "Failed to stop Rafiki's Cache"
 title "Stopping Rafiki's Admin..."
 docker rm -f $ADMIN_HOST || echo "Failed to stop Rafiki's Admin"
 
-title "Stopping Rafiki's Advisor..."
-docker rm -f $ADVISOR_HOST || echo "Failed to stop Rafiki's Advisor"
-
 title "Stopping Rafiki's Web Admin..."
 docker rm -f $ADMIN_WEB_HOST || echo "Failed to stop Rafiki's Web Admin"
 

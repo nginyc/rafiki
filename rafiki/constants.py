@@ -1,10 +1,11 @@
-class ModelDependency():
-    TENSORFLOW = 'tensorflow'
-    KERAS = 'Keras'
-    SCIKIT_LEARN = 'scikit-learn'
-    TORCH = 'torch'
-    TORCHVISION = 'torchvision'
-    SINGA = 'singa'
+from typing import Dict
+
+Budget = Dict[str, any]
+
+class BudgetOption():
+    GPU_COUNT = 'GPU_COUNT'
+    TIME_HOURS = 'TIME_HOURS'
+    MODEL_TRIAL_COUNT = 'MODEL_TRIAL_COUNT'
 
 class ModelAccessRight():
     PUBLIC = 'PUBLIC'
@@ -19,7 +20,6 @@ class InferenceJobStatus():
 class TrainJobStatus():
     STARTED = 'STARTED'
     RUNNING = 'RUNNING'
-    ERRORED = 'ERRORED'
     STOPPED = 'STOPPED'
     ERRORED = 'ERRORED'
 
@@ -30,23 +30,32 @@ class TrialStatus():
     TERMINATED = 'TERMINATED'
     COMPLETED = 'COMPLETED'
 
+class UserType():
+    SUPERADMIN = 'SUPERADMIN'
+    ADMIN = 'ADMIN'
+    MODEL_DEVELOPER = 'MODEL_DEVELOPER'
+    APP_DEVELOPER = 'APP_DEVELOPER'
+
+class ServiceType():
+    TRAIN = 'TRAIN'
+    ADVISOR = 'ADVISOR'
+    PREDICT = 'PREDICT'
+    INFERENCE = 'INFERENCE'
+
 class ServiceStatus():
     STARTED = 'STARTED'
     DEPLOYING = 'DEPLOYING'
     RUNNING = 'RUNNING'
     ERRORED = 'ERRORED'
     STOPPED = 'STOPPED'
-
-class ServiceType():
-    TRAIN = 'TRAIN'
-    PREDICT = 'PREDICT'
-    INFERENCE = 'INFERENCE'
-
-class UserType():
-    SUPERADMIN = 'SUPERADMIN'
-    ADMIN = 'ADMIN'
-    MODEL_DEVELOPER = 'MODEL_DEVELOPER'
-    APP_DEVELOPER = 'APP_DEVELOPER'
+    
+class ModelDependency():
+    TENSORFLOW = 'tensorflow'
+    KERAS = 'Keras'
+    SCIKIT_LEARN = 'scikit-learn'
+    TORCH = 'torch'
+    TORCHVISION = 'torchvision'
+    SINGA = 'singa'
 
 class DatasetType():
     IMAGE_FILES = 'IMAGE_FILES'
