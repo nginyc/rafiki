@@ -631,7 +631,7 @@ class TfEnas(BaseModel):
         utils.logger.log('Feeding dataset to model...')
 
         # Mock classes if required
-        classes = [0 for _ in range(len(images))]
+        classes = classes or [0 for _ in range(len(images))]
         
         if is_train:
             self._sess.run(m.train_dataset_init_op, feed_dict={
