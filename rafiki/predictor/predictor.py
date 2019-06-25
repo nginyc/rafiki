@@ -7,8 +7,9 @@ import traceback
 
 from rafiki.utils.auth import superadmin_client
 from rafiki.meta_store import MetaStore
-from rafiki.cache import InferenceCache, Query, Prediction
+from rafiki.cache import InferenceCache
 
+from .constants import Prediction, Query
 from .ensemble import ensemble_predictions
 
 PREDICT_LOOP_SLEEP_SECS = 0.1

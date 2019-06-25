@@ -9,7 +9,8 @@ from rafiki.meta_store import MetaStore
 from rafiki.model import load_model_class, BaseModel
 from rafiki.advisor import Proposal
 from rafiki.param_store import FileParamStore
-from rafiki.cache import InferenceCache, Query, Prediction
+from rafiki.predictor import Query, Prediction
+from rafiki.cache import InferenceCache
 
 LOOP_SLEEP_SECS = 0.1
 PREDICT_BATCH_SIZE = 32

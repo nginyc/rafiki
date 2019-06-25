@@ -56,18 +56,18 @@ class ServicesManager(object):
         trial_ids = self._get_deployment_for_inference_job(inference_job)
 
         try:
+            # Create predictor
+            predictor_service = self._create_predictor(inference_job)
+
             # Create worker for each trial to be deployed
             for trial_id in trial_ids:
                 trial = self._meta_store.get_trial(trial_id)
                 self._create_inference_job_worker(inference_job, trial)
 
-            # Create predictor
-            predictor_service = self._create_predictor(inference_job)
-
             return (inference_job, predictor_service)
 
         except Exception as e:
-            # Stop partially started train services
+            # Stop partially started inference services
             self.stop_inference_services(inference_job_id)
             self._meta_store.mark_inference_job_as_errored(inference_job)
             raise ServiceDeploymentError(e)   
@@ -106,16 +106,14 @@ class ServicesManager(object):
                 worker_status_to_count[service.status] += 1
         predictor_status = predictor_service.status if predictor_service is not None else None
 
-        print(predictor_status, worker_status_to_count)
-
         # If predictor is running and at least 1 worker, it is running
         # If predictor is stopped, it is stopped
         # If predictor is errored or all workers are errored, it is errored
         if predictor_status == ServiceStatus.RUNNING and worker_status_to_count[ServiceStatus.RUNNING] >= 1:
-            self._meta_store.mark_inference_job_as_errored(inference_job)
+            self._meta_store.mark_inference_job_as_running(inference_job)
         elif predictor_status == ServiceStatus.STOPPED:
             self._meta_store.mark_inference_job_as_stopped(inference_job)
-        elif predictor_status is None or predictor_status == ServiceStatus.ERRORED or \
+        elif predictor_status == ServiceStatus.ERRORED or \
                 worker_status_to_count[ServiceStatus.ERRORED] == len(workers):
             self._meta_store.mark_inference_job_as_errored(inference_job)
 
@@ -204,7 +202,7 @@ class ServicesManager(object):
             self._meta_store.mark_sub_train_job_as_running(sub_train_job)
         elif advisor_status == ServiceStatus.STOPPED:
             self._meta_store.mark_sub_train_job_as_stopped(sub_train_job)
-        elif advisor_status is None or advisor_status == ServiceStatus.ERRORED or \
+        elif advisor_status == ServiceStatus.ERRORED or \
                 worker_status_to_count[ServiceStatus.ERRORED] == len(workers):
             self._meta_store.mark_sub_train_job_as_errored(sub_train_job)
 
