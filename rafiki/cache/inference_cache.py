@@ -1,78 +1,101 @@
-import redis
-import os
-import json
-import uuid
+from typing import Union, List
+import pickle
+import logging
 
-RUNNING_INFERENCE_WORKERS = 'INFERENCE_WORKERS'
-QUERIES_QUEUE = 'QUERIES'
-PREDICTIONS_QUEUE = 'PREDICTIONS'
+from rafiki.predictor import Prediction, Query
 
-class InferenceCache(object):
-    def __init__(self,
-        redis_host=os.environ.get('REDIS_HOST', 'localhost'),
-        redis_port=os.environ.get('REDIS_PORT', 6379)):
-        self._redis = self._make_redis_client(redis_host, redis_port)
+from .redis import RedisSession
+
+logger = logging.getLogger(__name__)
+
+REDIS_NAMESPACE = 'INFERENCE'
+
+class InferenceCache():
+    '''
+    Caches queries & predictions to facilitate communication between predictor & inference workers.
+
+    For each session, assume a single predictor and multiple inference workers running concurrently.
+
+    :param str session_id: Associated session ID
+    '''
+
+    '''
+        Internally, organises data into these Redis namespaces:
+
+        workers                                     | Set of IDs of workers available 
+        workers:<worker_id>:queries                 | List of queries for worker
+        workers:<worker_id>:<query_id>:prediction   | Prediction for query of ID for worker of ID 
+    '''
+    
+    def __init__(self, 
+                session_id='local', 
+                redis_host=None,
+                redis_port=None):
+        redis_namespace = f'{REDIS_NAMESPACE}:{session_id}'
+        self._redis = RedisSession(redis_namespace, redis_host, redis_port)
+
+    ####################################
+    # Predictor
+    ####################################
+
+    def get_workers(self) -> List[str]:
+        worker_ids = self._redis.list_set('workers')
+        return worker_ids
+
+    def add_queries_for_worker(self, worker_id: str, queries: List[Query]):
+        name = f'workers:{worker_id}:queries'
+        queries = [pickle.dumps(x) for x in queries]
+        logger.info(f'Adding {len(queries)} querie(s) for worker "{worker_id}"...')
+        self._redis.prepend_to_list(name, *queries)
+
+    def take_prediction_for_worker(self, worker_id: str, query_id: str) -> Union[Prediction, None]:
+        name = f'workers:{worker_id}:{query_id}:prediction'
+        prediction = self._redis.get(name)
+        if prediction is None:
+            return None
         
-    def add_worker_of_inference_job(self, worker_id, inference_job_id):
-        inference_workers_key = '{}_{}'.format(RUNNING_INFERENCE_WORKERS, inference_job_id)
-        self._redis.sadd(inference_workers_key, worker_id)
+        # Delete prediction from cache
+        self._redis.delete(name)
+        prediction = pickle.loads(prediction)
+        logger.info(f'Took prediction for query "{query_id}" from worker "{worker_id}"')
+        return prediction
 
-    def delete_worker_of_inference_job(self, worker_id, inference_job_id):
-        inference_workers_key = '{}_{}'.format(RUNNING_INFERENCE_WORKERS, inference_job_id)
-        self._redis.srem(inference_workers_key, worker_id)
+    def clear_all(self):
+        self._redis.delete('workers')
+        self._redis.delete_pattern('workers:*')
+        self._redis.delete_pattern('queries:*')
 
-    def get_workers_of_inference_job(self, inference_job_id):
-        inference_workers_key = '{}_{}'.format(RUNNING_INFERENCE_WORKERS, inference_job_id)
-        worker_ids = self._redis.smembers(inference_workers_key)
-        return [x.decode() for x in worker_ids]
+    ####################################
+    # Inference Worker
+    ####################################
 
-    def add_query_of_worker(self, worker_id, query):
-        query_id = str(uuid.uuid4())
-        query = json.dumps({
-            'id': query_id,
-            'query': query
-        })
+    def add_worker(self, worker_id: str):
+        self._redis.add_to_set('workers', worker_id)
 
-        worker_queries_key = '{}_{}'.format(QUERIES_QUEUE, worker_id)
-        self._redis.rpush(worker_queries_key, query)
-        return query_id
+    def pop_queries_for_worker(self, worker_id: str, batch_size: int) -> List[Query]:
+        name = f'workers:{worker_id}:queries'
+        queries = []
 
-    def pop_queries_of_worker(self, worker_id, batch_size):
-        worker_queries_key = '{}_{}'.format(QUERIES_QUEUE, worker_id)
-        queries = self._redis.lrange(worker_queries_key, 0, batch_size - 1)
-        self._redis.ltrim(worker_queries_key, len(queries), -1)
-        queries = [json.loads(x) for x in queries]
-        query_ids = [x['id'] for x in queries]
-        queries = [x['query'] for x in queries]
-        return (query_ids, queries)
+        # Repeatedly pop from list of queries to accumulate batch
+        for _ in range(batch_size):
+            query = self._redis.pop_from_list(name)
+            if query is None:
+                break
+            query = pickle.loads(query)
+            queries.append(query)
+        
+        if len(queries) > 0:
+            logger.info(f'Popped {len(queries)} querie(s) for worker "{worker_id}"')
 
-    def add_prediction_of_worker(self, worker_id, query_id, prediction):
-        prediction = json.dumps({
-            'id': query_id,
-            'prediction': prediction
-        })
+        return queries
+    
+    def add_predictions_for_worker(self, worker_id: str, predictions: List[Prediction]):
+        logger.info(f'Adding {len(predictions)} prediction(s) for worker "{worker_id}"')
+        for prediction in predictions:
+            name = f'workers:{worker_id}:{prediction.query_id}:prediction'
+            prediction = pickle.dumps(prediction)
+            self._redis.set(name, prediction)
+    
 
-        worker_predictions_key = '{}_{}'.format(PREDICTIONS_QUEUE, worker_id)
-        self._redis.rpush(worker_predictions_key, prediction)
-
-    def pop_prediction_of_worker(self, worker_id, query_id):
-        # Search through worker's list of predictions
-        worker_predictions_key = '{}_{}'.format(PREDICTIONS_QUEUE, worker_id)
-        predictions = self._redis.lrange(worker_predictions_key, 0, -1)
-
-        for (i, prediction) in enumerate(predictions):
-            prediction = json.loads(prediction)
-            # If prediction for query found, remove prediction from list and return it
-            if prediction['id'] == query_id:
-                self._redis.ltrim(worker_predictions_key, i + 1, i)
-                return prediction['prediction']
-
-        # Return None if prediction is not found
-        return None
-
-    def _make_redis_client(self, host, port):
-        cache_connection_url = 'redis://{}:{}'.format(host, port)
-        connection_pool = redis.ConnectionPool.from_url(cache_connection_url)
-        client = redis.StrictRedis(connection_pool=connection_pool, decode_responses=True)
-        return client
-
+    def delete_worker(self, worker_id: str):
+        self._redis.delete_from_set('workers', worker_id)

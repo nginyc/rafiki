@@ -21,7 +21,7 @@ def start_worker(service_id, service_type, container_id):
         worker.start()
     elif service_type == ServiceType.INFERENCE:
         from rafiki.worker.inference import InferenceWorker
-        worker = InferenceWorker(service_id)
+        worker = InferenceWorker(service_id, container_id)
         worker.start()
     elif service_type == ServiceType.ADVISOR:
         from rafiki.worker.advisor import AdvisorWorker

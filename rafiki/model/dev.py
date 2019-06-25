@@ -1,25 +1,23 @@
 import json
 import traceback
-import uuid
 import inspect
 import argparse
 import time
 from datetime import datetime
-from typing import Dict, Type
+from typing import Dict, Type, List
 
-from rafiki.model import BaseModel, BaseKnob, serialize_knob_config, deserialize_knob_config, \
-                        parse_model_install_command, load_model_class
 from rafiki.constants import ModelDependency, Budget
-from rafiki.predictor import ensemble_predictions
+from rafiki.advisor import ParamsType, Proposal, TrialResult, make_advisor
+from rafiki.predictor import ensemble_predictions, Query, Prediction
 from rafiki.param_store import FileParamStore, ParamStore
-from rafiki.cache import ParamCache, TrainCache
+from rafiki.cache import ParamCache, TrainCache, InferenceCache
 
-from .constants import ParamsType, Proposal, TrialResult
-from .advisor import make_advisor
-
+from .model import BaseModel, BaseKnob, Params
+from .utils import serialize_knob_config, deserialize_knob_config, parse_model_install_command, load_model_class
+                    
 # TODO: Better doc
 def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dataset_path: str, 
-                test_dataset_path: str = None, budget: Budget = None) -> (Dict[str, any], float, str):
+                test_dataset_path: str = None, budget: Budget = None) -> (Dict[str, any], float, Params):
     '''
     Tunes a model on a given dataset in the current environment.
 
@@ -67,17 +65,21 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
     best_proposal = None
     best_store_params_id = None
 
+    # Train worker tells advisor that it is free
+    train_cache.add_worker(worker_id)
+
     # Until there's no more proposals, keep conducting trials
     trial_no = 0
     while True:
         trial_no += 1
 
-        # Train worker tells advisor that it is free
-        train_cache.add_free_worker(worker_id)
-
-        # Advisor waits for free train worker s
-        worker_ids = train_cache.get_free_workers()
+        # Advisor checks free workers
+        worker_ids = train_cache.get_workers()
         assert worker_id in worker_ids
+
+        # Advisor checks worker doesn't already have a proposal
+        proposal = train_cache.get_proposal(worker_id)
+        assert proposal is None
 
         # Advisor sends a proposal to worker
         # Overriding knobs from args
@@ -89,9 +91,8 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
         train_cache.create_proposal(worker_id, proposal)
 
         # Worker receives proposal
-        proposal = train_cache.take_proposal(worker_id)
+        proposal = train_cache.get_proposal(worker_id)
         assert proposal is not None
-        train_cache.delete_free_worker(worker_id)
 
         # Worker starts trial
         _print_header(f'Trial #{trial_no}')
@@ -130,6 +131,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
         # Worker sends result to advisor
         print('Giving feedback to advisor...')
         train_cache.create_result(worker_id, result) 
+        train_cache.delete_proposal(worker_id)
 
         # Advisor receives result
         # Advisor ingests feedback
@@ -139,6 +141,9 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
 
         # Destroy model
         model_inst.destroy()
+    
+    # Train worker tells advisor that it is no longer free
+    train_cache.delete_worker(worker_id)
 
     # Declare best model
     if best_proposal is not None:
@@ -161,15 +166,70 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
 
     return (best_proposal, best_model_test_score, best_params)
 
+def make_predictions(queries: List[any], task: str, py_model_class: Type[BaseModel], proposal: Proposal, params: Params) -> List[any]:
+    inference_cache: InferenceCache = InferenceCache()
+    worker_id = 'local'
+
+    print('Queries: {}'.format(queries))
+
+    # Worker load best trained model's parameters
+    model_inst = None
+    _print_header('Loading trained model...')
+    model_inst = py_model_class(**proposal.knobs)
+    model_inst.load_parameters(params)
+
+    # Inference worker tells predictor that it is free
+    inference_cache.add_worker(worker_id)
+
+    # Predictor receives queries
+    queries = [Query(x) for x in queries]
+
+    # Predictor checks free workers
+    worker_ids = inference_cache.get_workers()
+    assert worker_id in worker_ids
+
+    # Predictor sends query to worker
+    inference_cache.add_queries_for_worker(worker_id, queries)
+
+    # Worker receives query
+    queries_at_worker = inference_cache.pop_queries_for_worker(worker_id, len(queries))
+    assert len(queries_at_worker) == len(queries)
+
+    # Worker makes prediction on queries
+    _print_header('Making predictions with trained model...')
+    predictions = model_inst.predict([x.query for x in queries_at_worker])
+    predictions = [Prediction(x, query.id, worker_id) for (x, query) in zip(predictions, queries_at_worker)]
+
+    # Worker sends predictions to predictor
+    inference_cache.add_predictions_for_worker(worker_id, predictions)
+
+    # Predictor receives predictions
+    predictions_at_predictor = []
+    for query in queries:
+        prediction = inference_cache.take_prediction_for_worker(worker_id, query.id)
+        assert prediction is not None
+        predictions_at_predictor.append(prediction)
+
+    # Predictor ensembles predictions
+    out_predictions = []
+    for prediction in predictions_at_predictor:
+        prediction = prediction.prediction
+        _assert_jsonable(prediction, Exception('Each `prediction` should be JSON serializable'))
+        out_prediction = ensemble_predictions([prediction], task)
+        out_predictions.append(out_prediction)
+
+    print('Predictions: {}'.format(out_predictions))
+
+    return (out_predictions, model_inst)
 
 # TODO: Fix method, more thorough testing of model API
 def test_model_class(model_file_path: str, model_class: str, task: str, 
-                    dependencies: Dict[str, str], queries: list = None, **kwargs):
+                    dependencies: Dict[str, str], queries: List[any] = None, **kwargs) -> (List[any], BaseModel):
     '''
     Tests whether a model class is properly defined by running a full train-inference flow.
     The model instance's methods will be called in an order similar to that in Rafiki.
 
-    Refer to `tune_model` for additional parameters to be passed.
+    Refer to `tune_model` for additional parameters that can be passed.
 
     :param str model_file_path: Path to a single Python file that contains the definition for the model class
     :param str model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
@@ -177,8 +237,8 @@ def test_model_class(model_file_path: str, model_class: str, task: str,
     :param dict[str, str] dependencies: Model's dependencies
     :param str train_dataset_path: File path of the train dataset for training of the model
     :param str val_dataset_path: File path of the validation dataset for evaluating trained models
-    :param list[any] queries: List of queries for testing predictions with the trained model
-    :returns: The trained model
+    :param List[any] queries: List of queries for testing predictions with the trained model
+    :returns: (<predictions of best trained model>, <best trained model>)
     '''
     _print_header('Installing & checking model dependencies...')
     _check_dependencies(dependencies)
@@ -189,35 +249,20 @@ def test_model_class(model_file_path: str, model_class: str, task: str,
     py_model_class = load_model_class(model_file_bytes, model_class, temp_mod_name=model_class)
     _check_model_class(py_model_class)
 
-    # Simulation of training process
+    # Simulation of training
     (best_proposal, _, best_params) = tune_model(py_model_class, **kwargs)
-   
-    # Load best trained model's parameters
+
+    # Simulation of inference
     model_inst = None
-    if best_proposal is not None:
-        _print_header('Checking loading of best model...')
-        model_inst = py_model_class(**best_proposal.knobs)
-        model_inst.load_parameters(best_params)
-
-        if queries is not None:
-            _print_header('Checking predictions...')
-            print('Using queries: {}'.format(queries))
-            predictions = model_inst.predict(queries)
-
-            # Verify format of predictions
-            for prediction in predictions:
-                _assert_jsonable(prediction, Exception('Each `prediction` should be JSON serializable'))
-
-            # Ensemble predictions in predictor
-            predictions = ensemble_predictions([predictions], task)
-
-            print('Predictions: {}'.format(predictions))
+    predictions = None
+    if best_proposal is not None and best_params is not None and queries is not None:
+        (predictions, model_inst) = make_predictions(queries, task, py_model_class, best_proposal, best_params)
 
     py_model_class.teardown()
 
     inform_user('No errors encountered while testing model!')
 
-    return model_inst
+    return (predictions, model_inst)
 
 def warn_user(msg):
     print(f'\033[93mWARNING: {msg}\033[0m')

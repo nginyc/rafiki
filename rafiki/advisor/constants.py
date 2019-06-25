@@ -3,20 +3,6 @@ from typing import Union
 
 from rafiki.model import Knobs
 
-class AdvisorType(Enum):
-    FIXED = 'FIXED'
-    BAYES_OPT_WITH_PARAM_SHARING = 'BAYES_OPT_WITH_PARAM_SHARING'
-    BAYES_OPT = 'BAYES_OPT'
-    RANDOM = 'RANDOM'
-    ENAS = 'ENAS'
-
-class ParamsType(Enum):
-    LOCAL_RECENT = 'LOCAL_RECENT'
-    LOCAL_BEST = 'LOCAL_BEST'
-    GLOBAL_RECENT = 'GLOBAL_RECENT'
-    GLOBAL_BEST = 'GLOBAL_BEST'
-    NONE = 'NONE'
-
 class Jsonable():
     @classmethod
     def from_jsonable(cls, jsonable) -> object:
@@ -36,6 +22,20 @@ class Jsonable():
 
     def __str__(self):
         return str(self.to_jsonable())
+
+class AdvisorType(Enum):
+    FIXED = 'FIXED'
+    BAYES_OPT_WITH_PARAM_SHARING = 'BAYES_OPT_WITH_PARAM_SHARING'
+    BAYES_OPT = 'BAYES_OPT'
+    RANDOM = 'RANDOM'
+    ENAS = 'ENAS'
+
+class ParamsType(Enum):
+    LOCAL_RECENT = 'LOCAL_RECENT'
+    LOCAL_BEST = 'LOCAL_BEST'
+    GLOBAL_RECENT = 'GLOBAL_RECENT'
+    GLOBAL_BEST = 'GLOBAL_BEST'
+    NONE = 'NONE'
 
 class Proposal(Jsonable):
     def __init__(self, 

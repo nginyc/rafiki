@@ -1,4 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import Column, String, Float, ForeignKey, Integer, LargeBinary, DateTime, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSON, ARRAY
 import uuid
@@ -79,6 +80,12 @@ class Service(Base):
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     datetime_stopped = Column(DateTime, default=None)
 
+    @hybrid_property
+    def host(self):
+        if self.ext_hostname is None or self.ext_port is None:
+            return None
+        return f'{self.ext_hostname}:{self.ext_port}'
+
 class TrainJob(Base):
     __tablename__ = 'train_job'
 
@@ -131,6 +138,10 @@ class Trial(Base):
     score = Column(Float, default=None)
     store_params_id = Column(String, default=None)
     proposal = Column(JSON, default=None)
+
+    @hybrid_property
+    def is_params_saved(self):
+        return self.store_params_id is not None
 
     __table_args__ = (UniqueConstraint('sub_train_job_id', 'no', name='_sub_train_job_id_no_uc'),) # Unique by (sub train job, trial no)
 

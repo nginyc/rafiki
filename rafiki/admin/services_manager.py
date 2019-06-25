@@ -53,23 +53,16 @@ class ServicesManager(object):
 
     def create_inference_services(self, inference_job_id):
         inference_job = self._meta_store.get_inference_job(inference_job_id)
-        sub_inference_jobs = self._meta_store.get_sub_inference_jobs_of_inference_job(inference_job_id)
+        trial_ids = self._get_deployment_for_inference_job(inference_job)
 
         try:
-            # Create a worker service for each best trial of associated train job
-            worker_services = []
-            for (trial, replicas) in trial_to_replicas.items():
-                service = self._create_inference_job_worker(inference_job, trial)
-                worker_services.append(service)
-                self._meta_store.commit()
+            # Create worker for each trial to be deployed
+            for trial_id in trial_ids:
+                trial = self._meta_store.get_trial(trial_id)
+                self._create_inference_job_worker(inference_job, trial)
 
             # Create predictor
             predictor_service = self._create_predictor(inference_job)
-            self._meta_store.update_inference_job(inference_job, predictor_service_id=predictor_service.id)
-            self._meta_store.commit()
-
-            # Ensure that all services are running
-            self._wait_until_services_running([predictor_service, *worker_services])
 
             return (inference_job, predictor_service)
 
@@ -83,18 +76,50 @@ class ServicesManager(object):
         inference_job = self._meta_store.get_inference_job(inference_job_id)
         
         # Stop predictor
-        service = self._meta_store.get_service(inference_job.predictor_service_id)
-        self._stop_service(service)
+        if inference_job.predictor_service_id is not None:
+            service = self._meta_store.get_service(inference_job.predictor_service_id)
+            self._stop_service(service)
 
         # Stop all workers for inference job
-        sub_inference_jobs = self._meta_store.get_sub_inference_jobs_of_inference_job(inference_job_id)
-        for sub_inference_job in sub_inference_jobs:
-            workers = self._meta_store.get_sub_inference_job_workers(sub_inference_job.id)
-            for worker in workers:
-                service = self._meta_store.get_service(worker.service_id)
-                self._stop_service(service)
+        workers = self._meta_store.get_workers_of_inference_job(inference_job_id)
+        for worker in workers:
+            service = self._meta_store.get_service(worker.service_id)
+            self._stop_service(service)
+
+        self._meta_store.mark_inference_job_as_stopped(inference_job)
+        self._meta_store.commit()
 
         return inference_job
+
+    def refresh_inference_job_status(self, inference_job_id):
+        inference_job = self._meta_store.get_inference_job(inference_job_id)
+        assert inference_job is not None
+        predictor_service_id = inference_job.predictor_service_id
+        workers = self._meta_store.get_workers_of_inference_job(inference_job_id)
+        predictor_service = self._meta_store.get_service(predictor_service_id) if predictor_service_id is not None else None
+        services = [self._meta_store.get_service(x.service_id) for x in workers]
+
+        # Count statuses of workers
+        worker_status_to_count = defaultdict(int)
+        for service in services:
+            if service is not None:
+                worker_status_to_count[service.status] += 1
+        predictor_status = predictor_service.status if predictor_service is not None else None
+
+        print(predictor_status, worker_status_to_count)
+
+        # If predictor is running and at least 1 worker, it is running
+        # If predictor is stopped, it is stopped
+        # If predictor is errored or all workers are errored, it is errored
+        if predictor_status == ServiceStatus.RUNNING and worker_status_to_count[ServiceStatus.RUNNING] >= 1:
+            self._meta_store.mark_inference_job_as_errored(inference_job)
+        elif predictor_status == ServiceStatus.STOPPED:
+            self._meta_store.mark_inference_job_as_stopped(inference_job)
+        elif predictor_status is None or predictor_status == ServiceStatus.ERRORED or \
+                worker_status_to_count[ServiceStatus.ERRORED] == len(workers):
+            self._meta_store.mark_inference_job_as_errored(inference_job)
+
+        self._meta_store.commit()
 
     def create_train_services(self, train_job_id):
         train_job = self._meta_store.get_train_job(train_job_id)
@@ -102,25 +127,21 @@ class ServicesManager(object):
 
         # Determine CPU & GPU allocation across sub train jobs
         total_gpus = int(train_job.budget.get(BudgetOption.GPU_COUNT, DEFAULT_TRAIN_GPU_COUNT))
-        (jobs_gpus, jobs_cpus) = self._get_deployment_for_sub_train_jobs(total_gpus, sub_train_jobs)
+        (jobs_gpus, jobs_cpus) = self._get_deployment_for_train_job(total_gpus, sub_train_jobs)
 
         # Try to create advisors & workers for each sub train job
         try:
-            services = []
             for (sub_train_job, gpus, cpus) in zip(sub_train_jobs, jobs_gpus, jobs_cpus):
                 # Create advisor
-                service = self._create_advisor(sub_train_job)
-                services.append(service)
+                self._create_advisor(sub_train_job)
                 
                 # 1 GPU per worker
                 for _ in range(gpus):
-                    service = self._create_train_job_worker(sub_train_job)
-                    services.append(service)
+                    self._create_train_job_worker(sub_train_job)
 
                 # CPU workers
                 for _ in range(cpus):
-                    service = self._create_train_job_worker(sub_train_job, gpus=0)
-                    services.append(service)
+                    self._create_train_job_worker(sub_train_job, gpus=0)
         
             return train_job
 
@@ -197,12 +218,10 @@ class ServicesManager(object):
         assert train_job is not None
         sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(train_job_id)
 
-        # Count statuses of workers
+        # Count statuses of sub train jobs
         status_to_count = defaultdict(int)
         for job in sub_train_jobs:
             status_to_count[job.status] += 1
-
-        print(status_to_count)
 
         # If any sub train job is running, train job is running
         # If all sub train jobs are stopped, train job is stopped
@@ -218,7 +237,7 @@ class ServicesManager(object):
     # Private
     ####################################
 
-    def _get_deployment_for_sub_train_jobs(self, total_gpus, sub_train_jobs):
+    def _get_deployment_for_train_job(self, total_gpus, sub_train_jobs):
         # Evenly distribute GPus across sub train jobs, letting first few sub train jobs have 1 more GPU to fully allocate
         N = len(sub_train_jobs)
         base_gpus = total_gpus // N
@@ -231,6 +250,19 @@ class ServicesManager(object):
             jobs_cpus.append(0 if gpus > 0 else 1)
 
         return (jobs_gpus, jobs_cpus)
+
+    def _get_deployment_for_inference_job(self, inference_job):
+        sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(inference_job.train_job_id)
+
+        trial_ids = []
+        # For each sub train job, to deploy best-scoring trial
+        for sub_train_job in sub_train_jobs:
+            trials = self._meta_store.get_best_trials_of_sub_train_job(sub_train_job.id, max_count=1)
+            if len(trials) == 0:
+                continue
+            trial_ids.append(trials[0].id)
+
+        return trial_ids
 
     def _create_inference_job_worker(self, inference_job, trial):
         sub_train_job = self._meta_store.get_sub_train_job(trial.sub_train_job_id)
@@ -247,6 +279,13 @@ class ServicesManager(object):
             environment_vars=environment_vars
         )
 
+        self._meta_store.create_inference_job_worker(
+            service_id=service.id,
+            inference_job_id=inference_job.id,
+            trial_id=trial.id
+        )
+        self._meta_store.commit()
+
         return service
 
     def _create_predictor(self, inference_job):
@@ -259,6 +298,9 @@ class ServicesManager(object):
             environment_vars=environment_vars,
             container_port=self._predictor_port
         )
+
+        self._meta_store.update_inference_job(inference_job, predictor_service_id=service.id)
+        self._meta_store.commit()
 
         return service
 
@@ -318,19 +360,6 @@ class ServicesManager(object):
             # Allow exception to be thrown if deleting service fails (maybe concurrent service deletion)
             logger.info('Error while deleting service with ID {} - maybe already deleted'.format(service.id))
             logger.info(traceback.format_exc())
-
-    # Returns when all services have status of `RUNNING`
-    # Throws an exception if any of the services have a status of `ERRORED` or `STOPPED`
-    def _wait_until_services_running(self, services):
-        for service in services:
-            while service.status not in \
-                    [ServiceStatus.RUNNING, ServiceStatus.ERRORED, ServiceStatus.STOPPED]:
-                time.sleep(SERVICE_STATUS_WAIT_SECS)
-                self._meta_store.expire()
-                service = self._meta_store.get_service(service.id)
-
-            if service.status in [ServiceStatus.ERRORED, ServiceStatus.STOPPED]:
-                raise ServiceDeploymentError('Service of ID {} is of status {}'.format(service.id, service.status))
 
     def _create_service(self, service_type, docker_image,
                         replicas=1, environment_vars={}, args=[], 

@@ -20,7 +20,7 @@ class InvalidDatasetError(Exception): pass
 
 logger = logging.getLogger(__name__)
 
-class TrainWorker(object):
+class TrainWorker():
     def __init__(self, service_id, worker_id):
         self._worker_id = worker_id
         self._monitor: _SubTrainJobMonitor = _SubTrainJobMonitor(service_id)
@@ -43,14 +43,11 @@ class TrainWorker(object):
         logger.info(f'Starting worker for sub train job "{self._monitor.sub_train_job_id}"...')
         self._notify_start()
         
-        self._mark_as_free()
         while True:
             proposal = self._fetch_proposal()
             if proposal is not None:
-                self._mark_as_busy()
                 result = self._perform_trial(proposal)
                 self._submit_result(result)
-                self._mark_as_free()
             time.sleep(LOOP_SLEEP_SECS)
 
     def stop(self):
@@ -73,16 +70,11 @@ class TrainWorker(object):
 
     def _notify_start(self):
         superadmin_client().send_event('train_job_worker_started', sub_train_job_id=self._monitor.sub_train_job_id)
-
-    def _mark_as_free(self):
-        self._train_cache.add_free_worker(self._worker_id)
+        self._train_cache.add_worker(self._worker_id)
 
     def _fetch_proposal(self):
-        proposal = self._train_cache.take_proposal(self._worker_id)
+        proposal = self._train_cache.get_proposal(self._worker_id)
         return proposal
-
-    def _mark_as_busy(self):
-        self._train_cache.delete_free_worker(self._worker_id)
 
     def _perform_trial(self, proposal: Proposal) -> TrialResult:
         self._trial_id = proposal.trial_id
@@ -116,6 +108,7 @@ class TrainWorker(object):
             self._trial_id = None
 
     def _notify_stop(self):
+        self._train_cache.delete_worker(self._worker_id)
         superadmin_client().send_event('train_job_worker_stopped', sub_train_job_id=self._monitor.sub_train_job_id)
 
     def _start_logging_to_trial(self, handle_log):
@@ -182,6 +175,7 @@ class TrainWorker(object):
 
     def _submit_result(self, result: TrialResult):
         self._train_cache.create_result(self._worker_id, result)
+        self._train_cache.delete_proposal(self._worker_id)
 
     def _stop_logging_to_trial(self, logger_info):
         (root_logger, py_model_logger, log_handler) = logger_info
@@ -225,7 +219,6 @@ class _SubTrainJobMonitor():
             if model is None:
                 raise InvalidWorkerError('No such model with ID "{}"'.format(sub_train_job.model_id))
             logger.info(f'Using model "{model.name}"...')
-
 
             (self.train_dataset_path, self.val_dataset_path) = self._load_datasets(train_job)
             self.sub_train_job_id = sub_train_job.id

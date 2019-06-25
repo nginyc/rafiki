@@ -6,11 +6,11 @@ import numpy as np
 
 from rafiki.model import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob, PolicyKnob
 
-from .development import inform_user
 from .constants import ParamsType, Proposal
 from .advisor import BaseAdvisor, UnsupportedKnobError
 
-FINAL_TRAIN_HOURS = 1 # No. of hours to conduct final train trials
+# TODO: Change back
+FINAL_TRAIN_HOURS = 0.1 # No. of hours to conduct final train trials
 
 class BayesOptAdvisor(BaseAdvisor):
     '''
@@ -31,7 +31,7 @@ class BayesOptAdvisor(BaseAdvisor):
 
         # Prefer having certain policies
         if not self.has_policies(self.knob_config, ['QUICK_TRAIN']):
-            inform_user('To speed up hyperparameter search with Bayesian Optimization, having `QUICK_TRAIN` policy is preferred.')
+            print('To speed up hyperparameter search with Bayesian Optimization, having `QUICK_TRAIN` policy is preferred.')
 
     def propose(self, worker_id, trial_no):
         proposal_type = self._get_proposal_type(trial_no)
@@ -147,7 +147,7 @@ class BayesOptWithParamSharingAdvisor(BaseAdvisor):
         
         # Prefer having certain policies
         if not self.has_policies(self.knob_config, ['QUICK_TRAIN']):
-            inform_user('To speed up hyperparameter search with Bayesian Optimization, having `QUICK_TRAIN` policy is preferred.')
+            print('To speed up hyperparameter search with Bayesian Optimization, having `QUICK_TRAIN` policy is preferred.')
 
     def propose(self, worker_id, trial_no):
         proposal_type = self._get_proposal_type(trial_no)

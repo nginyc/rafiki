@@ -20,7 +20,7 @@ class _WorkerInfo():
     def __init__(self):
         self.trial_id: int = None # ID of pending trial assigned to worker, None if there is no pending trial
 
-class AdvisorWorker(object):
+class AdvisorWorker():
     def __init__(self, service_id):
         self._monitor: _SubTrainJobMonitor = _SubTrainJobMonitor(service_id)
         self._redis_host = os.environ['REDIS_HOST']
@@ -46,6 +46,7 @@ class AdvisorWorker(object):
         while True:
             self._fetch_results()
             if not self._make_proposals():
+                self._notify_budget_reached()
                 break
             time.sleep(LOOP_SLEEP_SECS)
 
@@ -102,7 +103,7 @@ class AdvisorWorker(object):
     # Returns False if tuning is to be stopped
     def _make_proposals(self):
         # For each free worker
-        worker_ids = self._train_cache.get_free_workers()
+        worker_ids = self._train_cache.get_workers()
         for worker_id in worker_ids:
             # If new worker, add info
             if worker_id not in self._worker_infos:
@@ -117,6 +118,7 @@ class AdvisorWorker(object):
                 continue
 
             # Create trial
+            # TODO: Terminate trial if budget is reached
             (trial_no, trial_id) = self._monitor.create_next_trial(worker_id)
 
             # Make proposal to free worker
@@ -136,6 +138,9 @@ class AdvisorWorker(object):
             worker_info.trial_id = trial_id
             
         return True
+
+    def _notify_budget_reached(self):
+        superadmin_client().send_event('sub_train_job_budget_reached',  sub_train_job_id=self._monitor.sub_train_job_id)
 
     def _notify_stop(self):
         superadmin_client().send_event('sub_train_job_advisor_stopped', sub_train_job_id=self._monitor.sub_train_job_id)
@@ -161,7 +166,7 @@ class _SubTrainJobMonitor():
         with self._meta_store:
             sub_train_job = self._meta_store.get_sub_train_job_by_advisor(service_id)
             if sub_train_job is None:
-                raise InvalidSubTrainJobError('No such sub train job associated with advisor "{}"'.format(service_id))
+                raise InvalidSubTrainJobError('No sub train job associated with advisor "{}"'.format(service_id))
 
             train_job = self._meta_store.get_train_job(sub_train_job.train_job_id)
             if train_job is None:
@@ -171,6 +176,7 @@ class _SubTrainJobMonitor():
             if model is None:
                 raise InvalidSubTrainJobError('No such model with ID "{}"'.format(sub_train_job.model_id))
             logger.info(f'Using model "{model.name}"...')
+            logger.info(f'Using budget "{train_job.budget}"...')
 
             trials = self._meta_store.get_trials_of_sub_train_job(sub_train_job.id)
 

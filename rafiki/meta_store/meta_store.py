@@ -187,7 +187,8 @@ class MetaStore(object):
         return sub_train_jobs 
 
     def update_sub_train_job(self, sub_train_job, advisor_service_id=None):
-        sub_train_job.advisor_service_id = advisor_service_id
+        if advisor_service_id is not None:
+            sub_train_job.advisor_service_id = advisor_service_id
         self._session.add(sub_train_job)
         return sub_train_job
 
@@ -272,8 +273,9 @@ class MetaStore(object):
             .filter(InferenceJob.user_id == user_id).all()
         return inference_jobs
 
-    def update_inference_job(self, inference_job, predictor_service_id):
-        inference_job.predictor_service_id = predictor_service_id
+    def update_inference_job(self, inference_job, predictor_service_id=None):
+        if predictor_service_id is not None:
+            inference_job.predictor_service_id = predictor_service_id
         self._session.add(inference_job)
         return inference_job
     
@@ -309,13 +311,24 @@ class MetaStore(object):
     ####################################  
 
     def create_inference_job_worker(self, service_id, inference_job_id, trial_id):
-        worker = TrainJobWorker(
+        worker = InferenceJobWorker(
             service_id=service_id,
             inference_job_id=inference_job_id,
             trial_id=trial_id
         )
         self._session.add(worker)
         return worker
+
+    def get_inference_job_worker(self, service_id):
+        worker = self._session.query(InferenceJobWorker) \
+            .filter(InferenceJobWorker.service_id == service_id).first()
+        return worker
+
+    def get_workers_of_inference_job(self, inference_job_id):
+        workers = self._session.query(InferenceJobWorker) \
+                    .filter(InferenceJobWorker.inference_job_id == inference_job_id).all()
+
+        return workers
 
     ####################################
     # Services
@@ -461,17 +474,29 @@ class MetaStore(object):
             
         return trial_logs
     
-    # Return a list of trials associated with a train job that have the best scores
+    # Return a list of trials associated with a train job that have the best scores, in descending score
     # Trials' models must be saved
-    def get_best_trials_of_train_job(self, train_job_id, max_count=2):
+    def get_best_trials_of_train_job(self, train_job_id, max_count=3):
         trials = self._session.query(Trial) \
             .join(SubTrainJob, Trial.sub_train_job_id == SubTrainJob.id) \
             .filter(SubTrainJob.train_job_id == train_job_id) \
             .filter(Trial.status == TrialStatus.COMPLETED) \
-            .filter(Trial.params_file_path != None) \
+            .filter(Trial.is_params_saved == True) \
             .order_by(Trial.score.desc()) \
             .limit(max_count).all()
 
+        return trials
+
+    # Return a list of trials associated with a sub train job that have the best scores, in descending score
+    # Trials' models must be saved
+    def get_best_trials_of_sub_train_job(self, sub_train_job_id, max_count=3):
+        trials = self._session.query(Trial) \
+            .filter(Trial.sub_train_job_id == sub_train_job_id) \
+            .filter(Trial.status == TrialStatus.COMPLETED) \
+            .filter(Trial.is_params_saved == True) \
+            .order_by(Trial.score.desc()) \
+            .limit(max_count).all()
+        
         return trials
 
     def get_trials_of_train_job(self, train_job_id, limit=1000, offset=0):

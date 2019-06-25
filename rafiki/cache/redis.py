@@ -55,7 +55,7 @@ class RedisSession(object):
     def get(self, name):
         key = self._get_redis_name(name)
         value = self._redis.get(key)
-        value = self._parse_value(value)
+        value = self._decode_value(value)
         return value
 
     def set(self, name, value):
@@ -72,12 +72,38 @@ class RedisSession(object):
         keys = self._redis.keys(key_patt)
         if len(keys) > 0:
             self._redis.delete(*keys)
+    
+    def add_to_set(self, name, *values):
+        key = self._get_redis_name(name)
+        values = [self._encode_value(x) for x in values]
+        self._redis.sadd(key, *values)
+
+    def delete_from_set(self, name, value):
+        key = self._get_redis_name(name)
+        value = self._encode_value(value)
+        self._redis.srem(key, value)
+    
+    def list_set(self, name):
+        key = self._get_redis_name(name)
+        values = self._redis.smembers(key)
+        return [self._decode_value(x) for x in values]
+
+    def prepend_to_list(self, name, *values):
+        key = self._get_redis_name(name)
+        values = [self._encode_value(x) for x in values]
+        self._redis.lpush(key, *values)
+    
+    def pop_from_list(self, name):
+        key = self._get_redis_name(name)
+        value = self._redis.rpop(key)
+        value = self._decode_value(value)
+        return value
 
     def _encode_value(self, value):
         value = msgpack.packb(value, use_bin_type=True)
         return value
 
-    def _parse_value(self, value):
+    def _decode_value(self, value):
         if value is None:
             return value
         value = msgpack.unpackb(value, raw=False)
@@ -104,20 +130,77 @@ class MockRedis():
     
     def get(self, key):
         value = self.data.get(key)
-        if isinstance(value, str):
-            return value.encode()
-        
         return value
     
     def set(self, key, value, **kwargs):
         is_set = (key in self.data)
+        if isinstance(value, str):
+            value = value.encode()
+
         self.data[key] = value
         return not is_set
 
     def keys(self, patt):
         # TODO: Do more accurate implementation based on pattern
         return self.data.keys()
+
+    def sadd(self, key, *values):
+        if key not in self.data:
+            self.data[key] = set()
+
+        if not isinstance(self.data[key], set):
+            raise KeyError(f'Value at key "{key}" is not a set')
+
+        for value in values:
+            if isinstance(value, str):
+                value = value.encode()
+            self.data[key].add(value)
     
+    def srem(self, key, *values):
+        if key not in self.data:
+            self.data[key] = set()
+
+        if not isinstance(self.data[key], set):
+            raise KeyError(f'Value at key "{key}" is not a set')
+        
+        for value in values:
+            if isinstance(value, str):
+                value = value.encode()
+            self.data[key].remove(value)
+
+    def smembers(self, key):
+        if key not in self.data:
+            return []
+
+        if not isinstance(self.data[key], set):
+            raise KeyError(f'Value at key "{key}" is not a set')
+
+        return list(self.data[key])
+
+    def lpush(self, key, *values):
+        if key not in self.data:
+            self.data[key] = list()
+
+        if not isinstance(self.data[key], list):
+            raise KeyError(f'Value at key "{key}" is not a list')
+
+        for value in values:
+            if isinstance(value, str):
+                value = value.encode()
+            self.data[key].insert(0, value)
+    
+    def rpop(self, key):
+        if key not in self.data:
+            self.data[key] = list()
+
+        if not isinstance(self.data[key], list):
+            raise KeyError(f'Value at key "{key}" is not a list')
+        
+        if len(self.data[key]) == 0:
+            return None
+
+        return self.data[key].pop()
+
     def delete(self, *keys):
         if len(keys) == 0:
             raise ValueError('Need at least 1 key to delete')
