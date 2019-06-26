@@ -1,80 +1,71 @@
 import os
 import argparse
-import pprint
+from pprint import pprint
 
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL
-from rafiki.constants import BudgetType, TaskType, ModelDependency
-from rafiki.advisor import AdvisorType
+from rafiki.constants import BudgetOption, TaskType, ModelDependency
 
-from examples.models.image_classification.PyDenseNetBc import PyDenseNetBc
-from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
+from examples.scripts.utils import gen_id
+from examples.datasets.image_classification.load_cifar_format import load_cifar10
 
-def train_densenet(client, gpus, full, param_policy):
-    total_trials = 10 if not full else 100 
+def train_densenet(client, train_dataset_path, val_dataset_path, gpus, hours):    
+    '''
+        Conducts training of model `PyDenseNetBc` on the CIFAR-10 dataset for the task `IMAGE_CLASSIFICATION`.
+        Demonstrates hyperparameter tuning with parameter sharing on Rafiki. 
+    '''
+    task = TaskType.IMAGE_CLASSIFICATION
+
     app_id = gen_id()
-    app = 'cifar_10_densenet_{}'.format(app_id)
+    app = 'cifar10_densenet_{}'.format(app_id)
     model_name = 'PyDenseNetBc_{}'.format(app_id)
 
-    print('Creating advisor...')
-    knob_config = PyDenseNetBc.get_knob_config()
-    advisor_config = { 'param_policy': param_policy }
-    advisor = client.create_advisor(knob_config, advisor_type=AdvisorType.SKOPT, advisor_config=advisor_config)
-    pprint.pprint(advisor)
-    advisor_id = advisor['id']
+    print('Preprocessing datasets...')
+    load_cifar10(train_dataset_path, val_dataset_path)
 
-    try:
-        print('Creating model...')
-        model = client.create_model(
-            name=model_name,
-            task=TaskType.IMAGE_CLASSIFICATION,
-            model_file_path='examples/models/image_classification/PyDenseNetBc.py',
-            model_class='PyDenseNetBc',
-            dependencies={ 
-                ModelDependency.TORCH: '1.0.1',
-                ModelDependency.TORCHVISION: '0.2.2'
-            }
-        )
-        pprint.pprint(model)
-        
-        print('Creating train job...')
-        train_job = client.create_train_job(
-            app=app,
-            task=TaskType.IMAGE_CLASSIFICATION,
-            train_dataset_uri='data/cifar_10_for_image_classification_train.zip',
-            val_dataset_uri='data/cifar_10_for_image_classification_val.zip',
-            budget={ 
-                BudgetType.MODEL_TRIAL_COUNT: total_trials,
-                BudgetType.GPU_COUNT: gpus
-            },
-            models={
-                model_name: {
-                    'advisor_id': advisor_id,
-                    'knobs': { 'batch_size': 32, 'trial_epochs': 10, 'early_stop_trial_epochs': 1 } if not full else {}
-                }
-            }
-        )
-        pprint.pprint(train_job)
-        wait_until_train_job_has_stopped(client, app, timeout=None)
+    print('Creating & uploading datasets onto Rafiki...')
+    train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
+    pprint(train_dataset)
+    val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_path)
+    pprint(val_dataset)
 
-    finally:
-        print('Stopping train job...')
-        pprint.pprint(client.stop_train_job(app))
+    print('Creating model...')
+    model = client.create_model(
+        name=model_name,
+        task=TaskType.IMAGE_CLASSIFICATION,
+        model_file_path='examples/models/image_classification/PyDenseNetBc.py',
+        model_class='PyDenseNetBc',
+        dependencies={ 
+            ModelDependency.TORCH: '1.0.1',
+            ModelDependency.TORCHVISION: '0.2.2'
+        }
+    )
+    pprint(model)
 
-        print('Deleting advisor...')
-        pprint.pprint(client.delete_advisor(advisor_id))
+    print('Creating train job...')
+    budget = { 
+        BudgetOption.TIME_HOURS: hours,
+        BudgetOption.GPU_COUNT: gpus
+    }
+    train_job = client.create_train_job(app, task, train_dataset['id'], val_dataset['id'], budget, models=[model['id']])
+    pprint(train_job)
+
+    print('Monitor the train job on Rafiki Web Admin')
+
+    # TODO: Evaluate on test dataset?
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--full', action='store_true', help='Whether to do training for its full duration/capacity')
-    parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
-    parser.add_argument('--param_policy', type=str, default='EXP_GREEDY', help='Param policy for the SkOpt advisor to be used')
+    parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
+    parser.add_argument('--hours', type=float, default=2, help='How long the train job should run for (in hours)')
+    out_train_dataset_path = 'data/cifar10_for_image_classification_train.zip'
+    out_val_dataset_path = 'data/cifar10_for_image_classification_val.zip'
     (args, _) = parser.parse_known_args()
 
     # Initialize client
     client = Client()
     client.login(email=args.email, password=args.password)
 
-    train_densenet(client, args.gpus, args.full, args.param_policy)
+    train_densenet(client, out_train_dataset_path, out_val_dataset_path, args.gpus, args.hours)

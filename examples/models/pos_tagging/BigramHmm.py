@@ -3,7 +3,7 @@ import json
 
 from rafiki.model import BaseModel, utils, FixedKnob
 from rafiki.constants import TaskType
-from rafiki.advisor import test_model_class
+from rafiki.model.dev import test_model_class
 
 class BigramHmm(BaseModel):
     '''

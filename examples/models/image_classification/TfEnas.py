@@ -10,10 +10,10 @@ from collections import namedtuple
 import numpy as np
 import argparse
 
-from rafiki.advisor import tune_model, test_model_class
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
                             FixedKnob, ArchKnob, KnobValue, PolicyKnob
+from rafiki.model.dev import test_model_class
 
 _Model = namedtuple('_Model', 
                     ['train_dataset_init_op', 'pred_dataset_init_op', 
@@ -32,9 +32,10 @@ TF_COLLECTION_MONITORED = 'MONITORED'
 
 class TfEnas(BaseModel):
     '''
-    Implements the child model of cell-based "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for image classification.
-    
-    Original paper: https://arxiv.org/abs/1802.03268
+        Implements the child model of cell-based "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for `architecture tuning with ENAS`.
+        
+        Original paper: https://arxiv.org/abs/1802.03268
+        Implementation is with credits to https://github.com/melodyguan/enas
     '''
     # Memoise across trials to speed up training
     _datasets_memo = {}                 # { <dataset_path> -> <dataset> }
@@ -48,7 +49,7 @@ class TfEnas(BaseModel):
         return {
             'cell_archs': TfEnas.make_arch_knob(),
             'max_image_size': FixedKnob(32),
-            'trial_epochs': FixedKnob(310), # Total no. of epochs during a standard train
+            'epochs': FixedKnob(310), # Total no. of epochs during a standard train
             'batch_size': FixedKnob(128),
             'learning_rate': FixedKnob(0.05), 
             'initial_block_ch': FixedKnob(36),
@@ -60,7 +61,7 @@ class TfEnas(BaseModel):
             'sgdr_alpha': FixedKnob(0.002),
             'sgdr_decay_epochs': FixedKnob(10),
             'sgdr_t_mul': FixedKnob(2),  
-            'num_layers': FixedKnob(15),
+            'num_layers': FixedKnob(15), 
             'aux_loss_mul': FixedKnob(0.4),
             'drop_path_keep_prob': FixedKnob(0.6),
             'drop_path_decay_epochs': FixedKnob(310),
@@ -79,8 +80,8 @@ class TfEnas(BaseModel):
             'enas_drop_path_decay_epochs': FixedKnob(150),
 
             # Affects whether training is shortened using a reduced no. of epochs
-            'quick_train': PolicyKnob('QUICK_TRAIN'), 
-            'enas_trial_epochs': FixedKnob(1),
+            'quick_train': PolicyKnob('EARLY_STOP'), 
+            'enas_epochs': FixedKnob(1),
 
             # Affects whether training is skipped
             'skip_train': PolicyKnob('SKIP_TRAIN'),
@@ -264,7 +265,7 @@ class TfEnas(BaseModel):
 
         # Knobs must be the same except for some that doesn't affect model construction
         # If arch is dynamic, knobs can differ by `cell_archs`
-        ignored_knobs = ['skip_train', 'quick_train', 'quick_eval', 'downscale', 'trial_epochs']
+        ignored_knobs = ['skip_train', 'quick_train', 'quick_eval', 'downscale', 'epochs']
         if use_dynamic_arch:
             ignored_knobs.append('cell_archs')
         
@@ -296,7 +297,7 @@ class TfEnas(BaseModel):
         if knobs['quick_train']:
             knobs = {
                 **knobs,
-                'trial_epochs': knobs['enas_trial_epochs'] 
+                'epochs': knobs['enas_epochs'] 
             }
 
         return knobs
@@ -645,7 +646,7 @@ class TfEnas(BaseModel):
             })
 
     def _train_model(self, images, classes, dataset_path=None, **knobs):
-        num_epochs = knobs['trial_epochs']
+        num_epochs = knobs['epochs']
         m = self._model
         N = len(images)
         
@@ -662,9 +663,9 @@ class TfEnas(BaseModel):
             utils.logger.log('Running epoch {}...'.format(epoch))
 
             corrects = []
-            itr = self._get_dataset_iterator(N,[m.train_op, m.train_corrects, m.step, 
+            itr = self._get_dataset_iterator(N,[m.train_op, m.train_corrects, m.step, m.pred_probs, 
                                             *self._monitored_values.values()], **knobs)
-            for  (_, batch_corrects, batch_steps, *values) in itr:
+            for  (_, batch_corrects, batch_steps, batch_probs, *values) in itr:
                 # To track mean batch accuracy
                 corrects.extend(batch_corrects)
 

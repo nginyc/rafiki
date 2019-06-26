@@ -1,19 +1,21 @@
 from pprint import pprint
-import time
-import argparse
-import requests
 import argparse
 import os
 
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL
-from rafiki.constants import TaskType, BudgetType, UserType, ModelDependency, ModelAccessRight
+from rafiki.constants import TaskType, BudgetOption, ModelDependency
 from examples.scripts.quickstart import get_predictor_host, \
-    wait_until_train_job_has_stopped, make_predictions,  gen_id
+    wait_until_train_job_has_stopped, make_predictions, gen_id
 
 from examples.datasets.pos_tagging.load_ptb_format import load_sample_ptb
 
-def run_pos_tagging(client, train_dataset_path, val_dataset_path, gpus):
+def run_pos_tagging(client, train_dataset_path, val_dataset_path, gpus, hours):
+    '''
+        Conducts a full train-inference flow on the Penn Treebank sample dataset with
+        models `BigramHmm` and `PyBiLstm` for the task `POS_TAGGING`.
+    '''
+
     task = TaskType.POS_TAGGING
 
     # Randomly generate app & model names to avoid naming conflicts
@@ -22,13 +24,16 @@ def run_pos_tagging(client, train_dataset_path, val_dataset_path, gpus):
     bihmm_model_name = 'BigramHmm_{}'.format(app_id)
     py_model_name = 'PyBiLstm_{}'.format(app_id)
 
+    print('Preprocessing datasets...')
+    load_sample_ptb(train_dataset_path, val_dataset_path)
+
     print('Adding models "{}" and "{}" to Rafiki...'.format(bihmm_model_name, py_model_name)) 
     bihmm_model = client.create_model(bihmm_model_name, task, 'examples/models/pos_tagging/BigramHmm.py', \
                         'BigramHmm', dependencies={}) 
 
     pprint(bihmm_model)
     py_model = client.create_model(py_model_name, task, 'examples/models/pos_tagging/PyBiLstm.py', \
-                        'PyBiLstm', dependencies={ ModelDependency.PYTORCH: '0.4.1' })
+                        'PyBiLstm', dependencies={ ModelDependency.TORCH: '0.4.1' })
     pprint(py_model)
     model_ids = [bihmm_model['id'], py_model['id']]
 
@@ -40,8 +45,8 @@ def run_pos_tagging(client, train_dataset_path, val_dataset_path, gpus):
 
     print('Creating train job for app "{}" on Rafiki...'.format(app))
     budget = {
-        BudgetType.MODEL_TRIAL_COUNT: 5,
-        BudgetType.GPU_COUNT: gpus
+        BudgetOption.TIME_HOURS: hours,
+        BudgetOption.GPU_COUNT: gpus
     }
     train_job = client.create_train_job(app, task, train_dataset['id'], val_dataset['id'], 
                                         budget, models=model_ids)
@@ -79,6 +84,7 @@ if __name__ == '__main__':
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
+    parser.add_argument('--hours', type=float, default=0.1, help='How long the train job should run for (in hours)') 
     (args, _) = parser.parse_known_args()
     out_train_dataset_path = 'data/ptb_for_pos_tagging_train.zip'
     out_val_dataset_path = 'data/ptb_for_pos_tagging_val.zip'
@@ -88,4 +94,4 @@ if __name__ == '__main__':
     client.login(email=args.email, password=args.password)
     
     # Run quickstart
-    run_pos_tagging(client, out_train_dataset_path, out_val_dataset_path, args.gpus)
+    run_pos_tagging(client, out_train_dataset_path, out_val_dataset_path, args.gpus, args.hours)

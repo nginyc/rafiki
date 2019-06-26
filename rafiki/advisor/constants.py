@@ -59,6 +59,6 @@ class Proposal(Jsonable):
 class TrialResult(Jsonable):
     def __init__(self, 
                 proposal: Proposal, 
-                score: Union[float, None] = None): # Score for the proposal
+                score: Union[float, None] = None): # Score for the proposal, None if trial was not evaluated
         self.proposal = proposal if isinstance(proposal, Proposal) else Proposal(**proposal)
         self.score = score

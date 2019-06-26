@@ -31,7 +31,7 @@ class EnasAdvisor(BaseAdvisor):
         # And time budget must be sufficient to cover final evals & final trains
         time_hours = budget.get(BudgetOption.TIME_HOURS, 0)
         return BaseAdvisor.has_only_knob_types(knob_config, [FixedKnob, ArchKnob, PolicyKnob]) and \
-            BaseAdvisor.has_policies(knob_config, ['SHARE_PARAMS', 'DOWNSCALE', 'QUICK_TRAIN', 'QUICK_EVAL', 'SKIP_TRAIN']) and \
+            BaseAdvisor.has_policies(knob_config, ['SHARE_PARAMS', 'DOWNSCALE', 'EARLY_STOP', 'QUICK_EVAL', 'SKIP_TRAIN']) and \
             time_hours >= ENAS_FINAL_HOURS 
 
     def __init__(self, knob_config, budget):
@@ -56,7 +56,7 @@ class EnasAdvisor(BaseAdvisor):
         self._worker_to_num_trials[worker_id] += 1
 
         if proposal_type == 'TRAIN':
-            knobs = self._propose_knobs(['DOWNSCALE', 'QUICK_TRAIN'])
+            knobs = self._propose_knobs(['DOWNSCALE', 'EARLY_STOP'])
             return Proposal(trial_no, knobs,
                             params_type=ParamsType.LOCAL_RECENT, 
                             to_eval=False, 
@@ -86,6 +86,10 @@ class EnasAdvisor(BaseAdvisor):
         knobs = proposal.knobs
         score = result.score
         proposal_type = proposal.meta.get('proposal_type') 
+
+        # Ignore null scores
+        if score is None:
+            return
 
         # Keep track of results of final evals & trains
         if proposal_type == 'FINAL_EVAL':

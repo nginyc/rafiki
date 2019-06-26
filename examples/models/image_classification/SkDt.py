@@ -5,7 +5,7 @@ import numpy as np
 
 from rafiki.model import BaseModel, IntegerKnob, CategoricalKnob, utils
 from rafiki.constants import TaskType, ModelDependency
-from rafiki.advisor import test_model_class
+from rafiki.model.dev import test_model_class
 
 class SkDt(BaseModel):
     '''
@@ -95,6 +95,7 @@ if __name__ == '__main__':
         },
         train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
         val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
+        test_dataset_path='data/fashion_mnist_for_image_classification_test.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

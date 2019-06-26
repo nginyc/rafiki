@@ -3,11 +3,12 @@ from tensorflow import keras
 from tensorflow.python.client import device_lib
 import tempfile
 import numpy as np
+import json
 import base64
 
 from rafiki.model import BaseModel, FloatKnob, CategoricalKnob, FixedKnob, utils
 from rafiki.constants import TaskType, ModelDependency
-from rafiki.advisor import test_model_class
+from rafiki.model.dev import test_model_class
 
 class TfVgg16(BaseModel):
     '''
@@ -120,8 +121,8 @@ class TfVgg16(BaseModel):
 
         # Save pre-processing params
         params['image_size'] = self._image_size
-        params['normalize_mean'] = self._normalize_mean
-        params['normalize_std'] = self._normalize_std
+        params['normalize_mean'] = json.dumps(self._normalize_mean)
+        params['normalize_std'] = json.dumps(self._normalize_std)
 
         return params
 
@@ -142,8 +143,8 @@ class TfVgg16(BaseModel):
         
         # Load pre-processing params
         self._image_size = params['image_size']
-        self._normalize_mean = params['normalize_mean']
-        self._normalize_std = params['normalize_std']
+        self._normalize_mean = json.loads(params['normalize_mean'])
+        self._normalize_std = json.loads(params['normalize_std'])
 
     def _on_train_epoch_end(self, epoch, logs):
         loss = logs['loss']

@@ -1,6 +1,7 @@
 from typing import Dict
 
 Budget = Dict[str, any]
+ModelDependencies = Dict[str, str]
 
 class BudgetOption():
     GPU_COUNT = 'GPU_COUNT'

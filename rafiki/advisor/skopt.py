@@ -9,8 +9,7 @@ from rafiki.model import CategoricalKnob, FixedKnob, IntegerKnob, FloatKnob, Pol
 from .constants import ParamsType, Proposal
 from .advisor import BaseAdvisor, UnsupportedKnobError
 
-# TODO: Change back
-FINAL_TRAIN_HOURS = 0.1 # No. of hours to conduct final train trials
+FINAL_TRAIN_HOURS = 1 # No. of hours to conduct final train trials
 
 class BayesOptAdvisor(BaseAdvisor):
     '''
@@ -30,15 +29,15 @@ class BayesOptAdvisor(BaseAdvisor):
         self._search_results: (float, Proposal) = [] 
 
         # Prefer having certain policies
-        if not self.has_policies(self.knob_config, ['QUICK_TRAIN']):
-            print('To speed up hyperparameter search with Bayesian Optimization, having `QUICK_TRAIN` policy is preferred.')
+        if not self.has_policies(self.knob_config, ['EARLY_STOP']):
+            print('To speed up hyperparameter search with Bayesian Optimization, having `EARLY_STOP` policy is preferred.')
 
     def propose(self, worker_id, trial_no):
         proposal_type = self._get_proposal_type(trial_no)
         meta = {'proposal_type': proposal_type}
 
         if proposal_type == 'SEARCH':
-            knobs = self._propose_knobs(['QUICK_TRAIN'])
+            knobs = self._propose_knobs(['EARLY_STOP'])
             return Proposal(trial_no, knobs, meta=meta)
         elif proposal_type == 'FINAL_TRAIN':
             knobs = self._propose_search_knobs()
@@ -115,8 +114,8 @@ class BayesOptAdvisor(BaseAdvisor):
         if self.get_trials_left(trial_no) <= 0:
             return None
 
-        # If `QUICK_TRAIN` is not supported, just keep searching
-        if not self.has_policies(self.knob_config, ['QUICK_TRAIN']):
+        # If `EARLY_STOP` is not supported, just keep searching
+        if not self.has_policies(self.knob_config, ['EARLY_STOP']):
             return 'SEARCH'
 
         # Schedule: |--<search>---||--<final train>--|
@@ -146,8 +145,8 @@ class BayesOptWithParamSharingAdvisor(BaseAdvisor):
         self._optimizer = self._make_optimizer(self._dimensions)
         
         # Prefer having certain policies
-        if not self.has_policies(self.knob_config, ['QUICK_TRAIN']):
-            print('To speed up hyperparameter search with Bayesian Optimization, having `QUICK_TRAIN` policy is preferred.')
+        if not self.has_policies(self.knob_config, ['EARLY_STOP']):
+            print('To speed up hyperparameter search with Bayesian Optimization, having `EARLY_STOP` policy is preferred.')
 
     def propose(self, worker_id, trial_no):
         proposal_type = self._get_proposal_type(trial_no)
@@ -155,7 +154,7 @@ class BayesOptWithParamSharingAdvisor(BaseAdvisor):
 
         if proposal_type == 'SEARCH':
             param = self._propose_param()
-            knobs = self._propose_knobs(['SHARE_PARAMS', 'QUICK_TRAIN'])
+            knobs = self._propose_knobs(['SHARE_PARAMS', 'EARLY_STOP'])
             return Proposal(trial_no, knobs, params_type=param, meta=meta)
         elif proposal_type is None:
             return None

@@ -7,7 +7,7 @@ import torch.optim as optim
 
 from rafiki.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, utils
 from rafiki.constants import TaskType, ModelDependency
-from rafiki.advisor import test_model_class
+from rafiki.model.dev import test_model_class
 
 class PyBiLstm(BaseModel):
     '''

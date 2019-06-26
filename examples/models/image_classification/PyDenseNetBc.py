@@ -17,15 +17,16 @@ from collections import OrderedDict
 
 from rafiki.constants import TaskType, ModelDependency
 from rafiki.model import BaseModel, utils, FixedKnob, FloatKnob, CategoricalKnob, PolicyKnob
-from rafiki.advisor import tune_model, AdvisorType, test_model_class
+from rafiki.model.dev import test_model_class
 
 _Model = namedtuple('_Model', ['net', 'step'])
 
 class PyDenseNetBc(BaseModel):
     '''
-    Implements DenseNet-BC of "Densely Connected Convolutional Networks" (https://arxiv.org/abs/1608.06993)
-
-    Credits to https://github.com/gpleiss/efficient_densenet_pytorch
+        Implements DenseNet-BC of "Densely Connected Convolutional Networks" for `hyperparameter tuning with distributed parameter sharing`.
+        
+        Original paper: https://arxiv.org/abs/1608.06993
+        Implementation is with credits to https://github.com/gpleiss/efficient_densenet_pytorch
     '''
     def __init__(self, **knobs):
         super().__init__(**knobs)
@@ -46,7 +47,7 @@ class PyDenseNetBc(BaseModel):
             'share_params': PolicyKnob('SHARE_PARAMS'),
 
             # Affects whether training is shortened by using early stopping
-            'quick_train': PolicyKnob('QUICK_TRAIN'), 
+            'quick_train': PolicyKnob('EARLY_STOP'), 
             'early_stop_train_val_samples': FixedKnob(1024),
             'early_stop_patience_epochs': FixedKnob(5)
         }

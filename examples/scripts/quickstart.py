@@ -46,6 +46,11 @@ def make_predictions(client, predictor_host, queries):
 
 
 def quickstart(client, train_dataset_path, val_dataset_path, gpus, hours):
+    '''
+        Conducts a full train-inference flow on the Fashion MNIST dataset with
+        models `SkDt` and `TfFeedForward` for the task `IMAGE_CLASSIFICATION`.
+    '''
+
     task = TaskType.IMAGE_CLASSIFICATION
 
     # Randomly generate app & model names to avoid naming conflicts
