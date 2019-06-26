@@ -35,10 +35,10 @@ Refer to its documentation for more details on how to use it, or refer to the sa
 Logging
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ``utils.logger`` in the ``rafiki.model`` module provides a set of methods to log messages & metrics while your model is training.
-These messages & metrics would be displayed on Rafiki Admin Web for monitoring & debugging purposes.
+These messages & metrics would be displayed on Rafiki Web Admin for monitoring & debugging purposes.
 Refer to :class:`rafiki.model.LoggerUtils` for more details.
 
-.. seealso:: :ref:`using-admin-web` 
+.. seealso:: :ref:`using-web-admin` 
 
 Dataset Loading
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
