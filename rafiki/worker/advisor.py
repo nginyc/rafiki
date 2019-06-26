@@ -140,7 +140,7 @@ class AdvisorWorker():
         return True
 
     def _notify_budget_reached(self):
-        superadmin_client().send_event('sub_train_job_budget_reached',  sub_train_job_id=self._monitor.sub_train_job_id)
+        superadmin_client().send_event('sub_train_job_budget_reached', sub_train_job_id=self._monitor.sub_train_job_id)
 
     def _notify_stop(self):
         superadmin_client().send_event('sub_train_job_advisor_stopped', sub_train_job_id=self._monitor.sub_train_job_id)

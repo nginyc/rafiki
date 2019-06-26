@@ -1,8 +1,9 @@
 import abc
-from rafiki.model import Params
 import msgpack
 import traceback
 import numpy as np
+
+from rafiki.model import Params
 
 class InvalidParamsFormatError(Exception): pass
 
@@ -64,7 +65,7 @@ def _simplify_params(params):
 
         return params_simple
 
-    except Exception:
+    except:
         traceback.print_stack()
         raise InvalidParamsFormatError()
 

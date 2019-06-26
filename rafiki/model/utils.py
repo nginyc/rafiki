@@ -10,6 +10,8 @@ from .model import BaseModel
 from .dataset import DatasetUtils
 from .log import LoggerUtils
 
+class InvalidModelClassError(Exception): pass
+
 def load_model_class(model_file_bytes, model_class, temp_mod_name=None) -> Type[BaseModel]:
     temp_mod_name = temp_mod_name or '{}-{}'.format(model_class, str(uuid.uuid4()))
     temp_model_file_name ='{}.py'.format(temp_mod_name)
@@ -24,7 +26,7 @@ def load_model_class(model_file_bytes, model_class, temp_mod_name=None) -> Type[
         # Extract model class from module
         clazz = getattr(mod, model_class)
     except Exception as e:
-        raise e
+        raise InvalidModelClassError(e)
     finally:
         # Ensure that temp model file is removed upon model loading error
         os.remove(temp_model_file_name)
