@@ -1,6 +1,5 @@
 import os
 import logging
-import atexit
 from flask import Flask, jsonify, request, g
 
 from .predictor import Predictor
@@ -12,14 +11,8 @@ app = Flask(__name__)
 
 class InvalidQueryFormatError(Exception): pass
 
-logger.info('Starting global predictor...')
-global_predictor: Predictor = Predictor(service_id)
-global_predictor.start()
-
 def get_predictor() -> Predictor:
-    global global_predictor
-
-    # Allow multiple threads to each have their own instance of predictor (aside from global one)
+    # Allow multiple threads to each have their own instance of predictor
     if not hasattr(g, 'predictor'):
         g.predictor = Predictor(service_id)
     
@@ -42,14 +35,6 @@ def get_request_params():
     params = {**params, **query_params}
 
     return params
-
-@atexit.register
-def on_stop():
-    global global_predictor
-    if global_predictor is not None:
-        logger.info('Stopping global predictor...')
-        global_predictor.stop()
-        global_predictor = None
 
 @app.route('/')
 def index():

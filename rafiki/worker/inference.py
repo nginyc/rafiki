@@ -32,6 +32,8 @@ class InferenceWorker():
         self._inference_cache: InferenceCache = None
         self._inference_job_id = None
         self._model_inst: BaseModel = None
+        self._proposal: Proposal = None
+        self._store_params_id = None
         self._py_model_class: Type[BaseModel] = None
 
     def start(self):
@@ -43,6 +45,9 @@ class InferenceWorker():
         logger.info(f'Starting worker for inference job "{self._inference_job_id}"...')
         
         self._notify_start()
+
+        # Load trial's model instance
+        self._model_inst = self._load_trial_model()
 
         while True:
             queries = self._fetch_queries()
@@ -96,20 +101,16 @@ class InferenceWorker():
 
             self._inference_job_id = inference_job.id
 
-            py_model_class = load_model_class(model.model_file_bytes, model.model_class)
-            proposal = Proposal.from_jsonable(trial.proposal)
-            store_params_id = trial.store_params_id 
+            self._py_model_class = load_model_class(model.model_file_bytes, model.model_class)
+            self._proposal = Proposal.from_jsonable(trial.proposal)
+            self._store_params_id = trial.store_params_id 
 
-        # Load trial's model instance
-        self._model_inst = self._load_trial_model(py_model_class, proposal, store_params_id)
-        self._py_model_class = py_model_class
-
-    def _load_trial_model(self, py_model_class, proposal, store_params_id):
+    def _load_trial_model(self):
         logger.info('Loading saved model parameters from store...')
-        params = self._param_store.load(store_params_id)
+        params = self._param_store.load(self._store_params_id)
 
         logger.info('Loading trial\'s trained model...')
-        model_inst = py_model_class(**proposal.knobs)
+        model_inst = self._py_model_class(**self._proposal.knobs)
         model_inst.load_parameters(params)
 
         return model_inst
