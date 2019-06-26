@@ -118,7 +118,6 @@ class AdvisorWorker():
                 continue
 
             # Create trial
-            # TODO: Terminate trial if budget is reached
             (trial_no, trial_id) = self._monitor.create_next_trial(worker_id)
 
             # Make proposal to free worker

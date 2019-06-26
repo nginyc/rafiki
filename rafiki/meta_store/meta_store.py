@@ -541,13 +541,6 @@ class MetaStore(object):
         self._session.add(trial)
         return trial
 
-    def mark_trial_as_terminated(self, trial):
-        trial.status = TrialStatus.TERMINATED
-        trial.datetime_stopped = datetime.utcnow()
-        trial.datetime_updated = datetime.utcnow()
-        self._session.add(trial)
-        return trial
-
     def add_trial_log(self, trial, line, level):
         trial_log = TrialLog(trial_id=trial.id, line=line, level=level)
         self._session.add(trial_log)

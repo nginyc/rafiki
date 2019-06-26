@@ -342,4 +342,4 @@ export interface InferenceJob {
   id: string;
 }
 
-export type TrialStatus = 'STARTED' | 'RUNNING' | 'ERRORED' | 'TERMINATED' | 'COMPLETED';
+export type TrialStatus = 'PENDING' | 'STARTED' | 'RUNNING' | 'ERRORED' | 'COMPLETED';

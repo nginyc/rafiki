@@ -28,7 +28,6 @@ class TrialStatus():
     PENDING = 'PENDING'
     RUNNING = 'RUNNING'
     ERRORED = 'ERRORED'
-    TERMINATED = 'TERMINATED'
     COMPLETED = 'COMPLETED'
 
 class UserType():
