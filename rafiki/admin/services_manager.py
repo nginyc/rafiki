@@ -1,12 +1,11 @@
 import os
 import logging
 import traceback
-import time
 import socket
 from collections import defaultdict
 from contextlib import closing
 
-from rafiki.constants import ServiceStatus, ServiceType, BudgetOption, TrainJobStatus
+from rafiki.constants import ServiceStatus, ServiceType, BudgetOption, TrainJobStatus, InferenceJobStatus
 from rafiki.meta_store import MetaStore
 from rafiki.container import DockerSwarmContainerManager, ContainerManager, ContainerService
 from rafiki.model import parse_model_install_command
@@ -86,36 +85,41 @@ class ServicesManager(object):
             service = self._meta_store.get_service(worker.service_id)
             self._stop_service(service)
 
-        self._meta_store.mark_inference_job_as_stopped(inference_job)
-        self._meta_store.commit()
+        self.refresh_inference_job_status(inference_job_id)
 
         return inference_job
 
     def refresh_inference_job_status(self, inference_job_id):
         inference_job = self._meta_store.get_inference_job(inference_job_id)
         assert inference_job is not None
+
+        # If inference job once errored, keep it errored
+        if inference_job.status == InferenceJobStatus.ERRORED:
+            return
+
         predictor_service_id = inference_job.predictor_service_id
         workers = self._meta_store.get_workers_of_inference_job(inference_job_id)
         predictor_service = self._meta_store.get_service(predictor_service_id) if predictor_service_id is not None else None
         services = [self._meta_store.get_service(x.service_id) for x in workers]
 
         # Count statuses of workers
-        worker_status_to_count = defaultdict(int)
+        worker_counts = defaultdict(int)
         for service in services:
             if service is not None:
-                worker_status_to_count[service.status] += 1
+                worker_counts[service.status] += 1
         predictor_status = predictor_service.status if predictor_service is not None else None
 
         # If predictor is running and at least 1 worker, it is running
         # If predictor is stopped, it is stopped
-        # If predictor is errored or all workers are errored, it is errored
-        if predictor_status == ServiceStatus.RUNNING and worker_status_to_count[ServiceStatus.RUNNING] >= 1:
+        # If predictor is errored or all workers are errored, it is errored, and stop all services
+        if predictor_status == ServiceStatus.RUNNING and worker_counts[ServiceStatus.RUNNING] >= 1:
             self._meta_store.mark_inference_job_as_running(inference_job)
         elif predictor_status == ServiceStatus.STOPPED:
             self._meta_store.mark_inference_job_as_stopped(inference_job)
         elif predictor_status == ServiceStatus.ERRORED or \
-                worker_status_to_count[ServiceStatus.ERRORED] == len(workers):
+                worker_counts[ServiceStatus.ERRORED] == len(workers):
             self._meta_store.mark_inference_job_as_errored(inference_job)
+            self.stop_inference_services(inference_job_id)
 
         self._meta_store.commit()
 
@@ -151,16 +155,16 @@ class ServicesManager(object):
 
     def stop_train_services(self, train_job_id):
         train_job = self._meta_store.get_train_job(train_job_id)
+        assert train_job is not None
         sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(train_job_id)
 
         # Stop all sub train jobs for train job
         for sub_train_job in sub_train_jobs:
             self.stop_sub_train_job_services(sub_train_job.id)
 
-        self._meta_store.mark_train_job_as_stopped(train_job)
-
     def stop_sub_train_job_services(self, sub_train_job_id):
         sub_train_job = self._meta_store.get_sub_train_job(sub_train_job_id)
+        assert sub_train_job is not None
         workers = self._meta_store.get_workers_of_sub_train_job(sub_train_job_id)
 
         # Stop advisor for sub train job
@@ -173,38 +177,41 @@ class ServicesManager(object):
             service = self._meta_store.get_service(worker.service_id)
             self._stop_service(service)
 
-        self._meta_store.mark_sub_train_job_as_stopped(sub_train_job)
-        self._meta_store.commit()
-
-        self.refresh_train_job_status(sub_train_job.train_job_id)
+        self.refresh_sub_train_job_status(sub_train_job_id)
 
         return sub_train_job
 
     def refresh_sub_train_job_status(self, sub_train_job_id):
         sub_train_job = self._meta_store.get_sub_train_job(sub_train_job_id)
         assert sub_train_job is not None
+
+        # If sub train job once errored, keep it errored
+        if sub_train_job.status == TrainJobStatus.ERRORED:
+            return
+
         advisor_service_id = sub_train_job.advisor_service_id
         workers = self._meta_store.get_workers_of_sub_train_job(sub_train_job_id)
         advisor_service = self._meta_store.get_service(advisor_service_id) if advisor_service_id is not None else None
         services = [self._meta_store.get_service(x.service_id) for x in workers]
 
         # Count statuses of workers
-        worker_status_to_count = defaultdict(int)
+        worker_counts = defaultdict(int)
         for service in services:
             if service is not None:
-                worker_status_to_count[service.status] += 1
+                worker_counts[service.status] += 1
         advisor_status = advisor_service.status if advisor_service is not None else None
 
         # If advisor is running and at least 1 worker, it is running
         # If advisor is stopped, it is stopped
-        # If advisor is errored or all workers are errored, it is errored
-        if advisor_status == ServiceStatus.RUNNING and worker_status_to_count[ServiceStatus.RUNNING] >= 1:
+        # If advisor is errored or all workers are errored, it is errored, and stop all services
+        if advisor_status == ServiceStatus.RUNNING and worker_counts[ServiceStatus.RUNNING] >= 1:
             self._meta_store.mark_sub_train_job_as_running(sub_train_job)
         elif advisor_status == ServiceStatus.STOPPED:
             self._meta_store.mark_sub_train_job_as_stopped(sub_train_job)
         elif advisor_status == ServiceStatus.ERRORED or \
-                worker_status_to_count[ServiceStatus.ERRORED] == len(workers):
+                worker_counts[ServiceStatus.ERRORED] == len(workers):
             self._meta_store.mark_sub_train_job_as_errored(sub_train_job)
+            self.stop_sub_train_job_services(sub_train_job_id)
 
         self._meta_store.commit()
 
@@ -216,19 +223,24 @@ class ServicesManager(object):
         assert train_job is not None
         sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(train_job_id)
 
+        # If train job once errored, keep it errored
+        if train_job.status == TrainJobStatus.ERRORED:
+            return
+
         # Count statuses of sub train jobs
-        status_to_count = defaultdict(int)
+        counts = defaultdict(int)
         for job in sub_train_jobs:
-            status_to_count[job.status] += 1
+            counts[job.status] += 1
 
         # If any sub train job is running, train job is running
         # If all sub train jobs are stopped, train job is stopped
-        # If all sub train jobs are errored, train job is errored
-        if status_to_count[TrainJobStatus.RUNNING] >= 1:
+        # If any sub train job is errored and all others have stopped, train job is errored
+        if counts[TrainJobStatus.RUNNING] >= 1:
             self._meta_store.mark_train_job_as_running(train_job)
-        elif status_to_count[TrainJobStatus.STOPPED] == len(sub_train_jobs):
+        elif counts[TrainJobStatus.STOPPED] == len(sub_train_jobs):
             self._meta_store.mark_train_job_as_stopped(train_job)
-        elif status_to_count[TrainJobStatus.ERRORED] == len(sub_train_jobs):
+        elif counts[TrainJobStatus.ERRORED] >= 1 and \
+            (counts[TrainJobStatus.ERRORED] + counts[TrainJobStatus.STOPPED]) == len(sub_train_jobs):
             self._meta_store.mark_train_job_as_errored(train_job)
 
     ####################################

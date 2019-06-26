@@ -303,7 +303,7 @@ class Admin(object):
         ]
     def stop_all_train_jobs(self):
         train_jobs = self._meta_store.get_train_jobs_by_statuses(
-                    [TrainJobStatus.STARTED, TrainJobStatus.RUNNING, TrainJobStatus.ERRORED])
+                    [TrainJobStatus.STARTED, TrainJobStatus.RUNNING])
         for train_job in train_jobs:
             self._services_manager.stop_train_services(train_job.id)
 
@@ -524,7 +524,7 @@ class Admin(object):
 
     def stop_all_inference_jobs(self):
         inference_jobs = self._meta_store.get_inference_jobs_by_statuses(
-            [InferenceJobStatus.STARTED, InferenceJobStatus.RUNNING, InferenceJobStatus.ERRORED]
+            [InferenceJobStatus.STARTED, InferenceJobStatus.RUNNING]
         )
         for inference_job in inference_jobs:
             self._services_manager.stop_inference_services(inference_job.id)

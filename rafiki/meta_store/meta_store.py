@@ -208,6 +208,7 @@ class MetaStore(object):
 
     def mark_sub_train_job_as_errored(self, sub_train_job):
         sub_train_job.status = TrainJobStatus.ERRORED
+        sub_train_job.datetime_stopped = datetime.utcnow()
         self._session.add(sub_train_job)
 
     def mark_sub_train_job_as_stopped(self, sub_train_job):
@@ -262,9 +263,7 @@ class MetaStore(object):
     def get_deployed_inference_job_by_train_job(self, train_job_id):
         inference_job = self._session.query(InferenceJob) \
             .filter(InferenceJob.train_job_id == train_job_id) \
-            .filter(InferenceJob.status.in_([
-                InferenceJobStatus.ERRORED, InferenceJobStatus.RUNNING, InferenceJobStatus.STARTED
-            ])).first()
+            .filter(InferenceJob.status.in_([InferenceJobStatus.RUNNING, InferenceJobStatus.STARTED])).first()
 
         return inference_job
 
