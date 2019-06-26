@@ -31,21 +31,23 @@ class ServicesManager(object):
         db = db or Database()
         container_manager: ContainerManager = container_manager or DockerSwarmContainerManager()
 
-         # Ensure that environment variable exists, failing fast
-        for x in var_autoforward:
-            os.environ[x]
         self._var_autoforward = var_autoforward
+        self._data_dir_path = os.environ.get('DATA_DIR_PATH',None)
+        self._logs_dir_path = os.environ.get('LOGS_DIR_PATH',None)
+        self._params_dir_path = os.environ.get('PARAMS_DIR_PATH',None)
+        self._host_workdir_path = os.environ.get('HOST_WORKDIR_PATH',None)
+        self._docker_workdir_path = os.environ.get('DOCKER_WORKDIR_PATH',None)
+        self._predictor_image = '{}:{}'.format(os.environ.get('RAFIKI_IMAGE_PREDICTOR',None),
+                                                os.environ.get('RAFIKI_VERSION',None))
+        self._predictor_port = os.environ.get('PREDICTOR_PORT',None)
+        self._rafiki_addr = os.environ.get('RAFIKI_ADDR',None)
+        self._app_mode = os.environ.get('APP_MODE',None)
 
-        self._data_dir_path = os.environ['DATA_DIR_PATH']
-        self._logs_dir_path = os.environ['LOGS_DIR_PATH']
-        self._params_dir_path = os.environ['PARAMS_DIR_PATH']
-        self._host_workdir_path = os.environ['HOST_WORKDIR_PATH']
-        self._docker_workdir_path = os.environ['DOCKER_WORKDIR_PATH']
-        self._predictor_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_PREDICTOR'],
-                                                os.environ['RAFIKI_VERSION'])
-        self._predictor_port = os.environ['PREDICTOR_PORT']
-        self._rafiki_addr = os.environ['RAFIKI_ADDR']
-        self._app_mode = os.environ['APP_MODE']
+        # Ensure that environment variable exists, failing fast
+        if self._data_dir_path is None or self._logs_dir_path is None or self._params_dir_path is None\
+            or self._host_workdir_path is None or self._docker_workdir_path is None or self._predictor_image == 'None:None'\
+            or self._predictor_port is None or self._rafiki_addr is None or self._app_mode is None:
+            raise RuntimeError("environment variable error!")
 
         self._db = db
         self._container_manager = container_manager
