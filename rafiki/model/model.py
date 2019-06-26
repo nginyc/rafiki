@@ -1,23 +1,25 @@
 import abc
 import numpy as np
-from typing import Union, Dict, Optional
+from typing import Union, Dict, Optional, Any, List
 
 from .knob import BaseKnob
 
 KnobConfig = Dict[str, BaseKnob]
-Knobs = Dict[str, any]
+Knobs = Dict[str, Any]
 Params = Dict[str, Union[str, int, float, np.ndarray]]
 
 class BaseModel(abc.ABC):
     '''
-    Rafiki's base model class that Rafiki models should extend. 
-    Rafiki models should implement all abstract methods according to their associated tasks' specifications,
-    together with the static methods ``get_knob_config()`` (optional).
+    Rafiki's base model class that Rafiki models must extend.
+
+    Rafiki models must implement all abstract methods below, according to the specification of its associated task (see :ref:`tasks`).
+    They configure how this model template will be trained, evaluated, tuned, serialized and served on Rafiki.
 
     In the model's ``__init__`` method, call ``super().__init__(**knobs)`` as the first line, 
     followed by the model's initialization logic. The model should be initialize itself with ``knobs``, 
-    a set of generated knob values for the instance, and possibly save the knobs' values as 
-    attribute(s) of the model instance. These knob values will be chosen by Rafiki based on the model's knob config. 
+    a set of generated knob values for the created model instance. 
+    
+    These knob values are chosen by Rafiki based on the model's knob configuration (defined in :meth:`rafiki.model.BaseModel.get_knob_config`).
     
     For example:
 
@@ -29,83 +31,89 @@ class BaseModel(abc.ABC):
             ...
             self._build_model(self.knob1, self.knob2)
 
-    :param knobs: Dictionary of knob values for this model instance
-    :type knobs: dict[str, any]
+    :param knobs: Dictionary mapping knob names to knob values
+    :type knobs: :obj:`rafiki.model.Knobs`
     '''   
-    def __init__(self, **knobs):
+    def __init__(self, **knobs: Knobs):
         pass
 
-    @staticmethod
-    @abc.abstractmethod
+    @abc.abstractstaticmethod
     def get_knob_config() -> KnobConfig:
         '''
-        Return a dictionary defining this model class' knob configuration 
-        (i.e. list of knob names, their data types and their ranges).
+        Return a dictionary that defines the search space for this model template's knobs 
+        (i.e. knobs' names, their types & their ranges). 
 
-        :returns: Dictionary defining this model's knob configuration 
-        :rtype: KnobConfig
+        Over the course of training, your model will be initialized with different values of knobs within this search space
+        to maximize this model’s performance.
+
+        Refer to :ref:`model-tuning` to understand more about how this works.
+
+        :returns: Dictionary mapping knob names to knob specifications
         '''
         raise NotImplementedError()
 
-    # TODO: Improve doc
     @abc.abstractmethod
     def train(self, dataset_path: str, shared_params: Optional[Params] = None):
         '''
-        Train this model instance with given dataset and initialized knob values.
-        Additionally, a dictionary of trained parameters shared from previous trials could be passed.
+        Train this model instance with the given traing dataset and initialized knob values.
 
-        :param str dataset_path: File path of the train dataset file in the local file system, in a format specified by the task
-        :param Params shared_params: { <param_name>: <param_value> }
+        Additionally, trained parameters shared from previous trials could be passed, 
+        as part of the ``SHARE_PARAMS`` policy (see :ref:`model-policies`).
+
+        Subsequently, the model is considered *trained*.
+
+        :param dataset_path: File path of the train dataset file in the *local filesystem*, in a format specified by the task
+        :param shared_params: Dictionary mapping parameter names to values, as produced by your model's :meth:`rafiki.model.BaseModel.dump_parameters`. 
         '''
         raise NotImplementedError()
 
-    # TODO: Allow configuration of other metrics
     @abc.abstractmethod
     def evaluate(self, dataset_path: str) -> float:
         '''
-        Evaluate this model instance with given dataset after training. 
+        Evaluate this model instance with the given validation dataset after training.
+
         This will be called only when model is *trained*.
 
-        :param str dataset_path: File path of the validation dataset file in the local file system, in a format specified by the task
-        :returns: Accuracy as float from 0-1 on the validation dataset
-        :rtype: float
+        :param dataset_path: File path of the validation dataset file in the *local filesystem*, in a format specified by the task
+        :returns: A score associated with the validation performance for the trained model instance, the higher the better e.g. classification accuracy.
         '''
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def predict(self, queries: list) -> list:
+    def predict(self, queries: List[Any]) -> List[Any]:
         '''
-        Make predictions on a batch of queries with this model instance after training. 
-        Each prediction should be JSON serializable.
+        Make predictions on a batch of queries after training. 
+
         This will be called only when model is *trained*.
 
-        :param queries: List of queries, where a query is in a format specified by the task 
-        :type queries: list[any]
-        :returns: List of predictions, where a prediction is in a format specified by the task 
-        :rtype: list[any]
+        :param queries: List of queries, where a query is in the format specified by the task 
+        :returns: List of predictions, in an order corresponding to the queries, where a prediction is in the format specified by the task 
         '''
         raise NotImplementedError()
 
-    # TODO: Document format of params
     @abc.abstractmethod
     def dump_parameters(self) -> Params:
         '''
-        Returns a dictionary of model parameters for persistence and to share with future trials during training.
-        This dictionary should be serializable by the Python's ``pickle`` module.
-        This will be used for trained model serialization within Rafiki.
+        Returns a dictionary of model parameters that *fully define the trained state of the model*.
+        This dictionary must conform to the format :obj:`rafiki.model.Params`.
+        This will be used to save the trained model in Rafiki.
+
+        Additionally, trained parameters produced by this method could be shared with future trials, as
+        part of the ``SHARE_PARAMS`` policy (see :ref:`model-policies`).
+        
         This will be called only when model is *trained*.
 
-        :returns: { <param_name>: <param_value> }
-        :rtype: Params
+        :returns: Dictionary mapping parameter names to values
         '''
         raise NotImplementedError()
 
     @abc.abstractmethod
     def load_parameters(self, params: Params):
         '''
-        Loads previously trained parameters for this model. This model's initialized knob values would match those during training.
-        The model will be considered *trained* subsequently.
-        :param Params params: { <param_name>: <param_value> }
+        Loads this model instance with previously trained model parameters produced by your model's :meth:`rafiki.model.BaseModel.dump_parameters`. 
+        *This model instance's initialized knob values will match those during training*.
+
+        Subsequently, the model is considered *trained*.
         '''
         raise NotImplementedError()
     

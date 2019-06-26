@@ -1,6 +1,6 @@
-from typing import Dict
+from typing import Dict, Any
 
-Budget = Dict[str, any]
+Budget = Dict[str, Any]
 ModelDependencies = Dict[str, str]
 
 class BudgetOption():

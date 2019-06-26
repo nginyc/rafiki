@@ -1,17 +1,17 @@
 import logging
 import numpy as np
-from typing import List, Callable
+from typing import List, Callable, Any
 from collections import Iterable
 
 logger = logging.getLogger(__name__)
 
-def get_ensemble_method(task: str) -> Callable[[List[any]], any]:
+def get_ensemble_method(task: str) -> Callable[[List[Any]], Any]:
     if task == 'IMAGE_CLASSIFICATION':
         return ensemble_probabilities
     else:
         return ensemble
 
-def ensemble_probabilities(predictions: List[any]) -> any:
+def ensemble_probabilities(predictions: List[Any]) -> Any:
     if len(predictions) == 0:
         return None
 
@@ -25,7 +25,7 @@ def ensemble_probabilities(predictions: List[any]) -> any:
     prediction = _simplify_prediction(prediction)
     return prediction
 
-def ensemble(predictions: List[any]) -> any:
+def ensemble(predictions: List[Any]) -> Any:
     if len(predictions) == 0:
         return None
 

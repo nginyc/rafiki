@@ -10,14 +10,15 @@ Core
 .. autoclass:: rafiki.model.BaseKnob
     :members:
 
+.. autodata:: rafiki.model.Knobs
+.. autodata:: rafiki.model.KnobConfig
+.. autodata:: rafiki.model.Params
 
 Knobs
 --------------------------------------------------------------------
 
 .. autoclass:: rafiki.model.CategoricalKnob
     :members:
-
-.. autodata:: rafiki.model.CategoricalValue
 
 .. autoclass:: rafiki.model.KnobValue
     :members:

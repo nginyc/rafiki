@@ -20,13 +20,12 @@ As an overview, your model template needs to provide the following logic for dep
 - Evaluation of the model given a (validation) dataset onthe local file system
 - Dumping of the model's parameters for serialization, after training
 - Loading of the model with trained parameters
-- Making batch predictions with the model, after training
+- Making batch predictions with the model, after being trained
 
 Full details of Rafiki's base model interface is documented at :class:`rafiki.model.BaseModel`.
 Your model implementation has to follow a specific task's specification (see :ref:`tasks`).
 
-To aid your implementation, you can refer to the sample models in 
-`./examples/models/ <https://github.com/nginyc/rafiki/tree/master/examples/models/>`_.
+To aid your implementation, you can refer to :ref:`sample-models`.
 
 Testing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -52,7 +51,9 @@ Defining Hyperparameter Search Space
 Refer to :ref:`model-tuning` for the specifics of how you can tune your models on Rafiki. 
 
 
-Running Sample Models
+.. _`sample-models`:
+
+Sample Models
 --------------------------------------------------------------------
 
 To illustrate how to write models for Rafiki, we have written the following:

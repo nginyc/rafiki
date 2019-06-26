@@ -4,7 +4,7 @@ import inspect
 import argparse
 import time
 from datetime import datetime
-from typing import Dict, Type, List
+from typing import Dict, Type, List, Any
 
 from rafiki.constants import ModelDependency, Budget
 from rafiki.advisor import ParamsType, Proposal, TrialResult, make_advisor
@@ -16,7 +16,7 @@ from .model import BaseModel, BaseKnob, Params
 from .utils import serialize_knob_config, deserialize_knob_config, parse_model_install_command, load_model_class
                     
 def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dataset_path: str, 
-                test_dataset_path: str = None, budget: Budget = None) -> (Dict[str, any], float, Params):
+                test_dataset_path: str = None, budget: Budget = None) -> (Dict[str, Any], float, Params):
     worker_id = 'local'
 
     # Note start time
@@ -153,7 +153,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
 
     return (best_proposal, best_model_test_score, best_params)
 
-def make_predictions(queries: List[any], task: str, py_model_class: Type[BaseModel], proposal: Proposal, params: Params) -> List[any]:
+def make_predictions(queries: List[Any], task: str, py_model_class: Type[BaseModel], proposal: Proposal, params: Params) -> List[Any]:
     inference_cache: InferenceCache = InferenceCache()
     worker_id = 'local'
 
@@ -214,7 +214,7 @@ def make_predictions(queries: List[any], task: str, py_model_class: Type[BaseMod
 # TODO: Fix method, more thorough testing of model API
 def test_model_class(model_file_path: str, model_class: str, task: str, dependencies: Dict[str, str], 
                     train_dataset_path: str, val_dataset_path: str, test_dataset_path: str = None, 
-                    budget: Budget = None, queries: List[any] = None) -> (List[any], BaseModel):
+                    budget: Budget = None, queries: List[Any] = None) -> (List[Any], BaseModel):
     '''
     Tests whether a model class is *more likely* to be correctly defined by *locally* simulating a full train-inference flow on your model
     on a given dataset. The model's methods will be called in an manner similar to that in Rafiki.
@@ -231,7 +231,7 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
     :param str train_dataset_path: File path of the train dataset for training of the model
     :param str val_dataset_path: File path of the validation dataset for evaluating trained models
     :param str test_dataset_path: File path of the test dataset for testing the final best trained model, if provided
-    :param List[any] queries: List of queries for testing predictions with the trained model
+    :param List[Any] queries: List of queries for testing predictions with the trained model
     :returns: (<predictions of best trained model>, <best trained model>)
 
     '''

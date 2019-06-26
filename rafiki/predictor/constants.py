@@ -1,15 +1,15 @@
-from typing import Union
+from typing import Union, Any
 import uuid
 
 class Query():
-    def __init__(self, query: any):
+    def __init__(self, query: Any):
         self.id = str(uuid.uuid4())
         self.query = query
 
 class Prediction():
     def __init__(self, 
                 # Raw prediction, or None if the worker is unable to make a prediction (e.g. errored)
-                prediction: Union[any, None], 
+                prediction: Union[Any, None], 
                 # ID of query of prediction
                 query_id: str, 
                 # Worker who made the prediction, if any

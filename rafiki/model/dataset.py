@@ -1,14 +1,10 @@
 from PIL import Image
 import numpy as np
 import random
-import requests
 import logging
 import os
 import tempfile
 import traceback
-from tqdm import tqdm
-import math
-from urllib.parse import urlparse
 import zipfile
 import io
 import abc
@@ -16,7 +12,6 @@ import csv
 
 logger = logging.getLogger(__name__)
 
-class InvalidDatasetProtocolException(Exception): pass 
 class InvalidDatasetFormatException(Exception): pass 
 
 class DatasetUtils():
@@ -41,34 +36,27 @@ class DatasetUtils():
             utils.dataset.load_dataset_of_image_files(dataset_path)
             ...
     '''   
-    
-    def __init__(self):
-        # Caches downloaded datasets
-        self._dataset_uri_to_path = {}
-
-    def load_dataset_of_corpus(self, dataset_uri, tags=['tag'], split_by='\\n'):
+    def load_dataset_of_corpus(self, dataset_path, tags=None, split_by='\\n'):
         '''
-            Loads dataset with type `CORPUS`.
+            Loads dataset for the task ``POS_TAGGING``
             
-            :param str dataset_uri: URI of the dataset file
+            :param str dataset_path: File path of the dataset
             :returns: An instance of ``CorpusDataset``.
         '''
-        dataset_path = self.download_dataset_from_uri(dataset_uri)
-        return CorpusDataset(dataset_path, tags, split_by)
+        return CorpusDataset(dataset_path, tags or ['tag'], split_by)
 
-    def load_dataset_of_image_files(self, dataset_uri, min_image_size=None, 
+    def load_dataset_of_image_files(self, dataset_path, min_image_size=None, 
                                     max_image_size=None, mode='RGB', if_shuffle=False):
         '''
-            Loads dataset with type `IMAGE_FILES`.
+            Loads dataset for the task ``IMAGE_CLASSIFICATION``.
 
-            :param str dataset_uri: URI of the dataset file
+            :param str dataset_path: File path of the dataset
             :param int min_image_size: minimum width *and* height to resize all images to 
             :param int max_image_size: maximum width *and* height to resize all images to 
             :param str mode: Pillow image mode. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes
             :param bool if_shuffle: Whether to shuffle the dataset
             :returns: An instance of ``ImageFilesDataset``
         '''
-        dataset_path = self.download_dataset_from_uri(dataset_uri)
         return ImageFilesDataset(dataset_path, min_image_size=min_image_size, max_image_size=max_image_size, 
                                 mode=mode, if_shuffle=if_shuffle)
 
@@ -117,48 +105,6 @@ class DatasetUtils():
             images = [x.convert(mode) for x in images]
 
         return np.asarray([np.asarray(x) for x in images])
-    
-    def download_dataset_from_uri(self, dataset_uri):
-        '''
-            Maybe download the dataset at URI, ensuring that the dataset ends up in the local filesystem.
-
-            :param str dataset_uri: URI of the dataset file
-            :returns: file path of the dataset file in the local filesystem
-        '''
-        if dataset_uri in self._dataset_uri_to_path:
-            return self._dataset_uri_to_path[dataset_uri]
-
-        dataset_path = None
-
-        parsed_uri = urlparse(dataset_uri)
-        protocol = '{uri.scheme}'.format(uri=parsed_uri).lower().strip()
-
-        # Download dataset over HTTP/HTTPS
-        if protocol == 'http' or protocol == 'https':
-
-            r = requests.get(dataset_uri, stream=True)
-            temp_file = tempfile.NamedTemporaryFile(delete=False)
-
-            # Show a progress bar while downloading
-            total_size = int(r.headers.get('content-length', 0)); 
-            block_size = 1024
-            iters = math.ceil(total_size / block_size) 
-            for data in tqdm(r.iter_content(block_size), total=iters, unit='KB'):
-                temp_file.write(data)
-                
-            temp_file.close()
-            
-            dataset_path = temp_file.name
-
-        # Assume it is on filesystem
-        elif protocol == '' or protocol == 'file':
-            dataset_path = dataset_uri
-        else:
-            raise InvalidDatasetProtocolException()
-
-        # Cache dataset path to possibly prevent re-downloading
-        self._dataset_uri_to_path[dataset_uri] = dataset_path
-        return dataset_path
 
 class ModelDataset():
     '''
@@ -180,7 +126,7 @@ class ModelDataset():
 
 class CorpusDataset(ModelDataset):
     '''
-    Class that helps loading of dataset with type `CORPUS`
+    Class that helps loading of dataset for task ``POS_TAGGING``.
 
     ``tags`` is the expected list of tags for each token in the corpus.
     Dataset samples are grouped as sentences by a delimiter token corresponding to ``split_by``.
@@ -251,7 +197,7 @@ class CorpusDataset(ModelDataset):
 
 class ImageFilesDataset(ModelDataset):
     '''
-    Class that helps loading of dataset with type `IMAGE_FILES`
+    Class that helps loading of dataset for task ``IMAGE_CLASSIFICATION``.
     
     ``classes`` is the number of image classes.
 

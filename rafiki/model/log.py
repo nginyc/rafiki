@@ -14,28 +14,27 @@ class LogType():
 
 class LoggerUtils():
     '''
-    Allows models to log messages and metrics during model training, and 
-    define plots for visualization of model training.
+    Allows models to log messages & metrics during model training.
 
-    To use this logger, import the global ``logger`` instance from the module ``rafiki.model``.
-
+    This should NOT be initiailized outside of the module. Instead,
+    import the global ``utils`` instance from the module ``rafiki.model``
+    and use ``utils.logger``.
+    
     For example:
 
     ::
 
-        from rafiki.model import logger, BaseModel
+        from rafiki.model import utils
         ...
-        class MyModel(BaseModel):
+        def train(self, dataset_path, **kwargs):
             ...
-            def train(self, dataset_uri):
-                ...
-                logger.log('Starting model training...')
-                logger.define_plot('Precision & Recall', ['precision', 'recall'], x_axis='epoch')
-                ...
-                logger.log(precision=0.1, recall=0.6, epoch=1)
-                ...
-                logger.log('Ending model training...')
-                ...
+            utils.logger.log('Starting model training...')
+            utils.logger.define_plot('Precision & Recall', ['precision', 'recall'], x_axis='epoch')
+            ...
+            utils.logger.log(precision=0.1, recall=0.6, epoch=1)
+            ...
+            utils.logger.log('Ending model training...')
+            ...
 
     '''
     

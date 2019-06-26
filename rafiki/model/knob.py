@@ -1,6 +1,8 @@
 import abc
 from typing import Union, List
 
+POLICIES = ['SHARE_PARAMS', 'EARLY_STOP', 'SKIP_TRAIN', 'QUICK_EVAL', 'DOWNSCALE']
+
 class KnobValue():
     '''
         Wrapper for a ``CategoricalValue``.
@@ -94,8 +96,6 @@ class FixedKnob(BaseKnob):
     def value(self):
         return self._value
 
-
-POLICIES = ['SHARE_PARAMS', 'EARLY_STOP', 'SKIP_TRAIN', 'QUICK_EVAL', 'DOWNSCALE']
 
 class PolicyKnob(BaseKnob):
     '''
@@ -204,7 +204,7 @@ class ArchKnob(BaseKnob):
         Knob type representing part of a model's architecture as a fixed-size list of categorical values. 
         ``items`` is a list of list of candidate categorical values; a realization of this knob type would be a list of categorical values, wIth the value at each index matching an element of the list of candidates at that index.
         
-        To illustrate, the following can be a definition of 3-layer model's architecture search space inspired by the NAS cell architecture construction strategy:
+        To illustrate, the following can be a definition of 3-layer model's architecture search space inspired by the ENAS cell architecture construction strategy:
 
         ::
 
