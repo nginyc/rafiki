@@ -1,15 +1,10 @@
 import pytest
-import tempfile
-import os
-import time
 
 from rafiki.client import Client
-from rafiki.constants import ModelAccessRight, TrainJobStatus
-from test.utils import make_model_dev, make_app_dev, make_model, make_private_model, make_dataset, \
-                        gen, superadmin
+from rafiki.constants import TrainJobStatus, BudgetOption
+from test.utils import global_setup, make_model_dev, make_app_dev, make_model, make_private_model, \
+                    make_invalid_model, make_dataset, gen, superadmin, wait_for_train_job_status
 
-TRAIN_JOB_TIMEOUT_SECS = 60
-    
 class TestTrainJobs():
 
     @pytest.fixture(scope='class')
@@ -20,12 +15,9 @@ class TestTrainJobs():
         # Create train job
         train_job = app_dev.create_train_job(app, task, train_dataset_id, val_dataset_id, budget, models=[model_id])
         assert 'id' in train_job
-        train_job_id = train_job['id']
+        wait_for_train_job_status(app_dev, app, TrainJobStatus.STOPPED)
 
-        # Wait until train job stops
-        wait_until_train_job_stops(app, app_dev)
-
-        return (app_dev, app, train_job_id, task)
+        return (app_dev, app, train_job['id'], task)
 
     def test_app_dev_create_train_job(self, app_dev_create_train_job_and_waited):
         (app_dev, app, train_job_id, *args) = app_dev_create_train_job_and_waited
@@ -35,7 +27,7 @@ class TestTrainJobs():
         train_job = app_dev.get_train_job(app)
         assert train_job['id'] == train_job_id
         assert train_job['app'] == app
-        assert 'status' in train_job
+        assert train_job['status'] == TrainJobStatus.STOPPED
         
         # Get train job by user
         user = app_dev.get_current_user()
@@ -74,7 +66,7 @@ class TestTrainJobs():
         # Get info for a trial
         trial = app_dev.get_trial(trial_id)
         assert trial['id'] == trial_id
-        assert all([(x in trial) for x in ['knobs', 'status', 'score', 'datetime_started', 'datetime_stopped']])
+        assert all([(x in trial) for x in ['proposal', 'status', 'score', 'datetime_started', 'datetime_stopped']])
         
     
     def test_app_dev_get_trial_logs(self, app_dev_create_train_job_and_waited):
@@ -145,14 +137,14 @@ class TestTrainJobs():
     def test_app_dev_create_train_job_with_gpu(self):
         app_dev = make_app_dev()
         (task, app, model_id, train_dataset_id, val_dataset_id, budget) = make_train_job_info(app_dev)
-        budget['GPU_COUNT'] = 1 # Activate GPU
+        budget[BudgetOption.GPU_COUNT] = 1 # With GPU
         
         # Create train job
         train_job = app_dev.create_train_job(app, task, train_dataset_id, val_dataset_id, budget, models=[model_id])
         assert 'id' in train_job
 
         # Wait until train job stops
-        wait_until_train_job_stops(app, app_dev)
+        wait_for_train_job_status(app_dev, app, TrainJobStatus.STOPPED)
 
         # Train job should have stopped without error
         train_job = app_dev.get_train_job(app)
@@ -162,16 +154,39 @@ class TestTrainJobs():
         trials = app_dev.get_trials_of_train_job(app)
         assert len(trials) > 0
 
-
     def test_app_dev_cant_use_private_model(self):
-        model_id = make_private_model() # Have private model created
         app_dev = make_app_dev()
         (task, app, _, train_dataset_id, val_dataset_id, budget) = make_train_job_info(app_dev)
+        model_id = make_private_model(task=task) # Have private model created
 
         # Can't create train job with private model
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match='InvalidModelError'):
             app_dev.create_train_job(app, task, train_dataset_id, val_dataset_id, budget, models=[model_id])
 
+    def test_app_dev_informed_model_error(self):
+        app_dev = make_app_dev()
+        (task, app, _, train_dataset_id, val_dataset_id, budget) = make_train_job_info(app_dev)
+        model_id = make_invalid_model(task=task) # Have invalid model created
+
+        # Create train job
+        app_dev.create_train_job(app, task, train_dataset_id, val_dataset_id, budget, models=[model_id])
+        
+        # Train job will be errored
+        with pytest.raises(Exception, match='errored'):
+            wait_for_train_job_status(app_dev, app, TrainJobStatus.STOPPED)
+
+    def test_app_dev_informed_model_error_with_multiple_models(self):
+        app_dev = make_app_dev()
+        (task, app, _, train_dataset_id, val_dataset_id, budget) = make_train_job_info(app_dev)
+        model_id = make_invalid_model(task=task) # Have invalid model created
+        model_id2 = make_model(task=task) # Have valid model created
+
+        # Create train job
+        app_dev.create_train_job(app, task, train_dataset_id, val_dataset_id, budget, models=[model_id, model_id2])
+
+        # Train job will be errored
+        with pytest.raises(Exception, match='errored'):
+            wait_for_train_job_status(app_dev, app, TrainJobStatus.STOPPED)
 
 def make_train_job_info(client: Client, task=None):
     task = task or gen()
@@ -179,25 +194,8 @@ def make_train_job_info(client: Client, task=None):
     train_dataset_id = make_dataset(client, task=task)
     val_dataset_id = make_dataset(client, task=task)
     model_id = make_model(task=task)
-    budget = { 'MODEL_TRIAL_COUNT': 1 }
+
+    # 1 trial & no GPU
+    budget = {BudgetOption.MODEL_TRIAL_COUNT: 1, BudgetOption.GPU_COUNT: 0}
 
     return (task, app, model_id, train_dataset_id, val_dataset_id, budget)
-
-def wait_until_train_job_stops(app, client: Client):
-    length = 0
-    timeout = TRAIN_JOB_TIMEOUT_SECS
-    tick = 1
-
-    while True:
-        train_job = client.get_train_job(app)
-        status = train_job['status']
-        if status not in [TrainJobStatus.STARTED, TrainJobStatus.RUNNING]:
-            # Train job has stopped
-            return
-            
-        # Still running...
-        if length >= timeout:
-            raise TimeoutError('Train job is running for too long')
-
-        length += tick
-        time.sleep(tick)

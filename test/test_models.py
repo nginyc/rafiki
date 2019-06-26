@@ -3,7 +3,7 @@ import tempfile
 import os
 
 from rafiki.constants import ModelAccessRight
-from test.utils import make_model_dev, make_app_dev, gen, superadmin, MODEL_CLASS, MODEL_FILE_PATH
+from test.utils import global_setup, make_model_dev, make_app_dev, gen, superadmin, MODEL_CLASS, MODEL_FILE_PATH
 
 
 class TestModels():

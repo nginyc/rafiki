@@ -1,10 +1,7 @@
 import pytest
-import tempfile
-import os
 
 from rafiki.client import Client
-from test.utils import make_model_dev, make_app_dev, gen, superadmin, DATASET_FILE_PATH
-
+from test.utils import global_setup, make_app_dev, gen, DATASET_FILE_PATH
 
 class TestDatasets():
 

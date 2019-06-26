@@ -1,9 +1,9 @@
 import pytest
+import numpy as np
 
 from rafiki.cache.local_cache import LocalCache
 
 from test.utils import global_setup
-import numpy as np
 
 class TestLocalCache():
     @pytest.fixture(scope='class', autouse=True)

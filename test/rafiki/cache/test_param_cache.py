@@ -6,7 +6,7 @@ from rafiki.advisor import ParamsType
 from rafiki.cache import ParamCache
 from test.utils import global_setup
 
-class TestStore():    
+class TestParamCache():    
     
     @pytest.fixture(scope='class', autouse=True)
     def params(self):
