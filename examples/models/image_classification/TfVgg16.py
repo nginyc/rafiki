@@ -7,7 +7,7 @@ import json
 import base64
 
 from rafiki.model import BaseModel, FloatKnob, CategoricalKnob, FixedKnob, utils
-from rafiki.constants import TaskType, ModelDependency
+from rafiki.constants import ModelDependency
 from rafiki.model.dev import test_model_class
 
 class TfVgg16(BaseModel):
@@ -173,7 +173,7 @@ if __name__ == '__main__':
     test_model_class(
         model_file_path=__file__,
         model_class='TfVgg16',
-        task=TaskType.IMAGE_CLASSIFICATION,
+        task='IMAGE_CLASSIFICATION',
         dependencies={
             ModelDependency.TENSORFLOW: '1.12.0'
         },

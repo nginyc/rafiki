@@ -4,7 +4,7 @@ import base64
 import numpy as np
 
 from rafiki.model import BaseModel, IntegerKnob, CategoricalKnob, utils
-from rafiki.constants import TaskType, ModelDependency
+from rafiki.constants import ModelDependency
 from rafiki.model.dev import test_model_class
 
 class SkDt(BaseModel):
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     test_model_class(
         model_file_path=__file__,
         model_class='SkDt',
-        task=TaskType.IMAGE_CLASSIFICATION,
+        task='IMAGE_CLASSIFICATION',
         dependencies={
             ModelDependency.SCIKIT_LEARN: '0.20.0'
         },

@@ -1,29 +1,40 @@
+import logging
 import numpy as np
-from typing import List
+from typing import List, Callable
 from collections import Iterable
 
-from rafiki.constants import TaskType
+logger = logging.getLogger(__name__)
 
-def ensemble_predictions(predictions: List[any], task: str) -> any:
+def get_ensemble_method(task: str) -> Callable[[List[any]], any]:
+    if task == 'IMAGE_CLASSIFICATION':
+        return ensemble_probabilities
+    else:
+        return ensemble
+
+def ensemble_probabilities(predictions: List[any]) -> any:
     if len(predictions) == 0:
         return None
 
-    # By default, just return some worker's predictions
+    # All probs must have same length
+    probs_by_worker = predictions
+    assert all([len(x) == len(probs_by_worker[0]) for x in probs_by_worker]) 
+
+    # Compute mean of probabilities across predictions
+    probs = np.mean(probs_by_worker, axis=0)
+    prediction = probs
+    prediction = _simplify_prediction(prediction)
+    return prediction
+
+def ensemble(predictions: List[any]) -> any:
+    if len(predictions) == 0:
+        return None
+
+    # Return some worker's predictions
     index = 0
     prediction = predictions[index]
-
-    if task == TaskType.IMAGE_CLASSIFICATION:
-        # All probs must have same length
-        probs_by_worker = predictions
-        assert all([len(x) == len(probs_by_worker[0]) for x in probs_by_worker]) 
-
-        # Compute mean of probabilities across predictions
-        probs = np.mean(probs_by_worker, axis=0)
-        prediction = probs
-
     prediction = _simplify_prediction(prediction)
-
     return prediction
+
 
 def _simplify_prediction(prediction):
     # Convert numpy arrays to lists

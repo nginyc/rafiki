@@ -2,7 +2,6 @@ import math
 import json
 
 from rafiki.model import BaseModel, utils, FixedKnob
-from rafiki.constants import TaskType
 from rafiki.model.dev import test_model_class
 
 class BigramHmm(BaseModel):
@@ -182,7 +181,7 @@ if __name__ == '__main__':
     test_model_class(
         model_file_path=__file__,
         model_class='BigramHmm',
-        task=TaskType.POS_TAGGING,
+        task='POS_TAGGING',
         dependencies={},
         train_dataset_path='data/ptb_for_pos_tagging_train.zip',
         val_dataset_path='data/ptb_for_pos_tagging_val.zip',

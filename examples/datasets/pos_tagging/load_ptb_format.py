@@ -26,7 +26,7 @@ def load_sample_ptb(out_train_dataset_path='data/ptb_for_pos_tagging_train.zip',
 def load(dataset_url, out_train_dataset_path, out_val_dataset_path, out_meta_tsv_path, validation_split):
     '''
         Loads and converts a dataset of the format of the Penn Treebank sample 
-        at http://www.nltk.org/nltk_data/ to the DatasetType `CORPUS` for the Task `POS_TAGGING`.
+        at http://www.nltk.org/nltk_data/ to the dataset type `CORPUS` for the task `POS_TAGGING`.
 
         :param str dataset_url: URL to download the dataset stored in the format similar to the Penn Treebank sample
         :param str out_train_dataset_path: Path to save the output train dataset file

@@ -6,7 +6,7 @@ import os
 
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL
-from rafiki.constants import TaskType, BudgetOption, InferenceJobStatus, ModelDependency
+from rafiki.constants import BudgetOption, InferenceJobStatus, ModelDependency
 
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
 from examples.datasets.image_classification.load_mnist_format import load_fashion_mnist
@@ -44,7 +44,7 @@ def quickstart(client, train_dataset_path, val_dataset_path, gpus, hours):
         models `SkDt` and `TfFeedForward` for the task `IMAGE_CLASSIFICATION`.
     '''
 
-    task = TaskType.IMAGE_CLASSIFICATION
+    task = 'IMAGE_CLASSIFICATION'
 
     # Randomly generate app & model names to avoid naming conflicts
     app_id = gen_id()

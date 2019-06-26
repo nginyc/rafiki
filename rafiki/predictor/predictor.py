@@ -1,7 +1,7 @@
 import logging
 import os
 from collections import defaultdict
-from typing import List
+from typing import List, Callable
 import time
 import traceback
 
@@ -10,7 +10,7 @@ from rafiki.meta_store import MetaStore
 from rafiki.cache import InferenceCache
 
 from .constants import Prediction, Query
-from .ensemble import ensemble_predictions
+from .ensemble import get_ensemble_method
 
 PREDICT_LOOP_SLEEP_SECS = 0.1
 
@@ -25,7 +25,7 @@ class Predictor():
         self._meta_store = meta_store or MetaStore()
         self._redis_host = os.environ['REDIS_HOST']
         self._redis_port = os.environ['REDIS_PORT']
-        self._task = None
+        self._ensemble_method: Callable[[List[any]], any] = None
         self._inference_job_id = None
 
         self._pull_job_info()
@@ -67,8 +67,10 @@ class Predictor():
             if train_job is None:
                 raise InvalidInferenceJobError('No such train job with ID "{}"'.format(inference_job.train_job_id))
 
+            self._ensemble_method = get_ensemble_method(train_job.task)
             self._inference_job_id = inference_job.id
-            self._task = train_job.task 
+
+            logger.info(f'Using ensemble method: {self._ensemble_method}...')
 
     def _notify_start(self):
         superadmin_client().send_event('predictor_started', inference_job_id=self._inference_job_id)
@@ -119,7 +121,7 @@ class Predictor():
             worker_predictions = [x.prediction for x in worker_predictions if x.prediction is not None] 
 
             # Do ensembling
-            prediction = ensemble_predictions(worker_predictions, self._task)
+            prediction = self._ensemble_method(worker_predictions)
             predictions.append(prediction)
 
         return predictions

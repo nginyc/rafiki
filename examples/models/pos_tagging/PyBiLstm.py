@@ -6,7 +6,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from rafiki.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, utils
-from rafiki.constants import TaskType, ModelDependency
+from rafiki.constants import ModelDependency
 from rafiki.model.dev import test_model_class
 
 class PyBiLstm(BaseModel):
@@ -305,7 +305,7 @@ if __name__ == '__main__':
     test_model_class(
         model_file_path=__file__,
         model_class='PyBiLstm',
-        task=TaskType.POS_TAGGING,
+        task='POS_TAGGING',
         dependencies={
             ModelDependency.TORCH: '0.4.1'
         },

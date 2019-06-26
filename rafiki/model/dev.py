@@ -8,7 +8,7 @@ from typing import Dict, Type, List
 
 from rafiki.constants import ModelDependency, Budget
 from rafiki.advisor import ParamsType, Proposal, TrialResult, make_advisor
-from rafiki.predictor import ensemble_predictions, Query, Prediction
+from rafiki.predictor import get_ensemble_method, Query, Prediction
 from rafiki.param_store import FileParamStore, ParamStore
 from rafiki.cache import ParamCache, TrainCache, InferenceCache
 
@@ -202,7 +202,9 @@ def make_predictions(queries: List[any], task: str, py_model_class: Type[BaseMod
     for prediction in predictions_at_predictor:
         prediction = prediction.prediction
         _assert_jsonable(prediction, Exception('Each `prediction` should be JSON serializable'))
-        out_prediction = ensemble_predictions([prediction], task)
+        ensemble_method = get_ensemble_method(task)
+        print(f'Ensemble method: {ensemble_method}')
+        out_prediction = ensemble_method([prediction])
         out_predictions.append(out_prediction)
 
     print('Predictions: {}'.format(out_predictions))

@@ -6,7 +6,7 @@ import numpy as np
 import base64
 
 from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, PolicyKnob
-from rafiki.constants import TaskType, ModelDependency
+from rafiki.constants import ModelDependency
 from rafiki.model.dev import test_model_class
 
 class TfFeedForward(BaseModel):
@@ -190,7 +190,7 @@ if __name__ == '__main__':
     test_model_class(
         model_file_path=__file__,
         model_class='TfFeedForward',
-        task=TaskType.IMAGE_CLASSIFICATION,
+        task='IMAGE_CLASSIFICATION',
         dependencies={
             ModelDependency.TENSORFLOW: '1.12.0'
         },

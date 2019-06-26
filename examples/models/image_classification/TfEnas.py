@@ -10,7 +10,7 @@ from collections import namedtuple
 import numpy as np
 import argparse
 
-from rafiki.constants import TaskType, ModelDependency
+from rafiki.constants import ModelDependency
 from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
                             FixedKnob, ArchKnob, KnobValue, PolicyKnob
 from rafiki.model.dev import test_model_class
@@ -1274,7 +1274,7 @@ if __name__ == '__main__':
     test_model_class(
         model_file_path=__file__,
         model_class='TfEnas',
-        task=TaskType.IMAGE_CLASSIFICATION,
+        task='IMAGE_CLASSIFICATION',
         dependencies={
             ModelDependency.TENSORFLOW: '1.12.0'
         },

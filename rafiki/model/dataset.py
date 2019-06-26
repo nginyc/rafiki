@@ -17,7 +17,6 @@ import csv
 logger = logging.getLogger(__name__)
 
 class InvalidDatasetProtocolException(Exception): pass 
-class InvalidDatasetTypeException(Exception): pass 
 class InvalidDatasetFormatException(Exception): pass 
 
 class DatasetUtils():

@@ -57,10 +57,3 @@ class ModelDependency():
     TORCH = 'torch'
     TORCHVISION = 'torchvision'
     SINGA = 'singa'
-
-class DatasetType():
-    IMAGE_FILES = 'IMAGE_FILES'
-
-class TaskType():
-    IMAGE_CLASSIFICATION = 'IMAGE_CLASSIFICATION'
-    POS_TAGGING = 'POS_TAGGING'

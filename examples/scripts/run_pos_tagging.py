@@ -4,7 +4,7 @@ import os
 
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL
-from rafiki.constants import TaskType, BudgetOption, ModelDependency
+from rafiki.constants import BudgetOption, ModelDependency
 from examples.scripts.quickstart import get_predictor_host, \
     wait_until_train_job_has_stopped, make_predictions, gen_id
 
@@ -16,7 +16,7 @@ def run_pos_tagging(client, train_dataset_path, val_dataset_path, gpus, hours):
         models `BigramHmm` and `PyBiLstm` for the task `POS_TAGGING`.
     '''
 
-    task = TaskType.POS_TAGGING
+    task = 'POS_TAGGING'
 
     # Randomly generate app & model names to avoid naming conflicts
     app_id = gen_id()

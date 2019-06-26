@@ -4,7 +4,7 @@ from pprint import pprint
 
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL
-from rafiki.constants import BudgetOption, TaskType, ModelDependency
+from rafiki.constants import BudgetOption, ModelDependency
 
 from examples.scripts.utils import gen_id
 from examples.datasets.image_classification.load_cifar_format import load_cifar10
@@ -14,7 +14,7 @@ def run_enas(client, train_dataset_path, val_dataset_path, gpus, hours):
         Conducts training of model `TfEnas` on the CIFAR-10 dataset for the task `IMAGE_CLASSIFICATION`.
         Demonstrates architecture tuning with ENAS on Rafiki. 
     '''
-    task = TaskType.IMAGE_CLASSIFICATION
+    task = 'IMAGE_CLASSIFICATION'
 
     app_id = gen_id()
     app = 'cifar10_enas_{}'.format(app_id)
@@ -32,7 +32,7 @@ def run_enas(client, train_dataset_path, val_dataset_path, gpus, hours):
     print('Creating model...')
     model = client.create_model(
         name=model_name,
-        task=TaskType.IMAGE_CLASSIFICATION,
+        task='IMAGE_CLASSIFICATION',
         model_file_path='examples/models/image_classification/TfEnas.py',
         model_class='TfEnas',
         dependencies={ModelDependency.TENSORFLOW: '1.12.0'}

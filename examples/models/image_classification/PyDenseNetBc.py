@@ -15,7 +15,7 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import torchvision.transforms as transforms
 from collections import OrderedDict
 
-from rafiki.constants import TaskType, ModelDependency
+from rafiki.constants import ModelDependency
 from rafiki.model import BaseModel, utils, FixedKnob, FloatKnob, CategoricalKnob, PolicyKnob
 from rafiki.model.dev import test_model_class
 
@@ -590,7 +590,7 @@ if __name__ == '__main__':
     test_model_class(
         model_file_path=__file__,
         model_class='PyDenseNetBc',
-        task=TaskType.IMAGE_CLASSIFICATION,
+        task='IMAGE_CLASSIFICATION',
         dependencies={ 
             ModelDependency.TORCH: '1.0.1',
             ModelDependency.TORCHVISION: '0.2.2'

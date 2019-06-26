@@ -4,7 +4,7 @@ from pprint import pprint
 
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL
-from rafiki.constants import BudgetOption, TaskType, ModelDependency
+from rafiki.constants import BudgetOption, ModelDependency
 
 from examples.scripts.utils import gen_id
 from examples.datasets.image_classification.load_cifar_format import load_cifar10
@@ -14,7 +14,7 @@ def train_densenet(client, train_dataset_path, val_dataset_path, gpus, hours):
         Conducts training of model `PyDenseNetBc` on the CIFAR-10 dataset for the task `IMAGE_CLASSIFICATION`.
         Demonstrates hyperparameter tuning with parameter sharing on Rafiki. 
     '''
-    task = TaskType.IMAGE_CLASSIFICATION
+    task = 'IMAGE_CLASSIFICATION'
 
     app_id = gen_id()
     app = 'cifar10_densenet_{}'.format(app_id)
@@ -32,7 +32,7 @@ def train_densenet(client, train_dataset_path, val_dataset_path, gpus, hours):
     print('Creating model...')
     model = client.create_model(
         name=model_name,
-        task=TaskType.IMAGE_CLASSIFICATION,
+        task='IMAGE_CLASSIFICATION',
         model_file_path='examples/models/image_classification/PyDenseNetBc.py',
         model_class='PyDenseNetBc',
         dependencies={ 
