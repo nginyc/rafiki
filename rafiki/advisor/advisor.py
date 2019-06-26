@@ -137,8 +137,8 @@ class FixedAdvisor(BaseAdvisor):
     ''' 
     @staticmethod
     def is_compatible(knob_config, budget):
-        # Must only have fixed knobs
-        return BaseAdvisor.has_only_knob_types(knob_config, [FixedKnob])
+        # Must only have fixed & policy knobs
+        return BaseAdvisor.has_only_knob_types(knob_config, [FixedKnob, PolicyKnob])
 
     def propose(self, worker_id, trial_no):
         if trial_no > 1:
