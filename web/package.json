@@ -1,43 +1,92 @@
 {
-  "name": "rafiki_web",
-  "version": "0.0.1",
-  "description": "Admin Portal for Rafiki",
-  "main": "index.js",
-  "author": "nginyc",
+
+  "name": "rafiki_web_admin",
+  "version": "0.2.0",
+  "description": "Web Admin Portal for Rafiki",
+  "private": false,
+  "dependencies": {
+    "@material-ui/core": "3.9.2",
+    "@material-ui/icons": "3.0.2",
+    "@testing-library/react": "^8.0.1",
+    "chartist": "0.10.1",
+    "classnames": "2.2.6",
+    "echarts": "^4.2.1",
+    "ejs": "^2.6.1",
+    "express": "^4.17.1",
+    "history": "4.7.2",
+    "moment": "^2.24.0",
+    "perfect-scrollbar": "1.4.0",
+    "prettier": "1.16.4",
+    "prop-types": "15.7.1",
+    "react": "16.8.1",
+    "react-chartist": "0.13.3",
+    "react-dom": "16.8.1",
+    "react-google-maps": "9.4.5",
+    "react-router-dom": "4.3.1",
+    "react-scripts": "2.1.5",
+    "react-swipeable-views": "0.13.1",
+    "react-syntax-highlighter": "^10.2.1"
+  },
   "license": "Apache-2.0",
   "scripts": {
-    "build": "webpack --config webpack.config.prod.js",
-    "start": "node app.js",
-    "dev": "webpack-dev-server --port $ADMIN_WEB_EXT_PORT --open --config webpack.config.dev.js"
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "test:debug": "react-scripts --inspect-brk test --runInBand",
+    "eject": "react-scripts eject",
+    "install:clean": "rm -rf node_modules/ && rm -rf package-lock.json && npm install && npm start",
+    "lint:check": "eslint . --ext=js,jsx;  exit 0",
+    "lint:fix": "eslint . --ext=js,jsx --fix;  exit 0",
+    "build-package-css": "cp src/assets/css/material-dashboard-react.css dist/material-dashboard-react.css",
+    "build-package": "npm run build-package-css && babel src --out-dir dist",
+    "start_nus": "echo \"This script is for personal use and to inject the config automatically\" & REACT_APP_API_POINT_HOST=rafiki.nus REACT_APP_API_POINT_PORT=3000 react-scripts start"
   },
-  "dependencies": {
-    "@material-ui/core": "^3.3.2",
-    "@material-ui/icons": "^3.0.1",
-    "@types/echarts": "^4.1.1",
-    "@types/lodash": "^4.14.120",
-    "@types/react": "^16.4.18",
-    "@types/react-dom": "^16.0.9",
-    "@types/react-router-dom": "^4.3.1",
-    "awesome-typescript-loader": "^5.2.1",
-    "clean-webpack-plugin": "^0.1.19",
-    "echarts": "^4.2.0-rc.2",
-    "ejs": "^2.6.1",
-    "express": "^4.16.4",
-    "file-loader": "^2.0.0",
-    "lodash": "^4.17.11",
-    "moment": "^2.22.2",
-    "react": "^16.6.0",
-    "react-dom": "^16.6.0",
-    "react-router": "^4.3.1",
-    "react-router-dom": "^4.3.1",
-    "source-map-loader": "^0.2.4",
-    "typescript": "^3.1.4",
-    "webpack": "^4.22.0",
-    "webpack-cli": "^3.1.2",
-    "whatwg-fetch": "^3.0.0"
-  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ],
   "devDependencies": {
-    "tslint": "^5.11.0",
-    "webpack-dev-server": "^3.1.11"
+    "eslint-config-prettier": "4.0.0",
+    "eslint-plugin-prettier": "3.0.1",
+    "jest-dom": "^3.5.0"
+  },
+  "eslintConfig": 
+  {
+    "parserOptions": {
+      "ecmaVersion": 2018,
+      "ecmaFeatures": {
+        "jsx": true
+      },
+      "sourceType": "module"
+    },
+  
+    "settings": {
+      "react": {
+        "version": "16.0"
+      }
+    },
+  
+    "plugins": [
+      "react"
+    ],
+  
+    "extends": [
+      "standard-jsx"
+    ],
+  
+    "rules": {
+      "react/jsx-no-bind": ["error", {
+        "allowArrowFunctions": true,
+        "allowBind": false,
+        "ignoreRefs": true
+      }],
+      "react/no-did-update-set-state": "error",
+      "react/no-unknown-property": "error",
+      "react/no-unused-prop-types": "error",
+      "react/prop-types": "error",
+      "react/react-in-jsx-scope": "error"
+    }
   }
 }

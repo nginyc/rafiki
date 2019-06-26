@@ -23,6 +23,15 @@ def run_pos_tagging(client, train_dataset_path, val_dataset_path, gpus, hours):
     app = 'pos_tagging_app_{}'.format(app_id)
     bihmm_model_name = 'BigramHmm_{}'.format(app_id)
     py_model_name = 'PyBiLstm_{}'.format(app_id)
+    
+    print('Preprocessing datasets...')
+    load_sample_ptb(train_dataset_path, val_dataset_path)
+
+    print('Creating & uploading datasets onto Rafiki...')
+    train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
+    pprint(train_dataset)
+    val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_path)
+    pprint(val_dataset)
 
     print('Preprocessing datasets...')
     load_sample_ptb(train_dataset_path, val_dataset_path)
@@ -36,12 +45,6 @@ def run_pos_tagging(client, train_dataset_path, val_dataset_path, gpus, hours):
                         'PyBiLstm', dependencies={ ModelDependency.TORCH: '0.4.1' })
     pprint(py_model)
     model_ids = [bihmm_model['id'], py_model['id']]
-
-    print('Creating & uploading datasets onto Rafiki...')
-    train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
-    pprint(train_dataset)
-    val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_path)
-    pprint(val_dataset)
 
     print('Creating train job for app "{}" on Rafiki...'.format(app))
     budget = {

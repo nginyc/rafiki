@@ -9,7 +9,7 @@ from itertools import chain
 from PIL import Image
 import argparse
 
-from rafiki.model import utils
+from examples.datasets.utils import download_dataset_from_url
 
 # Loads the official Fashion MNIST dataset for `IMAGE_CLASSIFICATION` task
 def load_fashion_mnist(out_train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
@@ -62,12 +62,14 @@ def load(train_images_url, train_labels_url, test_images_url, test_labels_url, l
         :param float validation_split: Proportion (0-1) to carve out validation dataset from the originl train dataset
         :param int limit: Maximum number of samples for each dataset (for purposes of development)
     '''
+    if all([os.path.exists(x) for x in [out_train_dataset_path, out_val_dataset_path, out_meta_csv_path]]):
+        print('Dataset already loaded in local filesystem - skipping...')
+        return
 
-    print('Downloading files...')
-    train_images_file_path = utils.dataset.download_dataset_from_uri(train_images_url)
-    train_labels_file_path = utils.dataset.download_dataset_from_uri(train_labels_url)
-    test_images_file_path = utils.dataset.download_dataset_from_uri(test_images_url)
-    test_labels_file_path = utils.dataset.download_dataset_from_uri(test_labels_url)
+    train_images_file_path = download_dataset_from_url(train_images_url)
+    train_labels_file_path = download_dataset_from_url(train_labels_url)
+    test_images_file_path = download_dataset_from_url(test_images_url)
+    test_labels_file_path = download_dataset_from_url(test_labels_url)
 
     print('Loading datasets into memory...')
     (train_images, train_labels) = _load_dataset_from_files(train_images_file_path, train_labels_file_path)

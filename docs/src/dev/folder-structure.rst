@@ -64,7 +64,7 @@ Folder Structure
 
 - `web/`
 
-    Code for Rafiki's `Admin Web` component
+    Code for Rafiki Web Admin component
     
 - `dockerfiles/`
     

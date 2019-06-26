@@ -9,7 +9,7 @@ User Guide
    quickstart-app-developers
    quickstart-app-users
    quickstart-admins
-   using-admin-web
+   using-web-admin
    tasks
    installing-python
    model-development

@@ -188,7 +188,7 @@ class Admin(object):
         # Ensure all specified models are available
         for model_id in model_ids:
             if model_id not in avail_model_ids:
-                raise InvalidModelError(f'No model of ID "{model_id}" is available for task "{task}"')
+                raise InvalidModelError(f'No model with ID "{model_id}" is available for task "{task}"')
 
         # Ensure that datasets are valid and of the correct task
         try:

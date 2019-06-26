@@ -11,7 +11,7 @@ As an *App Developer*, you can manage datasets, train jobs & inference jobs on R
     4. Creating a model serving job after the model training job completes
     
 This guide assumes that you have access to a running instance of *Rafiki Admin* at ``<rafiki_host>:<admin_port>``
-and *Rafiki Admin Web* at ``<rafiki_host>:<admin_web_port>``, and there have been models added to Rafiki under the task of `IMAGE_CLASSIFICATION`.
+and *Rafiki Web Admin* at ``<rafiki_host>:<web_admin_port>``, and there have been models added to Rafiki under the task of `IMAGE_CLASSIFICATION`.
 
 To learn more about what else you can do on Rafiki, explore the methods of :class:`rafiki.client.Client`.
 

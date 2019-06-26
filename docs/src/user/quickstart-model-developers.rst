@@ -8,7 +8,7 @@ As a *Model Developer*, you can manage models, datasets, train jobs & inference 
 To learn about how to manage datasets, train jobs & inference jobs, go to :ref:`quickstart-app-developers`.
 
 This guide assumes that you have access to a running instance of *Rafiki Admin* at ``<rafiki_host>:<admin_port>``
-and *Rafiki Admin Web* at ``<rafiki_host>:<admin_web_port>``.
+and *Rafiki Web Admin* at ``<rafiki_host>:<web_admin_port>``.
 
 To learn more about what else you can do on Rafiki, explore the methods of :class:`rafiki.client.Client`
 

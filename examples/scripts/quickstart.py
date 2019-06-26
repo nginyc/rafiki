@@ -136,7 +136,7 @@ def quickstart(client, train_dataset_path, val_dataset_path, gpus, hours):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', type=str, default='localhost', help='Host of Rafiki instance')
-    parser.add_argument('--admin_web_port', type=int, default=os.environ.get('ADMIN_WEB_EXT_PORT', 3001), help='Port for Rafiki Admin Web on host')
+    parser.add_argument('--web_admin_port', type=int, default=os.environ.get('WEB_ADMIN_EXT_PORT', 3001), help='Port for Rafiki Admin Web on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
@@ -148,8 +148,8 @@ if __name__ == '__main__':
     # Initialize client
     client = Client()
     client.login(email=args.email, password=args.password)
-    admin_web_url = 'http://{}:{}'.format(args.host, args.admin_web_port)
-    print('During training, you can view the status of the train job at {}'.format(admin_web_url))
+    web_admin_url = 'http://{}:{}'.format(args.host, args.web_admin_port)
+    print('During training, you can view the status of the train job at {}'.format(web_admin_url))
     print('Login with email "{}" and password "{}"'.format(args.email, args.password)) 
     
     # Run quickstart
