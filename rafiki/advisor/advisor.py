@@ -157,7 +157,7 @@ class FixedAdvisor(BaseAdvisor):
 
 class RandomAdvisor(BaseAdvisor):
     '''
-    Advisor that randomly chooses knobs with no mathematical guarantee. 
+    Advisor that uniformly randomly chooses knobs. 
     '''   
     @staticmethod
     def is_compatible(knob_config, budget):

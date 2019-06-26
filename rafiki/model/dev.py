@@ -15,21 +15,8 @@ from rafiki.cache import ParamCache, TrainCache, InferenceCache
 from .model import BaseModel, BaseKnob, Params
 from .utils import serialize_knob_config, deserialize_knob_config, parse_model_install_command, load_model_class
                     
-# TODO: Better doc
 def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dataset_path: str, 
                 test_dataset_path: str = None, budget: Budget = None) -> (Dict[str, any], float, Params):
-    '''
-    Tunes a model on a given dataset in the current environment.
-
-    Additionally, reads knob values and budget options from CLI arguments.
-
-    :param BaseModel py_model_class: The Python class for the model
-    :param str train_dataset_path: File path of the train dataset for training of the model
-    :param str val_dataset_path: File path of the validation dataset for evaluating trained models
-    :param str test_dataset_path: URI of the validation dataset for testing the final best trained model, if provided
-    :rtype: (dict, float, str)
-    :returns: (<knobs for best model>, <test score for best model>, <params for best model>)
-    ''' 
     worker_id = 'local'
 
     # Note start time
@@ -223,13 +210,17 @@ def make_predictions(queries: List[any], task: str, py_model_class: Type[BaseMod
     return (out_predictions, model_inst)
 
 # TODO: Fix method, more thorough testing of model API
-def test_model_class(model_file_path: str, model_class: str, task: str, 
-                    dependencies: Dict[str, str], queries: List[any] = None, **kwargs) -> (List[any], BaseModel):
+def test_model_class(model_file_path: str, model_class: str, task: str, dependencies: Dict[str, str], 
+                    train_dataset_path: str, val_dataset_path: str, test_dataset_path: str = None, 
+                    budget: Budget = None, queries: List[any] = None) -> (List[any], BaseModel):
     '''
-    Tests whether a model class is properly defined by running a full train-inference flow.
-    The model instance's methods will be called in an order similar to that in Rafiki.
+    Tests whether a model class is *more likely* to be correctly defined by *locally* simulating a full train-inference flow on your model
+    on a given dataset. The model's methods will be called in an manner similar to that in Rafiki.
 
-    Refer to `tune_model` for additional parameters that can be passed.
+    This method assumes that your model's Python dependencies have already been installed. 
+    
+    This method also reads knob values and budget options from CLI arguments. 
+    For example, you can pass e.g. ``--TIME_HOURS=0.01`` to configure the budget, or ``--learning_rate=0.01`` to fix a knob's value.
 
     :param str model_file_path: Path to a single Python file that contains the definition for the model class
     :param str model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
@@ -237,8 +228,10 @@ def test_model_class(model_file_path: str, model_class: str, task: str,
     :param dict[str, str] dependencies: Model's dependencies
     :param str train_dataset_path: File path of the train dataset for training of the model
     :param str val_dataset_path: File path of the validation dataset for evaluating trained models
+    :param str test_dataset_path: File path of the test dataset for testing the final best trained model, if provided
     :param List[any] queries: List of queries for testing predictions with the trained model
     :returns: (<predictions of best trained model>, <best trained model>)
+
     '''
     _print_header('Installing & checking model dependencies...')
     _check_dependencies(dependencies)
@@ -250,7 +243,8 @@ def test_model_class(model_file_path: str, model_class: str, task: str,
     _check_model_class(py_model_class)
 
     # Simulation of training
-    (best_proposal, _, best_params) = tune_model(py_model_class, **kwargs)
+    (best_proposal, _, best_params) = tune_model(py_model_class, train_dataset_path, val_dataset_path, 
+                                                test_dataset_path=test_dataset_path, budget=budget)
 
     # Simulation of inference
     model_inst = None

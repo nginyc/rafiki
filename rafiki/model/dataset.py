@@ -24,6 +24,9 @@ class DatasetUtils():
     '''
     Collection of utility methods to help with the loading of datasets.
 
+    Usage of these methods are optional. 
+    In fact, you are encouraged to rely on your preferred ML libraries' dataset loading methods, or hand-roll your own.
+
     This should NOT be initiailized outside of the module. Instead,
     import the global ``utils`` instance from the module ``rafiki.model``
     and use ``utils.dataset``.
@@ -34,9 +37,9 @@ class DatasetUtils():
 
         from rafiki.model import utils
         ...
-        def train(self, dataset_uri):
+        def train(self, dataset_path, **kwargs):
             ...
-            utils.dataset.load_dataset_of_image_files(dataset_uri)
+            utils.dataset.load_dataset_of_image_files(dataset_path)
             ...
     '''   
     
@@ -239,7 +242,7 @@ class CorpusDataset(ModelDataset):
                     # Maintain max sent length
                     max_sent_len = max(len(sent), max_sent_len)
 
-            except Exception:
+            except:
                 traceback.print_stack()
                 raise InvalidDatasetFormatException()
 
@@ -302,7 +305,7 @@ class ImageFilesDataset(ModelDataset):
                 with open(images_csv_path, mode='r') as f:
                     reader = csv.DictReader(f)
                     (image_paths, image_classes) = zip(*[(row['path'], int(row['class'])) for row in reader])
-            except Exception:
+            except:
                 traceback.print_stack()
                 raise InvalidDatasetFormatException()
 

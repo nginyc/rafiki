@@ -1,9 +1,7 @@
 rafiki.model
 ====================================================================
 
-.. contents:: Table of Contents
-
-Core Classes
+Core
 --------------------------------------------------------------------
 
 .. autoclass:: rafiki.model.BaseModel
@@ -13,12 +11,15 @@ Core Classes
     :members:
 
 
-.. _`knob-types`:
-
-Knob Classes
+Knobs
 --------------------------------------------------------------------
 
 .. autoclass:: rafiki.model.CategoricalKnob
+    :members:
+
+.. autodata:: rafiki.model.CategoricalValue
+
+.. autoclass:: rafiki.model.KnobValue
     :members:
 
 .. autoclass:: rafiki.model.IntegerKnob
@@ -30,13 +31,16 @@ Knob Classes
 .. autoclass:: rafiki.model.FixedKnob
     :members:
 
+.. autoclass:: rafiki.model.PolicyKnob
+    :members:
 
-Utility Classes & Methods
+.. autoclass:: rafiki.model.ArchKnob
+    :members:
+
+Utility
 --------------------------------------------------------------------
 
-.. automethod:: rafiki.model.test_model_class
-
-.. autoclass:: rafiki.model.Utils
+.. automodule:: rafiki.model.dev
     :members:
 
 .. autoclass:: rafiki.model.LoggerUtils
