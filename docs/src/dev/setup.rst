@@ -105,7 +105,7 @@ it is highly recommended to change the master passwords for superadmin, server a
 Reading Rafiki's logs
 --------------------------------------------------------------------
 
-By default, you can read logs of Rafiki Admin, Rafiki Advisor & any of Rafiki's workers
+By default, you can read logs of Rafiki Admin & any of Rafiki's workers
 in ``./logs`` directory at the root of the project's directory of the master node. 
 
 

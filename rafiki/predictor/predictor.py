@@ -1,7 +1,7 @@
 import logging
 import os
 from collections import defaultdict
-from typing import List, Callable
+from typing import List, Callable, Any
 import time
 import traceback
 
@@ -25,7 +25,7 @@ class Predictor():
         self._meta_store = meta_store or MetaStore()
         self._redis_host = os.environ['REDIS_HOST']
         self._redis_port = os.environ['REDIS_PORT']
-        self._ensemble_method: Callable[[List[any]], any] = None
+        self._ensemble_method: Callable[[List[Any]], Any] = None
         self._inference_job_id = None
 
         self._pull_job_info()
@@ -75,7 +75,7 @@ class Predictor():
     def _notify_start(self):
         superadmin_client().send_event('predictor_started', inference_job_id=self._inference_job_id)
 
-    def _get_predictions_from_workers(self, queries: List[any]) -> List[List[Prediction]]:
+    def _get_predictions_from_workers(self, queries: List[Any]) -> List[List[Prediction]]:
         queries = [Query(x) for x in queries]
 
         # Get list of available workers
@@ -113,7 +113,7 @@ class Predictor():
 
         return worker_predictions_list
 
-    def _combine_worker_predictions(self, worker_predictions_list: List[List[Prediction]]) -> List[any]:
+    def _combine_worker_predictions(self, worker_predictions_list: List[List[Prediction]]) -> List[Any]:
         # Ensemble predictions for each query
         predictions = []
         for worker_predictions in worker_predictions_list:

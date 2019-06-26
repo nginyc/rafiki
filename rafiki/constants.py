@@ -1,12 +1,12 @@
 from typing import Dict, Any
 
-Budget = Dict[str, Any]
-ModelDependencies = Dict[str, str]
-
 class BudgetOption():
     GPU_COUNT = 'GPU_COUNT'
     TIME_HOURS = 'TIME_HOURS'
     MODEL_TRIAL_COUNT = 'MODEL_TRIAL_COUNT'
+
+Budget = Dict[BudgetOption, Any]
+ModelDependencies = Dict[str, str]
 
 class ModelAccessRight():
     PUBLIC = 'PUBLIC'

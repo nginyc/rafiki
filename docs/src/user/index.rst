@@ -11,7 +11,6 @@ User Guide
    quickstart-admins
    using-admin-web
    tasks
-   datasets
    installing-python
    model-development
    model-tuning
