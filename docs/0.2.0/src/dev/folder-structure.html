@@ -1,0 +1,332 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Folder Structure &mdash; Rafiki  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Python Documentation" href="../python/index.html" />
+    <link rel="prev" title="Rafiki’s Architecture" href="architecture.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> Rafiki
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../user/index.html">User Guide</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Developer Guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="setup.html">Setup &amp; Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development.html">Development</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-types.html">Users of Rafiki</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html">Rafiki’s Architecture</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Folder Structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../python/index.html">Python Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Rafiki</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Developer Guide</a> &raquo;</li>
+        
+      <li>Folder Structure</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../_sources/src/dev/folder-structure.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="folder-structure">
+<span id="id1"></span><h1>Folder Structure<a class="headerlink" href="#folder-structure" title="Permalink to this headline">¶</a></h1>
+<ul>
+<li><p><cite>rafiki/</cite></p>
+<blockquote>
+<div><p>Rafiki’s Python package</p>
+<ul>
+<li><p><cite>admin/</cite></p>
+<blockquote>
+<div><p>Rafiki’s static Admin component</p>
+</div></blockquote>
+</li>
+<li><p><cite>advisor/</cite></p>
+<blockquote>
+<div><p>Rafiki’s advisors</p>
+</div></blockquote>
+</li>
+<li><p><cite>client/</cite></p>
+<blockquote>
+<div><p>Rafiki’s client-side SDK</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.client</span></code></p>
+</div>
+</div></blockquote>
+</li>
+<li><p><cite>worker/</cite></p>
+<blockquote>
+<div><p>Rafiki’s train, inference &amp; advisor workers</p>
+</div></blockquote>
+</li>
+<li><p><cite>predictor/</cite></p>
+<blockquote>
+<div><p>Rafiki’s predictor</p>
+</div></blockquote>
+</li>
+<li><p><cite>meta_store/</cite></p>
+<blockquote>
+<div><p>Abstract data access layer for Rafiki’s main metadata store (backed by PostgreSQL)</p>
+</div></blockquote>
+</li>
+<li><p><cite>param_store/</cite></p>
+<blockquote>
+<div><p>Abstract data access layer for Rafiki’s store of model parameters (backed by filesystem)</p>
+</div></blockquote>
+</li>
+<li><p><cite>data_store/</cite></p>
+<blockquote>
+<div><p>Abstract data access layer for Rafiki’s store of datasets (backed by filesystem)</p>
+</div></blockquote>
+</li>
+<li><p><cite>cache/</cite></p>
+<blockquote>
+<div><p>Abstract data access layer for Rafiki’s temporary store of model parameters, train job metadata and queries &amp; predictions in train &amp; inference jobs (backed by Redis)</p>
+</div></blockquote>
+</li>
+<li><p><cite>container/</cite></p>
+<blockquote>
+<div><p>Abstract access layer for dynamic deployment of workers</p>
+</div></blockquote>
+</li>
+<li><p><cite>utils/</cite></p>
+<blockquote>
+<div><p>Collection of Rafiki-internal utility methods (e.g. for logging, authentication)</p>
+</div></blockquote>
+</li>
+<li><p><cite>model/</cite></p>
+<blockquote>
+<div><p>Definition of abstract <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.BaseModel" title="rafiki.model.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.BaseModel</span></code></a> that all Rafiki models should extend, programming
+abstractions used in model development, as well as a collection of utility methods for model developers
+in the implementation of their own models</p>
+</div></blockquote>
+</li>
+<li><p><cite>constants.py</cite></p>
+<blockquote>
+<div><p>Rafiki’s programming abstractions &amp; constants (e.g. valid values for user types, job statuses)</p>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p><cite>web/</cite></p>
+<blockquote>
+<div><p>Rafiki’s Web Admin component</p>
+</div></blockquote>
+</li>
+<li><p><cite>dockerfiles/</cite></p>
+<blockquote>
+<div><p>Stores Dockerfiles for customized components of Rafiki</p>
+</div></blockquote>
+</li>
+<li><p><cite>examples/</cite></p>
+<blockquote>
+<div><p>Sample usage code for Rafiki.</p>
+</div></blockquote>
+</li>
+<li><p><cite>docs/</cite></p>
+<blockquote>
+<div><p>Source documentation for Rafiki (e.g. Sphinx documentation files)</p>
+</div></blockquote>
+</li>
+<li><p><cite>test/</cite></p>
+<blockquote>
+<div><p>Test code for Rafiki</p>
+</div></blockquote>
+</li>
+<li><p><cite>scripts/</cite></p>
+<blockquote>
+<div><p>Shell &amp; python scripts for initializing, starting and stopping various components of Rafiki’s stack</p>
+</div></blockquote>
+</li>
+<li><p><cite>.env.sh</cite></p>
+<blockquote>
+<div><p>Stores configuration variables for Rafiki</p>
+</div></blockquote>
+</li>
+</ul>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../python/index.html" class="btn btn-neutral float-right" title="Python Documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="architecture.html" class="btn btn-neutral float-left" title="Rafiki’s Architecture" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

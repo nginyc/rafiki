@@ -1,0 +1,416 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>How Model Tuning Works &mdash; Rafiki  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Developer Guide" href="../dev/index.html" />
+    <link rel="prev" title="Model Development Guide" href="model-development.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> Rafiki
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">User Guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html">Quick Start (Model Developers)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html">Quick Start (Application Developers)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html">Quick Start (Application Users)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html">Quick Start (Admins)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using-web-admin.html">Using Rafiki’s Web Admin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tasks.html">Supported Tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installing-python.html">Installing Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model-development.html">Model Development Guide</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">How Model Tuning Works</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#defining-hyperparameter-search-space">Defining Hyperparameter Search Space</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#model-policies">Model Policies</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#model-tuning-schemes">Model Tuning Schemes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#architecture-tuning-with-enas">Architecture Tuning with ENAS</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#deep-dive-on-enas">Deep Dive on ENAS</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dev/index.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../python/index.html">Python Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Rafiki</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">User Guide</a> &raquo;</li>
+        
+      <li>How Model Tuning Works</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../_sources/src/user/model-tuning.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="how-model-tuning-works">
+<span id="model-tuning"></span><h1>How Model Tuning Works<a class="headerlink" href="#how-model-tuning-works" title="Permalink to this headline">¶</a></h1>
+<p>Traditionally, getting the best performing model on a dataset involves involves <em>tedious</em> manual hyperparameter tuning.
+On Rafiki, model hyperparameter tuning is automated by conducting multiple <em>trials</em> in a train job.</p>
+<p>Over the trials, the model is initialized with different hyperparameters (<em>knobs</em>), trained and evaluated.
+A hyperparameter tuning <em>advisor</em> on Rafiki ingests the <em>validation scores</em> from these trials to suggest better hyperparameters for future trials,
+to maximise performance of a model on the dataset.
+At the very end of the train job, Rafiki could deploy the best-scoring trials for predictions.</p>
+<div class="section" id="defining-hyperparameter-search-space">
+<h2>Defining Hyperparameter Search Space<a class="headerlink" href="#defining-hyperparameter-search-space" title="Permalink to this headline">¶</a></h2>
+<p>You’ll define a search space of hyperparameters (<em>knob configuration</em>) in a declarative manner with the static method <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.BaseModel.get_knob_config" title="rafiki.model.BaseModel.get_knob_config"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.BaseModel.get_knob_config()</span></code></a>.
+The method should return a mapping of hyperparameter names (<em>knob names</em>) to hyperparameter specifications (<em>knob specifications</em>).
+A hyperparameter specification is an instance of a class that extends <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.BaseKnob" title="rafiki.model.BaseKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.BaseKnob</span></code></a>, which is limited to any of the following:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.FixedKnob" title="rafiki.model.FixedKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.FixedKnob</span></code></a></p></li>
+<li><p><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.CategoricalKnob" title="rafiki.model.CategoricalKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.CategoricalKnob</span></code></a></p></li>
+<li><p><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.FloatKnob" title="rafiki.model.FloatKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.FloatKnob</span></code></a></p></li>
+<li><p><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.IntegerKnob" title="rafiki.model.IntegerKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.IntegerKnob</span></code></a></p></li>
+<li><p><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.PolicyKnob" title="rafiki.model.PolicyKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.PolicyKnob</span></code></a></p></li>
+<li><p><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.ArchKnob" title="rafiki.model.ArchKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.ArchKnob</span></code></a></p></li>
+</ul>
+<p>Refer to their documentation for more details on each type of knob specification, and refer to <a class="reference internal" href="model-development.html#sample-models"><span class="std std-ref">Sample Models</span></a> to see examples of
+how knob configurations are declared.</p>
+<div class="section" id="model-policies">
+<span id="id1"></span><h3>Model Policies<a class="headerlink" href="#model-policies" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.PolicyKnob" title="rafiki.model.PolicyKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.PolicyKnob</span></code></a> is a special type of knob specification that allows Rafiki to configure the <em>behaviour</em> of a model on a <em>trial basis</em>.</p>
+<p>In a modern model hyperparameter tuning scheme, a model tends to switch between different “modes”, or so we call <em>policies</em>. For example,
+when you tune your model manually, you might want the model to do early-stopping for the first e.g. 100 trials, then conduct a final trial for a full e.g. 300 epochs.
+As such, the concept of model policies in Rafiki enables Rafiki’s tuning advisor to externally configure your model to switch between these “modes”.</p>
+<p>Your model communicates to Rafiki which policies it supports by adding <code class="docutils literal notranslate"><span class="pre">PolicyKnob(policy_name)</span></code> to your model’s knob_configuration.
+On the other hand, during training, Rafiki configures the <em>activation</em> of the model’s policies on a trial basis
+by <em>realising</em> the values of <code class="docutils literal notranslate"><span class="pre">PolicyKnob``s</span> <span class="pre">to</span> <span class="pre">either</span> <span class="pre">``True</span></code> (activated) or <code class="docutils literal notranslate"><span class="pre">False</span></code> (not activated).</p>
+<p>For example, if Rafiki’s tuning scheme for your model requires your model to engage in e.g. early-stopping for all trials except for the final trial,
+if your model has <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">'early_stop':</span> <span class="pre">PolicyKnob('EARLY_STOP'),</span> <span class="pre">...</span> <span class="pre">}</span></code>, Rafiki will pass <code class="docutils literal notranslate"><span class="pre">early_stop=False</span></code> for just the final trial as part of its knobs, and
+pass <code class="docutils literal notranslate"><span class="pre">early_stop=True</span></code> for all other trials. Your model would <em>situationally</em> do early-stopping based on the value of the knob <cite>early-stop</cite>.</p>
+<p>Below is the list of officially recognized model policies:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p><strong>Policy</strong></p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SHARE_PARAMS</span></code></p></td>
+<td><p>Whether model should load the shared parameters passed in <code class="docutils literal notranslate"><span class="pre">train()</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">EARLY_STOP</span></code></p></td>
+<td><p>Whether model should stop training early in <code class="docutils literal notranslate"><span class="pre">train()</span></code>, e.g. with use of early stopping or reduced no. of epochs</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SKIP_TRAIN</span></code></p></td>
+<td><p>Whether model should skip training its parameters</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">QUICK_EVAL</span></code></p></td>
+<td><p>Whether model should stop evaluation early in <code class="docutils literal notranslate"><span class="pre">evaluate()</span></code>, e.g. by evaluating on only a subset of their
+validation dataset</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">DOWNSCALE</span></code></p></td>
+<td><p>Whether a smaller version of the model should be constructed e.g. with fewer layers</p></td>
+</tr>
+</tbody>
+</table>
+<p>Refer to the next section of <a class="reference internal" href="#model-tuning-schemes"><span class="std std-ref">Model Tuning Schemes</span></a> to better understand which policies your model should support to optimize hyperparameter search for your model.</p>
+</div>
+</div>
+<div class="section" id="model-tuning-schemes">
+<span id="id2"></span><h2>Model Tuning Schemes<a class="headerlink" href="#model-tuning-schemes" title="Permalink to this headline">¶</a></h2>
+<p>At a model level, Rafiki <em>automatically</em> selects the appropriate tuning scheme (<em>advisor</em>) based on the composition of the model’s knob configuration
+and the <em>incoming train job’s budget</em>.
+Specifically, it employs the following rules, in the <em>given order</em>, to select the type of advisor to use:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 44%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p><strong>Rule</strong></p></th>
+<th class="head" colspan="2"><p>Tuning Scheme</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><div class="line-block">
+<div class="line">Only <code class="docutils literal notranslate"><span class="pre">PolicyKnob</span></code>, <code class="docutils literal notranslate"><span class="pre">FixedKnob</span></code></div>
+</div>
+</td>
+<td colspan="2"><p>Only conduct a single trial</p></td>
+</tr>
+<tr class="row-odd"><td><div class="line-block">
+<div class="line">Only <code class="docutils literal notranslate"><span class="pre">PolicyKnob</span></code>, <code class="docutils literal notranslate"><span class="pre">FixedKnob</span></code>,</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">FloatKnob</span></code>, <code class="docutils literal notranslate"><span class="pre">IntegerKnob</span></code>,</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">CategoricalKnob</span></code>, with policy</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">SHARE_PARAMS</span></code></div>
+</div>
+</td>
+<td colspan="2"><div class="line-block">
+<div class="line">Hyperparameter tuning with Bayesian Optimization &amp; cross-trial parameter sharing.</div>
+<div class="line">Share globally best-scoring parameters across workers in a epsilon greedy manner.</div>
+<div class="line">Optionally employ early stopping (<code class="docutils literal notranslate"><span class="pre">EARLY_STOP</span></code> policy) for all trials.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><div class="line-block">
+<div class="line">Only <code class="docutils literal notranslate"><span class="pre">PolicyKnob</span></code>, <code class="docutils literal notranslate"><span class="pre">FixedKnob</span></code>,</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">FloatKnob</span></code>, <code class="docutils literal notranslate"><span class="pre">IntegerKnob</span></code>,</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">CategoricalKnob</span></code></div>
+</div>
+</td>
+<td colspan="2"><div class="line-block">
+<div class="line">Hyperparameter tuning with Bayesian Optimization. Optionally employ early stopping</div>
+<div class="line">(<code class="docutils literal notranslate"><span class="pre">EARLY_STOP</span></code> policy) before the last 1h, and perform standard trials during the last 1h.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><div class="line-block">
+<div class="line">Only <code class="docutils literal notranslate"><span class="pre">PolicyKnob</span></code>, <code class="docutils literal notranslate"><span class="pre">FixedKnob</span></code>,</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">ArchKnob</span></code>, with policies</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">SHARE_PARAMS</span></code>, <code class="docutils literal notranslate"><span class="pre">EARLY_STOP</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">SKIP_TRAIN</span></code>, <code class="docutils literal notranslate"><span class="pre">QUICK_EVAL</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">DOWNSCALE</span></code>, and <code class="docutils literal notranslate"><span class="pre">TIME_HOURS</span></code> budget</div>
+<div class="line">&gt;= 12h</div>
+</div>
+</td>
+<td colspan="2"><div class="line-block">
+<div class="line">Architecture tuning with cell-based</div>
+<div class="line"><a class="reference external" href="https://arxiv.org/abs/1802.03268">“Efficient Neural Architecture Search via Parameter Sharing”</a>.</div>
+<div class="line">It conducts <em>ENAS architecture search</em> before the last 12h, then performs the final</div>
+<div class="line">training of the best architectures found in the last 12h.</div>
+<div class="line"><br /></div>
+<div class="line">More details at <a class="reference internal" href="#arch-tuning-with-enas"><span class="std std-ref">Architecture Tuning with ENAS</span></a>.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p>All others</p></td>
+<td colspan="2"><p>Hyperparameter tuning with uniformly random knobs</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="architecture-tuning-with-enas">
+<span id="arch-tuning-with-enas"></span><h2>Architecture Tuning with ENAS<a class="headerlink" href="#architecture-tuning-with-enas" title="Permalink to this headline">¶</a></h2>
+<p>To tune the architecture for your model with a modern architecture search algorithm
+<a class="reference external" href="https://arxiv.org/abs/1802.03268">“Efficient Neural Architecture Search via Parameter Sharing”</a> (<em>ENAS</em>),
+have a <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.ArchKnob" title="rafiki.model.ArchKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.ArchKnob</span></code></a> defined in your knob configuration,
+and offer the policies <code class="docutils literal notranslate"><span class="pre">SHARE_PARAMS</span></code>, <code class="docutils literal notranslate"><span class="pre">EARLY_STOP</span></code>, <code class="docutils literal notranslate"><span class="pre">SKIP_TRAIN</span></code>, <code class="docutils literal notranslate"><span class="pre">QUICK_EVAL</span></code> and <code class="docutils literal notranslate"><span class="pre">DOWNSCALE</span></code> (see <a class="reference internal" href="#model-policies"><span class="std std-ref">Model Policies</span></a>).
+Specifically, you’ll need your model to support parameter sharing, stopping training early, skipping the training step, evaluating
+on a subset of the validation dataset, and <em>downscaling</em> the model e.g. to use fewer layers. These policies are critical in
+the speed &amp; performance of ENAS.</p>
+<p>Refer to the sample model <cite>./examples/models/image_classification/TfEnas.py &lt;https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/TfEnas.py&gt;</cite>
+and its corresponding usage script <cite>./examples/scripts/image_classification/run_enas.py  &lt;https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/TfEnas.py&gt;</cite>
+to better understand how to do architecture tuning.</p>
+<div class="section" id="deep-dive-on-enas">
+<h3>Deep Dive on ENAS<a class="headerlink" href="#deep-dive-on-enas" title="Permalink to this headline">¶</a></h3>
+<p>The ENAS paper outlines a new methodology for automatic neural network construction,
+speeding up the original Neural Architecture Search (NAS) methodology by 1000x without affecting its ability to search for a competitive architecture.
+The authors made the crucial observation that 2 different architectures would share a common subgraph,
+and the model parameters in that subgraph could be reused across trials without having to re-train these parameters from scratch every trial.</p>
+<p>The following is an overview of how ENAS works.
+As explained in the ENAS paper, during an ENAS search for best CNN architecture (<em>ENAS Search</em>),
+there is an alternation between 2 phases: training of the ENAS CNN’s shared parameters (<em>CNN Train Phase</em>),
+and the training of the ENAS controller (<em>Controller Train Phase</em>). While CNN parameters are carried over the phases,
+the CNN’s shared parameters are not trained during Controller Train Phases.
+After ENAS Search is done, there is a final training of the best CNN architecture found (<em>ENAS Train</em>),
+this time initializing its CNN parameters from scratch,</p>
+<p>On Rafiki, we’ve replicated the <em>Cell-Based ENAS</em> controller for image classification as one of Rafiki’s tuning scheme and
+a Rafiki model <code class="docutils literal notranslate"><span class="pre">TfEnas</span></code>, with very close reference to author’s code. In this specific setup for ENAS,
+ENAS Search is done with the construction of a single <em>supergraph</em> of all possible architectures,
+while ENAS Train is done with the construction of a <em>fixed graph</em> of the best architecture (with slight architectural differences from ENAS Search).
+Each CNN Train Phase involves training the CNN for 1 epoch, while within each Controller Train Phase, the controller is trained for 30 steps.
+In each controller step, 10 architectures are sampled from the controller, evaluated on the ENAS CNN by <em>dynamically changing its architecture</em>,
+and losses based on validation accuracies are back-propagated in the controller to update the controller’s parameters.
+Each validation accuracy is computed on only a <em>batch</em> of the validation dataset.
+The alternation between CNN Train Phase and Controller Train Phase happens for <code class="docutils literal notranslate"><span class="pre">X</span></code> cycles during ENAS Search, and close to
+the end of training, during ENAS Train, architecture samples with highest validation accuracies, this time computed on the <em>full</em> validation dataset,
+would be trained from scratch to arrive at final best models.</p>
+<p>We’ve generalized the ENAS controller, its architecture encoding scheme and its overall tuning scheme on Rafiki, such that Rafiki models can
+leverage on architecture tuning with a flexible architecture encoding, and Rafiki’s application developers can train with these models
+in an end-to-end manner.</p>
+<p>We’ve also devised a simple, yet effective strategy to run ENAS in a <em>distributed</em> setting. When given multiple GPUs, Rafiki performs
+ENAS <em>locally at each worker</em> in a train job, with these workers sharing a central ENAS controller.</p>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../dev/index.html" class="btn btn-neutral float-right" title="Developer Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="model-development.html" class="btn btn-neutral float-left" title="Model Development Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
