@@ -1,0 +1,446 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>rafiki.model.knob &mdash; Rafiki  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Rafiki
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/user/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/dev/index.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/python/index.html">Python Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Rafiki</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>rafiki.model.knob</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for rafiki.model.knob</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">abc</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span>
+
+<span class="n">POLICIES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;SHARE_PARAMS&#39;</span><span class="p">,</span> <span class="s1">&#39;EARLY_STOP&#39;</span><span class="p">,</span> <span class="s1">&#39;SKIP_TRAIN&#39;</span><span class="p">,</span> <span class="s1">&#39;QUICK_EVAL&#39;</span><span class="p">,</span> <span class="s1">&#39;DOWNSCALE&#39;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="KnobValue"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.KnobValue">[docs]</a><span class="k">class</span> <span class="nc">KnobValue</span><span class="p">():</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Wrapper for a ``CategoricalValue``.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]):</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dtype</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dtype</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_parse_value</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="n">value_type</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">value_type</span> <span class="o">=</span> <span class="nb">int</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="n">value_type</span> <span class="o">=</span> <span class="nb">float</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="n">value_type</span> <span class="o">=</span> <span class="nb">bool</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">value_type</span> <span class="o">=</span> <span class="nb">str</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Only the following knob value data types are supported: `int`, `float`, `bool` or `str`&#39;</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">value_type</span><span class="p">)</span></div>
+
+
+<span class="n">CategoricalValue</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">KnobValue</span><span class="p">]</span> 
+
+<div class="viewcode-block" id="BaseKnob"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseKnob">[docs]</a><span class="k">class</span> <span class="nc">BaseKnob</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        The base class for a knob type.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="c1"># Data type of a realized value of this knob</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">value_type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="CategoricalKnob"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.CategoricalKnob">[docs]</a><span class="k">class</span> <span class="nc">CategoricalKnob</span><span class="p">(</span><span class="n">BaseKnob</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Knob type representing a categorical value of type ``int``, ``float``, ``bool`` or ``str``.</span>
+<span class="sd">        ``values`` is a list of candidate cateogrical values for this knob type; a realization of this knob type would be an element of ``values``.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">CategoricalValue</span><span class="p">]):</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_values</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_type</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_values</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">value_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_type</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">values</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_validate_values</span><span class="p">(</span><span class="n">values</span><span class="p">):</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="n">KnobValue</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">KnobValue</span><span class="p">)</span> <span class="k">else</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">values</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Length of `values` should at least 1&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">values</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`values` should have elements of the same type&#39;</span><span class="p">)</span>
+
+        <span class="n">value_type</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">value_type</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FixedKnob"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.FixedKnob">[docs]</a><span class="k">class</span> <span class="nc">FixedKnob</span><span class="p">(</span><span class="n">BaseKnob</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Knob type representing a fixed value of type ``int``, ``float``, ``bool`` or ``str``.</span>
+<span class="sd">        Essentially, this represents a knob type that does not require tuning.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">CategoricalValue</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_value</span> <span class="o">=</span> <span class="n">KnobValue</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">KnobValue</span><span class="p">)</span> <span class="k">else</span> <span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_value_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="o">.</span><span class="n">dtype</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">value_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_type</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span></div>
+
+
+<div class="viewcode-block" id="PolicyKnob"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.PolicyKnob">[docs]</a><span class="k">class</span> <span class="nc">PolicyKnob</span><span class="p">(</span><span class="n">BaseKnob</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Knob type representing whether a certain policy should be activated, as a boolean.</span>
+<span class="sd">    E.g. the ``EARLY_STOP`` policy knob decides whether the model should stop model training early, or not. </span>
+<span class="sd">    Offering the ability to activate different policies can optimize hyperparameter search for your model. </span>
+<span class="sd">    Activation of all policies default to false.</span>
+
+<span class="sd">    Refer to :ref:`model-policies` to understand how to use this knob type.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">policy</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">policy</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">POLICIES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Policy type must be one of </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">POLICIES</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_policy</span> <span class="o">=</span> <span class="n">policy</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">value_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">bool</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">policy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_policy</span></div>
+
+
+<div class="viewcode-block" id="IntegerKnob"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.IntegerKnob">[docs]</a><span class="k">class</span> <span class="nc">IntegerKnob</span><span class="p">(</span><span class="n">BaseKnob</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Knob type representing an ``int`` value within a specific interval [``value_min``, ``value_max``].</span>
+<span class="sd">    ``is_exp`` specifies whether the knob value should be scaled exponentially.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value_min</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">value_max</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">is_exp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_values</span><span class="p">(</span><span class="n">value_min</span><span class="p">,</span> <span class="n">value_max</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_value_min</span> <span class="o">=</span> <span class="n">value_min</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_value_max</span> <span class="o">=</span> <span class="n">value_max</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_exp</span> <span class="o">=</span> <span class="n">is_exp</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">value_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">int</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">value_min</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_min</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">value_max</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_max</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_exp</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_exp</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_validate_values</span><span class="p">(</span><span class="n">value_min</span><span class="p">,</span> <span class="n">value_max</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value_min</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`value_min` should be an `int`&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value_max</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`value_max` should be an `int`&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">value_min</span> <span class="o">&gt;</span> <span class="n">value_max</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`value_max` should be at least `value_min`&#39;</span><span class="p">)</span></div>
+        
+
+<div class="viewcode-block" id="FloatKnob"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.FloatKnob">[docs]</a><span class="k">class</span> <span class="nc">FloatKnob</span><span class="p">(</span><span class="n">BaseKnob</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Knob type representing a ``float`` value within a specific interval [``value_min``, ``value_max``].</span>
+<span class="sd">        ``is_exp`` specifies whether the knob value should be scaled exponentially.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value_min</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">value_max</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">is_exp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_values</span><span class="p">(</span><span class="n">value_min</span><span class="p">,</span> <span class="n">value_max</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_value_min</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value_min</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_value_max</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value_max</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_exp</span> <span class="o">=</span> <span class="n">is_exp</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">value_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">float</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">value_min</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_min</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">value_max</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_max</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_exp</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_exp</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_validate_values</span><span class="p">(</span><span class="n">value_min</span><span class="p">,</span> <span class="n">value_max</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value_min</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value_min</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`value_min` should be a `float` or `int`&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value_max</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value_max</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`value_max` should be a `float` or `int`&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">value_min</span> <span class="o">&gt;</span> <span class="n">value_max</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`value_max` should be at least `value_min`&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ArchKnob"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ArchKnob">[docs]</a><span class="k">class</span> <span class="nc">ArchKnob</span><span class="p">(</span><span class="n">BaseKnob</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Knob type representing part of a model&#39;s architecture as a fixed-size list of categorical values. </span>
+<span class="sd">        ``items`` is a list of list of candidate categorical values; a realization of this knob type would be a list of categorical values, wIth the value at each index matching an element of the list of candidates at that index.</span>
+<span class="sd">        </span>
+<span class="sd">        To illustrate, the following can be a definition of 3-layer model&#39;s architecture search space inspired by the ENAS cell architecture construction strategy:</span>
+
+<span class="sd">        ::</span>
+
+<span class="sd">            l0 = KnobValue(0) # Input layer as input connection</span>
+<span class="sd">            l1 = KnobValue(1) # Layer 1 as input connection</span>
+<span class="sd">            l2 = KnobValue(2) # Layer 2 as input connection</span>
+<span class="sd">            ops = [KnobValue(&#39;conv3x3&#39;), KnobValue(&#39;conv5x5&#39;), KnobValue(&#39;avg_pool&#39;), KnobValue(&#39;max_pool&#39;)]</span>
+<span class="sd">            arch_knob = ArchKnob([</span>
+<span class="sd">                [l0], ops, [l0], ops,                   # To form layer 1, choose input 1, op on input 1, input 2, op on input 2, then combine post-op inputs as preferred                                     </span>
+<span class="sd">                [l0, l1], ops, [l0, l1], ops,           # To form layer 2, ...</span>
+<span class="sd">                [l0, l1, l2], ops, [l0, l1, l2], ops,   # To form layer 3, ...</span>
+<span class="sd">            ])</span>
+<span class="sd">            </span>
+
+<span class="sd">        If the same ``KnobValue`` instance is reused at different indices in ``items``, they are considered to be *semantically* identical for the purposes of architecture search.</span>
+<span class="sd">        For example, in the above code snippet, the meaning of ``l0`` in the 1st item index and ``l0`` in the 3rd item index are identical - they refer to an input connection from the input layer.  </span>
+
+<span class="sd">        It is assumed that the realization of components of the architecture `later` in the list is influenced by the components of architecture `earlier` in the list. </span>
+<span class="sd">        For example, which operation is to be applied on an input (e.g. which value in ``ops``) is somewhat dependent on the source of the input (e.g. which value in ``[l0, l1, l2]``).</span>
+
+<span class="sd">        Note that the exact model architecture space is not fully described with this knob - it still depends on how the model code constructs the computation graph and implements the various building blocks of the model. </span>
+
+<span class="sd">        Encoding of the architecture with ``ArchKnob`` can be flexibly defined as necessary. You can search only over operations and have the connections in the architecture already hard-coded</span>
+<span class="sd">        as part of the model, or you can search only over input indices of various layers and have operations already decided. </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">items</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">CategoricalValue</span><span class="p">]]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_items</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_values</span><span class="p">(</span><span class="n">items</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">value_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">list</span>
+
+    <span class="nd">@property</span>  
+    <span class="k">def</span> <span class="nf">items</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">CategoricalValue</span><span class="p">]]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_items</span>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_items</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_validate_values</span><span class="p">(</span><span class="n">items</span><span class="p">):</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">items</span><span class="p">):</span>
+            <span class="n">items</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">KnobValue</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">KnobValue</span><span class="p">)</span> <span class="k">else</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">values</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">items</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
