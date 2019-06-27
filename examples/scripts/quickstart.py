@@ -136,7 +136,7 @@ def quickstart(client, train_dataset_path, val_dataset_path, gpus, hours):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', type=str, default='localhost', help='Host of Rafiki instance')
-    parser.add_argument('--web_admin_port', type=int, default=os.environ.get('WEB_ADMIN_EXT_PORT', 3001), help='Port for Rafiki Admin Web on host')
+    parser.add_argument('--web_admin_port', type=int, default=os.environ.get('WEB_ADMIN_EXT_PORT', 3001), help='Port for Rafiki Web Admin on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
