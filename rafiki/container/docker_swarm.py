@@ -98,7 +98,7 @@ class DockerSwarmContainerManager(ContainerManager):
 
     def _destroy_sevice(self, service_id):
         service = self._client.services.get(service_id)
-        service.remove()
+        _retry(service.remove)()
 
     def _create_service(self, deployment, service_name, docker_image, replicas, 
                         args, environment_vars, mounts, publish_port):
@@ -205,6 +205,7 @@ def _retry(func):
 
                 # Retried so many times but still errors - raise exception    
                 if no == RETRY_TIMES:
+                    logger.info(f'Giving up on `{func} call...')
                     raise e
                 
             logger.info(f'Retrying {func} after {wait_secs}s...')
