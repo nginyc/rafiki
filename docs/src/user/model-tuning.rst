@@ -104,7 +104,7 @@ Hyperparameter Tuning with Parameter Sharing
 ====================================================================
 
 To tune the hyperparameters of your model across multiple trials and automatically have best-scoring model parameters shared between trials
-to improve speed of convergence (as outlined in `"Rafiki: Machine Learning as an Analytics Service System" <https://arxiv.org/pdf/1804.06087.pdf>`),
+to improve speed of convergence (as outlined in `"Rafiki: Machine Learning as an Analytics Service System" <https://arxiv.org/pdf/1804.06087.pdf>`_),
 have your model offer the policy ``SHARE_PARAMS`` and optionally ``EARLY_STOP`` (see :ref:`model-policies`).
 
 Refer to the sample model `./examples/models/image_classification/PyDenseNetBc.py <https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/PyDenseNetBc.py>`_
