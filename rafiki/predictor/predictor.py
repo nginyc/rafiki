@@ -15,7 +15,6 @@ from .ensemble import get_ensemble_method
 PREDICT_LOOP_SLEEP_SECS = 0.1
 
 class InvalidInferenceJobError(Exception): pass
-class NoWorkersAvailableError(Exception): pass
 
 logger = logging.getLogger(__name__)
 
@@ -78,10 +77,10 @@ class Predictor():
     def _get_predictions_from_workers(self, queries: List[Any]) -> List[List[Prediction]]:
         queries = [Query(x) for x in queries]
 
-        # Get list of available workers
-        worker_ids = self._inference_cache.get_workers()
-        if len(worker_ids) == 0:
-            raise NoWorkersAvailableError()
+        # Wait for at least 1 free worker
+        worker_ids = []
+        while len(worker_ids) == 0:
+            worker_ids = self._inference_cache.get_workers()
 
         # For each worker, send queries to worker
         pending_queries = set() # {(query_id, worker_id)}
