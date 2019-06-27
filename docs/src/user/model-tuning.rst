@@ -110,6 +110,9 @@ Specifically, you'll need your model to support parameter sharing, stopping trai
 on a subset of the validation dataset, and *downscaling* the model e.g. to use fewer layers. These policies are critical in
 the speed & performance of ENAS.
 
+Refer to the sample model `./examples/models/image_classification/TfEnas.py <https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/TfEnas.py>`
+and its corresponding usage script `./examples/scripts/image_classification/run_enas.py  <https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/TfEnas.py>`
+to better understand how to do architecture tuning.
 
 Deep Dive on ENAS 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -128,8 +131,7 @@ After ENAS Search is done, there is a final training of the best CNN architectur
 this time initializing its CNN parameters from scratch,
 
 On Rafiki, we've replicated the *Cell-Based ENAS* controller for image classification as one of Rafiki's tuning scheme and
-a Rafiki model `./examples/models/image_classification/TfEnas.py <https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/TfEnas.py>`_, 
-with very close reference to author’s code. In this specific setup for ENAS, 
+a Rafiki model ``TfEnas``, with very close reference to author’s code. In this specific setup for ENAS, 
 ENAS Search is done with the construction of a single *supergraph* of all possible architectures, 
 while ENAS Train is done with the construction of a *fixed graph* of the best architecture (with slight architectural differences from ENAS Search). 
 Each CNN Train Phase involves training the CNN for 1 epoch, while within each Controller Train Phase, the controller is trained for 30 steps. 
@@ -142,4 +144,7 @@ would be trained from scratch to arrive at final best models.
 
 We've generalized the ENAS controller, its architecture encoding scheme and its overall tuning scheme on Rafiki, such that Rafiki models can 
 leverage on architecture tuning with a flexible architecture encoding, and Rafiki's application developers can train with these models
-in an end-to-end manner.  
+in an end-to-end manner. 
+
+We've also devised a simple, yet effective strategy to run ENAS in a *distributed* setting. When given multiple GPUs, Rafiki performs 
+ENAS *locally at each worker* in a train job, with these workers sharing a central ENAS controller. 
