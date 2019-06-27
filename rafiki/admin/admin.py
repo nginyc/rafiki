@@ -351,6 +351,7 @@ class Admin(object):
                 'id': trial.id,
                 'proposal': trial.proposal,
                 'datetime_started': trial.datetime_started,
+                'status': trial.status,
                 'datetime_stopped': trial.datetime_stopped,
                 'model_name': model.name,
                 'score': trial.score,

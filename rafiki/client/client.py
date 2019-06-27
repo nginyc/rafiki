@@ -513,7 +513,8 @@ class Client():
         :returns: A *trained* model instance of ``ModelClass``, loaded with the trial's knobs and parameters
         '''
         data = self.get_trial(trial_id)
-        knobs = data.get('knobs')
+        assert 'proposal' in data
+        knobs = data['proposal']['knobs']
         parameters = self.get_trial_parameters(trial_id)
         model_inst = ModelClass(**knobs)
         model_inst.load_parameters(parameters)
