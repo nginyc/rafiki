@@ -11,8 +11,8 @@ from examples.datasets.image_classification.load_cifar_format import load_cifar1
 
 def train_densenet(client, train_dataset_path, val_dataset_path, gpus, hours):    
     '''
-        Conducts training of model `PyDenseNetBc` on the CIFAR-10 dataset for the task `IMAGE_CLASSIFICATION`.
-        Demonstrates hyperparameter tuning with parameter sharing on Rafiki. 
+        Conducts training of model `PyDenseNetBc` on the CIFAR-10 dataset for IMAGE_CLASSIFICATION.
+        Demonstrates hyperparameter tuning with distributed parameter sharing on Rafiki. 
     '''
     task = 'IMAGE_CLASSIFICATION'
 

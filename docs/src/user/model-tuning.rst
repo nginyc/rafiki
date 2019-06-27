@@ -39,7 +39,7 @@ As such, the concept of model policies in Rafiki enables Rafiki's tuning advisor
 
 Your model communicates to Rafiki which policies it supports by adding ``PolicyKnob(policy_name)`` to your model's knob_configuration. 
 On the other hand, during training, Rafiki configures the *activation* of the model's policies on a trial basis 
-by *realising* the values of ``PolicyKnob``s to either ``True`` (activated) or ``False`` (not activated).
+by *realising* the values of ``PolicyKnob`` to either ``True`` (activated) or ``False`` (not activated).
 
 For example, if Rafiki's tuning scheme for your model requires your model to engage in e.g. early-stopping for all trials except for the final trial, 
 if your model has ``{ 'early_stop': PolicyKnob('EARLY_STOP'), ... }``, Rafiki will pass ``early_stop=False`` for just the final trial as part of its knobs, and 
@@ -81,7 +81,8 @@ Specifically, it employs the following rules, in the *given order*, to select th
 | | Only ``PolicyKnob``, ``FixedKnob``,         | | Hyperparameter tuning with Bayesian Optimization & cross-trial parameter sharing.                       |
 | | ``FloatKnob``, ``IntegerKnob``,             | | Share globally best-scoring parameters across workers in a epsilon greedy manner.                       |
 | | ``CategoricalKnob``, with policy            | | Optionally employ early stopping (``EARLY_STOP`` policy) for all trials.                                |  
-| | ``SHARE_PARAMS``                            |                                                                                                           |
+| | ``SHARE_PARAMS``                            | |                                                                                                         |
+| |                                             | | More details at :ref:`tuning-with-param-sharing`.                                                       |
 +-----------------------------------------------+-------------------------------------------------------------------+---------------------------------------+
 | | Only ``PolicyKnob``, ``FixedKnob``,         | | Hyperparameter tuning with Bayesian Optimization. Optionally employ early stopping                      | 
 | | ``FloatKnob``, ``IntegerKnob``,             | | (``EARLY_STOP`` policy) before the last 1h, and perform standard trials during the last 1h.             |
@@ -97,12 +98,25 @@ Specifically, it employs the following rules, in the *given order*, to select th
 | All others                                    | Hyperparameter tuning with uniformly random knobs                                                         |
 +-----------------------------------------------+-------------------------------------------------------------------+---------------------------------------+
 
+.. _`tuning-with-param-sharing`:
+
+Hyperparameter Tuning with Parameter Sharing
+====================================================================
+
+To tune the hyperparameters of your model across multiple trials and automatically have best-scoring model parameters shared between trials
+to improve speed of convergence (as outlined in `"Rafiki: Machine Learning as an Analytics Service System" <https://arxiv.org/pdf/1804.06087.pdf>`),
+have your model offer the policy ``SHARE_PARAMS`` and optionally ``EARLY_STOP`` (see :ref:`model-policies`).
+
+Refer to the sample model `./examples/models/image_classification/PyDenseNetBc.py <https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/PyDenseNetBc.py>`_
+and its corresponding usage script `./examples/scripts/image_classification/train_densenet.py  <https://github.com/nginyc/rafiki/tree/master/examples/scripts/image_classification/train_densenet.py>`_
+to better understand how to do parameter sharing.
+
 .. _`arch-tuning-with-enas`:
 
 Architecture Tuning with ENAS
 ====================================================================
 
-To tune the architecture for your model with a modern architecture search algorithm 
+To tune the architecture for your model with the modern architecture search algorithm 
 `"Efficient Neural Architecture Search via Parameter Sharing" <https://arxiv.org/abs/1802.03268>`_ (*ENAS*), 
 have a :class:`rafiki.model.ArchKnob` defined in your knob configuration,
 and offer the policies ``SHARE_PARAMS``, ``EARLY_STOP``, ``SKIP_TRAIN``, ``QUICK_EVAL`` and ``DOWNSCALE`` (see :ref:`model-policies`).
@@ -110,8 +124,8 @@ Specifically, you'll need your model to support parameter sharing, stopping trai
 on a subset of the validation dataset, and *downscaling* the model e.g. to use fewer layers. These policies are critical in
 the speed & performance of ENAS.
 
-Refer to the sample model `./examples/models/image_classification/TfEnas.py <https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/TfEnas.py>`
-and its corresponding usage script `./examples/scripts/image_classification/run_enas.py  <https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/TfEnas.py>`
+Refer to the sample model `./examples/models/image_classification/TfEnas.py <https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/TfEnas.py>`_
+and its corresponding usage script `./examples/scripts/image_classification/run_enas.py <https://github.com/nginyc/rafiki/tree/master/examples/scripts/image_classification/run_enas.py>`_
 to better understand how to do architecture tuning.
 
 Deep Dive on ENAS 

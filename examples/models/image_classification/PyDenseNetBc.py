@@ -23,7 +23,8 @@ _Model = namedtuple('_Model', ['net', 'step'])
 
 class PyDenseNetBc(BaseModel):
     '''
-        Implements DenseNet-BC of "Densely Connected Convolutional Networks" for `hyperparameter tuning with distributed parameter sharing`.
+        Implements DenseNet-BC of "Densely Connected Convolutional Networks",
+        configured for *hyperparameter tuning with distributed parameter sharing* on Rafiki.
         
         Original paper: https://arxiv.org/abs/1608.06993
         Implementation is with credits to https://github.com/gpleiss/efficient_densenet_pytorch

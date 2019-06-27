@@ -32,7 +32,8 @@ TF_COLLECTION_MONITORED = 'MONITORED'
 
 class TfEnas(BaseModel):
     '''
-        Implements the child model of cell-based "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) for `architecture tuning with ENAS`.
+        Implements the child model of cell-based "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) 
+        configured for *architecture tuning with ENAS* on Rafiki. 
         
         Original paper: https://arxiv.org/abs/1802.03268
         Implementation is with credits to https://github.com/melodyguan/enas

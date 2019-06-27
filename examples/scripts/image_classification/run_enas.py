@@ -11,7 +11,7 @@ from examples.datasets.image_classification.load_cifar_format import load_cifar1
 
 def run_enas(client, train_dataset_path, val_dataset_path, gpus, hours):    
     '''
-        Conducts training of model `TfEnas` on the CIFAR-10 dataset for the task `IMAGE_CLASSIFICATION`.
+        Conducts training of model `TfEnas` on the CIFAR-10 dataset for IMAGE_CLASSIFICATION.
         Demonstrates architecture tuning with ENAS on Rafiki. 
     '''
     task = 'IMAGE_CLASSIFICATION'
