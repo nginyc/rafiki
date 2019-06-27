@@ -48,18 +48,26 @@ class TrialDetails extends React.Component {
   }
 
   componentDidUpdate() {
-    this.updatePlots();
+    this.updateCharts();
   }
 
-  updatePlots() {
+  updateCharts() {
     const { logs } = this.state;
-    const { appUtils: { plotManager } } = this.props;
 
     if (!logs) return;
+    
+    this.charts = [];
+    const chartOptions = getPlotChartOptions(logs);
 
-    for (const i in logs.plots) {
-      const { series, plotOption } = getPlotDetails(logs.plots[i], logs.metrics)
-      plotManager.updatePlot(`plot-${i}`, series, plotOption);
+    for (const i in chartOptions) {
+      const chartOption = chartOptions[i];
+      const dom = document.getElementById(`plot-${i}`);
+
+      if (!dom) continue;
+
+      // @ts-ignore
+      const chart = echarts.init(dom);  
+      chart.setOption(chartOption);
     }
   }
 
@@ -82,10 +90,6 @@ class TrialDetails extends React.Component {
                 <TableCell>{trial.model_name}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell>Worker</TableCell>
-                <TableCell>{trial.worker_id}</TableCell>
-              </TableRow>
-              <TableRow>
                 <TableCell>Status</TableCell>
                 <TableCell>{trial.status}</TableCell>
               </TableRow>
@@ -94,8 +98,8 @@ class TrialDetails extends React.Component {
                 <TableCell>{trial.score}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell>Proposal</TableCell>
-                <TableCell>{JSON.stringify(trial.proposal, null, 2)}</TableCell>
+                <TableCell>Knobs</TableCell>
+                <TableCell>{JSON.stringify(trial.knobs, null, 2)}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell>Started at</TableCell>
@@ -166,18 +170,15 @@ class TrialDetails extends React.Component {
   }
 
   render() {
-    const { classes } = this.props;
+    const { classes, trialId } = this.props;
     const { logs, trial } = this.state;
 
     return (
       <React.Fragment>
-        {
-          trial &&
-          <Typography gutterBottom variant="h2">
-            Trial
-            <span className={classes.headerSub}>{`#${trial.no}`}</span>
-          </Typography>
-        }
+        <Typography gutterBottom variant="h2">
+          Trial
+          <span className={classes.headerSub}>{`(ID: ${trialId})`}</span>
+        </Typography>
         {
           trial &&
           this.renderDetails()
@@ -210,22 +211,26 @@ class TrialDetails extends React.Component {
 function getPlotChartOptions(logs) {
   const chartOptions = [];
 
-  for (const metric of metrics) {
-    // Check if x axis value exists
-    if (!(xAxis in metric)) {
-      continue;
-    }
+  for (const plot of logs.plots) {
+    const points = [];
 
-    // For each of plot's y axis metrics, push the [x, y] to data array
-    for (const plotMetric of plot.metrics) {
-      if (!(plotMetric in metric)) {
+    for (const metric of logs.metrics) {
+      // Check if x axis value exists
+      const xAxis = plot.x_axis || 'time';
+      if (!(xAxis in metric)) {
         continue;
       }
 
-      // Push x axis value to data array
-      seriesByName[plotMetric].data.push([metric[xAxis], metric[plotMetric]]);
+      // Initialize point
+      const point = [metric[xAxis]];
+
+      // For each of plot's y axis metrics, add it to point data
+      for (const plotMetric of plot.metrics) {
+        point.push(plotMetric in metric ? metric[plotMetric] : null);
+      }
+
+      points.push(point);
     }
-  }
 
     const series = [];
     series.push({
@@ -259,7 +264,7 @@ function getPlotChartOptions(logs) {
     chartOptions.push(chartOption);
   }
 
-  return { series: Object.values(seriesByName), plotOption };
+  return chartOptions;
 }
 
 const styles = (theme) => ({

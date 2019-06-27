@@ -3,7 +3,6 @@ import CssBaseline from '@material-ui/core/CssBaseline';
 
 import RafikiClient from './client/RafikiClient';
 import AppNavigator from './app/AppNavigator';
-import PlotManager from './app/PlotManager';
 import AppRouter from './components/app/AppRouter';
 import AppAlert from './components/app/AppAlert';
 
@@ -22,14 +21,12 @@ class App extends React.Component {
 
     const rafikiClient = new RafikiClient(adminHost, adminPort);
     const appNavigator = new AppNavigator();
-    const plotManager = new PlotManager();
 
     this.appUtils = {
       showError: (...x) => this.showError(...x),
       showSuccess: (...x) => this.showSuccess(...x),
       rafikiClient,
-      appNavigator,
-      plotManager
+      appNavigator
     };
   }
 
