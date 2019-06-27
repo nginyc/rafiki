@@ -198,12 +198,12 @@ def make_predictions(queries: List[Any], task: str, py_model_class: Type[BaseMod
         predictions_at_predictor.append(prediction)
 
     # Predictor ensembles predictions
+    ensemble_method = get_ensemble_method(task)
+    print(f'Ensemble method: {ensemble_method}')
     out_predictions = []
     for prediction in predictions_at_predictor:
         prediction = prediction.prediction
         _assert_jsonable(prediction, Exception('Each `prediction` should be JSON serializable'))
-        ensemble_method = get_ensemble_method(task)
-        print(f'Ensemble method: {ensemble_method}')
         out_prediction = ensemble_method([prediction])
         out_predictions.append(out_prediction)
 
