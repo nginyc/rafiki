@@ -1,19 +1,12 @@
-import requests
-import pprint
 import os
 import re
 import tempfile
-import numpy as np
 import random
-import gzip
 import csv
 import shutil
 from tqdm import tqdm
-from itertools import chain
 from PIL import Image
 import argparse
-
-from rafiki.model import utils
 
 def load(data_dir: str, image_width: int, image_height: int, 
         out_train_dataset_path: str, out_val_dataset_path: str, 
@@ -122,15 +115,13 @@ if __name__ == '__main__':
     parser.add_argument('--validation_split', type=float, default=0.1)
     args = parser.parse_args()
 
-    name = args.name
-
     load(
         data_dir=args.data_dir,
         image_width=args.image_width,
         image_height=args.image_height,
-        out_train_dataset_path='data/{}_train.zip'.format(name),
-        out_val_dataset_path='data/{}_val.zip'.format(name),
-        out_meta_csv_path='data/{}_meta.csv'.format(name),
+        out_train_dataset_path='data/{}_train.zip'.format(args.name),
+        out_val_dataset_path='data/{}_val.zip'.format(args.name),
+        out_meta_csv_path='data/{}_meta.csv'.format(args.name),
         validation_split=args.validation_split,
     )
 

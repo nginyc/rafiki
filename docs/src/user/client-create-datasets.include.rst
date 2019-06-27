@@ -1,5 +1,6 @@
 
-You'll first need to convert your dataset into a format specified by one of the tasks (see :ref:`tasks`), and split them into two files: one for training & one for validation.
+You'll first need to convert your dataset into a format specified by one of the tasks (see :ref:`tasks`), 
+and split them into two files: one for training & one for validation.
 After doing so, you'll create 2 corresponding datasets on Rafiki by uploading them from your filesystem.
 
 Example (pre-processing step):

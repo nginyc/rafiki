@@ -50,6 +50,12 @@ An example of ``images.csv`` follows:
 
 Additionally, the train & validation dataset's images should be have the same dimensions ``W x H``.
 
+.. note::
+
+    You can refer to and run `./examples/datasets/image_classification/load_folder_format.py <https://github.com/nginyc/rafiki/tree/master/examples/datasets/load_folder_format.py>`_
+    for converting *directories of images* to Rafiki's ``IMAGE_CLASSIFICATION`` format. 
+
+
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
