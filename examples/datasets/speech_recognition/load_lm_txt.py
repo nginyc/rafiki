@@ -23,6 +23,7 @@ def reporthook(count, block_size, total_size):
 url = 'http://www.openslr.org/resources/11/librispeech-lm-norm.txt.gz'
 data_upper = '/tmp/upper.txt.gz'
 request.urlretrieve(url, data_upper, reporthook)
+print('Finished downloading, starting cleanup \n')
 
 # Convert to lowercase and cleanup.
 data_lower = '/tmp/lower.txt'
@@ -31,4 +32,4 @@ with open(data_lower, 'w', encoding='utf-8') as lower:
         for line in upper:
             lower.write(line.lower())
 
-print('Finished converting case')
+print('Finished converting case, saved to /tmp/ folder \n')

@@ -55,14 +55,15 @@ class TfDeepSpeech(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': FixedKnob(3),
-            'batch_size': CategoricalKnob([1]),
-            'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
+            'epochs': FixedKnob(1),
+            # batch_size should be no larger than the number of samples in the dataset
+            'batch_size': CategoricalKnob([32]),
+            'learning_rate': FloatKnob(1e-5, 1e-2, is_exp=True),
             'n_hidden': CategoricalKnob([128, 256, 512, 1024, 2048]),
             # lm_alpha and lm_beta can be used for further hyperparameter tuning
             # the alpha hyperparameter of the CTC decoder. Language Model weight
             'lm_alpha': FloatKnob(0.75, 0.75),
-            # the beta hyperparameter of the CTC decoder. Word insertion weight.'
+            # the beta hyperparameter of the CTC decoder. Word insertion weight
             'lm_beta': FloatKnob(1.85, 1.85)
         }
 
@@ -165,7 +166,7 @@ class TfDeepSpeech(BaseModel):
         if not os.path.isdir(FLAGS.checkpoint_dir):
             os.makedirs(FLAGS.checkpoint_dir)
 
-        c.alphabet = Alphabet(os.path.abspath(os.path.abspath(FLAGS.alphabet_config_path)))
+        c.alphabet = Alphabet(FLAGS.alphabet_config_path)
 
         c.n_input = 26
 
@@ -201,12 +202,9 @@ class TfDeepSpeech(BaseModel):
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
-        # self._graph = tf.Graph()
         self._sess_config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False,
-                                inter_op_parallelism_threads=0, intra_op_parallelism_threads=0)
+                                           inter_op_parallelism_threads=0, intra_op_parallelism_threads=0)
         self._sess_config.gpu_options.allow_growth = True
-        # self._sess = tf.Session(graph=self._graph, config=self._sess_config)
-        # self._sess = tf.Session( config=self._sess_config)
 
         self.create_flags()
         self.f = tf.app.flags.FLAGS
@@ -735,14 +733,10 @@ class TfDeepSpeech(BaseModel):
         # Checkpointing
         checkpoint_saver = tf.train.Saver(max_to_keep=FLAGS.max_to_keep)
         checkpoint_path = os.path.join(FLAGS.checkpoint_dir, 'train')
-        checkpoint_filename = 'checkpoint'
 
         initializer = tf.global_variables_initializer()
 
-        # with self._sess.as_default():
-        # with tf.Session(config=self._sess_config) as session:
         session = tf.Session(config=self._sess_config)
-        # session = tf.get_default_session()
         self._sess = session
         tf.get_default_graph().finalize()
 
@@ -788,8 +782,11 @@ class TfDeepSpeech(BaseModel):
                 train_loss, _ = run_set('train', epoch, train_init_op)
                 if train_loss == float('inf'):
                     logger.log('No valid CTC path found due to shorter input sequence than label. '
+                               'Bad learning_rate and n_hidden combination. '
                                '(Try other learning_rate and n_hidden combinations)')
+                    raise Exception('Bad learning_rate and n_hidden combination')
                 logger.log('Finished training epoch %d - loss: %f' % (epoch, train_loss))
+                logger.log_loss(train_loss, epoch)
                 checkpoint_saver.save(session, checkpoint_path, global_step=global_step)
 
         except KeyboardInterrupt:
@@ -803,7 +800,6 @@ class TfDeepSpeech(BaseModel):
         scorer = Scorer(self._knobs.get('lm_alpha'), self._knobs.get('lm_beta'),
                         FLAGS.lm_binary_path, FLAGS.lm_trie_path,
                         Config.alphabet)
-
         dataset_dir = tempfile.TemporaryDirectory()
         logger.log('Test dataset will be extracted to {}'.format(dataset_dir.name))
 
@@ -841,7 +837,6 @@ class TfDeepSpeech(BaseModel):
         # Create a saver using variables from the above newly created graph
         saver = tf.train.Saver()
 
-        # with tf.Session(config=self._sess_config) as session:
         session = tf.Session(config=self._sess_config)
         self._sess = session
 
@@ -944,7 +939,7 @@ class TfDeepSpeech(BaseModel):
             samples.sort(key=lambda s: s.loss)
 
             # Then order by WER (highest WER on top)
-            samples.sort(key=lambda s: s.wer, reverse=False)
+            samples.sort(key=lambda s: s.wer, reverse=True)
 
             return samples_wer, samples_cer, samples
 
@@ -981,13 +976,14 @@ class TfDeepSpeech(BaseModel):
             report_samples = itertools.islice(samples, FLAGS.report_count)
 
             logger.log('Test on %s - WER: %f, CER: %f, loss: %f' % (dataset, wer, cer, mean_loss))
+            logger.log('Reporting %f samples with highest WER ...' % FLAGS.report_count)
             logger.log('-' * 80)
             for sample in report_samples:
-                print('WER: %f, CER: %f, loss: %f' %\
-                      (sample.wer, sample.cer, sample.loss))
-                print(' - src: "%s"' % sample.src)
-                print(' - res: "%s"' % sample.res)
-                print('-' * 80)
+                logger.log('WER: %f, CER: %f, loss: %f' % \
+                           (sample.wer, sample.cer, sample.loss))
+                logger.log(' - src: "%s"' % sample.src)
+                logger.log(' - res: "%s"' % sample.res)
+                logger.log('-' * 80)
 
             return samples, mean_loss
 
@@ -1127,12 +1123,15 @@ if __name__ == '__main__':
         model_class='TfDeepSpeech',
         task=TaskType.SPEECH_RECOGNITION,
         dependencies={
+            # Change to tensorflow-gpu to enable GPUs
             ModelDependency.TENSORFLOW: '1.12.0',
-            ModelDependency.DS_CTCDECODER: os.path.abspath('examples/models/speech_recognition/utils/taskcluster.py')
+            # Indicate taskcluster.py file path for ds_ctcdecoder package, it will install the library based on systems
+            ModelDependency.DS_CTCDECODER: 'examples/models/speech_recognition/utils/taskcluster.py'
         },
         # Demonstrative only, this dataset only contains one sample, we use batch_size = 1 to run
         # Replace with larger test data and larger batch_size in practice
-        train_dataset_uri=os.path.abspath('data/ldc93s1/ldc93s1.zip'),
-        test_dataset_uri=os.path.abspath('data/ldc93s1/ldc93s1.zip'),
-        queries=[os.path.abspath('data/ldc93s1/ldc93s1/LDC93S1.wav')]
+        train_dataset_uri='data/ldc93s1/ldc93s1.zip',
+        test_dataset_uri='data/ldc93s1/ldc93s1.zip',
+        # Ensure the wav files have a sample rate of 16kHz
+        queries=['data/ldc93s1/ldc93s1/LDC93S1.wav']
     )
