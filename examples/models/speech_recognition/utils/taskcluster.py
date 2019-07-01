@@ -12,6 +12,8 @@ import six.moves.urllib as urllib
 
 from pkg_resources import parse_version
 
+# Update version number when you encounter version mismatch
+VERSION = '0.6.0-alpha.1'
 
 DEFAULT_SCHEMES = {
     'deepspeech': 'https://index.taskcluster.net/v1/task/project.deepspeech.deepspeech.native_client.%(branch_name)s.%(arch_string)s/artifacts/public/%(artifact_name)s',
@@ -116,7 +118,7 @@ def main():
         if plat == 'darwin':
             plat = 'macosx_10_10'
 
-        version_string = '0.5.0-alpha.8'.strip()
+        version_string = VERSION.strip()
         ds_version = parse_version(version_string)
 
         if not has_branch_set:

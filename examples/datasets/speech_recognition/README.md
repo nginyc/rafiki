@@ -92,7 +92,9 @@ Remember to modify the `alphabet.txt` file if you are training TfDeepSpeech on l
 Run
 
 ```sh
-.bazel-bin/native-clinet/generate_trie ../rafiki/examples/datasets/speech_recognition/alphabet.txt ../rafiki/data/lm.binary ../rafiki/data/trie
+bazel-bin/native-clinet/generate_trie ../rafiki/examples/datasets/speech_recognition/alphabet.txt ../rafiki/data/lm.binary ../rafiki/data/trie
 ```
 
 The `trie` file is now in the data directory.
+
+*Note: The `generate_trie` binaries are subject to updates by the DeepSpeech team. If you find mismatch of trie file version, update the version of ctc_decoder package by amending the `VERSION` variable in `examples/models/speech_recognition/utils/taskcluster.py`.*
