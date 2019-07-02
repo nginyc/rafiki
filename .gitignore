@@ -16,11 +16,6 @@ __pycache__/
 # MacOS
 .DS_Store
 
-# Sphinx documentation
-.doctrees/
-docs/*
-!docs/src
-
 # Datasets
 data/*
 !data/.gitkeep

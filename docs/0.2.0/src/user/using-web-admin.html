@@ -1,0 +1,250 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Using Rafiki’s Web Admin &mdash; Rafiki  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Supported Tasks" href="tasks.html" />
+    <link rel="prev" title="Quick Start (Admins)" href="quickstart-admins.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> Rafiki
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">User Guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html">Quick Start (Model Developers)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html">Quick Start (Application Developers)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html">Quick Start (Application Users)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html">Quick Start (Admins)</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Using Rafiki’s Web Admin</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#logging-in">Logging In</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#viewing-train-jobs">Viewing Train Jobs</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tasks.html">Supported Tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installing-python.html">Installing Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model-development.html">Model Development Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model-tuning.html">How Model Tuning Works</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dev/index.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../python/index.html">Python Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Rafiki</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">User Guide</a> &raquo;</li>
+        
+      <li>Using Rafiki’s Web Admin</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../_sources/src/user/using-web-admin.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="using-rafiki-s-web-admin">
+<span id="using-web-admin"></span><h1>Using Rafiki’s Web Admin<a class="headerlink" href="#using-rafiki-s-web-admin" title="Permalink to this headline">¶</a></h1>
+<p>Rafiki Web Admin is accessible at <code class="docutils literal notranslate"><span class="pre">&lt;rafiki_host&gt;:&lt;web_admin_port&gt;</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">127.0.0.1:3001</span></code> by default).</p>
+<div class="section" id="logging-in">
+<h2>Logging In<a class="headerlink" href="#logging-in" title="Permalink to this headline">¶</a></h2>
+<p>Log in with the same credentials for Rafiki Admin.</p>
+</div>
+<div class="section" id="viewing-train-jobs">
+<h2>Viewing Train Jobs<a class="headerlink" href="#viewing-train-jobs" title="Permalink to this headline">¶</a></h2>
+<p>Currently, you are able to view the statuses of the train jobs you have launched on Rafiki:</p>
+<div class="figure align-center" id="id1">
+<a class="reference internal image-reference" href="../../_images/train-job-page.png"><img alt="../../_images/train-job-page.png" src="../../_images/train-job-page.png" style="width: 1200px;" /></a>
+<p class="caption"><span class="caption-text">Sample of a Train Job page</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+</div>
+<p>For each train job, you can view the statuses of each trial, including the knobs that has been
+generated for the trial, its training duration, its score, and plots &amp; messages logged during
+model training:</p>
+<div class="figure align-center" id="id2">
+<a class="reference internal image-reference" href="../../_images/trial-page.png"><img alt="../../_images/trial-page.png" src="../../_images/trial-page.png" style="width: 1200px;" /></a>
+<p class="caption"><span class="caption-text">Sample of a Trial page (details section)</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+</div>
+<div class="figure align-center" id="id3">
+<a class="reference internal image-reference" href="../../_images/trial-page-plots.png"><img alt="../../_images/trial-page-plots.png" src="../../_images/trial-page-plots.png" style="width: 1200px;" /></a>
+<p class="caption"><span class="caption-text">Sample of a Trial page (plots section)</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="tasks.html" class="btn btn-neutral float-right" title="Supported Tasks" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="quickstart-admins.html" class="btn btn-neutral float-left" title="Quick Start (Admins)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
