@@ -310,7 +310,7 @@ class AudioFilesDataset(ModelDataset):
         # Convert to character index arrays
         df['transcript'] = df['transcript']\
             .apply(partial(text_to_char_array,
-                           alphabet=Alphabet(os.path.abspath('examples/datasets/speech_recognition/alphabet.txt'))))
+                           alphabet=Alphabet('examples/datasets/speech_recognition/alphabet.txt')))
 
         num_samples = df['wav_filename'].count()
 
