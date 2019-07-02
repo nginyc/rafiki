@@ -26,7 +26,7 @@ To completely destroy Rafiki's stack:
 bash scripts/stop.sh
 ```
 
-More instructions are available in [Rafiki's Developer Guide](https://nginyc.github.io/rafiki/docs/latest/docs/src/dev).
+More instructions are available in [Rafiki's Developer Guide](https://nginyc.github.io/rafiki/docs/latest/src/dev).
 
 
 ## Issues
