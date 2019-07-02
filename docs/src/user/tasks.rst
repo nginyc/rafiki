@@ -61,3 +61,28 @@ Prediction Format
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A list of integers representing the list of predicted tag for each token, in sequence, for the sentence.
+
+
+SPEECH_RECOGNITION
+--------------------------------------------------------------------
+
+Dataset Type
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:ref:`dataset-type:AUDIO_FILES`, such that:
+
+- Audios are in ``.wav`` format
+- Audio sample rate equals to 16kHz
+- Transcripts should only contain permitted alphabets stated in ``alphabet.txt`` (this file is used for training)
+
+
+Query Format
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A list of strings representing the paths to the audio files that meet the above requirements.
+
+
+Prediction Format
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A list of strings representing the predicted transcripts for each audio file in sequence.
