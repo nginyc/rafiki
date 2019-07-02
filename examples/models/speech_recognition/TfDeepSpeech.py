@@ -55,9 +55,9 @@ class TfDeepSpeech(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': FixedKnob(1),
+            'epochs': FixedKnob(3),
             # batch_size should be no larger than the number of samples in the dataset
-            'batch_size': CategoricalKnob([32]),
+            'batch_size': CategoricalKnob([1]),
             'learning_rate': FloatKnob(1e-5, 1e-2, is_exp=True),
             'n_hidden': CategoricalKnob([128, 256, 512, 1024, 2048]),
             # lm_alpha and lm_beta can be used for further hyperparameter tuning
