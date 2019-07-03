@@ -13,6 +13,7 @@ import io
 import abc
 import tempfile
 import csv
+import pandas as pd
 
 from rafiki.constants import DatasetType
 
@@ -64,6 +65,16 @@ class ModelDatasetUtils():
         '''
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         return ImageFilesDataset(dataset_path, image_size)
+
+    def load_dataset_of_tabular(self, dataset_path):
+
+        """
+            Loads dataset for the task ``TabularRegression`` or ``TabularClassification``.
+
+            :param str dataset_path: File path of the dataset
+            :returns: An instance of ``TabularDataset``
+        """
+        return TabularDataset(dataset_path)
 
     def resize_as_images(self, images, image_size):
         '''
@@ -266,5 +277,24 @@ class ImageFilesDataset(ModelDataset):
         num_samples = len(image_paths)
 
         return (num_samples, num_classes, image_paths, image_classes, dataset_dir)
+
+class TabularDataset(ModelDataset):
+    '''
+    Class that helps loading of tabular format dataset``.
+
+    Each dataset example is a csv file which will be loaded in to pandas DataFrame format
+    '''   
+
+    def __init__(self, dataset_path):
+        super().__init__(dataset_path)
+        (self.data, self.size) = self._load(self.path)
+        
+    def __getitem__(self, index):
+        return self.data.iloc[:1,:]
+
+    def _load(self, dataset_path):
+        data = pd.read_csv(dataset_path)
+        size = data.size
+        return (data, size)
 
 dataset_utils = ModelDatasetUtils()
