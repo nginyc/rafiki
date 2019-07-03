@@ -8,6 +8,7 @@ class ModelDependency():
     SCIKIT_LEARN = 'scikit-learn'
     PYTORCH = 'torch'
     SINGA = 'singa'
+    XGBOOST = 'xgboost'
 
 class ModelAccessRight():
     PUBLIC = 'PUBLIC'
@@ -59,3 +60,5 @@ class DatasetType():
 class TaskType():
     IMAGE_CLASSIFICATION = 'IMAGE_CLASSIFICATION'
     POS_TAGGING = 'POS_TAGGING'
+    TABULAR_REGRESSION = 'TABULAR_REGRESSION'
+    TABULAR_CLASSIFICATION = 'TABULAR_CLASSIFICATION'

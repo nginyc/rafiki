@@ -5,6 +5,9 @@ import os
 import base64
 import numpy as np
 
+import sys
+sys.path.insert(0, '/Users/pro/Desktop/rafiki_fork')
+
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
                         IntegerKnob, CategoricalKnob, dataset_utils, logger
 from rafiki.constants import TaskType, ModelDependency
@@ -91,8 +94,8 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.SCIKIT_LEARN: '0.20.0'
         },
-        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
+        train_dataset_uri='/Users/pro/Desktop/rafiki_fork/data/fashion_mnist_for_image_classification_train.zip',
+        test_dataset_uri='/Users/pro/Desktop/rafiki_fork/data/fashion_mnist_for_image_classification_test.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
