@@ -128,7 +128,7 @@ class BaseModel(abc.ABC):
 
 def test_model_class(model_file_path, model_class, task, dependencies, \
                     train_dataset_uri, test_dataset_uri, \
-                    queries=[], knobs=None):
+                    queries=[], knobs=None, features=None, target=None):
     '''
     Tests whether a model class is properly defined by running a full train-inference flow.
     The model instance's methods will be called in an order similar to that in Rafiki.
@@ -144,6 +144,8 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
     :param list[any] queries: List of queries for testing predictions with the trained model
     :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used
     :type knobs: dict[str, any]
+    :param list[str] features: List of features for tabular dataset
+    :param str target: target column to predict for tabular dataset
     :returns: The trained model
     '''
     try:
@@ -169,8 +171,12 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         _check_model_inst(model_inst)
 
         _print_header('Checking training & evaluation of model...')
-        model_inst.train(train_dataset_uri)
-        score = model_inst.evaluate(test_dataset_uri)
+        if task == TaskType.TABULAR_REGRESSION or TaskType.TABULAR_CLASSIFICATION:
+            model_inst.train(train_dataset_uri, features, target)
+            score = model_inst.evaluate(test_dataset_uri, features, target)
+        else:
+            model_inst.train(train_dataset_uri)
+            score = model_inst.evaluate(test_dataset_uri)
 
         if not isinstance(score, float):
             raise Exception('`evaluate()` should return a float!')
@@ -195,21 +201,22 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         model_inst = py_model_class(**knobs)
         model_inst.load_parameters(parameters)
 
-        _print_header('Checking predictions with model...')
-        print('Using queries: {}'.format(queries))
-        predictions = model_inst.predict(queries)
+        if queries != []:
+            _print_header('Checking predictions with model...')
+            print('Using queries: {}'.format(queries))
+            predictions = model_inst.predict(queries)
 
-        try:
-            for prediction in predictions:
-                json.dumps(prediction)
-        except Exception:
-            traceback.print_stack()
-            raise Exception('Each `prediction` should be JSON serializable')
+            try:
+                for prediction in predictions:
+                    json.dumps(prediction)
+            except Exception:
+                traceback.print_stack()
+                raise Exception('Each `prediction` should be JSON serializable')
 
-        # Ensembling predictions in predictor
-        predictions = ensemble_predictions([predictions], task)
+            # Ensembling predictions in predictor
+            predictions = ensemble_predictions([predictions], task)
 
-        print('Predictions: {}'.format(predictions))
+            print('Predictions: {}'.format(predictions))
 
         _note('The model definition is valid!')
     
