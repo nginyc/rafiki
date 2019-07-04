@@ -168,7 +168,9 @@ if __name__ == '__main__':
         test_dataset_uri=os.path.join(root, 'data/titanic_test.zip'),
         queries=[
             OrderedDict([('Pclass', {499: 3}),
-             ('Sex', {499: 'male'}),
-             ('Age', {499: 24.0})])
+             ('Age', {499: 24.0}),
+             ('Sex_female', {499: 0}), 
+             ('Sex_male', {499: 1}),
+             ])
         ],
     )
