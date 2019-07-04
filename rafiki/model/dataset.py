@@ -3,7 +3,6 @@ import numpy as np
 import requests
 import logging
 import os
-import tempfile
 import traceback
 from tqdm import tqdm
 import math
@@ -14,12 +13,6 @@ import abc
 import tempfile
 import csv
 import pandas
-from functools import partial
-
-from ..utils.text import Alphabet, text_to_char_array
-
-
-from rafiki.constants import DatasetType
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +68,7 @@ class ModelDatasetUtils():
             Loads dataset with type `AUDIO_FILES`.
 
             :param str dataset_uri: URI of the dataset file
-            :returns: An instance of ``ImageFilesDataset``.
+            :returns: An instance of ``AudioFilesDataset``.
         '''
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         return AudioFilesDataset(dataset_path, dataset_dir)
@@ -306,11 +299,6 @@ class AudioFilesDataset(ModelDataset):
 
         df = pandas.read_csv(audios_csv_path, encoding='utf-8', na_filter=False)
         df.sort_values(by='wav_filesize', inplace=True)
-
-        # Convert to character index arrays
-        df['transcript'] = df['transcript']\
-            .apply(partial(text_to_char_array,
-                           alphabet=Alphabet('examples/datasets/speech_recognition/alphabet.txt')))
 
         num_samples = df['wav_filename'].count()
 

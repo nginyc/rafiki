@@ -1,12 +1,8 @@
-import sys
 import os
 
-import codecs
 import fnmatch
 import pandas
 import progressbar
-import requests
-import subprocess
 import tarfile
 import shutil
 import unicodedata
@@ -14,7 +10,7 @@ import unicodedata
 from sox import Transformer
 from tensorflow.python.platform import gfile
 from rafiki.model import dataset_utils
-from rafiki.utils.text import *
+from examples.models.speech_recognition.utils.text import Alphabet, validate_label
 
 def load(data_dir, label_filter):
     '''
@@ -118,14 +114,21 @@ def load(data_dir, label_filter):
     # Write sets to disk as CSV files
     print("Writing CSV files...")
     train_100.to_csv(os.path.join(work_dir, "train-clean-100-wav", "audios.csv"), index=False)
+    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "train-clean-100-wav", "alphabet.txt"))
     train_360.to_csv(os.path.join(work_dir, "train-clean-360-wav", "audios.csv"), index=False)
+    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "train-clean-360-wav", "alphabet.txt"))
     train_500.to_csv(os.path.join(work_dir, "train-other-500-wav", "audios.csv"), index=False)
+    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "train-clean-500-wav", "alphabet.txt"))
 
     dev_clean.to_csv(os.path.join(work_dir, "dev-clean-wav", "audios.csv"), index=False)
+    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "dev-clean-wav", "alphabet.txt"))
     dev_other.to_csv(os.path.join(work_dir, "dev-other-wav", "audios.csv"), index=False)
+    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "dev-other-wav", "alphabet.txt"))
 
     test_clean.to_csv(os.path.join(work_dir, "test-clean-wav", "audios.csv"), index=False)
+    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "test-clean-wav", "alphabet.txt"))
     test_other.to_csv(os.path.join(work_dir, "test-other-wav", "audios.csv"), index=False)
+    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "test-other-wav", "alphabet.txt"))
 
     print("Zipping required dataset formats...")
     _write_dataset(os.path.join(work_dir, "train-clean-100-wav"), os.path.join(data_dir, "train-clean-100.zip"))
@@ -215,7 +218,6 @@ def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir, label_
 
                     # Filter samples with invalid characters
                     transcript = label_filter(transcript)
-                    print(transcript)
                     if transcript is None:
                         counter['invalid'] += 1
                         continue
@@ -241,7 +243,7 @@ def _write_dataset(dir_path, out_dataset_path):
     os.rename(out_path, out_dataset_path) # Remove additional trailing `.zip`
 
 if __name__ == "__main__":
-    alphabet = Alphabet(os.path.abspath('examples/datasets/speech_recognition/alphabet.txt'))
+    alphabet = Alphabet('examples/datasets/speech_recognition/alphabet.txt')
 
     def label_filter(label):
         label = validate_label(label)

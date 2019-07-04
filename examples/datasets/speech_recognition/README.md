@@ -13,9 +13,11 @@ Before you could run training using the TfDeepSpeech model, you will need to sup
 
 Speech Recognition models in Rafiki require a specific dataset format, see [Supported Dataset Types](https://nginyc.github.io/rafiki/docs/latest/src/user/datasets.html#) for more details. Two examples scripts has been provided in this directory.
 
-For testing purposes, you could run the `load_tiny_format.py` file to download a dataset with only one voice sample.
+Do the following in `<rafiki_root_directory>`:
 
-For real training, you might want to use a voice corpus of considerable size. `load_librispeech_format` helps you to load a benchmark dataset (~55GB) sufficient for training a functional Speech Recognition model.
+For testing purposes, you could run `python examples/datasets/speech_recognition/load_tiny_format.py` to download a dataset with only one voice sample.
+
+For real training, you might want to use a voice corpus of considerable size. `python examples/datasets/speech_recognition/load_librispeech_format.py` helps you to load a benchmark dataset (~55GB) sufficient for training a functional Speech Recognition model.
 
 
 ## Use Pre-built LM and Trie

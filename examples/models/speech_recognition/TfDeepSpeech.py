@@ -14,17 +14,17 @@ import numpy as np
 from datetime import datetime
 from multiprocessing import cpu_count
 from multiprocessing.dummy import Pool
+from functools import partial
 import itertools
 import tempfile
 import base64
 
+from examples.models.speech_recognition.utils.text import Alphabet, levenshtein, text_to_char_array
 from ds_ctcdecoder import ctc_beam_search_decoder_batch, ctc_beam_search_decoder, Scorer
 
 from rafiki.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, \
     dataset_utils, logger, test_model_class, InvalidModelParamsException
-
 from rafiki.constants import TaskType, ModelDependency
-from rafiki.utils.text import Alphabet
 
 
 class ConfigSingleton:
@@ -119,8 +119,6 @@ class TfDeepSpeech(BaseModel):
 
         # Decoder
 
-        f.DEFINE_string('alphabet_config_path', 'examples/datasets/speech_recognition/alphabet.txt',
-                        'path to the configuration file specifying the alphabet used by the network. See the comment in data/alphabet.txt for a description of the format.')
         f.DEFINE_string('lm_binary_path', 'data/lm.binary',
                         'path to the language model binary file created with KenLM')
         f.DEFINE_string('lm_trie_path', 'data/trie',
@@ -166,8 +164,6 @@ class TfDeepSpeech(BaseModel):
         if not os.path.isdir(FLAGS.checkpoint_dir):
             os.makedirs(FLAGS.checkpoint_dir)
 
-        c.alphabet = Alphabet(FLAGS.alphabet_config_path)
-
         c.n_input = 26
 
         # The number of frames in theinitialize_globals context
@@ -187,9 +183,6 @@ class TfDeepSpeech(BaseModel):
 
         # The number of units in the third layer, which feeds in to the LSTM
         c.n_hidden_3 = c.n_cell_dim
-
-        # Units in the sixth layer = number of characters in the target language plus one
-        c.n_hidden_6 = c.alphabet.size() + 1  # +1 for CTC blank label
 
         # Size of audio window in samples
         c.audio_window_samples = FLAGS.audio_sample_rate * (FLAGS.feature_win_len / 1000)
@@ -266,6 +259,17 @@ class TfDeepSpeech(BaseModel):
 
         dataset = dataset_utils.load_dataset_of_audio_files(dataset_uri, dataset_dir)
         df = dataset.df
+
+        # Config Alphabet
+
+        # See the comment in alphabet.txt file for a description of the format
+        alphabet_path = os.path.join(dataset._dataset_dir.name, 'alphabet.txt')
+        Config.alphabet = Alphabet(alphabet_path)
+        # Units in the sixth layer = number of characters in the target language plus one
+        Config.n_hidden_6 = Config.alphabet.size() + 1  # +1 for CTC blank label
+
+        # Convert to character index arrays
+        df['transcript'] = df['transcript'].apply(partial(text_to_char_array,alphabet=Config.alphabet))
 
         num_gpus = len(Config.available_devices)
 
@@ -891,26 +895,6 @@ class TfDeepSpeech(BaseModel):
                 cer = min(cer, 1.0)
 
                 return wer, cer
-
-            def levenshtein(a, b):
-                "Calculates the Levenshtein distance between a and b."
-                n, m = len(a), len(b)
-                if n > m:
-                    # Make sure n <= m, to use O(min(n,m)) space
-                    a, b = b, a
-                    n, m = m, n
-
-                current = list(range(n + 1))
-                for i in range(1, m + 1):
-                    previous, current = current, [i] + [0] * n
-                    for j in range(1, n + 1):
-                        add, delete = previous[j] + 1, current[j - 1] + 1
-                        change = previous[j - 1]
-                        if a[j - 1] != b[i - 1]:
-                            change = change + 1
-                        current[j] = min(add, delete, change)
-
-                return current[n]
 
             def process_decode_result(item):
                 ground_truth, prediction, loss = item
