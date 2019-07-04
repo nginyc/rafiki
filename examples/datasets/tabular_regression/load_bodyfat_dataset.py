@@ -4,13 +4,14 @@ import tempfile
 import shutil
 import os
 
+from pathlib import Path
 from sklearn.model_selection import train_test_split
 
 
 def load(dataset_url, out_train_dataset_path, out_test_dataset_path, out_meta_txt_path, \
         target=None, features=None):
     '''
-        Loads and converts an tabular dataset of sklearn boston housing to the 
+        Loads and converts an tabular dataset of bodyfat to the 
         DatasetType `TABULAR`.
 
         :param str dataset_url: URL to download the dataset CSV file
@@ -58,17 +59,18 @@ def _write_dataset(table_meta, data, out_dataset_path):
         with open(table_meta_path, 'w') as outfile:  
             json.dump(table_meta, outfile)
 
-    # Zip and export folder as dataset
+        # Zip and export folder as dataset
         out_path = shutil.make_archive(out_dataset_path, 'zip', d)
         os.rename(out_path, out_dataset_path) # Remove additional trailing `.zip`
 
 if __name__ == '__main__':
     # Loads the bodyfat dataset as `TABULAR` DatasetType
+    root = str(Path(os.path.abspath(__file__)).parents[3])
     load(
         dataset_url = 'https://course1.winona.edu/bdeppa/Stat%20425/Data/bodyfat.csv',
-        out_train_dataset_path='/Users/pro/Desktop/rafiki_fork/data/bodyfat_train.zip',
-        out_test_dataset_path='/Users/pro/Desktop/rafiki_fork/data/bodyfat_test.zip',
-        out_meta_txt_path='/Users/pro/Desktop/rafiki_fork/data/bodyfat_meta.txt',
+        out_train_dataset_path=os.path.join(root, 'data/bodyfat_train.zip'),
+        out_test_dataset_path=os.path.join(root, 'data/bodyfat_test.zip'),
+        out_meta_txt_path=os.path.join(root, 'data/bodyfat_meta.txt'),
         features=['density',
                   'age',
                   'weight',
