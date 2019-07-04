@@ -3,6 +3,7 @@ import pickle
 import base64
 import pandas as pd
 import category_encoders as ce
+from collections import OrderedDict
 
 from pathlib import Path
 import sys
@@ -36,11 +37,20 @@ class XgbClf(BaseModel):
     def train(self, dataset_path, features=None, target=None):
         dataset = dataset_utils.load_dataset_of_tabular(dataset_path)
         data = dataset.data
+        table_meta = dataset.table_meta
+
+        if table_meta != {}:
+            features = table_meta['features']
+            target = table_meta['target']
+        else:
+            features = None
+            target = None
+
         if features is None:
             X = data.iloc[:,:-1]
         else:
             X = data[features]
-        if target  is None:
+        if target is None:
             y = data.iloc[:,-1]
         else:
             y = data[target]
@@ -61,6 +71,15 @@ class XgbClf(BaseModel):
     def evaluate(self, dataset_path, features=None, target=None):
         dataset = dataset_utils.load_dataset_of_tabular(dataset_path)
         data = dataset.data
+        table_meta = dataset.table_meta
+
+        if table_meta != {}:
+            features = table_meta['features']
+            target = table_meta['target']
+        else:
+            features = None
+            target = None
+
         if features is None:
             X = data.iloc[:,:-1]
         else:
@@ -145,11 +164,11 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.XGBOOST: '0.90'
         },
-        train_dataset_uri=os.path.join(root, 'data/titanic_train.csv'),
-        test_dataset_uri=os.path.join(root, 'data/titanic_test.csv'),
+        train_dataset_uri=os.path.join(root, 'data/titanic_train.zip'),
+        test_dataset_uri=os.path.join(root, 'data/titanic_test.zip'),
         queries=[
-            {'Pclass': {499: 3}, 'Age': {499: 24.0}, 'Sex_female': {499: 0}, 'Sex_male': {499: 1}}
+            OrderedDict([('Pclass', {499: 3}),
+             ('Sex', {499: 'male'}),
+             ('Age', {499: 24.0})])
         ],
-        features=['Pclass','Sex','Age'],
-        target='Survived'
     )
