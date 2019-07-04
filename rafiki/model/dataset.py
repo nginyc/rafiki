@@ -11,8 +11,8 @@ from urllib.parse import urlparse
 import zipfile
 import io
 import abc
-import tempfile
 import csv
+import json
 import pandas as pd
 
 from rafiki.constants import DatasetType
@@ -287,14 +287,35 @@ class TabularDataset(ModelDataset):
 
     def __init__(self, dataset_path):
         super().__init__(dataset_path)
-        (self.data, self.size) = self._load(self.path)
+        (self.data, self.table_meta, self.size) = self._load(self.path)
         
     def __getitem__(self, index):
         return self.data.iloc[:1,:]
 
     def _load(self, dataset_path):
-        data = pd.read_csv(dataset_path)
+        # Create temp directory to unzip to
+        dataset_dir = tempfile.TemporaryDirectory()
+
+        dataset_zipfile = zipfile.ZipFile(dataset_path, 'r')
+        dataset_zipfile.extractall(path=dataset_dir.name)
+        dataset_zipfile.close()
+
+        csv_path = os.path.join(dataset_dir.name, dataset_path.split('/')[-1].split('.')[0] + '.csv')
+        table_meta_path = os.path.join(dataset_dir.name, 'table_meta.txt')
+
+        data = pd.read_csv(csv_path)
+        with open(table_meta_path) as json_file:  
+            table_meta = json.load(json_file)
+            features = table_meta['features']
+            target = table_meta['target']
+
+            if bool(features == None) != bool(target == None):
+                # Features and target should be both set to avoid repetitons
+                print("Features and target should be both set")
+                raise InvalidDatasetFormatException()
+
         size = data.size
-        return (data, size)
+
+        return (data, table_meta, size)
 
 dataset_utils = ModelDatasetUtils()
