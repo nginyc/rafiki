@@ -1,5 +1,6 @@
 import xgboost as xgb
 from sklearn.metrics import mean_squared_error
+from collections import OrderedDict
 import pickle
 import base64
 import numpy as np
@@ -37,14 +38,23 @@ class XgbReg(BaseModel):
         self._clf = self._build_classifier(self.n_estimators, self.min_child_weight, \
             self.max_depth, self.gamma, self.subsample, self.colsample_bytree)
        
-    def train(self, dataset_path, features=None, target=None):
+    def train(self, dataset_path):
         dataset = dataset_utils.load_dataset_of_tabular(dataset_path)
         data = dataset.data
+        table_meta = dataset.table_meta
+
+        if table_meta != {}:
+            features = table_meta['features']
+            target = table_meta['target']
+        else:
+            features = None
+            target = None
+
         if features is None:
             X = data.iloc[:,:-1]
         else:
             X = data[features]
-        if target  is None:
+        if target is None:
             y = data.iloc[:,-1]
         else:
             y = data[target]
@@ -58,9 +68,18 @@ class XgbReg(BaseModel):
         rmse = np.sqrt(mean_squared_error(y, preds))
         logger.log('Train RMSE: {}'.format(rmse))
 
-    def evaluate(self, dataset_path, features=None, target=None):
+    def evaluate(self, dataset_path):
         dataset = dataset_utils.load_dataset_of_tabular(dataset_path)
         data = dataset.data
+        table_meta = dataset.table_meta
+
+        if table_meta != {}:
+            features = table_meta['features']
+            target = table_meta['target']
+        else:
+            features = None
+            target = None
+
         if features is None:
             X = data.iloc[:,:-1]
         else:
@@ -132,10 +151,21 @@ if __name__ == '__main__':
             ModelDependency.XGBOOST: '0.90'
         },
         queries=[
-            {'CRIM': {370: 6.53876}, 'ZN': {370: 0.0}, 'INDUS': {370: 18.1}, 'CHAS': {370: 1.0}, 
-            'NOX': {370: 0.631}, 'RM': {370: 7.016}, 'AGE': {370: 97.5}, 'DIS': {370: 1.2024}, 
-            'RAD': {370: 24.0}, 'TAX': {370: 666.0}, 'PTRATIO': {370: 20.2}, 'B': {370: 392.05}}
+            OrderedDict([('density', {241: 1.0207}),
+             ('age', {241: 65}),
+             ('weight', {241: 224.5}),
+             ('height', {241: 68.25}),
+             ('neck', {241: 38.8}),
+             ('chest', {241: 119.6}),
+             ('abdomen', {241: 118.0}),
+             ('hip', {241: 114.3}),
+             ('thigh', {241: 61.3}),
+             ('knee', {241: 42.1}),
+             ('ankle', {241: 23.4}),
+             ('biceps', {241: 34.9}),
+             ('forearm', {241: 30.1}),
+             ('wrist', {241: 19.4})])
         ],
-        train_dataset_uri=os.path.join(root, 'data/boston_train.csv'),
-        test_dataset_uri=os.path.join(root, 'data/boston_test.csv')
+        train_dataset_uri=os.path.join(root, 'data/bodyfat_train.zip'),
+        test_dataset_uri=os.path.join(root, 'data/bodyfat_test.zip')
     )
