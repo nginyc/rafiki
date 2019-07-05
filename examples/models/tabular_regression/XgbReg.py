@@ -5,7 +5,6 @@ import pickle
 import base64
 import numpy as np
 import pandas as pd
-import category_encoders as ce
 
 from pathlib import Path
 import sys
@@ -60,7 +59,8 @@ class XgbReg(BaseModel):
             y = data[target]
 
         # Encode categorical features
-        X = self._category_encoding_type(X, y)
+        X = self._encoding_categorical_type(X)
+
         self._clf.fit(X, y)
 
         # Compute train root mean square error
@@ -90,13 +90,15 @@ class XgbReg(BaseModel):
             y = data[target]
 
         # Encode categorical features
-        X = self._category_encoding_type(X, y)
+        X = self._encoding_categorical_type(X)
+
         preds = self._clf.predict(X)
         rmse = np.sqrt(mean_squared_error(y, preds))
         return rmse
 
     def predict(self, queries):
-        results = [self._clf.predict(pd.DataFrame.from_dict(query)).tolist()[0] for query in queries]
+        queries = [pd.DataFrame.from_dict(query) for query in queries]
+        results = [self._clf.predict(self._features_mapping(query)).tolist()[0] for query in queries]
         return results
 
     def destroy(self):
@@ -109,6 +111,7 @@ class XgbReg(BaseModel):
         clf_bytes = pickle.dumps(self._clf)
         clf_base64 = base64.b64encode(clf_bytes).decode('utf-8')
         params['clf_base64'] = clf_base64
+        params['encoding_dict'] = self._encoding_dict
 
         return params
 
@@ -119,17 +122,32 @@ class XgbReg(BaseModel):
             raise InvalidModelParamsException()
         clf_bytes = base64.b64decode(clf_base64.encode('utf-8'))
         self._clf = pickle.loads(clf_bytes)
+        self._encoding_dict = params['encoding_dict']
 
-    def _category_encoding_type(self, cols, target):
-        # Apply target encoding for those categorical columns that have too many features
-        cols_target = list(filter(lambda x: cols[x].dtype == 'object' and cols[x].unique().size > 5, cols.columns))
-        if cols_target != []:
-            ce_target = ce.TargetEncoder(cols = cols_target)
-            ce_target.fit(cols, target)
-            cols = ce_target.transform(cols, target)
-        # Apply one-hot encoding for the rest categorical columns
-        cols = pd.get_dummies(cols)
-        return cols
+    def _encoding_categorical_type(self, cols):
+        # Apply label encoding for those categorical columns
+        cat_cols = list(filter(lambda x: cols[x].dtype == 'object', cols.columns))
+        encoded_cols = pd.DataFrame({col: cols[col].astype('category').cat.codes \
+            if cols[col].dtype == 'object' else cols[col] for col in cols}, index=cols.index)
+
+        # Recover the missing elements (Use XGBoost to automatically handle them)
+        encoded_cols = encoded_cols.replace(to_replace = -1, value = np.nan)
+
+        # Generate the dict that maps categorical features to numerical
+        encoding_dict = {col: {cat: n for n, cat in enumerate(cols[col].astype('category'). \
+            cat.categories)} for col in cat_cols}
+        self._encoding_dict = encoding_dict
+
+        return encoded_cols
+
+    def _features_mapping(self, df):
+        # Encode the categorical features with pre saved encoding dict
+        cat_cols = list(filter(lambda x: df[x].dtype == 'object', df.columns))
+        df_temp = df.copy()
+        for col in cat_cols:
+            df_temp[col] = df[col].map(self._encoding_dict[col])
+        df = df_temp
+        return df
 
     def _build_classifier(self, n_estimators, min_child_weight, max_depth, gamma, subsample, colsample_bytree):
         clf = xgb.XGBRegressor(
