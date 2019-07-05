@@ -1107,10 +1107,9 @@ if __name__ == '__main__':
         model_class='TfDeepSpeech',
         task=TaskType.SPEECH_RECOGNITION,
         dependencies={
-            # Change to tensorflow-gpu to enable GPUs
             ModelDependency.TENSORFLOW: '1.12.0',
-            # Indicate taskcluster.py file path for ds_ctcdecoder package, it will install the library based on systems
-            ModelDependency.DS_CTCDECODER: 'examples/models/speech_recognition/utils/taskcluster.py'
+            # Use ds_ctcdecoder version compatible with the trie file you download or generate
+            ModelDependency.DS_CTCDECODER: '0.6.0-alpha.1'
         },
         # Demonstrative only, this dataset only contains one sample, we use batch_size = 1 to run
         # Replace with larger test data and larger batch_size in practice
