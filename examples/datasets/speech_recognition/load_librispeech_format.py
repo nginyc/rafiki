@@ -114,21 +114,14 @@ def load(data_dir, label_filter):
     # Write sets to disk as CSV files
     print("Writing CSV files...")
     train_100.to_csv(os.path.join(work_dir, "train-clean-100-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "train-clean-100-wav", "alphabet.txt"))
     train_360.to_csv(os.path.join(work_dir, "train-clean-360-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "train-clean-360-wav", "alphabet.txt"))
     train_500.to_csv(os.path.join(work_dir, "train-other-500-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "train-clean-500-wav", "alphabet.txt"))
 
     dev_clean.to_csv(os.path.join(work_dir, "dev-clean-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "dev-clean-wav", "alphabet.txt"))
     dev_other.to_csv(os.path.join(work_dir, "dev-other-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "dev-other-wav", "alphabet.txt"))
 
     test_clean.to_csv(os.path.join(work_dir, "test-clean-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "test-clean-wav", "alphabet.txt"))
     test_other.to_csv(os.path.join(work_dir, "test-other-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "test-other-wav", "alphabet.txt"))
 
     print("Zipping required dataset formats...")
     _write_dataset(os.path.join(work_dir, "train-clean-100-wav"), os.path.join(data_dir, "train-clean-100.zip"))

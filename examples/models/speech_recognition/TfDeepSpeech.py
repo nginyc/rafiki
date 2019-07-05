@@ -119,6 +119,9 @@ class TfDeepSpeech(BaseModel):
 
         # Decoder
 
+        f.DEFINE_string('alphabet_config_path', 'examples/datasets/speech_recognition/alphabet.txt',
+                        'path to the configuration file specifying the alphabet used by the network. See the comment in data/alphabet.txt for a description of the format.')
+
         f.DEFINE_string('lm_binary_path', 'data/lm.binary',
                         'path to the language model binary file created with KenLM')
         f.DEFINE_string('lm_trie_path', 'data/trie',
@@ -164,6 +167,8 @@ class TfDeepSpeech(BaseModel):
         if not os.path.isdir(FLAGS.checkpoint_dir):
             os.makedirs(FLAGS.checkpoint_dir)
 
+        c.alphabet = Alphabet(FLAGS.alphabet_config_path)
+
         c.n_input = 26
 
         # The number of frames in theinitialize_globals context
@@ -177,6 +182,9 @@ class TfDeepSpeech(BaseModel):
         c.n_hidden_2 = c.n_hidden
 
         c.n_hidden_5 = c.n_hidden
+
+        # Units in the sixth layer = number of characters in the target language plus one
+        c.n_hidden_6 = c.alphabet.size() + 1  # +1 for CTC blank label
 
         # LSTM cell state dimension
         c.n_cell_dim = c.n_hidden
@@ -260,16 +268,8 @@ class TfDeepSpeech(BaseModel):
         dataset = dataset_utils.load_dataset_of_audio_files(dataset_uri, dataset_dir)
         df = dataset.df
 
-        # Config Alphabet
-
-        # See the comment in alphabet.txt file for a description of the format
-        alphabet_path = os.path.join(dataset._dataset_dir.name, 'alphabet.txt')
-        Config.alphabet = Alphabet(alphabet_path)
-        # Units in the sixth layer = number of characters in the target language plus one
-        Config.n_hidden_6 = Config.alphabet.size() + 1  # +1 for CTC blank label
-
         # Convert to character index arrays
-        df['transcript'] = df['transcript'].apply(partial(text_to_char_array,alphabet=Config.alphabet))
+        df['transcript'] = df['transcript'].apply(partial(text_to_char_array, alphabet=Config.alphabet))
 
         num_gpus = len(Config.available_devices)
 

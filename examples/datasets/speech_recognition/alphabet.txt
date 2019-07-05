@@ -1,7 +1,5 @@
 # List here the alphabets you want to use in your speech recognition model
 # Make sure your voice corpus transcript only contain the following allowed alphabets
-# Make sure you include this file into your .zip
-# Make sure you use the same alphabet.txt file for both training and testing datasets
 #
 #
 # Each line in this file represents the Unicode codepoint (UTF-8 encoded)
