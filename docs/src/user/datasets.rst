@@ -83,3 +83,29 @@ An example of ``corpus.tsv`` for POS tagging follows:
     presidents  8   
     .           4
     \n          0
+
+
+.. _`dataset-type:TABULAR`:
+
+TABULAR
+--------------------------------------------------------------------
+
+The dataset file must be of the ``.zip`` archive format with a ``table_meta.txt`` and the tabular dataset of the ``.csv`` format at the root of the directory.
+
+The ``table_meta.txt`` should be of a `.TXT <https://en.wikipedia.org/wiki/Text_file?oldformat=true>`_
+format which should be a dictionary with two keys ``target`` and ``features``.
+
+For each key,
+
+    ``target`` should be a string that contains the column to be predicted of the tabular dataset.
+
+    ``features`` should be a string list that contains the columns to be used as features of the tabular dataset.
+
+An example of ``table_meta.txt`` follows:
+
+.. code-block:: json
+
+    {
+     "target": "col_1_name", 
+     "features": ["col_2_name", "col_3_name", ... "col_n_name"]
+    }

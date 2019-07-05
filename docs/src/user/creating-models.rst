@@ -116,3 +116,47 @@ Example: Testing Models for ``POS_TAGGING``
 
         python examples/models/pos_tagging/BigramHmm.py
         python examples/models/pos_tagging/PyBiLstm.py
+
+
+Example: Testing Models for ``TABULAR_CLASSIFICATION``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1. Download & pre-process the titanic dataset to the dataset format specified by ``TABULAR``:
+
+    .. code-block:: shell
+
+        python examples/datasets/tabular_classification/load_titanic_dataset.py
+
+2. Install the Python dependencies for the sample models:
+
+    .. code-block:: shell
+
+        pip install xgboost==0.90
+
+3. Test the sample models in ``./examples/models/tabular_classification`` with :meth:`rafiki.model.test_model_class`:
+
+    .. code-block:: shell
+
+        python examples/models/tabular_classification/XgbClf.py
+
+
+Example: Testing Models for ``TABULAR_REGRESSION``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1. Download & pre-process the bodyfat dataset to the dataset format specified by ``TABULAR``:
+
+    .. code-block:: shell
+
+        python examples/datasets/tabular_regression/load_bodyfat_dataset.py
+
+2. Install the Python dependencies for the sample models:
+
+    .. code-block:: shell
+
+        pip install xgboost==0.90
+
+3. Test the sample models in ``./examples/models/tabular_regression`` with :meth:`rafiki.model.test_model_class`:
+
+    .. code-block:: shell
+
+        python examples/models/tabular_regression/XgbReg.py

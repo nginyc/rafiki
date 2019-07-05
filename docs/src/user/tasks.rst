@@ -61,3 +61,43 @@ Prediction Format
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A list of integers representing the list of predicted tag for each token, in sequence, for the sentence.
+
+TABULAR_CLASSIFICATION
+--------------------------------------------------------------------
+
+Dataset Type
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:ref:`dataset-type:TABULAR`
+
+The train & test dataset should have the same number of features columns ``N`` and all features columns and the target column in the train dataset should be in the test dataset.
+
+Query Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An ``N`` ordered dictionary representing the features names and values of the query column. 
+
+Prediction Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A size-``k`` list of floats, representing the probabilities of each class from ``0`` to ``k - 1``.
+
+TABULAR_REGRESSION
+--------------------------------------------------------------------
+
+Dataset Type
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:ref:`dataset-type:TABULAR`
+
+Same as ``TABULAR_CLASSIFICATION``.
+
+Query Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An ``N`` ordered dictionary representing the features names and values of the query column. 
+
+Prediction Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A float, representing the value of the target.
