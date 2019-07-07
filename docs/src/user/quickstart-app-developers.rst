@@ -3,12 +3,17 @@
 Quick Start (Application Developers)
 ====================================================================
 
-As an App Developer, you can manage train & inference jobs on Rafiki.
+As an *App Developer*, you can manage datasets, train jobs & inference jobs on Rafiki. This guide walks through a *full* train-inference flow:
 
-To learn more about what you can do on Rafiki, explore the methods of :class:`rafiki.client.Client`.
+    1. Authenticating on Rafiki
+    2. Uploading datasets
+    3. Creating a model training job
+    4. Creating a model serving job after the model training job completes
+    
+This guide assumes that you have access to a running instance of *Rafiki Admin* at ``<rafiki_host>:<admin_port>``
+and *Rafiki Web Admin* at ``<rafiki_host>:<web_admin_port>``, and there have been models added to Rafiki under the task of `IMAGE_CLASSIFICATION`.
 
-We assume that you have access to a running instance of *Rafiki Admin* at ``<rafiki_host>:<admin_port>``
-and *Rafiki Admin Web* at ``<rafiki_host>:<admin_web_port>``.
+To learn more about what else you can do on Rafiki, explore the methods of :class:`rafiki.client.Client`.
 
 Installing the client
 --------------------------------------------------------------------
@@ -33,6 +38,12 @@ Listing available models by task
 --------------------------------------------------------------------
 
 .. include:: ./client-list-models.include.rst
+
+
+Creating datasets
+--------------------------------------------------------------------
+
+.. include:: ./client-create-datasets.include.rst
 
 
 Creating a train job
@@ -66,9 +77,9 @@ Example:
         'datetime_stopped': 'Mon, 17 Dec 2018 07:11:11 GMT',
         'id': 'ec4db479-b9b2-4289-8086-52794ffc71c8',
         'status': 'STOPPED',
-        'task': 'IMAGE_CLASSIFICATION',
-        'test_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true',
-        'train_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true',
+        'task': 'IMAGE_CLASSIFICATION'
+        'val_dataset_id': '7e9a2f8a-c61d-4365-ae4a-601e90892b88',
+        'train_dataset_id': 'ecf87d2f-6893-4e4b-8ed9-1d9454af9763',
         'workers': [{'datetime_started': 'Mon, 17 Dec 2018 07:08:05 GMT',
                     'datetime_stopped': 'Mon, 17 Dec 2018 07:11:14 GMT',
                     'model_name': 'SkDt',

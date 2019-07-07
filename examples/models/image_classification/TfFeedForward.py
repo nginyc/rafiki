@@ -35,7 +35,7 @@ class TfFeedForward(BaseModel):
         config.gpu_options.allow_growth = True
         self._sess = tf.Session(graph=self._graph, config=config)
         
-    def train(self, dataset_uri):
+    def train(self, dataset_path):
         im_sz = self._knobs.get('image_size')
         bs = self._knobs.get('batch_size')
         ep = self._knobs.get('epochs')
@@ -46,7 +46,7 @@ class TfFeedForward(BaseModel):
         logger.define_loss_plot()
         logger.define_plot('Loss Over Time', ['loss'])
 
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[im_sz, im_sz])
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[im_sz, im_sz])
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
@@ -71,10 +71,10 @@ class TfFeedForward(BaseModel):
                 logger.log('Train loss: {}'.format(loss))
                 logger.log('Train accuracy: {}'.format(accuracy))
 
-    def evaluate(self, dataset_uri):
+    def evaluate(self, dataset_path):
         im_sz = self._knobs.get('image_size')
 
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[im_sz, im_sz])
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[im_sz, im_sz])
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = np.asarray(images)
         classes = np.asarray(classes)
@@ -172,8 +172,8 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.TENSORFLOW: '1.12.0'
         },
-        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
+        train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
+        val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

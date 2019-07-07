@@ -57,23 +57,23 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def train(self, dataset_uri):
+    def train(self, dataset_path):
         '''
         Train this model instance with given dataset and initialized knob values.
 
-        :param str dataset_uri: URI of the train dataset in a format specified by the task
+        :param str dataset_path: File path of the train dataset file in the local file system, in a format specified by the task
         '''
         raise NotImplementedError()
 
     # TODO: Allow configuration of other metrics
     @abc.abstractmethod
-    def evaluate(self, dataset_uri):
+    def evaluate(self, dataset_path):
         '''
         Evaluate this model instance with given dataset after training. 
         This will be called only when model is *trained*.
 
-        :param str dataset_uri: URI of the test dataset in a format specified by the task
-        :returns: Accuracy as float from 0-1 on the test dataset
+        :param str dataset_path: File path of the validation dataset file in the local file system, in a format specified by the task
+        :returns: Accuracy as float from 0-1 on the validation dataset
         :rtype: float
         '''
         raise NotImplementedError()
@@ -127,7 +127,7 @@ class BaseModel(abc.ABC):
         pass
 
 def test_model_class(model_file_path, model_class, task, dependencies, \
-                    train_dataset_uri, test_dataset_uri, \
+                    train_dataset_path, val_dataset_path, \
                     queries=[], knobs=None):
     '''
     Tests whether a model class is properly defined by running a full train-inference flow.
@@ -139,8 +139,8 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
     :param str task: Task type of model
     :param dependencies: Model's dependencies
     :type dependencies: dict[str, str]
-    :param str train_dataset_uri: URI of the train dataset for testing the training of model
-    :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model
+    :param str train_dataset_path: File path of the train dataset for training of model
+    :param str val_dataset_path: File path of the validation dataset for evaluation of the resultant trained model
     :param list[any] queries: List of queries for testing predictions with the trained model
     :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used
     :type knobs: dict[str, any]
@@ -169,8 +169,8 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         _check_model_inst(model_inst)
 
         _print_header('Checking training & evaluation of model...')
-        model_inst.train(train_dataset_uri)
-        score = model_inst.evaluate(test_dataset_uri)
+        model_inst.train(train_dataset_path)
+        score = model_inst.evaluate(val_dataset_path)
 
         if not isinstance(score, float):
             raise Exception('`evaluate()` should return a float!')

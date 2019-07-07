@@ -15,7 +15,7 @@ bash ./scripts/load_db.sh || exit 1
 bash ./scripts/start_cache.sh || exit 1
 bash ./scripts/start_admin.sh || exit 1
 bash ./scripts/start_advisor.sh || exit 1
-bash ./scripts/start_admin_web.sh || exit 1
+bash ./scripts/start_web_admin.sh || exit 1
 
 title "Installing any dependencies..."
 pip install -r ./rafiki/requirements.txt

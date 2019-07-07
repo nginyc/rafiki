@@ -13,8 +13,7 @@ superadmin_email = SUPERADMIN_EMAIL
 superadmin_password = os.environ['SUPERADMIN_PASSWORD']
 
 # Details for mocks
-DATASET_TRAIN_FILE_PATH = 'test/data/dataset_train.csv'
-DATASET_VAL_FILE_PATH = 'test/data/dataset_val.csv'
+DATASET_FILE_PATH = 'test/data/dataset.csv'
 MODEL_FILE_PATH = 'test/data/Model.py'
 MODEL_CLASS = 'Model'
 
@@ -62,6 +61,18 @@ def make_user(user_type, email=None, password=None):
     client.login(email, password)
     return client
     
+
+####################################
+# Datasets
+####################################
+
+def make_dataset(client: Client, task=None):
+    name = gen()
+    task = task or gen()
+    file_path = DATASET_FILE_PATH
+    dataset = client.create_dataset(name, task, file_path)
+    dataset_id = dataset['id']
+    return dataset_id
 
 ####################################
 # Models

@@ -3,6 +3,8 @@ from flask_cors import CORS
 import os
 import traceback
 import json
+import tempfile
+import requests
 from datetime import datetime
 
 from rafiki.constants import UserType
@@ -87,6 +89,43 @@ def generate_user_token():
     })
 
 ####################################
+# Datasets
+####################################
+
+@app.route('/datasets', methods=['POST'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def create_dataset(auth):
+    admin = get_admin()
+    params = get_request_params()
+
+    # Temporarily store incoming dataset data as file
+    with tempfile.NamedTemporaryFile() as f:
+        if 'dataset' in request.files:
+            # Save dataset data in request body
+            file_storage = request.files['dataset']
+            file_storage.save(f.name)
+            file_storage.close()
+        else:
+            # Download dataset at URL and save it
+            assert 'dataset_url' in params
+            r = requests.get(params['dataset_url'], allow_redirects=True)
+            f.write(r.content)
+            del params['dataset_url']
+
+        params['data_file_path'] = f.name
+
+        with admin:
+            return jsonify(admin.create_dataset(auth['user_id'], **params))
+
+@app.route('/datasets', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def get_datasets(auth):
+    admin = get_admin()
+    params = get_request_params()
+    with admin:
+        return jsonify(admin.get_datasets(auth['user_id'], **params))
+
+####################################
 # Train Jobs
 ####################################
 
@@ -97,6 +136,15 @@ def create_train_job(auth):
     params = get_request_params()
 
     with admin:
+        # Ensure that datasets are owned by current user
+        dataset_attrs = ['train_dataset_id', 'val_dataset_id']
+        for attr in dataset_attrs:
+            if attr in params:
+                dataset_id = params[attr]
+                dataset = admin.get_dataset(dataset_id)
+                if auth['user_id'] != dataset['owner_id']:
+                    raise UnauthorizedError('You have no access to dataset of ID "{}"'.format(dataset_id))
+        
         return jsonify(admin.create_train_job(auth['user_id'], **params))
 
 @app.route('/train_jobs', methods=['GET'])

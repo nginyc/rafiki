@@ -1,0 +1,93 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`App renders login page 1`] = `
+<div>
+  <main
+    class="LoginPage-main-1"
+  >
+    <div
+      class="MuiPaper-root-4 MuiPaper-elevation2-8 MuiPaper-rounded-5 LoginPage-loginPaper-2"
+    >
+      <h3
+        class="MuiTypography-root-31 MuiTypography-h3-45"
+      >
+        Login
+      </h3>
+      <form>
+        <div
+          class="MuiFormControl-root-67 MuiFormControl-marginNormal-68 MuiFormControl-fullWidth-70"
+        >
+          <label
+            class="MuiFormLabel-root-82 MuiFormLabel-focused-83 MuiInputLabel-focused-72 MuiFormLabel-required-87 MuiInputLabel-required-75 MuiInputLabel-root-71 MuiInputLabel-formControl-76 MuiInputLabel-animated-79 MuiInputLabel-shrink-78"
+            data-shrink="true"
+            for="email"
+          >
+            Email Address
+            <span
+              class="MuiFormLabel-asterisk-88"
+            >
+               *
+            </span>
+          </label>
+          <div
+            class="MuiInputBase-root-102 MuiInput-root-89 MuiInput-underline-93 MuiInputBase-focused-104 MuiInput-focused-91 MuiInputBase-formControl-103 MuiInput-formControl-90"
+          >
+            <input
+              aria-invalid="false"
+              autocomplete="email"
+              class="MuiInputBase-input-112 MuiInput-input-97"
+              name="email"
+              required=""
+              type="text"
+              value=""
+            />
+          </div>
+        </div>
+        <div
+          class="MuiFormControl-root-67 MuiFormControl-marginNormal-68 MuiFormControl-fullWidth-70"
+        >
+          <label
+            class="MuiFormLabel-root-82 MuiFormLabel-required-87 MuiInputLabel-required-75 MuiInputLabel-root-71 MuiInputLabel-formControl-76 MuiInputLabel-animated-79"
+            data-shrink="false"
+            for="password"
+          >
+            Password
+            <span
+              class="MuiFormLabel-asterisk-88"
+            >
+               *
+            </span>
+          </label>
+          <div
+            class="MuiInputBase-root-102 MuiInput-root-89 MuiInput-underline-93 MuiInputBase-formControl-103 MuiInput-formControl-90"
+          >
+            <input
+              aria-invalid="false"
+              autocomplete="current-password"
+              class="MuiInputBase-input-112 MuiInput-input-97 MuiInputBase-inputType-115 MuiInput-inputType-100"
+              name="password"
+              required=""
+              type="password"
+              value=""
+            />
+          </div>
+        </div>
+        <button
+          class="MuiButtonBase-root-145 MuiButton-root-119 MuiButton-text-121 MuiButton-textPrimary-122 MuiButton-flat-124 MuiButton-flatPrimary-125 MuiButton-fullWidth-144 LoginPage-loginBtn-3"
+          tabindex="0"
+          type="submit"
+        >
+          <span
+            class="MuiButton-label-120"
+          >
+            Login
+          </span>
+          <span
+            class="MuiTouchRipple-root-148"
+          />
+        </button>
+      </form>
+    </div>
+  </main>
+</div>
+`;

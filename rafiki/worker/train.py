@@ -9,6 +9,7 @@ from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.constants import TrainJobStatus, TrialStatus, BudgetType
 from rafiki.model import load_model_class, serialize_knob_config, logger as model_logger
 from rafiki.db import Database
+from rafiki.data_store import DataStore, FileDataStore
 from rafiki.client import Client
 
 logger = logging.getLogger(__name__)
@@ -17,14 +18,14 @@ class InvalidTrainJobException(Exception): pass
 class InvalidModelException(Exception): pass
 class InvalidBudgetTypeException(Exception): pass
 class InvalidWorkerException(Exception): pass
+class InvalidDatasetException(Exception): pass
 
 class TrainWorker(object):
-    def __init__(self, service_id, worker_id, db=None):
-        if db is None: 
-            db = Database()
-            
+    def __init__(self, service_id, worker_id, db=None, data_store=None):
+        self._db = db or Database()
+        data_folder_path = os.path.join(os.environ['WORKDIR_PATH'], os.environ['DATA_DIR_PATH'])
+        self._data_store: DataStore = data_store or FileDataStore(data_folder_path)
         self._service_id = service_id
-        self._db = db
         self._worker_id = worker_id
         self._trial_id = None
         self._sub_train_job_id = None
@@ -43,7 +44,7 @@ class TrainWorker(object):
         while True:
             with self._db:
                 (self._sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
-                    train_job_id, train_dataset_uri, test_dataset_uri) = self._read_worker_info()
+                    train_job_id, train_dataset_path, val_dataset_path) = self._read_worker_info()
 
                 self._get_client().send_event('train_job_worker_started', sub_train_job_id=self._sub_train_job_id)
 
@@ -100,8 +101,8 @@ class TrainWorker(object):
                         trial = self._db.get_trial(self._trial_id)
                         self._db.add_trial_log(trial, log_line, log_lvl)
 
-                (score, params_file_path) = self._train_and_evaluate_model(clazz, knobs, train_dataset_uri, 
-                                                                    test_dataset_uri, handle_log)
+                (score, params_file_path) = self._train_and_evaluate_model(clazz, knobs, train_dataset_path, 
+                                                                    val_dataset_path, handle_log)
                 logger.info('Trial score: {}'.format(score))
                 
                 with self._db:
@@ -144,11 +145,11 @@ class TrainWorker(object):
             logger.error('Error marking trial as terminated:')
             logger.error(traceback.format_exc())
 
+    def _train_and_evaluate_model(self, clazz, knobs, train_dataset_path, \
+                                val_dataset_path, handle_log):
+
         if self._sub_train_job_id is not None:
             self._get_client().send_event('train_job_worker_stopped', sub_train_job_id=self._sub_train_job_id)
-
-    def _train_and_evaluate_model(self, clazz, knobs, train_dataset_uri, \
-                                test_dataset_uri, handle_log):
 
         # Initialize model
         model_inst = clazz(**knobs)
@@ -165,10 +166,10 @@ class TrainWorker(object):
         model_logger.set_logger(py_model_logger)
 
         # Train model
-        model_inst.train(train_dataset_uri)
+        model_inst.train(train_dataset_path)
 
         # Evaluate model
-        score = model_inst.evaluate(test_dataset_uri)
+        score = model_inst.evaluate(val_dataset_path)
 
         # Remove log handlers from loggers for this trial
         root_logger.removeHandler(log_handler)
@@ -239,13 +240,23 @@ class TrainWorker(object):
 
         sub_train_job = self._db.get_sub_train_job(worker.sub_train_job_id)
         train_job = self._db.get_train_job(sub_train_job.train_job_id)
-        model = self._db.get_model(sub_train_job.model_id)
-
-        if model is None:
-            raise InvalidModelException()
 
         if train_job is None or sub_train_job is None:
             raise InvalidTrainJobException()
+
+        model = self._db.get_model(sub_train_job.model_id)
+        if model is None:
+            raise InvalidModelException()
+
+        try:
+            train_dataset = self._db.get_dataset(train_job.train_dataset_id)
+            assert train_dataset is not None
+            val_dataset = self._db.get_dataset(train_job.val_dataset_id)
+            assert val_dataset is not None
+            train_dataset_path = self._data_store.load(train_dataset.store_dataset_id)
+            val_dataset_path = self._data_store.load(val_dataset.store_dataset_id)
+        except Exception as e:
+            raise InvalidDatasetException(e)
 
         return (
             sub_train_job.id,
@@ -254,8 +265,8 @@ class TrainWorker(object):
             model.model_file_bytes,
             model.model_class,
             train_job.id,
-            train_job.train_dataset_uri,
-            train_job.test_dataset_uri
+            train_dataset_path,
+            val_dataset_path
         )
 
     def _get_client(self):
