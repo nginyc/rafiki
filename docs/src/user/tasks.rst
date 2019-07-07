@@ -75,7 +75,7 @@ The train & test dataset should have the same number of features columns ``N`` a
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-An ``N`` ordered dictionary representing the features names and values of the query column. 
+An ``N x 2`` 2D list representing the features names and their index-value dictionaries (the index could be any arbitrary value and all indexes should be the same; it is used as a place holder to keep the data format consistant).
 
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -95,7 +95,7 @@ Same as ``TABULAR_CLASSIFICATION``.
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-An ``N`` ordered dictionary representing the features names and values of the query column. 
+Same as ``TABULAR_CLASSIFICATION``. 
 
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -34,7 +34,7 @@ class XgbClf(BaseModel):
     def __init__(self, **knobs):
         self.__dict__.update(knobs)
        
-    def train(self, dataset_path, features=None, target=None):
+    def train(self, dataset_path):
         dataset = dataset_utils.load_dataset_of_tabular(dataset_path)
         data = dataset.data
         table_meta = dataset.table_meta
@@ -69,7 +69,7 @@ class XgbClf(BaseModel):
         score = self._clf.score(X, y)
         logger.log('Train accuracy: {}'.format(score))
 
-    def evaluate(self, dataset_path, features=None, target=None):
+    def evaluate(self, dataset_path):
         dataset = dataset_utils.load_dataset_of_tabular(dataset_path)
         data = dataset.data
         table_meta = dataset.table_meta
@@ -97,8 +97,14 @@ class XgbClf(BaseModel):
         return accuracy
 
     def predict(self, queries):
-        queries = [pd.DataFrame.from_dict(query) for query in queries]
-        probs = [self._clf.predict_proba(self._features_mapping(query)).tolist()[0] for query in queries]
+        decoded_queries = []
+        for query in queries:
+            query = [tuple(feature) for feature in query]
+            decoded_queries.append(query)
+        decoded_queries = [pd.DataFrame.from_dict(OrderedDict(decoded_query)) \
+            for decoded_query in decoded_queries]
+        probs = [self._clf.predict_proba(self._features_mapping(decoded_query)).tolist()[0] \
+            for decoded_query in decoded_queries]
         return probs
 
     def destroy(self):
@@ -185,8 +191,8 @@ if __name__ == '__main__':
         train_dataset_uri=os.path.join(root, 'data/titanic_train.zip'),
         test_dataset_uri=os.path.join(root, 'data/titanic_test.zip'),
         queries=[
-            OrderedDict([('Pclass', {340: 1}),
-             ('Sex', {340: 'female'}),
-             ('Age', {340: 2.0})])
+            [['Pclass', {'340': 1}],
+            ['Sex', {'340': 'female'}],
+            ['Age', {'340': 2.0}]]
         ],
     )
