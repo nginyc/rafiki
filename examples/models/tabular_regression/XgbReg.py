@@ -190,6 +190,6 @@ if __name__ == '__main__':
              ['forearm', {241: 30.1}],
              ['wrist', {241: 19.4}]]
         ],
-        train_dataset_uri=os.path.join(root, 'data/bodyfat_train.zip'),
-        test_dataset_uri=os.path.join(root, 'data/bodyfat_test.zip')
+        train_dataset_path=os.path.join(root, 'data/bodyfat_train.zip'),
+        val_dataset_path=os.path.join(root, 'data/bodyfat_test.zip')
     )

@@ -188,8 +188,8 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.XGBOOST: '0.90'
         },
-        train_dataset_uri=os.path.join(root, 'data/titanic_train.zip'),
-        test_dataset_uri=os.path.join(root, 'data/titanic_test.zip'),
+        train_dataset_path=os.path.join(root, 'data/titanic_train.zip'),
+        val_dataset_path=os.path.join(root, 'data/titanic_test.zip'),
         queries=[
             [['Pclass', {'340': 1}],
             ['Sex', {'340': 'female'}],
