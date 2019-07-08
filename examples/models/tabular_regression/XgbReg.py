@@ -87,6 +87,8 @@ class XgbReg(BaseModel):
         clf_base64 = base64.b64encode(clf_bytes).decode('utf-8')
         params['clf_base64'] = clf_base64
         params['encoding_dict'] = self._encoding_dict
+        params['features'] = pickle.dumps(self._features)
+        params['target'] = self._target
 
         return params
 
@@ -98,6 +100,8 @@ class XgbReg(BaseModel):
         clf_bytes = base64.b64decode(clf_base64.encode('utf-8'))
         self._clf = pickle.loads(clf_bytes)
         self._encoding_dict = params['encoding_dict']
+        self._features = pickle.loads(params['features'])
+        self._target = params['target']
 
     def _extract_xy(self, data):
         features = self._features
