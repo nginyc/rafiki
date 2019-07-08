@@ -11,8 +11,7 @@ from sklearn.model_selection import train_test_split
 def load(dataset_url, out_train_dataset_path, out_test_dataset_path, out_meta_txt_path, \
         target=None, features=None):
     '''
-        Loads and converts an tabular dataset of titanic to the 
-        DatasetType `TABULAR`.
+        Loads and converts a CSV file to the DatasetType `TABULAR`.
 
         :param str dataset_url: URL to download the dataset CSV file
         :param str out_train_dataset_path: Path to save the output train dataset file
@@ -62,15 +61,3 @@ def _write_dataset(table_meta, data, out_dataset_path):
         # Zip and export folder as dataset
         out_path = shutil.make_archive(out_dataset_path, 'zip', d)
         os.rename(out_path, out_dataset_path) # Remove additional trailing `.zip`
-
-if __name__ == '__main__':
-    # Loads the titanic dataset as `TABULAR` DatasetType
-    root = str(Path(os.path.abspath(__file__)).parents[3])
-    load(
-        dataset_url = 'https://web.stanford.edu/class/archive/cs/cs109/cs109.1166/stuff/titanic.csv',
-        out_train_dataset_path=os.path.join(root, 'data/titanic_train.zip'),
-        out_test_dataset_path=os.path.join(root, 'data/titanic_test.zip'),
-        out_meta_txt_path=os.path.join(root, 'data/titanic_meta.txt'),
-        features=['Pclass','Sex','Age'],
-        target='Survived'
-    )

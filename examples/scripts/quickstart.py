@@ -12,7 +12,7 @@ from rafiki.config import SUPERADMIN_EMAIL
 from rafiki.constants import TaskType, UserType, BudgetType, TrainJobStatus, \
                                 InferenceJobStatus, ModelDependency, ModelAccessRight
 
-from examples.datasets.image_classification.load_mnist_format import load_fashion_mnist
+from examples.datasets.image_files.load_fashion_mnist import load_fashion_mnist
 
 # Generates a random ID
 def gen_id(length=16):

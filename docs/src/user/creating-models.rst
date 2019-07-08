@@ -78,7 +78,7 @@ Example: Testing Models for ``IMAGE_CLASSIFICATION``
 
     .. code-block:: shell
 
-        python examples/datasets/image_classification/load_mnist_format.py
+        python examples/datasets/image_files/load_fashion_mnist.py
 
 2. Install the Python dependencies for the sample models:
 
@@ -102,7 +102,7 @@ Example: Testing Models for ``POS_TAGGING``
 
     .. code-block:: shell
 
-        python examples/datasets/pos_tagging/load_ptb_format.py
+        python examples/datasets/corpus/load_sample_ptb.py
 
 2. Install the Python dependencies for the sample models:
 
@@ -125,7 +125,7 @@ Example: Testing Models for ``TABULAR_CLASSIFICATION``
 
     .. code-block:: shell
 
-        python examples/datasets/tabular_classification/load_titanic_dataset.py
+        python examples/datasets/tabular/load_titanic.py
 
 2. Install the Python dependencies for the sample models:
 
@@ -147,7 +147,7 @@ Example: Testing Models for ``TABULAR_REGRESSION``
 
     .. code-block:: shell
 
-        python examples/datasets/tabular_regression/load_bodyfat_dataset.py
+        python examples/datasets/tabular/load_bodyfat.py
 
 2. Install the Python dependencies for the sample models:
 
