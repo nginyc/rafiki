@@ -279,14 +279,22 @@ class AudioFilesDataset(ModelDataset):
     '''
     Class that helps loading of dataset with type `AUDIO_FILES`
 
+    ``dataset_path`` is the URI to the dataset.
+    ``dataset_dir`` is the directory to store the extracted the Audio Files.
     '''
 
     def __init__(self, dataset_path, dataset_dir):
         super().__init__(dataset_path)
         self._dataset_dir = dataset_dir
-        (self.size, self.df) = self._load(self.path)
+        self.df = self._load(self.path)
 
     def _load(self, dataset_path):
+        '''
+            Loading the dataset into a pandas dataframe. Called in the class __init__ method.
+
+            :param str dataset_path: URI to the dataset
+            :returns: pandas dataframe with three columns: ``wav_filename``, ``wav_filesize`` and ``transcript``
+        '''
         dataset_dir = self._dataset_dir
 
         dataset_zipfile = zipfile.ZipFile(dataset_path, 'r')
@@ -298,10 +306,7 @@ class AudioFilesDataset(ModelDataset):
 
 
         df = pandas.read_csv(audios_csv_path, encoding='utf-8', na_filter=False)
-        df.sort_values(by='wav_filesize', inplace=True)
 
-        num_samples = df['wav_filename'].count()
-
-        return (num_samples, df)
+        return df
 
 dataset_utils = ModelDatasetUtils()

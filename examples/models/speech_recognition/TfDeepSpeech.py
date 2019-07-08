@@ -268,6 +268,10 @@ class TfDeepSpeech(BaseModel):
         dataset = dataset_utils.load_dataset_of_audio_files(dataset_uri, dataset_dir)
         df = dataset.df
 
+        # Sort the samples by filesize (representative of lengths) so that only similarly-sized utterances are
+        # combined into minibatches. This is done for the ease of data parallelism.
+        df.sort_values(by='wav_filesize', inplace=True)
+
         # Convert to character index arrays
         df['transcript'] = df['transcript'].apply(partial(text_to_char_array, alphabet=Config.alphabet))
 
