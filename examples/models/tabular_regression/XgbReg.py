@@ -10,11 +10,8 @@ from pathlib import Path
 import sys
 import os
 
-root = str(Path(os.path.abspath(__file__)).parents[3])
-sys.path.insert(0, root)
-
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, FloatKnob, dataset_utils, logger
+                        IntegerKnob, FloatKnob, logger
 from rafiki.constants import TaskType, ModelDependency
 
 class XgbReg(BaseModel):
@@ -37,26 +34,17 @@ class XgbReg(BaseModel):
         self._clf = self._build_classifier(self.n_estimators, self.min_child_weight, \
             self.max_depth, self.gamma, self.subsample, self.colsample_bytree)
        
-    def train(self, dataset_path):
-        dataset = dataset_utils.load_dataset_of_tabular(dataset_path)
-        data = dataset.data
-        table_meta = dataset.table_meta
+    def train(self, dataset_path, features=None, target=None):
+        # Record features & target
+        self._features = features
+        self._target = target
+        
+        # Load CSV file as pandas dataframe
+        csv_path = dataset_path
+        data = pd.read_csv(csv_path)
 
-        if table_meta != {}:
-            features = table_meta['features']
-            target = table_meta['target']
-        else:
-            features = None
-            target = None
-
-        if features is None:
-            X = data.iloc[:,:-1]
-        else:
-            X = data[features]
-        if target is None:
-            y = data.iloc[:,-1]
-        else:
-            y = data[target]
+        # Extract X & y from dataframe
+        (X, y) = self._extract_xy(data)
 
         # Encode categorical features
         X = self._encoding_categorical_type(X)
@@ -69,25 +57,12 @@ class XgbReg(BaseModel):
         logger.log('Train RMSE: {}'.format(rmse))
 
     def evaluate(self, dataset_path):
-        dataset = dataset_utils.load_dataset_of_tabular(dataset_path)
-        data = dataset.data
-        table_meta = dataset.table_meta
+        # Load CSV file as pandas dataframe
+        csv_path = dataset_path
+        data = pd.read_csv(csv_path)
 
-        if table_meta != {}:
-            features = table_meta['features']
-            target = table_meta['target']
-        else:
-            features = None
-            target = None
-
-        if features is None:
-            X = data.iloc[:,:-1]
-        else:
-            X = data[features]
-        if target  is None:
-            y = data.iloc[:,-1]
-        else:
-            y = data[target]
+        # Extract X & y from dataframe
+        (X, y) = self._extract_xy(data)
 
         # Encode categorical features
         X = self._encoding_categorical_type(X)
@@ -124,6 +99,22 @@ class XgbReg(BaseModel):
         self._clf = pickle.loads(clf_bytes)
         self._encoding_dict = params['encoding_dict']
 
+    def _extract_xy(self, data):
+        features = self._features
+        target = self._target
+
+        if features is None:
+            X = data.iloc[:,:-1]
+        else:
+            X = data[features]
+            
+        if target is None:
+            y = data.iloc[:,-1]
+        else:
+            y = data[target]
+
+        return (X, y)
+        
     def _encoding_categorical_type(self, cols):
         # Apply label encoding for those categorical columns
         cat_cols = list(filter(lambda x: cols[x].dtype == 'object', cols.columns))
@@ -168,6 +159,25 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.XGBOOST: '0.90'
         },
+        train_dataset_path='data/bodyfat_train.csv',
+        val_dataset_path='data/bodyfat_val.csv',
+        train_args={
+            'features': ['density',
+                        'age',
+                        'weight',
+                        'height',
+                        'neck',
+                        'chest',
+                        'abdomen',
+                        'hip',
+                        'thigh',
+                        'knee',
+                        'ankle',
+                        'biceps',
+                        'forearm',
+                        'wrist'],
+            'target': 'bodyfat'
+        },
         queries=[
              {'density': 1.0207,
              'age': 65,
@@ -183,7 +193,5 @@ if __name__ == '__main__':
              'biceps': 34.9,
              'forearm': 30.1,
              'wrist': 19.4}
-        ],
-        train_dataset_path=os.path.join(root, 'data/bodyfat_train.zip'),
-        val_dataset_path=os.path.join(root, 'data/bodyfat_test.zip')
+        ]
     )

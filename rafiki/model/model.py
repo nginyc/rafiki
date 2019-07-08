@@ -57,9 +57,10 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def train(self, dataset_path):
+    def train(self, dataset_path, **train_args):
         '''
         Train this model instance with given dataset and initialized knob values.
+        Additional keyword arguments could be passed depending on the task's specification.
 
         :param str dataset_path: File path of the train dataset file in the local file system, in a format specified by the task
         '''
@@ -128,7 +129,7 @@ class BaseModel(abc.ABC):
 
 def test_model_class(model_file_path, model_class, task, dependencies, \
                     train_dataset_path, val_dataset_path, \
-                    queries=[], knobs=None):
+                    queries=None, train_args=None, knobs=None):
     '''
     Tests whether a model class is properly defined by running a full train-inference flow.
     The model instance's methods will be called in an order similar to that in Rafiki.
@@ -141,6 +142,7 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
     :type dependencies: dict[str, str]
     :param str train_dataset_path: File path of the train dataset for training of model
     :param str val_dataset_path: File path of the validation dataset for evaluation of the resultant trained model
+    :param dict[str, any] train_args: Additional arguments to pass to models during training, if any
     :param list[any] queries: List of queries for testing predictions with the trained model
     :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used
     :type knobs: dict[str, any]
@@ -169,7 +171,7 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         _check_model_inst(model_inst)
 
         _print_header('Checking training & evaluation of model...')
-        model_inst.train(train_dataset_path)
+        model_inst.train(train_dataset_path, **(train_args or {}))
         score = model_inst.evaluate(val_dataset_path)
 
         if not isinstance(score, float):
@@ -195,7 +197,7 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         model_inst = py_model_class(**knobs)
         model_inst.load_parameters(parameters)
 
-        if queries != []:
+        if queries is not None:
             _print_header('Checking predictions with model...')
             print('Using queries: {}'.format(queries))
             predictions = model_inst.predict(queries)

@@ -8,11 +8,8 @@ from pathlib import Path
 import sys
 import os
 
-root = str(Path(os.path.abspath(__file__)).parents[3])
-sys.path.insert(0, root)
-
 from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, FloatKnob, dataset_utils, logger
+                        IntegerKnob, FloatKnob, logger
 from rafiki.constants import TaskType, ModelDependency
 
 class XgbClf(BaseModel):
@@ -33,27 +30,18 @@ class XgbClf(BaseModel):
     def __init__(self, **knobs):
         self.__dict__.update(knobs)
        
-    def train(self, dataset_path):
-        dataset = dataset_utils.load_dataset_of_tabular(dataset_path)
-        data = dataset.data
-        table_meta = dataset.table_meta
+    def train(self, dataset_path, features=None, target=None):
+        # Record features & target
+        self._features = features
+        self._target = target
+        
+        # Load CSV file as pandas dataframe
+        csv_path = dataset_path
+        data = pd.read_csv(csv_path)
 
-        if table_meta != {}:
-            features = table_meta['features']
-            target = table_meta['target']
-        else:
-            features = None
-            target = None
-
-        if features is None:
-            X = data.iloc[:,:-1]
-        else:
-            X = data[features]
-        if target is None:
-            y = data.iloc[:,-1]
-        else:
-            y = data[target]
-
+        # Extract X & y from dataframe
+        (X, y) = self._extract_xy(data)
+        
         # Encode categorical features
         X = self._encoding_categorical_type(X)
 
@@ -69,25 +57,12 @@ class XgbClf(BaseModel):
         logger.log('Train accuracy: {}'.format(score))
 
     def evaluate(self, dataset_path):
-        dataset = dataset_utils.load_dataset_of_tabular(dataset_path)
-        data = dataset.data
-        table_meta = dataset.table_meta
+        # Load CSV file as pandas dataframe
+        csv_path = dataset_path
+        data = pd.read_csv(csv_path)
 
-        if table_meta != {}:
-            features = table_meta['features']
-            target = table_meta['target']
-        else:
-            features = None
-            target = None
-
-        if features is None:
-            X = data.iloc[:,:-1]
-        else:
-            X = data[features]
-        if target  is None:
-            y = data.iloc[:,-1]
-        else:
-            y = data[target]
+        # Extract X & y from dataframe
+        (X, y) = self._extract_xy(data)
 
         # Encode categorical features
         X = self._encoding_categorical_type(X)
@@ -122,6 +97,22 @@ class XgbClf(BaseModel):
         clf_bytes = base64.b64decode(clf_base64.encode('utf-8'))
         self._clf = pickle.loads(clf_bytes)
         self._encoding_dict = params['encoding_dict']
+
+    def _extract_xy(self, data):
+        features = self._features
+        target = self._target
+
+        if features is None:
+            X = data.iloc[:,:-1]
+        else:
+            X = data[features]
+            
+        if target is None:
+            y = data.iloc[:,-1]
+        else:
+            y = data[target]
+
+        return (X, y)
 
     def _encoding_categorical_type(self, cols):
         # Apply label encoding for those categorical columns
@@ -181,9 +172,13 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.XGBOOST: '0.90'
         },
-        train_dataset_path=os.path.join(root, 'data/titanic_train.zip'),
-        val_dataset_path=os.path.join(root, 'data/titanic_test.zip'),
+        train_dataset_path='data/titanic_train.csv',
+        val_dataset_path='data/titanic_val.csv',
+        train_args={
+            'features': ['Pclass','Sex','Age'],
+            'target':'Survived'
+        },
         queries=[
             { 'Pclass': 1, 'Sex': 'female', 'Age': 2.0 }
-        ],
+        ]
     )

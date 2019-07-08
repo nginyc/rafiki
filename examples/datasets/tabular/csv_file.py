@@ -7,57 +7,24 @@ import os
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 
-
-def load(dataset_url, out_train_dataset_path, out_test_dataset_path, out_meta_txt_path, \
-        target=None, features=None):
+def load(dataset_url, out_train_dataset_path, out_val_dataset_path):
     '''
-        Loads and converts a CSV file to the DatasetType `TABULAR`.
+        Splits a standard CSV file into train & validation datasets, as per the DatasetType `TABULAR`.
 
         :param str dataset_url: URL to download the dataset CSV file
-        :param str out_train_dataset_path: Path to save the output train dataset file
-        :param str out_test_dataset_path: Path to save the output test dataset file
-        :param str out_meta_csv_path: Path to save the output dataset metadata .TXT file
-        :param str target: The name of the column to be predicted of the dataset
-        :param List[str] features: The list of the names of the columns used as the features 
+        :param str out_train_dataset_path: Path to save the output train dataset (CSV) file
+        :param str out_val_dataset_path: Path to save the output test dataset (CSV) file
     '''
 
-    print('Converting and writing datasets...')
-
-    table_meta = {}
-    if target != None:
-        table_meta['target'] = target
-        table_meta['features'] = features
-
+    print('Loading & splitting dataset...')
     X = pd.read_csv(dataset_url)
     X_train, X_test = train_test_split(X, test_size=0.2, random_state=123)
 
-    _write_meta_txt(table_meta, out_meta_txt_path)   
-    print('Dataset metadata file is saved at {}'.format(out_meta_txt_path))
-
-    _write_dataset(table_meta, X_train, out_train_dataset_path)
+    _write_dataset(X_train, out_train_dataset_path)
     print('Train dataset file is saved at {}'.format(out_train_dataset_path))
 
-    _write_dataset(table_meta, X_test, out_test_dataset_path)
-    print('Test dataset file is saved at {}'.format(out_test_dataset_path))
+    _write_dataset(X_test, out_val_dataset_path)
+    print('Validation dataset file is saved at {}'.format(out_val_dataset_path))
 
-
-def _write_meta_txt(table_meta, out_meta_text_path):
-    '''
-        Writes the txt that contains the meta data of the table (target and features)
-
-        :param dict[str, str] table_meta: A JSON that contains the target and features
-    '''
-    with open(out_meta_text_path, 'w') as outfile:  
-        json.dump(table_meta, outfile)
-
-def _write_dataset(table_meta, data, out_dataset_path):
-    with tempfile.TemporaryDirectory() as d:
-        csv_path = os.path.join(d, out_dataset_path.split('/')[-1].split('.')[0])
-        data.to_csv(csv_path + '.csv', index=False)
-        table_meta_path = os.path.join(d, 'table_meta.json')
-        with open(table_meta_path, 'w') as outfile:  
-            json.dump(table_meta, outfile)
-
-        # Zip and export folder as dataset
-        out_path = shutil.make_archive(out_dataset_path, 'zip', d)
-        os.rename(out_path, out_dataset_path) # Remove additional trailing `.zip`
+def _write_dataset(data, out_dataset_path):
+    data.to_csv(out_dataset_path, index=False)

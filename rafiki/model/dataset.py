@@ -66,16 +66,6 @@ class ModelDatasetUtils():
         dataset_path = self.download_dataset_from_uri(dataset_uri)
         return ImageFilesDataset(dataset_path, image_size)
 
-    def load_dataset_of_tabular(self, dataset_path):
-
-        """
-            Loads dataset for the task ``TabularRegression`` or ``TabularClassification``.
-
-            :param str dataset_path: File path of the dataset
-            :returns: An instance of ``TabularDataset``
-        """
-        return TabularDataset(dataset_path)
-
     def resize_as_images(self, images, image_size):
         '''
             Resize a list of N grayscale images to another size.
@@ -277,45 +267,5 @@ class ImageFilesDataset(ModelDataset):
         num_samples = len(image_paths)
 
         return (num_samples, num_classes, image_paths, image_classes, dataset_dir)
-
-class TabularDataset(ModelDataset):
-    '''
-    Class that helps loading of tabular format dataset``.
-
-    Each dataset example is a csv file which will be loaded in to pandas DataFrame format
-    '''   
-
-    def __init__(self, dataset_path):
-        super().__init__(dataset_path)
-        (self.data, self.table_meta, self.size) = self._load(self.path)
-        
-    def __getitem__(self, index):
-        return self.data.iloc[:1,:]
-
-    def _load(self, dataset_path):
-        # Create temp directory to unzip to
-        dataset_dir = tempfile.TemporaryDirectory()
-
-        dataset_zipfile = zipfile.ZipFile(dataset_path, 'r')
-        dataset_zipfile.extractall(path=dataset_dir.name)
-        dataset_zipfile.close()
-
-        csv_path = os.path.join(dataset_dir.name, dataset_path.split('/')[-1].split('.')[0] + '.csv')
-        table_meta_path = os.path.join(dataset_dir.name, 'table_meta.txt')
-
-        data = pd.read_csv(csv_path)
-        with open(table_meta_path) as json_file:  
-            table_meta = json.load(json_file)
-            features = table_meta['features']
-            target = table_meta['target']
-
-            if bool(features == None) != bool(target == None):
-                # Features and target should be both set to avoid repetitons
-                print("Features and target should be both set")
-                raise InvalidDatasetFormatException()
-
-        size = data.size
-
-        return (data, table_meta, size)
 
 dataset_utils = ModelDatasetUtils()
