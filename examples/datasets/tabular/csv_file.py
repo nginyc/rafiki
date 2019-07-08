@@ -54,7 +54,7 @@ def _write_dataset(table_meta, data, out_dataset_path):
     with tempfile.TemporaryDirectory() as d:
         csv_path = os.path.join(d, out_dataset_path.split('/')[-1].split('.')[0])
         data.to_csv(csv_path + '.csv', index=False)
-        table_meta_path = os.path.join(d, 'table_meta.txt')
+        table_meta_path = os.path.join(d, 'table_meta.json')
         with open(table_meta_path, 'w') as outfile:  
             json.dump(table_meta, outfile)
 

@@ -90,10 +90,9 @@ An example of ``corpus.tsv`` for POS tagging follows:
 TABULAR
 --------------------------------------------------------------------
 
-The dataset file must be of the ``.zip`` archive format with a ``table_meta.txt`` and the tabular dataset of the ``.csv`` format at the root of the directory.
+The dataset file must be of the ``.zip`` archive format with a ``table_meta.json`` and the tabular dataset of the ``.csv`` format at the root of the directory.
 
-The ``table_meta.txt`` should be of a `.TXT <https://en.wikipedia.org/wiki/Text_file?oldformat=true>`_
-format which should be a dictionary with two keys ``target`` and ``features``.
+The ``table_meta.json`` should be of a JSON format that is a dictionary with two keys ``target`` and ``features``.
 
 For each key,
 
@@ -101,7 +100,7 @@ For each key,
 
     ``features`` should be a string list that contains the columns to be used as features of the tabular dataset.
 
-An example of ``table_meta.txt`` follows:
+An example of ``table_meta.json`` follows:
 
 .. code-block:: json
 
