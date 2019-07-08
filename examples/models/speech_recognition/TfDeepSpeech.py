@@ -960,7 +960,7 @@ class TfDeepSpeech(BaseModel):
             report_samples = itertools.islice(samples, FLAGS.report_count)
 
             logger.log('Test on %s - WER: %f, CER: %f, loss: %f' % (dataset, wer, cer, mean_loss))
-            logger.log('Reporting %f samples with highest WER ...' % FLAGS.report_count)
+            logger.log('Reporting %i samples with highest WER ...' % FLAGS.report_count)
             logger.log('-' * 80)
             for sample in report_samples:
                 logger.log('WER: %f, CER: %f, loss: %f' % \
@@ -969,11 +969,12 @@ class TfDeepSpeech(BaseModel):
                 logger.log(' - res: "%s"' % sample.res)
                 logger.log('-' * 80)
 
-            return samples, mean_loss
+            return samples, wer
 
-        samples, mean_loss = run_test(test_init_op, dataset=dataset_uri)
+        samples, wer = run_test(test_init_op, dataset=dataset_uri)
 
-        return float(mean_loss)
+        # Return 1 - Word Error Rate (WER) as the Score
+        return float(1-wer)
 
     def predict(self, queries, n_steps=16):
         # Load from graph_def saved in the class attribute
