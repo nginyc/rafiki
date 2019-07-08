@@ -3,7 +3,6 @@ import pickle
 import base64
 import pandas as pd
 import numpy as np
-from collections import OrderedDict
 
 from pathlib import Path
 import sys
@@ -97,14 +96,8 @@ class XgbClf(BaseModel):
         return accuracy
 
     def predict(self, queries):
-        decoded_queries = []
-        for query in queries:
-            query = [tuple(feature) for feature in query]
-            decoded_queries.append(query)
-        decoded_queries = [pd.DataFrame.from_dict(OrderedDict(decoded_query)) \
-            for decoded_query in decoded_queries]
-        probs = [self._clf.predict_proba(self._features_mapping(decoded_query)).tolist()[0] \
-            for decoded_query in decoded_queries]
+        queries = [pd.DataFrame(query, index=[0]) for query in queries]
+        probs = [self._clf.predict_proba(self._features_mapping(query)).tolist()[0] for query in queries]
         return probs
 
     def destroy(self):
@@ -191,8 +184,6 @@ if __name__ == '__main__':
         train_dataset_path=os.path.join(root, 'data/titanic_train.zip'),
         val_dataset_path=os.path.join(root, 'data/titanic_test.zip'),
         queries=[
-            [['Pclass', {'340': 1}],
-            ['Sex', {'340': 'female'}],
-            ['Age', {'340': 2.0}]]
+            { 'Pclass': 1, 'Sex': 'female', 'Age': 2.0 }
         ],
     )

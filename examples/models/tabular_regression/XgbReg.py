@@ -97,14 +97,8 @@ class XgbReg(BaseModel):
         return rmse
 
     def predict(self, queries):
-        decoded_queries = []
-        for query in queries:
-            query = [tuple(feature) for feature in query]
-            decoded_queries.append(query)
-        decoded_queries = [pd.DataFrame.from_dict(OrderedDict(decoded_query)) \
-            for decoded_query in decoded_queries]
-        results = [self._clf.predict(self._features_mapping(decoded_query)).tolist()[0] \
-            for decoded_query in decoded_queries]
+        queries = [pd.DataFrame(query, index=[0]) for query in queries]
+        results = [self._clf.predict(self._features_mapping(query)).tolist()[0] for query in queries]
         return results
 
     def destroy(self):
@@ -175,20 +169,20 @@ if __name__ == '__main__':
             ModelDependency.XGBOOST: '0.90'
         },
         queries=[
-             [['density', {241: 1.0207}],
-             ['age', {241: 65}],
-             ['weight', {241: 224.5}],
-             ['height', {241: 68.25}],
-             ['neck', {241: 38.8}],
-             ['chest', {241: 119.6}],
-             ['abdomen', {241: 118.0}],
-             ['hip', {241: 114.3}],
-             ['thigh', {241: 61.3}],
-             ['knee', {241: 42.1}],
-             ['ankle', {241: 23.4}],
-             ['biceps', {241: 34.9}],
-             ['forearm', {241: 30.1}],
-             ['wrist', {241: 19.4}]]
+             {'density': 1.0207,
+             'age': 65,
+             'weight': 224.5,
+             'height': 68.25,
+             'neck': 38.8,
+             'chest': 119.6,
+             'abdomen': 118.0,
+             'hip': 114.3,
+             'thigh': 61.3,
+             'knee': 42.1,
+             'ankle': 23.4,
+             'biceps': 34.9,
+             'forearm': 30.1,
+             'wrist': 19.4}
         ],
         train_dataset_path=os.path.join(root, 'data/bodyfat_train.zip'),
         val_dataset_path=os.path.join(root, 'data/bodyfat_test.zip')
