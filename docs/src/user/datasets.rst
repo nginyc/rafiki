@@ -31,7 +31,7 @@ For each row,
 
     ``class`` should be an integer from ``0`` to ``k - 1``, where ``k`` is the number of classes in the classification of images.
 
-An example of ``images.csv`` follows:
+An example of ``images.csv`` for the task ``IMAGE_CLASSIFICATION`` follows:
 
 .. code-block:: text
 
@@ -64,7 +64,7 @@ For each row,
     These tag columns describe the corresponding token as part of the text of the corpus, and depends on the task.
 
 
-An example of ``corpus.tsv`` for POS tagging follows:
+An example of ``corpus.tsv`` for the task ``POS_TAGGING`` follows:
 
 .. code-block:: text
 
@@ -90,21 +90,14 @@ An example of ``corpus.tsv`` for POS tagging follows:
 TABULAR
 --------------------------------------------------------------------
 
-The dataset file must be of the ``.zip`` archive format with a ``table_meta.json`` and the tabular dataset of the ``.csv`` format at the root of the directory.
+The dataset file must be a tabular dataset of the ``.csv`` format with ``N`` columns.
 
-The ``table_meta.json`` should be of a JSON format that is a dictionary with two keys ``target`` and ``features``.
+An example of the dataset for the task ``TABULAR_REGRESSION`` follows:
 
-For each key,
+.. code-block:: text
 
-    ``target`` should be a string that contains the column to be predicted of the tabular dataset.
-
-    ``features`` should be a string list that contains the columns to be used as features of the tabular dataset.
-
-An example of ``table_meta.json`` follows:
-
-.. code-block:: json
-
-    {
-     "target": "col_1_name", 
-     "features": ["col_2_name", "col_3_name", ... "col_n_name"]
-    }
+    density,bodyfat,age,weight,height,neck,chest,abdomen,hip,thigh,knee,ankle,biceps,forearm,wrist
+    1.0708,12.3,23,154.25,67.75,36.2,93.1,85.2,94.5,59,37.3,21.9,32,27.4,17.1
+    1.0853,6.1,22,173.25,72.25,38.5,93.6,83,98.7,58.7,37.3,23.4,30.5,28.9,18.2
+    1.0414,25.3,22,154,66.25,34,95.8,87.9,99.2,59.6,38.9,24,28.8,25.2,16.6
+    ...

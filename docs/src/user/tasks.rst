@@ -38,7 +38,7 @@ A ``W x H`` 2D list representing the grayscale version of the query image.
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A size-``k`` list of floats, representing the probabilities of each class from ``0`` to ``k - 1``.
+A size-``k`` list of floats, representing the probabilities of each class from ``0`` to ``k-1``.
 
 POS_TAGGING
 --------------------------------------------------------------------
@@ -49,7 +49,7 @@ Dataset Type
 :ref:`dataset-type:CORPUS`, such that:
 
 - Sentences are delimited by  ``\n`` tokens.
-- There is only 1 tag column of ``tag`` corresponding to the POS tag of the token as an integer from ``0`` to ``k - 1``.
+- There is only 1 tag column of ``tag`` corresponding to the POS tag of the token as an integer from ``0`` to ``k-1``.
 
 
 Query Format 
@@ -70,17 +70,26 @@ Dataset Type
 
 :ref:`dataset-type:TABULAR`
 
-The train & test dataset should have the same number of features columns ``N`` and all features columns and the target column in the train dataset should be in the test dataset.
+The following optional train arguments are supported:
+
+    =====================       =====================
+    **Train Argument**          **Description**
+    ---------------------       ---------------------        
+    ``features``                List of feature columns' names as a list of strings (defaults to first ``N-1`` columns in the CSV file)
+    ``target``                  Target column name as a string (defaults to the *last* column in the CSV file)
+    =====================       =====================
+
+The train & validation datasets should have the same columns. 
 
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-An size-``N`` dictionary representing the feature-value pairs.
+An size-``N-1`` dictionary representing feature-value pairs.
 
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A size-``k`` list of floats, representing the probabilities of each class from ``0`` to ``k - 1``.
+A size-``k`` list of floats, representing the probabilities of each class from ``0`` to ``k-1`` for the target column.
 
 TABULAR_REGRESSION
 --------------------------------------------------------------------
@@ -90,14 +99,23 @@ Dataset Type
 
 :ref:`dataset-type:TABULAR`
 
-Same as ``TABULAR_CLASSIFICATION``.
+The following optional train arguments are supported:
+
+    =====================       =====================
+    **Train Argument**          **Description**
+    ---------------------       ---------------------        
+    ``features``                List of feature columns' names as a list of strings (defaults to first ``N-1`` columns in the CSV file)
+    ``target``                  Target column name as a string (defaults to the *last* column in the CSV file)
+    =====================       =====================
+    
+The train & validation datasets should have the same columns. 
 
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Same as ``TABULAR_CLASSIFICATION``. 
+An size-``N-1`` dictionary representing feature-value pairs.
 
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A float, representing the value of the target.
+A float, representing the value of the target column.
