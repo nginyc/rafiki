@@ -13,6 +13,10 @@ from examples.scripts.quickstart import get_predictor_host, \
 from examples.datasets.corpus.load_sample_ptb import load_sample_ptb
 
 def run_pos_tagging(client, train_dataset_path, val_dataset_path, gpus):
+    '''
+    Runs a sample full train-inference flow for the task ``POS_TAGGING``.
+    '''
+
     task = TaskType.POS_TAGGING
 
     # Randomly generate app & model names to avoid naming conflicts
