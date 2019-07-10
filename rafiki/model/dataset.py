@@ -13,7 +13,6 @@ import io
 import abc
 import csv
 import json
-import pandas as pd
 
 from rafiki.constants import DatasetType
 
