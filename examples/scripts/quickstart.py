@@ -9,7 +9,7 @@ from rafiki.config import SUPERADMIN_EMAIL
 from rafiki.constants import BudgetOption, InferenceJobStatus, ModelDependency
 
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
-from examples.datasets.image_classification.load_mnist_format import load_fashion_mnist
+from examples.datasets.image_files.load_fashion_mnist import load_fashion_mnist
 
 # Returns `predictor_host` of inference job
 def get_predictor_host(client, app):
@@ -142,8 +142,8 @@ if __name__ == '__main__':
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
     parser.add_argument('--hours', type=float, default=0.1, help='How long the train job should run for (in hours)') # 6min
     (args, _) = parser.parse_known_args()
-    out_train_dataset_path = 'data/fashion_mnist_for_image_classification_train.zip'
-    out_val_dataset_path = 'data/fashion_mnist_for_image_classification_val.zip'
+    out_train_dataset_path = 'data/fashion_mnist_train.zip'
+    out_val_dataset_path = 'data/fashion_mnist_val.zip'
 
     # Initialize client
     client = Client()
@@ -152,5 +152,4 @@ if __name__ == '__main__':
     print('During training, you can view the status of the train job at {}'.format(web_admin_url))
     print('Login with email "{}" and password "{}"'.format(args.email, args.password)) 
     
-    # Run quickstart
     quickstart(client, out_train_dataset_path, out_val_dataset_path, args.gpus, args.hours)

@@ -5,10 +5,11 @@ import os
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL
 from rafiki.constants import BudgetOption, ModelDependency
+
 from examples.scripts.quickstart import get_predictor_host, \
     wait_until_train_job_has_stopped, make_predictions, gen_id
 
-from examples.datasets.pos_tagging.load_ptb_format import load_sample_ptb
+from examples.datasets.corpus.load_sample_ptb import load_sample_ptb
 
 def run_pos_tagging(client, train_dataset_path, val_dataset_path, gpus, hours):
     '''
@@ -89,8 +90,8 @@ if __name__ == '__main__':
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
     parser.add_argument('--hours', type=float, default=0.1, help='How long the train job should run for (in hours)') 
     (args, _) = parser.parse_known_args()
-    out_train_dataset_path = 'data/ptb_for_pos_tagging_train.zip'
-    out_val_dataset_path = 'data/ptb_for_pos_tagging_val.zip'
+    out_train_dataset_path = 'data/ptb_train.zip'
+    out_val_dataset_path = 'data/ptb_val.zip'
 
     # Initialize client
     client = Client()

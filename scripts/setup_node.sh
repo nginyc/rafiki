@@ -1,3 +1,6 @@
+# Read from shell configuration file
+source ./.env.sh
+
 echo "Listing nodes in Docker Swarm..."
 docker node ls
 

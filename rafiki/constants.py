@@ -56,3 +56,4 @@ class ModelDependency():
     TORCH = 'torch'
     TORCHVISION = 'torchvision'
     SINGA = 'singa'
+    XGBOOST = 'xgboost'

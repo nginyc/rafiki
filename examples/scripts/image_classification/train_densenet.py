@@ -7,7 +7,7 @@ from rafiki.config import SUPERADMIN_EMAIL
 from rafiki.constants import BudgetOption, ModelDependency
 
 from examples.scripts.utils import gen_id
-from examples.datasets.image_classification.load_cifar_format import load_cifar10
+from examples.datasets.image_files.load_cifar10 import load_cifar10
 
 def train_densenet(client, train_dataset_path, val_dataset_path, gpus, hours):    
     '''
@@ -60,8 +60,8 @@ if __name__ == '__main__':
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
     parser.add_argument('--hours', type=float, default=2, help='How long the train job should run for (in hours)')
-    out_train_dataset_path = 'data/cifar10_for_image_classification_train.zip'
-    out_val_dataset_path = 'data/cifar10_for_image_classification_val.zip'
+    out_train_dataset_path = 'data/cifar10_train.zip'
+    out_val_dataset_path = 'data/cifar10_val.zip'
     (args, _) = parser.parse_known_args()
 
     # Initialize client

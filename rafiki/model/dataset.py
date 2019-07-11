@@ -9,6 +9,7 @@ import zipfile
 import io
 import abc
 import csv
+import json
 
 logger = logging.getLogger(__name__)
 

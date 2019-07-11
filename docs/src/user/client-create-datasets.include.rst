@@ -8,7 +8,7 @@ Example (pre-processing step):
   .. code-block:: shell
 
         # Run this in shell
-        python examples/datasets/image_classification/load_mnist_format.py
+        python examples/datasets/image_files/load_mnist_format.py
 
 
 Example:
@@ -18,13 +18,13 @@ Example:
         client.create_dataset(
             name='fashion_mnist_train',
             task='IMAGE_CLASSIFICATION',
-            dataset_path='data/fashion_mnist_for_image_classification_train.zip'
+            dataset_path='data/fashion_mnist_train.zip'
         )
 
         client.create_dataset(
             name='fashion_mnist_val',
             task='IMAGE_CLASSIFICATION',
-            dataset_path='data/fashion_mnist_for_image_classification_val.zip'
+            dataset_path='data/fashion_mnist_val.zip'
         )
 
     Output:
@@ -45,5 +45,5 @@ Example:
 
 .. note::
 
-    The code that preprocesses the original Fashion MNIST dataset is available at `./examples/datasets/image_classification/load_mnist_format.py <https://github.com/nginyc/rafiki/tree/master/examples/datasets/image_classification/load_mnist_format.py>`_.
+    The code that preprocesses the original Fashion MNIST dataset is available at `./examples/datasets/image_files/load_mnist_format.py <https://github.com/nginyc/rafiki/tree/master/examples/datasets/image_files/load_mnist_format.py>`_.
     

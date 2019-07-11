@@ -3,6 +3,7 @@ LOG_FILE_PATH=$PWD/logs/start_db.log
 source ./scripts/utils.sh
 
 title "Starting Rafiki's DB..."
+
 (docker run --rm --name $POSTGRES_HOST \
   --network $DOCKER_NETWORK \
   -e POSTGRES_HOST=$POSTGRES_HOST \

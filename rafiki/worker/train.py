@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Dict, Union
+from typing import Union
 import traceback
 import time
 from datetime import datetime
@@ -142,9 +142,10 @@ class TrainWorker():
 
     def _train_model(self, model_inst: BaseModel, proposal: Proposal, shared_params: Union[dict, None]):
         train_dataset_path = self._monitor.train_dataset_path
+        train_args = self._monitor.train_args
         
         logger.info('Training model...')
-        model_inst.train(train_dataset_path, shared_params=shared_params)
+        model_inst.train(train_dataset_path, shared_params=shared_params, **(train_args or {}))
 
     def _evaluate_model(self, model_inst: BaseModel, proposal: Proposal) -> TrialResult:
         val_dataset_path = self._monitor.val_dataset_path
@@ -221,6 +222,7 @@ class _SubTrainJobMonitor():
             logger.info(f'Using model "{model.name}"...')
 
             (self.train_dataset_path, self.val_dataset_path) = self._load_datasets(train_job)
+            self.train_args = train_job.train_args
             self.sub_train_job_id = sub_train_job.id
             self.model_class = load_model_class(model.model_file_bytes, model.model_class)
 

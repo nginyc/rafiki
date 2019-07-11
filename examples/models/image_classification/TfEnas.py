@@ -1267,9 +1267,9 @@ class TimedRepeatCondition():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_path', type=str, default='data/cifar10_for_image_classification_train.zip', help='Path to train dataset')
-    parser.add_argument('--val_path', type=str, default='data/cifar10_for_image_classification_val.zip', help='Path to validation dataset')
-    parser.add_argument('--test_path', type=str, default='data/cifar10_for_image_classification_test.zip', help='Path to test dataset')
+    parser.add_argument('--train_path', type=str, default='data/cifar10_train.zip', help='Path to train dataset')
+    parser.add_argument('--val_path', type=str, default='data/cifar10_val.zip', help='Path to validation dataset')
+    parser.add_argument('--test_path', type=str, default='data/cifar10_test.zip', help='Path to test dataset')
     (args, _) = parser.parse_known_args()
 
     test_model_class(
