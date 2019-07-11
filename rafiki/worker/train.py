@@ -44,7 +44,7 @@ class TrainWorker(object):
         while True:
             with self._db:
                 (self._sub_train_job_id, budget, model_id, model_file_bytes, model_class, \
-                    train_job_id, train_dataset_path, val_dataset_path) = self._read_worker_info()
+                    train_job_id, train_dataset_path, val_dataset_path, train_args) = self._read_worker_info()
 
                 self._get_client().send_event('train_job_worker_started', sub_train_job_id=self._sub_train_job_id)
 
@@ -102,7 +102,7 @@ class TrainWorker(object):
                         self._db.add_trial_log(trial, log_line, log_lvl)
 
                 (score, params_file_path) = self._train_and_evaluate_model(clazz, knobs, train_dataset_path, 
-                                                                    val_dataset_path, handle_log)
+                                                                    val_dataset_path, train_args, handle_log)
                 logger.info('Trial score: {}'.format(score))
                 
                 with self._db:
@@ -146,7 +146,7 @@ class TrainWorker(object):
             logger.error(traceback.format_exc())
 
     def _train_and_evaluate_model(self, clazz, knobs, train_dataset_path, \
-                                val_dataset_path, handle_log):
+                                val_dataset_path, train_args, handle_log):
 
         if self._sub_train_job_id is not None:
             self._get_client().send_event('train_job_worker_stopped', sub_train_job_id=self._sub_train_job_id)
@@ -166,7 +166,7 @@ class TrainWorker(object):
         model_logger.set_logger(py_model_logger)
 
         # Train model
-        model_inst.train(train_dataset_path)
+        model_inst.train(train_dataset_path, **(train_args or {}))
 
         # Evaluate model
         score = model_inst.evaluate(val_dataset_path)
@@ -266,7 +266,8 @@ class TrainWorker(object):
             model.model_class,
             train_job.id,
             train_dataset_path,
-            val_dataset_path
+            val_dataset_path,
+            train_job.train_args
         )
 
     def _get_client(self):
