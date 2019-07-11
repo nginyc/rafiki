@@ -37,11 +37,10 @@ class CNN(BaseModel):
 
     def train(self, dataset_uri):
         ep = self._knobs.get('epochs')
-        bs = self._knobs.get('batch_size')
-    
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[28,28])
+        bs = self._knobs.get('batch_size')       
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[28,28])
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-        
+             
         train = {}
         train['images'] = self._prepare_X(images)
         train['classes'] = classes
@@ -51,15 +50,13 @@ class CNN(BaseModel):
 
         X_train, y_train = train['images'], to_categorical(train['classes'], num_classes = 10)
         random_seed = 2
-        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size = 0.15, random_state=random_seed)
-        
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size = 0.15, random_state=random_seed)     
         datagen = ImageDataGenerator(rotation_range=10,
                              zoom_range=0.1,
                              width_shift_range=0.1,
                              height_shift_range=0.1,
                              fill_mode='nearest')  
         datagen.fit(X_train)
-
         learning_rate_reduction = ReduceLROnPlateau(monitor='val_acc', 
                                             patience=3, 
                                             verbose=1, 
@@ -73,8 +70,9 @@ class CNN(BaseModel):
         (train_loss, train_acc) = self._model.evaluate(X_val, y_val)
 
     def evaluate (self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[28,28])
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[28,28])
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+
         images = self._prepare_X(images)
         X_test, y_test = images, to_categorical(classes, num_classes = 10)
         # Compute test accuracy
@@ -126,7 +124,6 @@ class CNN(BaseModel):
         model.add(Dense(10, activation = "softmax"))
         my_optimizer = RMSprop(lr=0.001, rho=0.9, epsilon=1e-08, decay=0.0)
         model.compile(optimizer=my_optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
-
         return model
 
 if __name__ == '__main__':
@@ -138,8 +135,8 @@ if __name__ == '__main__':
         ModelDependency.TENSORFLOW: '1.12.0',
         ModelDependency.KERAS: '2.2.4'
         },
-    train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-    test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
+    train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
+    val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
     queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

@@ -27,7 +27,7 @@ class LeNet5(BaseModel):
     def get_knob_config():
         return {
             'epochs': FixedKnob(10),
-            'batch_size': FixedKnob(128)
+            'batch_size': CategoricalKnob([1, 64, 128])
         }
 
     def __init__(self, **knobs):
@@ -36,19 +36,17 @@ class LeNet5(BaseModel):
         self.__dict__.update(knobs)
         self._model = self._build_classifier(self.epochs, self.batch_size)
 
+    
     def train(self, dataset_uri):
-        
         ep = self._knobs.get('epochs')
         bs = self._knobs.get('batch_size')
         
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[28,28])
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[28,28])
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = self._prepare_X(images)
-
         train = {}
         train['images'] = images
         train['classes'] = classes
-        
         validation = {}
         train['images'], validation['images'], train['classes'], validation['classes'] = train_test_split(train['images'], train['classes'], test_size=0.2, random_state=0)    
         train['images'] =  np.pad(train['images'], ((0,0),(2,2),(2,2),(0,0)), 'constant')
@@ -69,37 +67,40 @@ class LeNet5(BaseModel):
 
         # Compute train accuracy
         (train_loss, train_acc) = self._model.evaluate(X_validation, y_validation)
+        logger.log('Train loss: {}'.format(loss))
+        logger.log('Train accuracy: {}'.format(accuracy))
 
     def evaluate (self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[28,28])
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[28,28])
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = self._prepare_X(images)
         images = np.pad(images, ((0,0),(2,2),(2,2),(0,0)), 'constant')
-
         X_test, y_test = images, to_categorical(classes, num_classes = 10)
-
         # Compute test accuracy
         (test_loss, test_acc) = self._model.evaluate(X_test, y_test)
         return test_acc
-    
+
+
     def predict(self, queries):
         X = self._prepare_X(queries)
         X = np.pad(X, ((0,0),(2,2),(2,2),(0,0)), 'constant')
         probs = self._model.predict_proba(X)
         return probs.tolist()
-        
+
+
     def destroy(self):
         pass
 
+
     def dump_parameters(self):
         params = {}
-
         # Save model parameters
         model_bytes = pickle.dumps(self._model)
         model_base64 = base64.b64encode(model_bytes).decode('utf-8')
         params['model_base64'] = model_base64
         
         return params
+
 
     def load_parameters(self, params):
         # Load model parameters
@@ -109,10 +110,13 @@ class LeNet5(BaseModel):
         
         model_bytes = base64.b64decode(params['model_base64'].encode('utf-8'))
         self._model = pickle.loads(model_bytes)
+    
+    
     def _prepare_X(self, images):
         X = np.asarray(images)
         return X.reshape(-1,28,28,1)
             
+    
     def _build_classifier(self, epochs, batch_size):
         model = models.Sequential()
         model.add(layers.Conv2D(filters=6, kernel_size=(3, 3), activation='relu', input_shape=(32,32,1)))
@@ -122,12 +126,12 @@ class LeNet5(BaseModel):
         model.add(layers.Flatten())
         model.add(layers.Dense(units=120, activation='relu'))
         model.add(layers.Dense(units=84, activation='relu'))
-        model.add(layers.Dense(units=10, activation = 'softmax'))
-        
+        model.add(layers.Dense(units=10, activation = 'softmax'))      
         adam = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
-
         model.compile(loss=keras.losses.categorical_crossentropy, optimizer=adam, metrics=['accuracy'])
+        
         return model
+
 
 if __name__ == '__main__':
     test_model_class(
@@ -138,8 +142,8 @@ if __name__ == '__main__':
             ModelDependency.TENSORFLOW: '1.12.0',
             ModelDependency.KERAS: '2.2.4'
         },
-    train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-    test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
+    train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
+    val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
     queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
