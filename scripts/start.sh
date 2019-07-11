@@ -10,8 +10,14 @@ bash ./scripts/create_docker_swarm.sh
 bash ./scripts/pull_images.sh || exit 1
 
 # Start whole Rafiki stack
-bash ./scripts/start_db.sh || exit 1
-bash ./scripts/load_db.sh || exit 1
+# Skip starting & loading DB if DB is already running
+if is_running $POSTGRES_HOST
+then
+  echo "Detected that Rafiki's DB is already running!"
+else
+    bash ./scripts/start_db.sh || exit 1
+    bash ./scripts/load_db.sh || exit 1
+fi
 bash ./scripts/start_cache.sh || exit 1
 bash ./scripts/start_admin.sh || exit 1
 bash ./scripts/start_web_admin.sh || exit 1

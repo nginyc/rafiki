@@ -309,8 +309,8 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.TORCH: '0.4.1'
         },
-        train_dataset_path='data/ptb_for_pos_tagging_train.zip',
-        val_dataset_path='data/ptb_for_pos_tagging_val.zip',
+        train_dataset_path='data/ptb_train.zip',
+        val_dataset_path='data/ptb_val.zip',
         queries=[
             ['Ms.', 'Haag', 'plays', 'Elianti', '18', '.'],
             ['The', 'luxury', 'auto', 'maker', 'last', 'year', 'sold', '1,214', 'cars', 'in', 'the', 'U.S.']

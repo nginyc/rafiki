@@ -9,20 +9,6 @@ import zipfile
 
 from examples.datasets.utils import download_dataset_from_url
 
-# Loads the Penn Treebank sample dataset for `POS_TAGGING` task
-def load_sample_ptb(out_train_dataset_path='data/ptb_for_pos_tagging_train.zip',
-                    out_val_dataset_path='data/ptb_for_pos_tagging_val.zip',
-                    out_meta_tsv_path='data/ptb_for_pos_tagging_meta.tsv',
-                    validation_split=0.05):
-    load(
-        dataset_url='https://raw.githubusercontent.com/nltk/nltk_data/gh-pages/packages/corpora/treebank.zip',
-        out_train_dataset_path=out_train_dataset_path,
-        out_val_dataset_path=out_val_dataset_path,
-        out_meta_tsv_path=out_meta_tsv_path,
-        validation_split=validation_split
-    )
-
-
 def load(dataset_url, out_train_dataset_path, out_val_dataset_path, out_meta_tsv_path, validation_split):
     '''
         Loads and converts a dataset of the format of the Penn Treebank sample 
@@ -154,7 +140,3 @@ def _read_next_sentence(f, tag_to_index):
             print('WARNING: Failed to parse line "{}"'.format(line))
             traceback.print_stack()
         
-
-if __name__ == '__main__':
-    load_sample_ptb()    
-    

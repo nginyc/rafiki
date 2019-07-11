@@ -194,9 +194,9 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.TENSORFLOW: '1.12.0'
         },
-        train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
-        val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
-        test_dataset_path='data/fashion_mnist_for_image_classification_test.zip',
+        train_dataset_path='data/fashion_mnist_train.zip',
+        val_dataset_path='data/fashion_mnist_val.zip',
+        test_dataset_path='data/fashion_mnist_test.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

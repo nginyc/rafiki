@@ -29,6 +29,32 @@ ensure_stable()
     fi
 }
 
+# Check if docker container is running, returns 0/1
+is_running()
+{
+    name=$1
+    if [ -z "$(docker ps | grep $name)" ]
+    then
+        return 1
+    else
+        return 0
+    fi  
+}
+
+# Prompts the user with a yes/no question (defaults to yes), returns 0/1
+prompt()
+{
+    
+    text=$1
+    read -p "$text (y/n) " ok
+    if [ $ok = "n" ]
+    then
+        return 1
+    else
+        return 0
+    fi
+}
+
 # Delete a folder or file with confirmation 
 delete_path()
 {
