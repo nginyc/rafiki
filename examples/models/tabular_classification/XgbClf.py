@@ -3,6 +3,7 @@ import pickle
 import base64
 import pandas as pd
 import numpy as np
+import json
 
 from rafiki.model import BaseModel, IntegerKnob, FloatKnob, logger
 from rafiki.model.dev import test_model_class
@@ -26,7 +27,7 @@ class XgbClf(BaseModel):
     def __init__(self, **knobs):
         self.__dict__.update(knobs)
        
-    def train(self, dataset_path, features=None, target=None):
+    def train(self, dataset_path, features=None, target=None, **kwargs):
         # Record features & target
         self._features = features
         self._target = target
@@ -81,8 +82,8 @@ class XgbClf(BaseModel):
         clf_bytes = pickle.dumps(self._clf)
         clf_base64 = base64.b64encode(clf_bytes).decode('utf-8')
         params['clf_base64'] = clf_base64
-        params['encoding_dict'] = self._encoding_dict
-        params['features'] = pickle.dumps(self._features)
+        params['encoding_dict'] = json.dumps(self._encoding_dict)
+        params['features'] = json.dumps(self._features)
         params['target'] = self._target
 
         return params
@@ -94,8 +95,8 @@ class XgbClf(BaseModel):
         clf_bytes = base64.b64decode(clf_base64.encode('utf-8'))
 
         self._clf = pickle.loads(clf_bytes)
-        self._encoding_dict = params['encoding_dict']
-        self._features = pickle.loads(params['features'])
+        self._encoding_dict = json.loads(params['encoding_dict'])
+        self._features = json.loads(params['features'])
         self._target = params['target']
 
     def _extract_xy(self, data):

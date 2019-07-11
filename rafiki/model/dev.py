@@ -250,7 +250,8 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
 
     # Simulation of training
     (best_proposal, _, best_params) = tune_model(py_model_class, train_dataset_path, val_dataset_path, 
-                                                test_dataset_path=test_dataset_path, budget=budget)
+                                                test_dataset_path=test_dataset_path, budget=budget, 
+                                                train_args=train_args)
 
     # Simulation of inference
     model_inst = None
