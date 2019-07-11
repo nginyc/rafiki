@@ -1,6 +1,7 @@
 # Python virtualenv environments
 env/
 envs/
+venv/
 
 # Visual Studio Code config
 .vscode/

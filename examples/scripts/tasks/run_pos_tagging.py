@@ -10,9 +10,13 @@ from rafiki.constants import TaskType, BudgetType, UserType, ModelDependency, Mo
 from examples.scripts.quickstart import get_predictor_host, \
     wait_until_train_job_has_stopped, make_predictions,  gen_id
 
-from examples.datasets.pos_tagging.load_ptb_format import load_sample_ptb
+from examples.datasets.corpus.load_sample_ptb import load_sample_ptb
 
 def run_pos_tagging(client, train_dataset_path, val_dataset_path, gpus):
+    '''
+    Runs a sample full train-inference flow for the task ``POS_TAGGING``.
+    '''
+
     task = TaskType.POS_TAGGING
 
     # Randomly generate app & model names to avoid naming conflicts

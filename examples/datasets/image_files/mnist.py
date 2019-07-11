@@ -12,11 +12,11 @@ from PIL import Image
 
 from examples.datasets.utils import download_dataset_from_url
 
+# Loads the official Fashion MNIST dataset for the `IMAGE_CLASSIFICATION` task
 def load_fashion_mnist(out_train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
                         out_val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
                         out_meta_csv_path='data/fashion_mnist_for_image_classification_meta.csv'):
     
-    # Loads the official Fashion MNIST dataset for `IMAGE_CLASSIFICATION` task
     load(
         train_images_url='http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz',
         train_labels_url='http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz',
@@ -125,7 +125,3 @@ def _load_dataset_from_files(images_file_path, labels_file_path, limit=None):
         labels = labels[:limit]
 
     return (images, labels)
-
-if __name__ == '__main__':
-    load_fashion_mnist()    
-    

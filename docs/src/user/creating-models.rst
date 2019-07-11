@@ -31,6 +31,7 @@ Your model will be run in Python 3.6 with the following Python libraries pre-ins
         requests==2.20.0
         numpy==1.14.5
         Pillow==5.3.0
+        pandas==0.24.2
 
 Additionally, you'll specify a list of dependencies to be installed for your model, 
 prior to model training and inference. This is configurable with the ``dependencies`` option 
@@ -78,7 +79,7 @@ Example: Testing Models for ``IMAGE_CLASSIFICATION``
 
     .. code-block:: shell
 
-        python examples/datasets/image_classification/load_mnist_format.py
+        python examples/datasets/image_files/load_fashion_mnist.py
 
 2. Install the Python dependencies for the sample models:
 
@@ -102,7 +103,7 @@ Example: Testing Models for ``POS_TAGGING``
 
     .. code-block:: shell
 
-        python examples/datasets/pos_tagging/load_ptb_format.py
+        python examples/datasets/corpus/load_sample_ptb.py
 
 2. Install the Python dependencies for the sample models:
 
@@ -116,3 +117,47 @@ Example: Testing Models for ``POS_TAGGING``
 
         python examples/models/pos_tagging/BigramHmm.py
         python examples/models/pos_tagging/PyBiLstm.py
+
+
+Example: Testing Models for ``TABULAR_CLASSIFICATION``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1. Download & pre-process the titanic dataset to the dataset format specified by ``TABULAR``:
+
+    .. code-block:: shell
+
+        python examples/datasets/tabular/load_titanic.py
+
+2. Install the Python dependencies for the sample models:
+
+    .. code-block:: shell
+
+        pip install xgboost==0.90
+
+3. Test the sample models in ``./examples/models/tabular_classification`` with :meth:`rafiki.model.test_model_class`:
+
+    .. code-block:: shell
+
+        python examples/models/tabular_classification/XgbClf.py
+
+
+Example: Testing Models for ``TABULAR_REGRESSION``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1. Download & pre-process the bodyfat dataset to the dataset format specified by ``TABULAR``:
+
+    .. code-block:: shell
+
+        python examples/datasets/tabular/load_bodyfat.py
+
+2. Install the Python dependencies for the sample models:
+
+    .. code-block:: shell
+
+        pip install xgboost==0.90
+
+3. Test the sample models in ``./examples/models/tabular_regression`` with :meth:`rafiki.model.test_model_class`:
+
+    .. code-block:: shell
+
+        python examples/models/tabular_regression/XgbReg.py

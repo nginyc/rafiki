@@ -12,7 +12,7 @@ from rafiki.config import SUPERADMIN_EMAIL
 from rafiki.constants import TaskType, UserType, BudgetType, TrainJobStatus, \
                                 InferenceJobStatus, ModelDependency, ModelAccessRight
 
-from examples.datasets.image_classification.load_mnist_format import load_fashion_mnist
+from examples.datasets.image_files.load_fashion_mnist import load_fashion_mnist
 
 # Generates a random ID
 def gen_id(length=16):
@@ -69,6 +69,10 @@ def make_predictions(client, predictor_host, queries):
 
 
 def quickstart(client, train_dataset_path, val_dataset_path, gpus, trials):
+    '''
+    Runs a sample full train-inference flow for the task ``IMAGE_CLASSIFICATION``.
+    '''
+
     task = TaskType.IMAGE_CLASSIFICATION
 
     # Randomly generate app & model names to avoid naming conflicts
@@ -176,5 +180,4 @@ if __name__ == '__main__':
     print('During training, you can view the status of the train job at {}'.format(web_admin_url))
     print('Login with email "{}" and password "{}"'.format(args.email, args.password)) 
     
-    # Run quickstart
     quickstart(client, out_train_dataset_path, out_val_dataset_path, args.gpus, args.trials)

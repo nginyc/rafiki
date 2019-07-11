@@ -11,8 +11,8 @@ from urllib.parse import urlparse
 import zipfile
 import io
 import abc
-import tempfile
 import csv
+import json
 
 from rafiki.constants import DatasetType
 

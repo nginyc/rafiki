@@ -1,10 +1,11 @@
 DUMP_FILE=$POSTGRES_DUMP_FILE_PATH
 
+source ./scripts/utils.sh
+
 # Check if dump file exists
 if [ -f $DUMP_FILE ]
 then 
-    read -p "Database dump file exists at $DUMP_FILE. Override it? (y/n) " ok
-    if [ $ok = "n" ] 
+    if ! prompt "Database dump file exists at $DUMP_FILE. Override it?"
     then 
         echo "Not dumping database!" 
         exit 0
