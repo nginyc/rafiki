@@ -386,7 +386,7 @@ class Client(object):
     # Train Jobs
     ####################################
     
-    def create_train_job(self, app, task, train_dataset_id, val_dataset_id, budget, models=None):
+    def create_train_job(self, app, task, train_dataset_id, val_dataset_id, budget, models=None, train_args=None):
         '''
         Creates and starts a train job on Rafiki. 
 
@@ -399,8 +399,10 @@ class Client(object):
             the train job will train models associated with the task
         :param str train_dataset_id: ID of the train dataset, previously created on Rafiki
         :param str val_dataset_id: ID of the validation dataset, previously created on Rafiki
-        :param str budget: Budget for each model
-        :param str[] models: List of IDs of model to use for train job. Defaults to all available models
+        :param str budget: Budge for model training
+        :param str[] models: List of IDs of models to use for train job. Defaults to all available models
+        :param dict train_args: Additional arguments to pass to models during training, if any. 
+            Refer to the task's specification for appropriate arguments  
         :returns: Created train job as dictionary
         :rtype: dict[str, any]
 
@@ -435,7 +437,8 @@ class Client(object):
             'train_dataset_id': train_dataset_id,
             'val_dataset_id': val_dataset_id,
             'budget': budget,
-            'model_ids': models
+            'model_ids': models,
+            'train_args': train_args
         })
         return data
 

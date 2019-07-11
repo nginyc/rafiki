@@ -108,6 +108,7 @@ class TrainJob(Base):
     budget = Column(JSON, nullable=False)
     train_dataset_id = Column(String, ForeignKey('dataset.id'), nullable=False)
     val_dataset_id = Column(String, ForeignKey('dataset.id'), nullable=False)
+    train_args = Column(JSON, default=None)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
     status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)

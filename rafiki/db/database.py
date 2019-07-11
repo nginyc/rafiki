@@ -119,7 +119,7 @@ class Database(object):
     ####################################
 
     def create_train_job(self, user_id, app, app_version, task, budget,
-                        train_dataset_id, val_dataset_id):
+                        train_dataset_id, val_dataset_id, train_args):
 
         train_job = TrainJob(
             user_id=user_id,
@@ -128,7 +128,8 @@ class Database(object):
             task=task,
             budget=budget,
             train_dataset_id=train_dataset_id,
-            val_dataset_id=val_dataset_id
+            val_dataset_id=val_dataset_id,
+            train_args=train_args
         )
         self._session.add(train_job)
         return train_job

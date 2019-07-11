@@ -185,7 +185,7 @@ class Admin(object):
     ####################################
 
     def create_train_job(self, user_id, app, task, train_dataset_id, 
-                        val_dataset_id, budget, model_ids):
+                        val_dataset_id, budget, model_ids, train_args):
         
         # Ensure at least 1 model
         if len(model_ids) == 0:
@@ -225,7 +225,8 @@ class Admin(object):
             task=task,
             budget=budget,
             train_dataset_id=train_dataset_id,
-            val_dataset_id=val_dataset_id
+            val_dataset_id=val_dataset_id,
+            train_args=train_args
         )
         self._db.commit()
 
@@ -275,6 +276,7 @@ class Admin(object):
             'task': train_job.task,
             'train_dataset_id': train_job.train_dataset_id,
             'val_dataset_id': train_job.val_dataset_id,
+            'train_args': train_job.train_args,
             'datetime_started': train_job.datetime_started,
             'datetime_stopped': train_job.datetime_stopped,
             'workers': [
@@ -302,6 +304,7 @@ class Admin(object):
                 'task': x.task,
                 'train_dataset_id': x.train_dataset_id,
                 'val_dataset_id': x.val_dataset_id,
+                'train_args': x.train_args,
                 'datetime_started': x.datetime_started,
                 'datetime_stopped': x.datetime_stopped,
                 'budget': x.budget
@@ -340,6 +343,7 @@ class Admin(object):
                 'task': x.task,
                 'train_dataset_id': x.train_dataset_id,
                 'val_dataset_id': x.val_dataset_id,
+                'train_args': x.train_args,
                 'datetime_started': x.datetime_started,
                 'datetime_stopped': x.datetime_stopped,
                 'budget': x.budget

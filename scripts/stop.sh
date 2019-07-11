@@ -18,6 +18,7 @@
 #
 
 LOG_FILEPATH=$PWD/logs/stop.log
+
 source ./scripts/utils.sh
 
 # Read from shell configuration file
@@ -26,21 +27,13 @@ source ./.env.sh
 title "Stopping any existing jobs..."
 python ./scripts/stop_all_jobs.py
 
-title "Dumping database..." 
-bash ./scripts/save_db.sh
-
-# If database dump previously failed, prompt whether to continue script
-if [ $? -ne 0 ]
+# Prompt if should stop DB
+if prompt "Should stop Rafiki's DB?"
 then
-    read -p "Failed to dump database. Continue? (y/n) " ok
-    if [ $ok = "n" ]
-    then
-        exit 1
-    fi
+    bash scripts/stop_db.sh || exit 1
+else
+    echo "Not stopping Rafiki's DB!"
 fi
-
-title "Stopping Rafiki's DB..."
-docker rm -f $POSTGRES_HOST || echo "Failed to stop Rafiki's DB"
 
 title "Stopping Rafiki's Cache..."
 docker rm -f $REDIS_HOST || echo "Failed to stop Rafiki's Cache"
