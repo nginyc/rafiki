@@ -1,5 +1,6 @@
 import base64
 import numpy as np
+import pickle
 import tensorflow as tf
 from tensorflow import keras
 from sklearn.model_selection import train_test_split
@@ -25,9 +26,10 @@ class CNN(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': FixedKnob(100),
-            'batch_size': FixedKnob(86),
+            'epochs': FixedKnob(50),
+            'batch_size': CategoricalKnob([16,32,64,86])
         }
+
 
     def __init__(self, **knobs):
         super().__init__(**knobs)
@@ -35,19 +37,17 @@ class CNN(BaseModel):
         self.__dict__.update(knobs)
         self._model = self._build_classifier(self.epochs, self.batch_size)
 
-    def train(self, dataset_uri):
+
+    def train(self, dataset_path):
         ep = self._knobs.get('epochs')
         bs = self._knobs.get('batch_size')       
         dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[28,28])
-        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-             
+        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])          
         train = {}
         train['images'] = self._prepare_X(images)
         train['classes'] = classes
-
         validation = {}
         train['images'], validation['images'], train['classes'], validation['classes'] = train_test_split(train['images'], train['classes'], test_size=0.15, random_state=0)
-
         X_train, y_train = train['images'], to_categorical(train['classes'], num_classes = 10)
         random_seed = 2
         X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size = 0.15, random_state=random_seed)     
@@ -66,35 +66,42 @@ class CNN(BaseModel):
                               epochs=ep, validation_data = (X_val,y_val),
                               verbose = 2, steps_per_epoch=X_train.shape[0] // bs,
                               callbacks=[learning_rate_reduction]) 
+        
         # Compute train accuracy
         (train_loss, train_acc) = self._model.evaluate(X_val, y_val)
+        logger.log('Train loss: {}'.format(train_loss))
+        logger.log('Train accuracy: {}'.format(train_acc))
 
-    def evaluate (self, dataset_uri):
+
+    def evaluate (self, dataset_path):
         dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[28,28])
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-
         images = self._prepare_X(images)
         X_test, y_test = images, to_categorical(classes, num_classes = 10)
+        
         # Compute test accuracy
         (test_loss, test_acc) = self._model.evaluate(X_test, y_test)
         return test_acc
-    
+
+
     def predict(self, queries):
         X = self._prepare_X(queries)
         probs = self._model.predict_proba(X)
         return probs.tolist()
 
+
     def destroy(self):
         pass
 
+
     def dump_parameters(self):
         params = {}
-
         # Save model parameters
         model_bytes = pickle.dumps(self._model)
         model_base64 = base64.b64encode(model_bytes).decode('utf-8')
         params['model_base64'] = model_base64
         return params
+
 
     def load_parameters(self, params):
         # Load model parameters
@@ -104,9 +111,11 @@ class CNN(BaseModel):
                 model_bytes = base64.b64decode(params['model_base64'].encode('utf-8'))
                 self._model = pickle.loads(model_bytes)
 
+
     def _prepare_X(self, images):
         X = np.asarray(images)
         return X.reshape(-1,28,28,1)
+
 
     def _build_classifier(self, epochs, batch_size):
         model = models.Sequential()
@@ -124,7 +133,9 @@ class CNN(BaseModel):
         model.add(Dense(10, activation = "softmax"))
         my_optimizer = RMSprop(lr=0.001, rho=0.9, epsilon=1e-08, decay=0.0)
         model.compile(optimizer=my_optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
+        
         return model
+
 
 if __name__ == '__main__':
     test_model_class(

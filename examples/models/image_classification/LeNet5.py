@@ -30,6 +30,7 @@ class LeNet5(BaseModel):
             'batch_size': CategoricalKnob([1, 64, 128])
         }
 
+
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
@@ -37,7 +38,7 @@ class LeNet5(BaseModel):
         self._model = self._build_classifier(self.epochs, self.batch_size)
 
     
-    def train(self, dataset_uri):
+    def train(self, dataset_path):
         ep = self._knobs.get('epochs')
         bs = self._knobs.get('batch_size')
         
@@ -67,10 +68,11 @@ class LeNet5(BaseModel):
 
         # Compute train accuracy
         (train_loss, train_acc) = self._model.evaluate(X_validation, y_validation)
-        logger.log('Train loss: {}'.format(loss))
-        logger.log('Train accuracy: {}'.format(accuracy))
+        logger.log('Train loss: {}'.format(train_loss))
+        logger.log('Train accuracy: {}'.format(train_acc))
 
-    def evaluate (self, dataset_uri):
+
+    def evaluate (self, dataset_path):
         dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[28,28])
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = self._prepare_X(images)
@@ -175,6 +177,3 @@ if __name__ == '__main__':
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
         ]
     )
-
-
-
