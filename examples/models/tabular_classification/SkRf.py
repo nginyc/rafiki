@@ -11,7 +11,7 @@ from rafiki.constants import ModelDependency
 
 class SkRf(BaseModel):
     '''
-    Implements a XGBoost Classifier for tabular data classification task
+    Implements a random forest classifier on Scikit-Learn for tabular data classification task
     '''
     @staticmethod
     def get_knob_config():
@@ -117,7 +117,7 @@ class SkRf(BaseModel):
         encoded_cols = pd.DataFrame({col: cols[col].astype('category').cat.codes \
             if cols[col].dtype == 'object' else cols[col] for col in cols}, index=cols.index)
 
-        # Recover the missing elements (Use XGBoost to automatically handle them)
+        # Recover the missing elements (Use random forest to automatically handle them)
         encoded_cols = encoded_cols.replace(to_replace = -1, value = np.nan)
 
         # Generate the dict that maps categorical features to numerical
