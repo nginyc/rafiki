@@ -3,6 +3,7 @@ import traceback
 import inspect
 import argparse
 import time
+import math
 from datetime import datetime
 from typing import Dict, Type, List, Any
 
@@ -28,6 +29,9 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
     _print_header('Checking model configuration...')
     knob_config = py_model_class.get_knob_config()
     _check_knob_config(knob_config)
+
+    # Set the default task type to classification
+    train_args['task_type'] = train_args.get('task_type', 'classification')
 
     # Read knob values from CLI args
     _print_header('Starting trials...')
@@ -104,18 +108,28 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
         store_params_id = _save_model(model_inst, proposal, result, param_cache, param_store)
 
         # Update best saved model
-        if result.score is not None and store_params_id is not None and result.score > best_model_score:
-            inform_user('Best saved model so far! Beats previous best of score {}!'.format(best_model_score))
-            best_store_params_id = store_params_id
-            best_proposal = proposal
-            best_model_score = result.score
-            best_trial_no = trial_no
+        if result.score is not None and store_params_id is not None:
+            if best_model_score == 0:
+                is_best_model = True
+            else:
+                is_best_model = (result.score < best_model_score) if train_args['task_type'] == 'regression' \
+                    else (result.score > best_model_score)
+            if is_best_model:
+                inform_user('Best saved model so far! Beats previous best of score {}!'.format(best_model_score))
+                best_store_params_id = store_params_id
+                best_proposal = proposal
+                best_model_score = result.score
+                best_trial_no = trial_no
 
-            # Test best model, if test dataset provided
-            if test_dataset_path is not None:
-                print('Evaluting new best model on test dataset...')
-                best_model_test_score = model_inst.evaluate(test_dataset_path)
-                inform_user('Score on test dataset: {}'.format(best_model_test_score))
+                # Need to minimize RMSE
+                if train_args['task_type'] == 'regression':
+                    result.score = 1 / result.score
+
+                # Test best model, if test dataset provided
+                if test_dataset_path is not None:
+                    print('Evaluting new best model on test dataset...')
+                    best_model_test_score = model_inst.evaluate(test_dataset_path)
+                    inform_user('Score on test dataset: {}'.format(best_model_test_score))
 
         # Worker sends result to advisor
         print('Giving feedback to advisor...')
