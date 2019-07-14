@@ -1,3 +1,21 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
 # Core secrets for Rafiki - change these in production!
 export POSTGRES_PASSWORD=rafiki
 export SUPERADMIN_PASSWORD=rafiki
@@ -6,10 +24,10 @@ export APP_SECRET=rafiki
 # Core external configuration for Rafiki
 export DOCKER_NETWORK=rafiki
 export DOCKER_SWARM_ADVERTISE_ADDR=127.0.0.1
-export RAFIKI_VERSION=0.1.0
+export RAFIKI_VERSION=0.2.0
 export RAFIKI_ADDR=127.0.0.1
 export ADMIN_EXT_PORT=3000
-export ADMIN_WEB_EXT_PORT=3001
+export WEB_ADMIN_EXT_PORT=3001
 export ADVISOR_EXT_PORT=3002
 export POSTGRES_EXT_PORT=5433
 export REDIS_EXT_PORT=6380
@@ -33,7 +51,7 @@ export ADVISOR_PORT=3002
 export REDIS_HOST=rafiki_cache
 export REDIS_PORT=6379
 export PREDICTOR_PORT=3003
-export ADMIN_WEB_HOST=rafiki_admin_web
+export WEB_ADMIN_HOST=rafiki_admin_web
 export DOCKER_WORKDIR_PATH=/root
 export DATA_DIR_PATH=data # Shares a data folder with containers, relative to workdir
 export LOGS_DIR_PATH=logs # Shares a folder with containers that stores components' logs, relative to workdir
@@ -42,7 +60,7 @@ export CONDA_ENVIORNMENT=rafiki
 
 # Docker images for Rafiki's custom components
 export RAFIKI_IMAGE_ADMIN=rafikiai/rafiki_admin
-export RAFIKI_IMAGE_ADMIN_WEB=rafikiai/rafiki_admin_web
+export RAFIKI_IMAGE_WEB_ADMIN=rafikiai/rafiki_admin_web
 export RAFIKI_IMAGE_ADVISOR=rafikiai/rafiki_advisor
 export RAFIKI_IMAGE_WORKER=rafikiai/rafiki_worker
 export RAFIKI_IMAGE_PREDICTOR=rafikiai/rafiki_predictor

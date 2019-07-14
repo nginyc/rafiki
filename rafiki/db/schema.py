@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, ForeignKey, Integer, Binary, DateTime, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSON, ARRAY
@@ -32,6 +51,17 @@ class InferenceJobWorker(Base):
     service_id = Column(String, ForeignKey('service.id'), primary_key=True)
     inference_job_id = Column(String, ForeignKey('inference_job.id'))
     trial_id = Column(String, ForeignKey('trial.id'), nullable=False)
+
+class Dataset(Base):
+    __tablename__ = 'dataset'
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    name = Column(String, nullable=False)
+    task = Column(String, nullable=False)
+    store_dataset_id = Column(String, nullable=False)
+    size_bytes = Column(Integer, default=0)
+    owner_id = Column(String, ForeignKey('user.id'), nullable=False)
+    datetime_created = Column(DateTime, nullable=False, default=generate_datetime)
 
 class Model(Base):
     __tablename__ = 'model'
@@ -76,8 +106,9 @@ class TrainJob(Base):
     app_version = Column(Integer, nullable=False)
     task = Column(String, nullable=False)
     budget = Column(JSON, nullable=False)
-    train_dataset_uri = Column(String, nullable=False)
-    test_dataset_uri = Column(String, nullable=False)
+    train_dataset_id = Column(String, ForeignKey('dataset.id'), nullable=False)
+    val_dataset_id = Column(String, ForeignKey('dataset.id'), nullable=False)
+    train_args = Column(JSON, default=None)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
     status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)

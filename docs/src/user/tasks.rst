@@ -5,7 +5,7 @@ Supported Tasks
 
 Each task has an associated `Dataset Type`, `Query Format` and `Prediction Format`. 
 
-A task's `Dataset Type` specifies the format of the data sources ``train_dataset_uri`` and  ``test_dataset_uri`` point to. 
+A task's `Dataset Type` specifies the format of each dataset file. 
 Datasets are prepared by `Application Developers` when they create `Train Jobs` 
 and received by `Model Developers` when they define :meth:`rafiki.model.BaseModel.train` and :meth:`rafiki.model.BaseModel.evaluate`.
 
@@ -28,7 +28,7 @@ Dataset Type
 
 :ref:`dataset-type:IMAGE_FILES`
 
-The train & test dataset's images should be have the same dimensions ``W x H``.
+The train & validation dataset's images should be have the same dimensions ``W x H``.
 
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -38,7 +38,7 @@ A ``W x H`` 2D list representing the grayscale version of the query image.
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A size-``k`` list of floats, representing the probabilities of each class from ``0`` to ``k - 1``.
+A size-``k`` list of floats, representing the probabilities of each class from ``0`` to ``k-1``.
 
 POS_TAGGING
 --------------------------------------------------------------------
@@ -49,7 +49,7 @@ Dataset Type
 :ref:`dataset-type:CORPUS`, such that:
 
 - Sentences are delimited by  ``\n`` tokens.
-- There is only 1 tag column of ``tag`` corresponding to the POS tag of the token as an integer from ``0`` to ``k - 1``.
+- There is only 1 tag column of ``tag`` corresponding to the POS tag of the token as an integer from ``0`` to ``k-1``.
 
 
 Query Format 
@@ -61,3 +61,61 @@ Prediction Format
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A list of integers representing the list of predicted tag for each token, in sequence, for the sentence.
+
+TABULAR_CLASSIFICATION
+--------------------------------------------------------------------
+
+Dataset Type
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:ref:`dataset-type:TABULAR`
+
+The following optional train arguments are supported:
+
+    =====================       =====================
+    **Train Argument**          **Description**
+    ---------------------       ---------------------        
+    ``features``                List of feature columns' names as a list of strings (defaults to first ``N-1`` columns in the CSV file)
+    ``target``                  Target column name as a string (defaults to the *last* column in the CSV file)
+    =====================       =====================
+
+The train & validation datasets should have the same columns. 
+
+Query Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An size-``N-1`` dictionary representing feature-value pairs.
+
+Prediction Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A size-``k`` list of floats, representing the probabilities of each class from ``0`` to ``k-1`` for the target column.
+
+TABULAR_REGRESSION
+--------------------------------------------------------------------
+
+Dataset Type
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:ref:`dataset-type:TABULAR`
+
+The following optional train arguments are supported:
+
+    =====================       =====================
+    **Train Argument**          **Description**
+    ---------------------       ---------------------        
+    ``features``                List of feature columns' names as a list of strings (defaults to first ``N-1`` columns in the CSV file)
+    ``target``                  Target column name as a string (defaults to the *last* column in the CSV file)
+    =====================       =====================
+    
+The train & validation datasets should have the same columns. 
+
+Query Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An size-``N-1`` dictionary representing feature-value pairs.
+
+Prediction Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A float, representing the value of the target column.

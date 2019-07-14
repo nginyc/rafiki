@@ -1,0 +1,105 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`renders datasets message 1`] = `
+<div>
+  <div
+    class="MuiGrid-container-7 GridContainer-grid-6"
+  >
+    <div
+      class="MuiGrid-item-8 MuiGrid-grid-xs-12-47 MuiGrid-grid-sm-12-61 MuiGrid-grid-md-12-75 GridItem-grid-104"
+    >
+      <div
+        class="Card-card-105"
+      >
+        <div
+          class="CardHeader-cardHeader-109 CardHeader-infoCardHeader-116"
+        >
+          <button
+            class="MuiButtonBase-root-129 MuiFab-root-119 MuiFab-extended-123 Dataset-buttonAdd-4"
+            tabindex="0"
+            type="button"
+          >
+            <span
+              class="MuiFab-label-120"
+            >
+              <span
+                aria-hidden="true"
+                class="material-icons MuiIcon-root-132"
+              >
+                add_circle
+              </span>
+              New Dataset
+            </span>
+            <span
+              class="MuiTouchRipple-root-178"
+            />
+          </button>
+        </div>
+        <div
+          class="CardBody-cardBody-144"
+        >
+          <a
+            href="/admin/datasets/details"
+          >
+            <div
+              class="CustomTable-tableResponsive-157"
+            >
+              <table
+                class="MuiTable-root-158 CustomTable-table-154"
+              >
+                <thead
+                  class="MuiTableHead-root-159 CustomTable-primaryTableHeader-148"
+                >
+                  <tr
+                    class="MuiTableRow-root-160 MuiTableRow-head-163"
+                  >
+                    <th
+                      class="MuiTableCell-root-165 MuiTableCell-head-166 CustomTable-tableCell-156 CustomTable-tableHeadCell-155"
+                      scope="col"
+                    >
+                      #
+                    </th>
+                    <th
+                      class="MuiTableCell-root-165 MuiTableCell-head-166 CustomTable-tableCell-156 CustomTable-tableHeadCell-155"
+                      scope="col"
+                    >
+                      Name
+                    </th>
+                    <th
+                      class="MuiTableCell-root-165 MuiTableCell-head-166 CustomTable-tableCell-156 CustomTable-tableHeadCell-155"
+                      scope="col"
+                    >
+                      ID
+                    </th>
+                    <th
+                      class="MuiTableCell-root-165 MuiTableCell-head-166 CustomTable-tableCell-156 CustomTable-tableHeadCell-155"
+                      scope="col"
+                    >
+                      Task
+                    </th>
+                    <th
+                      class="MuiTableCell-root-165 MuiTableCell-head-166 CustomTable-tableCell-156 CustomTable-tableHeadCell-155"
+                      scope="col"
+                    >
+                      Total items
+                    </th>
+                    <th
+                      class="MuiTableCell-root-165 MuiTableCell-head-166 CustomTable-tableCell-156 CustomTable-tableHeadCell-155"
+                      scope="col"
+                    >
+                      Last Updated
+                    </th>
+                  </tr>
+                </thead>
+                <tbody
+                  class="MuiTableBody-root-177"
+                />
+              </table>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

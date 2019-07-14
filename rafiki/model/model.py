@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import sys
 import os
 import json
@@ -60,23 +79,24 @@ class BaseModel(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def train(self, dataset_uri):
+    def train(self, dataset_path, **train_args):
         '''
         Train this model instance with given dataset and initialized knob values.
+        Additional keyword arguments could be passed depending on the task's specification.
 
-        :param str dataset_uri: URI of the train dataset in a format specified by the task
+        :param str dataset_path: File path of the train dataset file in the local file system, in a format specified by the task
         '''
         raise NotImplementedError()
 
     # TODO: Allow configuration of other metrics
     @abc.abstractmethod
-    def evaluate(self, dataset_uri):
+    def evaluate(self, dataset_path):
         '''
         Evaluate this model instance with given dataset after training. 
         This will be called only when model is *trained*.
 
-        :param str dataset_uri: URI of the test dataset in a format specified by the task
-        :returns: Accuracy as float from 0-1 on the test dataset
+        :param str dataset_path: File path of the validation dataset file in the local file system, in a format specified by the task
+        :returns: Accuracy as float from 0-1 on the validation dataset
         :rtype: float
         '''
         raise NotImplementedError()
@@ -130,8 +150,8 @@ class BaseModel(abc.ABC):
         pass
 
 def test_model_class(model_file_path, model_class, task, dependencies, \
-                    train_dataset_uri, test_dataset_uri, \
-                    queries=[], knobs=None):
+                    train_dataset_path, val_dataset_path, \
+                    queries=None, train_args=None, knobs=None):
     '''
     Tests whether a model class is properly defined by running a full train-inference flow.
     The model instance's methods will be called in an order similar to that in Rafiki.
@@ -142,8 +162,9 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
     :param str task: Task type of model
     :param dependencies: Model's dependencies
     :type dependencies: dict[str, str]
-    :param str train_dataset_uri: URI of the train dataset for testing the training of model
-    :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model
+    :param str train_dataset_path: File path of the train dataset for training of model
+    :param str val_dataset_path: File path of the validation dataset for evaluation of the resultant trained model
+    :param dict[str, any] train_args: Additional arguments to pass to models during training, if any
     :param list[any] queries: List of queries for testing predictions with the trained model
     :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used
     :type knobs: dict[str, any]
@@ -172,8 +193,8 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         _check_model_inst(model_inst)
 
         _print_header('Checking training & evaluation of model...')
-        model_inst.train(train_dataset_uri)
-        score = model_inst.evaluate(test_dataset_uri)
+        model_inst.train(train_dataset_path, **(train_args or {}))
+        score = model_inst.evaluate(val_dataset_path)
 
         if not isinstance(score, float):
             raise Exception('`evaluate()` should return a float!')
@@ -198,21 +219,22 @@ def test_model_class(model_file_path, model_class, task, dependencies, \
         model_inst = py_model_class(**knobs)
         model_inst.load_parameters(parameters)
 
-        _print_header('Checking predictions with model...')
-        print('Using queries: {}'.format(queries))
-        predictions = model_inst.predict(queries)
+        if queries is not None:
+            _print_header('Checking predictions with model...')
+            print('Using queries: {}'.format(queries))
+            predictions = model_inst.predict(queries)
 
-        try:
-            for prediction in predictions:
-                json.dumps(prediction)
-        except Exception:
-            traceback.print_stack()
-            raise Exception('Each `prediction` should be JSON serializable')
+            try:
+                for prediction in predictions:
+                    json.dumps(prediction)
+            except Exception:
+                traceback.print_stack()
+                raise Exception('Each `prediction` should be JSON serializable')
 
-        # Ensembling predictions in predictor
-        predictions = ensemble_predictions([predictions], task)
+            # Ensembling predictions in predictor
+            predictions = ensemble_predictions([predictions], task)
 
-        print('Predictions: {}'.format(predictions))
+            print('Predictions: {}'.format(predictions))
 
         _note('The model definition is valid!')
     

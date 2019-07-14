@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 from datetime import datetime
 import os
 from sqlalchemy import create_engine, distinct, or_
@@ -8,7 +27,7 @@ from rafiki.constants import TrainJobStatus, UserType, \
 
 from .schema import Base, TrainJob, SubTrainJob, TrainJobWorker, \
     InferenceJob, Trial, Model, User, Service, InferenceJobWorker, \
-    TrialLog
+    TrialLog, Dataset
 
 class InvalidModelAccessRightError(Exception): pass
 class DuplicateModelNameError(Exception): pass
@@ -67,11 +86,40 @@ class Database(object):
             raise InvalidUserTypeError()
 
     ####################################
+    # Datasets
+    ####################################
+
+    def create_dataset(self, name, task, size_bytes, store_dataset_id, owner_id):
+        dataset = Dataset(
+            name=name,
+            task=task,
+            size_bytes=size_bytes,
+            store_dataset_id=store_dataset_id,
+            owner_id=owner_id
+        )
+        self._session.add(dataset)
+        return dataset
+
+    def get_dataset(self, id):
+        dataset = self._session.query(Dataset).get(id)
+        return dataset
+
+    def get_datasets(self, user_id, task=None):
+        query = self._session.query(Dataset) \
+            .filter(Dataset.owner_id == user_id)
+
+        if task is not None:
+            query = query.filter(Dataset.task == task)
+        
+        datasets = query.all()
+        return datasets
+    
+    ####################################
     # Train Jobs
     ####################################
 
     def create_train_job(self, user_id, app, app_version, task, budget,
-                        train_dataset_uri, test_dataset_uri):
+                        train_dataset_id, val_dataset_id, train_args):
 
         train_job = TrainJob(
             user_id=user_id,
@@ -79,8 +127,9 @@ class Database(object):
             app_version=app_version,
             task=task,
             budget=budget,
-            train_dataset_uri=train_dataset_uri,
-            test_dataset_uri=test_dataset_uri
+            train_dataset_id=train_dataset_id,
+            val_dataset_id=val_dataset_id,
+            train_args=train_args
         )
         self._session.add(train_job)
         return train_job

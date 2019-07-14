@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import os
 import logging
 import traceback
@@ -9,7 +28,8 @@ from rafiki.constants import ServiceStatus, UserType, ServiceType, InferenceJobS
     TrainJobStatus, ModelAccessRight, BudgetType
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.model import ModelLogger
-from rafiki.container import DockerSwarmContainerManager 
+from rafiki.container import DockerSwarmContainerManager
+from rafiki.data_store import Dataset, FileDataStore, DataStore
 
 from .services_manager import ServicesManager
 
@@ -25,19 +45,17 @@ class InvalidTrainJobError(Exception): pass
 class InvalidTrialError(Exception): pass
 class RunningInferenceJobExistsError(Exception): pass
 class NoModelsForTrainJobError(Exception): pass
+class InvalidDatasetError(Exception): pass
 
 class Admin(object):
-    def __init__(self, db=None, container_manager=None):
-        if db is None: 
-            db = Database()
-        if container_manager is None: 
-            container_manager = DockerSwarmContainerManager()
-            
+    def __init__(self, db=None, container_manager=None, data_store=None):
+        self._db = db or Database()
+        data_folder_path = os.path.join(os.environ['WORKDIR_PATH'], os.environ['DATA_DIR_PATH'])
+        self._data_store: DataStore = data_store or FileDataStore(data_folder_path)
         self._base_worker_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_WORKER'],
                                                 os.environ['RAFIKI_VERSION'])
-
-        self._db = db
-        self._services_manager = ServicesManager(db, container_manager)
+        container_manager = container_manager or DockerSwarmContainerManager()
+        self._services_manager = ServicesManager(self._db, container_manager)
 
     def seed(self):
         with self._db:
@@ -82,7 +100,7 @@ class Admin(object):
             }
             for user in users
         ]
-
+        
     def get_user_by_email(self, email):
         user = self._db.get_user_by_email(email)
         if user is None:
@@ -110,13 +128,64 @@ class Admin(object):
             'user_type': user.user_type,
             'banned_date': user.banned_date
         }
+    
+    ####################################
+    # Datasets
+    ####################################
+
+    def create_dataset(self, user_id, name, task, data_file_path):
+        # Store dataset in data folder
+        store_dataset = self._data_store.save(data_file_path)
+
+        # Get metadata for dataset
+        store_dataset_id = store_dataset.id
+        size_bytes = store_dataset.size_bytes
+        owner_id = user_id
+
+        dataset = self._db.create_dataset(name, task, size_bytes, store_dataset_id, owner_id)
+        self._db.commit()
+
+        return {
+            'id': dataset.id,
+            'name': dataset.name,
+            'task': dataset.task,
+            'size_bytes': dataset.size_bytes
+        }
+
+    def get_dataset(self, dataset_id):
+        dataset = self._db.get_dataset(dataset_id)
+        if dataset is None:
+            raise InvalidDatasetError()
+
+        return {
+            'id': dataset.id,
+            'name': dataset.name,
+            'task': dataset.task,
+            'datetime_created': dataset.datetime_created,
+            'size_bytes': dataset.size_bytes,
+            'owner_id': dataset.owner_id
+        }
+
+    def get_datasets(self, user_id, task=None):
+        datasets = self._db.get_datasets(user_id, task)
+        return [
+            {
+                'id': x.id,
+                'name': x.name,
+                'task': x.task,
+                'datetime_created': x.datetime_created,
+                'size_bytes': x.size_bytes
+
+            }
+            for x in datasets
+        ]
 
     ####################################
     # Train Job
     ####################################
 
-    def create_train_job(self, user_id, app, task, train_dataset_uri, 
-                        test_dataset_uri, budget, model_ids):
+    def create_train_job(self, user_id, app, task, train_dataset_id, 
+                        val_dataset_id, budget, model_ids, train_args):
         
         # Ensure at least 1 model
         if len(model_ids) == 0:
@@ -128,11 +197,26 @@ class Admin(object):
 
         # Get models available to user
         avail_model_ids = [x.id for x in self._db.get_available_models(user_id, task)]
+        
+        # Warn if there are no models for task
+        if len(avail_model_ids) == 0:
+            raise InvalidModelError(f'No models are available for task "{task}"')
 
         # Ensure all specified models are available
         for model_id in model_ids:
             if model_id not in avail_model_ids:
-                raise InvalidModelError(f'No model of ID "{model_id}" is available for task "{task}"')
+                raise InvalidModelError(f'No model with ID "{model_id}" is available for task "{task}"')
+
+        # Ensure that datasets are valid and of the correct task
+        try:
+            train_dataset = self._db.get_dataset(train_dataset_id)
+            assert train_dataset is not None
+            assert train_dataset.task == task
+            val_dataset = self._db.get_dataset(val_dataset_id)
+            assert val_dataset is not None
+            assert val_dataset.task == task
+        except AssertionError as e:
+            raise InvalidDatasetError(e)
 
         train_job = self._db.create_train_job(
             user_id=user_id,
@@ -140,8 +224,9 @@ class Admin(object):
             app_version=app_version,
             task=task,
             budget=budget,
-            train_dataset_uri=train_dataset_uri,
-            test_dataset_uri=test_dataset_uri
+            train_dataset_id=train_dataset_id,
+            val_dataset_id=val_dataset_id,
+            train_args=train_args
         )
         self._db.commit()
 
@@ -189,8 +274,9 @@ class Admin(object):
             'app': train_job.app,
             'app_version': train_job.app_version,
             'task': train_job.task,
-            'train_dataset_uri': train_job.train_dataset_uri,
-            'test_dataset_uri': train_job.test_dataset_uri,
+            'train_dataset_id': train_job.train_dataset_id,
+            'val_dataset_id': train_job.val_dataset_id,
+            'train_args': train_job.train_args,
             'datetime_started': train_job.datetime_started,
             'datetime_stopped': train_job.datetime_stopped,
             'workers': [
@@ -216,8 +302,9 @@ class Admin(object):
                 'app': x.app,
                 'app_version': x.app_version,
                 'task': x.task,
-                'train_dataset_uri': x.train_dataset_uri,
-                'test_dataset_uri': x.test_dataset_uri,
+                'train_dataset_id': x.train_dataset_id,
+                'val_dataset_id': x.val_dataset_id,
+                'train_args': x.train_args,
                 'datetime_started': x.datetime_started,
                 'datetime_stopped': x.datetime_stopped,
                 'budget': x.budget
@@ -254,8 +341,9 @@ class Admin(object):
                 'app': x.app,
                 'app_version': x.app_version,
                 'task': x.task,
-                'train_dataset_uri': x.train_dataset_uri,
-                'test_dataset_uri': x.test_dataset_uri,
+                'train_dataset_id': x.train_dataset_id,
+                'val_dataset_id': x.val_dataset_id,
+                'train_args': x.train_args,
                 'datetime_started': x.datetime_started,
                 'datetime_stopped': x.datetime_stopped,
                 'budget': x.budget

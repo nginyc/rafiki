@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import os
 import math
 import sys
@@ -25,15 +44,15 @@ class BigramHmm(BaseModel):
     def __init__(self, **knobs):
         super().__init__(**knobs)
 
-    def train(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_corpus(dataset_uri)
+    def train(self, dataset_path):
+        dataset = dataset_utils.load_dataset_of_corpus(dataset_path)
         (sents_tokens, sents_tags) = zip(*[zip(*sent) for sent in dataset])
         self._num_tags = dataset.tag_num_classes[0]
         (self._trans_probs, self._emiss_probs) = self._compute_probs(self._num_tags, sents_tokens, sents_tags)
         logger.log('No. of tags: {}'.format(self._num_tags))
 
-    def evaluate(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_corpus(dataset_uri)
+    def evaluate(self, dataset_path):
+        dataset = dataset_utils.load_dataset_of_corpus(dataset_path)
         (sents_tokens, sents_tags) = zip(*[zip(*sent) for sent in dataset])
         (sents_pred_tags) = self._tag_sents(self._num_tags, sents_tokens, self._trans_probs, self._emiss_probs)
         acc = self._compute_accuracy(sents_tags, sents_pred_tags)
@@ -192,8 +211,8 @@ if __name__ == '__main__':
         model_class='BigramHmm',
         task=TaskType.POS_TAGGING,
         dependencies={},
-        train_dataset_uri='data/ptb_for_pos_tagging_train.zip',
-        test_dataset_uri='data/ptb_for_pos_tagging_test.zip',
+        train_dataset_path='data/ptb_for_pos_tagging_train.zip',
+        val_dataset_path='data/ptb_for_pos_tagging_val.zip',
         queries=[
             ['Ms.', 'Haag', 'plays', 'Elianti', '18', '.'],
             ['The', 'luxury', 'auto', 'maker', 'last', 'year', 'sold', '1,214', 'cars', 'in', 'the', 'U.S.']

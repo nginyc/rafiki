@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 from sklearn import svm
 import json
 import pickle
@@ -27,15 +46,15 @@ class SkSvm(BaseModel):
         self.__dict__.update(knobs)
         self._clf = self._build_classifier(self.max_iter, self.kernel, self.gamma, self.C)
         
-    def train(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
+    def train(self, dataset_path):
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_path)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
         self._clf.fit(X, y)
 
-    def evaluate(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri)
+    def evaluate(self, dataset_path):
+        dataset = dataset_utils.load_dataset_of_image_files(dataset_path)
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         X = self._prepare_X(images)
         y = classes
@@ -92,8 +111,8 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.SCIKIT_LEARN: '0.20.0'
         },
-        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
+        train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
+        val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

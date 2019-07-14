@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import os
 import math
 import sys
@@ -35,8 +54,8 @@ class PyBiLstm(BaseModel):
         super().__init__(**knobs)
         self._knobs = knobs
 
-    def train(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_corpus(dataset_uri)
+    def train(self, dataset_path):
+        dataset = dataset_utils.load_dataset_of_corpus(dataset_path)
         self._word_dict = self._extract_word_dict(dataset)
         self._tag_count = dataset.tag_num_classes[0] 
 
@@ -49,8 +68,8 @@ class PyBiLstm(BaseModel):
 
         logger.log('Train accuracy: {}'.format(acc))
 
-    def evaluate(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_corpus(dataset_uri)
+    def evaluate(self, dataset_path):
+        dataset = dataset_utils.load_dataset_of_corpus(dataset_path)
         sents_tags = self._predict(dataset)
         acc = self._compute_accuracy(dataset, sents_tags)
         return acc
@@ -281,8 +300,8 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.PYTORCH: '0.4.1'
         },
-        train_dataset_uri='data/ptb_for_pos_tagging_train.zip',
-        test_dataset_uri='data/ptb_for_pos_tagging_test.zip',
+        train_dataset_path='data/ptb_for_pos_tagging_train.zip',
+        val_dataset_path='data/ptb_for_pos_tagging_val.zip',
         queries=[
             ['Ms.', 'Haag', 'plays', 'Elianti', '18', '.'],
             ['The', 'luxury', 'auto', 'maker', 'last', 'year', 'sold', '1,214', 'cars', 'in', 'the', 'U.S.']
