@@ -119,9 +119,6 @@ class TfDeepSpeech(BaseModel):
 
         # Decoder
 
-        f.DEFINE_string('alphabet_config_path', 'examples/datasets/speech_recognition/alphabet.txt',
-                        'path to the configuration file specifying the alphabet used by the network. See the comment in data/alphabet.txt for a description of the format.')
-
         f.DEFINE_string('lm_binary_path', 'data/lm.binary',
                         'path to the language model binary file created with KenLM')
         f.DEFINE_string('lm_trie_path', 'data/trie',
@@ -167,8 +164,6 @@ class TfDeepSpeech(BaseModel):
         if not os.path.isdir(FLAGS.checkpoint_dir):
             os.makedirs(FLAGS.checkpoint_dir)
 
-        c.alphabet = Alphabet(FLAGS.alphabet_config_path)
-
         c.n_input = 26
 
         # The number of frames in theinitialize_globals context
@@ -182,9 +177,6 @@ class TfDeepSpeech(BaseModel):
         c.n_hidden_2 = c.n_hidden
 
         c.n_hidden_5 = c.n_hidden
-
-        # Units in the sixth layer = number of characters in the target language plus one
-        c.n_hidden_6 = c.alphabet.size() + 1  # +1 for CTC blank label
 
         # LSTM cell state dimension
         c.n_cell_dim = c.n_hidden
@@ -271,6 +263,15 @@ class TfDeepSpeech(BaseModel):
         # Sort the samples by filesize (representative of lengths) so that only similarly-sized utterances are
         # combined into minibatches. This is done for the ease of data parallelism.
         df.sort_values(by='wav_filesize', inplace=True)
+
+        # Config Alphabet
+
+        # See the comment in alphabet.txt file for a description of the format
+        self.alphabet_path = os.path.join(dataset._dataset_dir.name, 'alphabet.txt')
+        Config.alphabet = Alphabet(self.alphabet_path)
+
+        # Units in the sixth layer = number of characters in the target language plus one
+        Config.n_hidden_6 = Config.alphabet.size() + 1  # +1 for CTC blank label
 
         # Convert to character index arrays
         df['transcript'] = df['transcript'].apply(partial(text_to_char_array, alphabet=Config.alphabet))
@@ -805,9 +806,6 @@ class TfDeepSpeech(BaseModel):
         Config = self.c
         tf.reset_default_graph()
 
-        scorer = Scorer(self._knobs.get('lm_alpha'), self._knobs.get('lm_beta'),
-                        FLAGS.lm_binary_path, FLAGS.lm_trie_path,
-                        Config.alphabet)
         dataset_dir = tempfile.TemporaryDirectory()
         logger.log('Test dataset will be extracted to {}'.format(dataset_dir.name))
 
@@ -941,6 +939,10 @@ class TfDeepSpeech(BaseModel):
             # Initialize iterator to the appropriate dataset
             session.run(init_op)
 
+            scorer = Scorer(self._knobs.get('lm_alpha'), self._knobs.get('lm_beta'),
+                            FLAGS.lm_binary_path, FLAGS.lm_trie_path,
+                            Config.alphabet)
+
             # First pass, compute losses and transposed logits for decoding
             while True:
                 try:
@@ -1038,6 +1040,7 @@ class TfDeepSpeech(BaseModel):
         Use a structure optimal for inference
         '''
 
+        Config = self.c
         tf.reset_default_graph()
         batch_size = self._knobs.get('batch_size')
         input, outputs, _ = self.create_inference_graph(batch_size=-1, n_steps=-1)
@@ -1084,12 +1087,33 @@ class TfDeepSpeech(BaseModel):
                 pb_model_bytes = f.read()
 
             params['pb_model_base64'] = base64.b64encode(pb_model_bytes).decode('utf-8')
+
+            with open(self.alphabet_path, 'rb') as f:
+                alphabet_txt_bytes = f.read()
+
+            params['alphabet_txt_base64'] = base64.b64encode(alphabet_txt_bytes).decode('utf-8')
+
             return params
 
         except RuntimeError as e:
             logger.log('Error occured! {}'.format(e))
 
     def load_parameters(self, params):
+        # Load alphabet.txt
+        alphabet_txt_base64 = params.get('alphabet_txt_base64', None)
+        if alphabet_txt_base64 is None:
+            raise InvalidModelParamsException()
+        alphabet_txt_bytes = base64.b64decode(alphabet_txt_base64.encode('utf-8'))
+
+        # Write the bytes into /tmp/alphabet.txt, to be used later in the Scorer of predictor
+        with open('/tmp/alphabet.txt', 'wb') as f:
+            f.write(alphabet_txt_bytes)
+
+        self.c.alphabet = Alphabet('/tmp/alphabet.txt')
+
+        # Units in the sixth layer = number of characters in the target language plus one
+        self.c.n_hidden_6 = self.c.alphabet.size() + 1  # +1 for CTC blank label
+
         # Load the Protocol Buffers into graph def
         tf.reset_default_graph()
         self.graph = tf.Graph()
