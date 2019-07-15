@@ -1,4 +1,4 @@
-.. _`tasks`:
+ .. _`tasks`:
 
 Supported Tasks
 ====================================================================
@@ -26,8 +26,7 @@ Dataset Format
 
 :ref:`dataset-type:IMAGE_FILES`
 
-- There is only 1 tag column of ``class``, corresponding to the class of the image
-as an integer from ``0`` to ``k - 1``, where ``k`` is the total no. of classes.
+- There is only 1 tag column of ``class``, corresponding to the class of the image as an integer from ``0`` to ``k - 1``, where ``k`` is the total no. of classes.
 - The train & validation dataset's images should be have the same dimensions ``W x H`` and same total no. of classes.
 
 An example:
@@ -42,9 +41,6 @@ An example:
     ...
     image-99-of-class-9.png,9
     
-
-.. _`dataset-type:CORPUS`:
-
 .. note::
 
     You can refer to and run `./examples/datasets/image_files/load_folder_format.py <https://github.com/nginyc/rafiki/tree/master/examples/datasets/load_folder_format.py>`_

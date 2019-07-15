@@ -24,6 +24,8 @@ For each row,
     The other ``N`` columns describe the corresponding image, *depending on the task*.
 
 
+.. _`dataset-type:CORPUS`:
+
 CORPUS
 --------------------------------------------------------------------
 
