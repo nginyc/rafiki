@@ -1,0 +1,1 @@
+{"algorithms": ["XgbClf", "SkRf"], "hyperparameters": {"XgbClf": {"n_estimators": [50, 125, 200], "max_depth": [2, 5, 8], "gamma": [0.0, 0.5, 1.0]}, "SkRf": {"min_samples_split": [0.01, 0.001, 0.0001, 1e-05]}}}
