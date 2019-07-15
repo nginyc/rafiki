@@ -8,6 +8,16 @@ class ModelDependency():
     SCIKIT_LEARN = 'scikit-learn'
     PYTORCH = 'torch'
     SINGA = 'singa'
+    numpy = 'numpy'
+    scipy = 'scipy'
+    Pillow = 'Pillow'
+    Cython = 'Cython'
+    matplotlib = 'matplotlib'
+    opencv_python = 'opencv-python'
+    imgaug = 'imgaug'
+    pycocotools = 'rafiki-cocoapi'
+    IPython = 'ipython'
+    scikit_image = 'scikit-image'
 
 class ModelAccessRight():
     PUBLIC = 'PUBLIC'
@@ -59,3 +69,4 @@ class DatasetType():
 class TaskType():
     IMAGE_CLASSIFICATION = 'IMAGE_CLASSIFICATION'
     POS_TAGGING = 'POS_TAGGING'
+    OBJECT_DETECTION = 'OBJECT_DETECTION'
