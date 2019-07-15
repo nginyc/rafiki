@@ -25,7 +25,23 @@ Prerequisites: MacOS or Linux environment
     ```
 
 More instructions are available in [Rafiki's Developer Guide](https://nginyc.github.io/rafiki/docs/latest/docs/src/dev).
-
+## Data Prepare
+put you data as the following format, wihch can be downloaded from http://cocodataset.org/  
+```sh
+\data  
+    \coco  
+        \annotations  
+            \instances_train2014.json
+            \instances_val2014.json
+            \instances_minival2014.json
+            \instances_valminusminival2014.json
+        \train2014
+            \images_train
+        \val2014
+            \images_val
+        \test2014
+            \images_test
+```
 
 ## Issues
 
