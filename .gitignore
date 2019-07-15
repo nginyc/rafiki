@@ -50,5 +50,4 @@ params/*
 *.sql
 
 # OBOE datasets
-/rafiki/advisor/oboe/error_matrix_generation/dataset
 /rafiki/advisor/oboe/error_matrix_generation/results

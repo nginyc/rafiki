@@ -10,6 +10,7 @@ $0  [-m] mode [-s] SAVE_DIR [-d] DATA_DIR [-p] P_TYPE [-j] JSON_FILE [-e] ERROR_
 -m:         mode in which to run, either "generate" or "merge"
 -s:         where to save results, or in the merge mode, where results are saved
 -d:         path to directory containing training datasets are located
+-r:         path to directory containing generated matrixes are located
 -p:         problem type, either "classification" or "regression"
 -j:         path to model configurations json file
 -e:         error matrix already generated
@@ -21,7 +22,7 @@ HELP_USAGE
 }
 
 # parse user arguments
-while getopts ":hm:s:d:p:j:e:n:a:f:" opt; do
+while getopts ":hm:s:d:r:p:j:e:n:a:f:" opt; do
     case ${opt} in
     h)
         usage
@@ -42,6 +43,13 @@ while getopts ":hm:s:d:p:j:e:n:a:f:" opt; do
         ;;
     d)
         DATA_DIR=$OPTARG
+        ;;
+    r)  
+        if [ ${OPTARG} == "" ]
+        then
+            MATRIX_DIR="matrix"
+        fi
+        MATRIX_DIR=$OPTARG
         ;;
     p)
         P_TYPE=$OPTARG
@@ -105,13 +113,14 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 if [ "${mode}" == "generate" ]
 then
   time=`date +%Y%m%d%H%M`
-  mkdir -p ${SAVE_DIR}/${time}
-  echo -e "SAVE_DIR=${SAVE_DIR}\nDATA_DIR=${DATA_DIR}\nP_TYPE=${P_TYPE}\nJSON_FILE=${JSON_FILE}\nAUC=${AUC}\nERROR_MATRIX=${ERROR_MATRIX}\n" >> ${SAVE_DIR}/${time}/configurations.txt
-  echo "Error matrix generation started at ${time}" >> ${SAVE_DIR}/${time}/log_${time}.txt
+  rm -r ${SAVE_DIR}/${MATRIX_DIR}
+  mkdir -p ${SAVE_DIR}/${MATRIX_DIR}
+  echo -e "SAVE_DIR=${SAVE_DIR}\nDATA_DIR=${DATA_DIR}\nP_TYPE=${P_TYPE}\nJSON_FILE=${JSON_FILE}\nAUC=${AUC}\nERROR_MATRIX=${ERROR_MATRIX}\n" >> ${SAVE_DIR}/${MATRIX_DIR}/configurations.txt
+  echo "Error matrix generation started at ${time}" >> ${SAVE_DIR}/${MATRIX_DIR}/log_${time}.txt
 
   ls ${DATA_DIR}/*.csv | xargs -i --max-procs=${MAX_PROCS} bash -c \
-  "python ${DIR}/generate_vector.py '${P_TYPE}' {} --file=${JSON_FILE} --save_dir=${SAVE_DIR}/${time} \
-  --error_matrix=${ERROR_MATRIX} --auc=${AUC} --fullname=${FULLNAME} &>> ${SAVE_DIR}/${time}/warnings_and_errors.txt"
+  "python ${DIR}/generate_vector.py '${P_TYPE}' {} --file=${JSON_FILE} --save_dir=${SAVE_DIR}/${MATRIX_DIR} \
+  --error_matrix=${ERROR_MATRIX} --auc=${AUC} --fullname=${FULLNAME} &>> ${SAVE_DIR}/${MATRIX_DIR}/warnings_and_errors.txt"
 fi
 
 # merge mode
