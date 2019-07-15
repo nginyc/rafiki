@@ -21,6 +21,9 @@ RUN apt-get update && \
       pkg-config \
       software-properties-common \
       unzip \
+      libsm6 \
+      libxrender1 \
+      libxext-dev \
       && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
