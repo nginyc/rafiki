@@ -17,36 +17,34 @@
   
 
   
-  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../../_static/jquery.js"></script>
-        <script type="text/javascript" src="../../_static/underscore.js"></script>
-        <script type="text/javascript" src="../../_static/doctools.js"></script>
-        <script type="text/javascript" src="../../_static/language_data.js"></script>
-    
-    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
+  
+  
     
 
   
+
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Installing Python" href="installing-python.html" />
+    <link rel="next" title="Dataset Types" href="datasets.html" />
     <link rel="prev" title="Using Rafiki’s Web Admin" href="using-web-admin.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
+
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+        <div class="wy-side-nav-search">
           
 
           
@@ -105,8 +103,21 @@
 <li class="toctree-l4"><a class="reference internal" href="#id3">Prediction Format</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#tabular-classification">TABULAR_CLASSIFICATION</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#dataset-type">Dataset Type</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id4">Query Format</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id5">Prediction Format</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#tabular-regression">TABULAR_REGRESSION</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id6">Dataset Type</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id7">Query Format</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id8">Prediction Format</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="datasets.html">Dataset Types</a></li>
 <li class="toctree-l2"><a class="reference internal" href="installing-python.html">Installing Python</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model-development.html">Model Development Guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model-tuning.html">How Model Tuning Works</a></li>
@@ -180,7 +191,9 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="supported-tasks">
+  <blockquote>
+<div></div></blockquote>
+<div class="section" id="supported-tasks">
 <span id="tasks"></span><h1>Supported Tasks<a class="headerlink" href="#supported-tasks" title="Permalink to this headline">¶</a></h1>
 <p>Each task has an associated a <em>Dataset Format</em>, a <em>Query Format</em> and a <em>Prediction Format</em>.</p>
 <p>A task’s <em>Dataset Format</em> specifies the format of the dataset files.
@@ -196,16 +209,12 @@ and received by <em>Application Users</em> as predictions to their queries sent 
 <h2>IMAGE_CLASSIFICATION<a class="headerlink" href="#image-classification" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="dataset-format">
 <h3>Dataset Format<a class="headerlink" href="#dataset-format" title="Permalink to this headline">¶</a></h3>
-<p>The dataset file must be of the <code class="docutils literal notranslate"><span class="pre">.zip</span></code> archive format with a <code class="docutils literal notranslate"><span class="pre">images.csv</span></code> at the root of the directory.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">images.csv</span></code> should be of a <a class="reference external" href="https://en.wikipedia.org/wiki/Comma-separated_values">.CSV</a>
-format with 2 columns of <code class="docutils literal notranslate"><span class="pre">path</span></code> and <code class="docutils literal notranslate"><span class="pre">class</span></code>.</p>
-<p>For each row,</p>
-<blockquote>
-<div><p><code class="docutils literal notranslate"><span class="pre">path</span></code> should be a file path to a <code class="docutils literal notranslate"><span class="pre">.png</span></code>, <code class="docutils literal notranslate"><span class="pre">.jpg</span></code> or <code class="docutils literal notranslate"><span class="pre">.jpeg</span></code> image file within the archive, relative to the root of the directory.
-All images in the train &amp; validation datasets should have the <strong>same</strong> dimensions <code class="docutils literal notranslate"><span class="pre">W</span> <span class="pre">x</span> <span class="pre">H</span></code>.</p>
-<p><code class="docutils literal notranslate"><span class="pre">class</span></code> should be an integer from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">-</span> <span class="pre">1</span></code>, where <code class="docutils literal notranslate"><span class="pre">k</span></code> is the number of classes in the classification of images.</p>
-</div></blockquote>
-<p>An example of <code class="docutils literal notranslate"><span class="pre">images.csv</span></code> follows:</p>
+<p><a class="reference internal" href="datasets.html#dataset-type-image-files"><span class="std std-ref">IMAGE_FILES</span></a></p>
+<ul class="simple">
+<li>There is only 1 tag column of <code class="docutils literal notranslate"><span class="pre">class</span></code>, corresponding to the class of the image as an integer from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">-</span> <span class="pre">1</span></code>, where <code class="docutils literal notranslate"><span class="pre">k</span></code> is the total no. of classes.</li>
+<li>The train &amp; validation dataset’s images should be have the same dimensions <code class="docutils literal notranslate"><span class="pre">W</span> <span class="pre">x</span> <span class="pre">H</span></code> and same total no. of classes.</li>
+</ul>
+<p>An example:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>path,class
 image-0-of-class-0.png,0
 image-1-of-class-0.png,0
@@ -215,7 +224,11 @@ image-0-of-class-1.png,1
 image-99-of-class-9.png,9
 </pre></div>
 </div>
-<p>Additionally, the train &amp; validation dataset’s images should be have the same dimensions <code class="docutils literal notranslate"><span class="pre">W</span> <span class="pre">x</span> <span class="pre">H</span></code>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">You can refer to and run <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/datasets/load_folder_format.py">./examples/datasets/image_files/load_folder_format.py</a>
+for converting <em>directories of images</em> to Rafiki’s <code class="docutils literal notranslate"><span class="pre">IMAGE_CLASSIFICATION</span></code> format.</p>
+</div>
 </div>
 <div class="section" id="query-format">
 <h3>Query Format<a class="headerlink" href="#query-format" title="Permalink to this headline">¶</a></h3>
@@ -223,25 +236,20 @@ image-99-of-class-9.png,9
 </div>
 <div class="section" id="prediction-format">
 <h3>Prediction Format<a class="headerlink" href="#prediction-format" title="Permalink to this headline">¶</a></h3>
-<p>A size-<code class="docutils literal notranslate"><span class="pre">k</span></code> list of floats, representing the probabilities of each class from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">-</span> <span class="pre">1</span></code>.</p>
+<p>A size-<code class="docutils literal notranslate"><span class="pre">k</span></code> list of floats, representing the probabilities of each class, by index, from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k-1</span></code>.
+For example, the float at index 0 corresponds to the probability of class 0.</p>
 </div>
 </div>
 <div class="section" id="pos-tagging">
 <h2>POS_TAGGING<a class="headerlink" href="#pos-tagging" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="id1">
 <h3>Dataset Format<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
-<p>The dataset file must be of the <code class="docutils literal notranslate"><span class="pre">.zip</span></code> archive format with a <code class="docutils literal notranslate"><span class="pre">corpus.tsv</span></code> at the root of the directory.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">corpus.tsv</span></code> should be of a <a class="reference external" href="https://en.wikipedia.org/wiki/Tab-separated_values">.TSV</a>
-format with 2 columns: <code class="docutils literal notranslate"><span class="pre">token</span></code> and <code class="docutils literal notranslate"><span class="pre">tag</span></code>.</p>
-<p>For each row,</p>
-<blockquote>
-<div><p><code class="docutils literal notranslate"><span class="pre">token</span></code> should be a string, a token (e.g. word) in the corpus.
-These tokens should appear in the order as it is in the text of the corpus.
-To delimit sentences, <code class="docutils literal notranslate"><span class="pre">token</span></code> takes the value of <code class="docutils literal notranslate"><span class="pre">\n</span></code>.</p>
-<p>The other <code class="docutils literal notranslate"><span class="pre">tag</span></code> column are integers from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">-</span> <span class="pre">1</span></code>, where <code class="docutils literal notranslate"><span class="pre">k</span></code> is the total number of POS tags,
-with each <code class="docutils literal notranslate"><span class="pre">tag</span></code> describing the POS tag of the corresponding token.</p>
-</div></blockquote>
-<p>An example of <code class="docutils literal notranslate"><span class="pre">corpus.tsv</span></code> for follows:</p>
+<p><a class="reference internal" href="datasets.html#dataset-type-corpus"><span class="std std-ref">CORPUS</span></a></p>
+<ul class="simple">
+<li>Sentences are delimited by  <code class="docutils literal notranslate"><span class="pre">\n</span></code> tokens.</li>
+<li>There is only 1 tag column of <code class="docutils literal notranslate"><span class="pre">tag</span></code> corresponding to the POS tag of the token as an integer from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k-1</span></code>.</li>
+</ul>
+<p>An example:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>token       tag
 Two         3
 leading     2
@@ -269,6 +277,78 @@ presidents  8
 <p>A list of integers representing the list of predicted tag for each token, in sequence, for the sentence.</p>
 </div>
 </div>
+<div class="section" id="tabular-classification">
+<h2>TABULAR_CLASSIFICATION<a class="headerlink" href="#tabular-classification" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="dataset-type">
+<h3>Dataset Type<a class="headerlink" href="#dataset-type" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference internal" href="datasets.html#dataset-type-tabular"><span class="std std-ref">TABULAR</span></a></p>
+<p>The following optional train arguments are supported:</p>
+<blockquote>
+<div><table border="1" class="docutils">
+<colgroup>
+<col width="17%" />
+<col width="83%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Train Argument</strong></td>
+<td><strong>Description</strong></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">features</span></code></td>
+<td>List of feature columns’ names as a list of strings (defaults to first <code class="docutils literal notranslate"><span class="pre">N-1</span></code> columns in the CSV file)</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">target</span></code></td>
+<td>Target column name as a string (defaults to the <em>last</em> column in the CSV file)</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<p>The train &amp; validation datasets should have the same columns.</p>
+</div>
+<div class="section" id="id4">
+<h3>Query Format<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
+<p>An size-<code class="docutils literal notranslate"><span class="pre">N-1</span></code> dictionary representing feature-value pairs.</p>
+</div>
+<div class="section" id="id5">
+<h3>Prediction Format<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h3>
+<p>A size-<code class="docutils literal notranslate"><span class="pre">k</span></code> list of floats, representing the probabilities of each class from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k-1</span></code> for the target column.</p>
+</div>
+</div>
+<div class="section" id="tabular-regression">
+<h2>TABULAR_REGRESSION<a class="headerlink" href="#tabular-regression" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id6">
+<h3>Dataset Type<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference internal" href="datasets.html#dataset-type-tabular"><span class="std std-ref">TABULAR</span></a></p>
+<p>The following optional train arguments are supported:</p>
+<blockquote>
+<div><table border="1" class="docutils">
+<colgroup>
+<col width="17%" />
+<col width="83%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Train Argument</strong></td>
+<td><strong>Description</strong></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">features</span></code></td>
+<td>List of feature columns’ names as a list of strings (defaults to first <code class="docutils literal notranslate"><span class="pre">N-1</span></code> columns in the CSV file)</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">target</span></code></td>
+<td>Target column name as a string (defaults to the <em>last</em> column in the CSV file)</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<p>The train &amp; validation datasets should have the same columns.</p>
+</div>
+<div class="section" id="id7">
+<h3>Query Format<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h3>
+<p>An size-<code class="docutils literal notranslate"><span class="pre">N-1</span></code> dictionary representing feature-value pairs.</p>
+</div>
+<div class="section" id="id8">
+<h3>Prediction Format<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h3>
+<p>A float, representing the value of the target column.</p>
+</div>
+</div>
 </div>
 
 
@@ -279,10 +359,10 @@ presidents  8
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="installing-python.html" class="btn btn-neutral float-right" title="Installing Python" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="datasets.html" class="btn btn-neutral float-right" title="Dataset Types" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="using-web-admin.html" class="btn btn-neutral float-left" title="Using Rafiki’s Web Admin" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="using-web-admin.html" class="btn btn-neutral" title="Using Rafiki’s Web Admin" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -291,7 +371,7 @@ presidents  8
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
 
     </p>
   </div>
@@ -308,16 +388,33 @@ presidents  8
   
 
 
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>

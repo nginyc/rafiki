@@ -17,36 +17,34 @@
   
 
   
-  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../../_static/jquery.js"></script>
-        <script type="text/javascript" src="../../_static/underscore.js"></script>
-        <script type="text/javascript" src="../../_static/doctools.js"></script>
-        <script type="text/javascript" src="../../_static/language_data.js"></script>
-    
-    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
+  
+  
     
 
   
+
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Users of Rafiki" href="user-types.html" />
     <link rel="prev" title="Setup &amp; Configuration" href="setup.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
+
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+        <div class="wy-side-nav-search">
           
 
           
@@ -90,7 +88,7 @@
 <li class="toctree-l2"><a class="reference internal" href="setup.html">Setup &amp; Configuration</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Development</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#testing-latest-code-changes">Testing Latest Code Changes</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#connecting-to-rafiki-s-db">Connecting to Rafiki’s DB</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#managing-rafiki-s-db">Managing Rafiki’s DB</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#connecting-to-rafiki-s-cache">Connecting to Rafiki’s Cache</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pushing-images-to-docker-hub">Pushing Images to Docker Hub</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#building-rafiki-s-documentation">Building Rafiki’s Documentation</a></li>
@@ -185,21 +183,21 @@
 <p>To test the lastet code changes e.g. in the <code class="docutils literal notranslate"><span class="pre">dev</span></code> branch, you’ll need to do the following:</p>
 <blockquote>
 <div><ol class="arabic simple">
-<li><p>Build Rafiki’s images on each participating node (the quickstart instructions pull pre-built <a class="reference external" href="https://hub.docker.com/r/rafikiai/">Rafiki’s images</a> from Docker Hub):</p></li>
+<li>Build Rafiki’s images on each participating node (the quickstart instructions pull pre-built <a class="reference external" href="https://hub.docker.com/r/rafikiai/">Rafiki’s images</a> from Docker Hub):</li>
 </ol>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/build_images.sh
 </pre></div>
 </div>
 <ol class="arabic simple" start="2">
-<li><p>Purge all of Rafiki’s data (since there might be database schema changes):</p></li>
+<li>Purge all of Rafiki’s data (since there might be database schema changes):</li>
 </ol>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/clean.sh
 </pre></div>
 </div>
 </div></blockquote>
 </div>
-<div class="section" id="connecting-to-rafiki-s-db">
-<h2>Connecting to Rafiki’s DB<a class="headerlink" href="#connecting-to-rafiki-s-db" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="managing-rafiki-s-db">
+<h2>Managing Rafiki’s DB<a class="headerlink" href="#managing-rafiki-s-db" title="Permalink to this headline">¶</a></h2>
 <p>By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g <a class="reference external" href="https://eggerapps.at/postico/">Postico</a>) with these credentials:</p>
 <blockquote>
 <div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">RAFIKI_ADDR</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
@@ -207,6 +205,13 @@
 <span class="n">POSTGRES_USER</span><span class="o">=</span><span class="n">rafiki</span>
 <span class="n">POSTGRES_DB</span><span class="o">=</span><span class="n">rafiki</span>
 <span class="n">POSTGRES_PASSWORD</span><span class="o">=</span><span class="n">rafiki</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>You can start &amp; stop Rafiki’s DB independently of the rest of Rafiki’s stack with:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/start_db.sh
+bash scripts/stop_db.sh
 </pre></div>
 </div>
 </div></blockquote>
@@ -298,7 +303,7 @@ and subsequently add the <cite>Authorization</cite> header for every other call:
         <a href="user-types.html" class="btn btn-neutral float-right" title="Users of Rafiki" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="setup.html" class="btn btn-neutral float-left" title="Setup &amp; Configuration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="setup.html" class="btn btn-neutral" title="Setup &amp; Configuration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -307,7 +312,7 @@ and subsequently add the <cite>Authorization</cite> header for every other call:
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
 
     </p>
   </div>
@@ -324,16 +329,33 @@ and subsequently add the <cite>Authorization</cite> header for every other call:
   
 
 
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>

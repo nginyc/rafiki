@@ -17,36 +17,34 @@
   
 
   
-  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../../_static/jquery.js"></script>
-        <script type="text/javascript" src="../../_static/underscore.js"></script>
-        <script type="text/javascript" src="../../_static/doctools.js"></script>
-        <script type="text/javascript" src="../../_static/language_data.js"></script>
-    
-    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
+  
+  
     
 
   
+
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Python Documentation" href="../python/index.html" />
     <link rel="prev" title="Rafiki’s Architecture" href="architecture.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
+
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+        <div class="wy-side-nav-search">
           
 
           
@@ -164,77 +162,77 @@
   <div class="section" id="folder-structure">
 <span id="id1"></span><h1>Folder Structure<a class="headerlink" href="#folder-structure" title="Permalink to this headline">¶</a></h1>
 <ul>
-<li><p><cite>rafiki/</cite></p>
+<li><p class="first"><cite>rafiki/</cite></p>
 <blockquote>
 <div><p>Rafiki’s Python package</p>
 <ul>
-<li><p><cite>admin/</cite></p>
+<li><p class="first"><cite>admin/</cite></p>
 <blockquote>
 <div><p>Rafiki’s static Admin component</p>
 </div></blockquote>
 </li>
-<li><p><cite>advisor/</cite></p>
+<li><p class="first"><cite>advisor/</cite></p>
 <blockquote>
 <div><p>Rafiki’s advisors</p>
 </div></blockquote>
 </li>
-<li><p><cite>client/</cite></p>
+<li><p class="first"><cite>client/</cite></p>
 <blockquote>
 <div><p>Rafiki’s client-side SDK</p>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.client</span></code></p>
+<p class="first admonition-title">See also</p>
+<p class="last"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.client</span></code></p>
 </div>
 </div></blockquote>
 </li>
-<li><p><cite>worker/</cite></p>
+<li><p class="first"><cite>worker/</cite></p>
 <blockquote>
 <div><p>Rafiki’s train, inference &amp; advisor workers</p>
 </div></blockquote>
 </li>
-<li><p><cite>predictor/</cite></p>
+<li><p class="first"><cite>predictor/</cite></p>
 <blockquote>
 <div><p>Rafiki’s predictor</p>
 </div></blockquote>
 </li>
-<li><p><cite>meta_store/</cite></p>
+<li><p class="first"><cite>meta_store/</cite></p>
 <blockquote>
 <div><p>Abstract data access layer for Rafiki’s main metadata store (backed by PostgreSQL)</p>
 </div></blockquote>
 </li>
-<li><p><cite>param_store/</cite></p>
+<li><p class="first"><cite>param_store/</cite></p>
 <blockquote>
 <div><p>Abstract data access layer for Rafiki’s store of model parameters (backed by filesystem)</p>
 </div></blockquote>
 </li>
-<li><p><cite>data_store/</cite></p>
+<li><p class="first"><cite>data_store/</cite></p>
 <blockquote>
 <div><p>Abstract data access layer for Rafiki’s store of datasets (backed by filesystem)</p>
 </div></blockquote>
 </li>
-<li><p><cite>cache/</cite></p>
+<li><p class="first"><cite>cache/</cite></p>
 <blockquote>
 <div><p>Abstract data access layer for Rafiki’s temporary store of model parameters, train job metadata and queries &amp; predictions in train &amp; inference jobs (backed by Redis)</p>
 </div></blockquote>
 </li>
-<li><p><cite>container/</cite></p>
+<li><p class="first"><cite>container/</cite></p>
 <blockquote>
 <div><p>Abstract access layer for dynamic deployment of workers</p>
 </div></blockquote>
 </li>
-<li><p><cite>utils/</cite></p>
+<li><p class="first"><cite>utils/</cite></p>
 <blockquote>
 <div><p>Collection of Rafiki-internal utility methods (e.g. for logging, authentication)</p>
 </div></blockquote>
 </li>
-<li><p><cite>model/</cite></p>
+<li><p class="first"><cite>model/</cite></p>
 <blockquote>
 <div><p>Definition of abstract <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.BaseModel" title="rafiki.model.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.BaseModel</span></code></a> that all Rafiki models should extend, programming
 abstractions used in model development, as well as a collection of utility methods for model developers
 in the implementation of their own models</p>
 </div></blockquote>
 </li>
-<li><p><cite>constants.py</cite></p>
+<li><p class="first"><cite>constants.py</cite></p>
 <blockquote>
 <div><p>Rafiki’s programming abstractions &amp; constants (e.g. valid values for user types, job statuses)</p>
 </div></blockquote>
@@ -242,37 +240,37 @@ in the implementation of their own models</p>
 </ul>
 </div></blockquote>
 </li>
-<li><p><cite>web/</cite></p>
+<li><p class="first"><cite>web/</cite></p>
 <blockquote>
 <div><p>Rafiki’s Web Admin component</p>
 </div></blockquote>
 </li>
-<li><p><cite>dockerfiles/</cite></p>
+<li><p class="first"><cite>dockerfiles/</cite></p>
 <blockquote>
 <div><p>Stores Dockerfiles for customized components of Rafiki</p>
 </div></blockquote>
 </li>
-<li><p><cite>examples/</cite></p>
+<li><p class="first"><cite>examples/</cite></p>
 <blockquote>
 <div><p>Sample usage code for Rafiki.</p>
 </div></blockquote>
 </li>
-<li><p><cite>docs/</cite></p>
+<li><p class="first"><cite>docs/</cite></p>
 <blockquote>
 <div><p>Source documentation for Rafiki (e.g. Sphinx documentation files)</p>
 </div></blockquote>
 </li>
-<li><p><cite>test/</cite></p>
+<li><p class="first"><cite>test/</cite></p>
 <blockquote>
 <div><p>Test code for Rafiki</p>
 </div></blockquote>
 </li>
-<li><p><cite>scripts/</cite></p>
+<li><p class="first"><cite>scripts/</cite></p>
 <blockquote>
 <div><p>Shell &amp; python scripts for initializing, starting and stopping various components of Rafiki’s stack</p>
 </div></blockquote>
 </li>
-<li><p><cite>.env.sh</cite></p>
+<li><p class="first"><cite>.env.sh</cite></p>
 <blockquote>
 <div><p>Stores configuration variables for Rafiki</p>
 </div></blockquote>
@@ -291,7 +289,7 @@ in the implementation of their own models</p>
         <a href="../python/index.html" class="btn btn-neutral float-right" title="Python Documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="architecture.html" class="btn btn-neutral float-left" title="Rafiki’s Architecture" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="architecture.html" class="btn btn-neutral" title="Rafiki’s Architecture" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -300,7 +298,7 @@ in the implementation of their own models</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
 
     </p>
   </div>
@@ -317,16 +315,33 @@ in the implementation of their own models</p>
   
 
 
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>

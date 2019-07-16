@@ -17,34 +17,32 @@
   
 
   
-  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../../../_static/jquery.js"></script>
-        <script type="text/javascript" src="../../../_static/underscore.js"></script>
-        <script type="text/javascript" src="../../../_static/doctools.js"></script>
-        <script type="text/javascript" src="../../../_static/language_data.js"></script>
-    
-    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
 
+  
+  
     
 
   
+
   <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" /> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
+
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+        <div class="wy-side-nav-search">
           
 
           
@@ -149,7 +147,26 @@
            <div itemprop="articleBody">
             
   <h1>Source code for rafiki.model.dev</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">json</span>
+<span></span><span class="c1">#</span>
+<span class="c1"># Licensed to the Apache Software Foundation (ASF) under one</span>
+<span class="c1"># or more contributor license agreements.  See the NOTICE file</span>
+<span class="c1"># distributed with this work for additional information</span>
+<span class="c1"># regarding copyright ownership.  The ASF licenses this file</span>
+<span class="c1"># to you under the Apache License, Version 2.0 (the</span>
+<span class="c1"># &quot;License&quot;); you may not use this file except in compliance</span>
+<span class="c1"># with the License.  You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing,</span>
+<span class="c1"># software distributed under the License is distributed on an</span>
+<span class="c1"># &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY</span>
+<span class="c1"># KIND, either express or implied.  See the License for the</span>
+<span class="c1"># specific language governing permissions and limitations</span>
+<span class="c1"># under the License.</span>
+<span class="c1">#</span>
+
+<span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">argparse</span>
@@ -167,7 +184,9 @@
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">serialize_knob_config</span><span class="p">,</span> <span class="n">deserialize_knob_config</span><span class="p">,</span> <span class="n">parse_model_install_command</span><span class="p">,</span> <span class="n">load_model_class</span>
                     
 <span class="k">def</span> <span class="nf">tune_model</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">],</span> <span class="n">train_dataset_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">val_dataset_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 
-                <span class="n">test_dataset_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">budget</span><span class="p">:</span> <span class="n">Budget</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">float</span><span class="p">,</span> <span class="n">Params</span><span class="p">):</span>
+                <span class="n">test_dataset_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">budget</span><span class="p">:</span> <span class="n">Budget</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                <span class="n">train_args</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">float</span><span class="p">,</span> <span class="n">Params</span><span class="p">):</span>
+
     <span class="n">worker_id</span> <span class="o">=</span> <span class="s1">&#39;local&#39;</span>
 
     <span class="c1"># Note start time</span>
@@ -244,7 +263,7 @@
 
         <span class="c1"># Worker trains model</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Training model...&#39;</span><span class="p">)</span>
-        <span class="n">model_inst</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">train_dataset_path</span><span class="p">,</span> <span class="n">shared_params</span><span class="o">=</span><span class="n">shared_params</span><span class="p">)</span>
+        <span class="n">model_inst</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">train_dataset_path</span><span class="p">,</span> <span class="n">shared_params</span><span class="o">=</span><span class="n">shared_params</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">train_args</span> <span class="ow">or</span> <span class="p">{}))</span>
 
         <span class="c1"># Worker evaluates model</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">_evaluate_model</span><span class="p">(</span><span class="n">model_inst</span><span class="p">,</span> <span class="n">proposal</span><span class="p">,</span> <span class="n">val_dataset_path</span><span class="p">)</span>
@@ -365,7 +384,7 @@
 <span class="c1"># TODO: Fix method, more thorough testing of model API</span>
 <div class="viewcode-block" id="test_model_class"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.dev.test_model_class">[docs]</a><span class="k">def</span> <span class="nf">test_model_class</span><span class="p">(</span><span class="n">model_file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model_class</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">task</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dependencies</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> 
                     <span class="n">train_dataset_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">val_dataset_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">test_dataset_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
-                    <span class="n">budget</span><span class="p">:</span> <span class="n">Budget</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">queries</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">BaseModel</span><span class="p">):</span>
+                    <span class="n">budget</span><span class="p">:</span> <span class="n">Budget</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">train_args</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">queries</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">BaseModel</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Tests whether a model class is *more likely* to be correctly defined by *locally* simulating a full train-inference flow on your model</span>
 <span class="sd">    on a given dataset. The model&#39;s methods will be called in an manner similar to that in Rafiki.</span>
@@ -375,14 +394,16 @@
 <span class="sd">    This method also reads knob values and budget options from CLI arguments. </span>
 <span class="sd">    For example, you can pass e.g. ``--TIME_HOURS=0.01`` to configure the budget, or ``--learning_rate=0.01`` to fix a knob&#39;s value.</span>
 
-<span class="sd">    :param str model_file_path: Path to a single Python file that contains the definition for the model class</span>
-<span class="sd">    :param str model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`</span>
-<span class="sd">    :param str task: Task type of model</span>
-<span class="sd">    :param dict[str, str] dependencies: Model&#39;s dependencies</span>
-<span class="sd">    :param str train_dataset_path: File path of the train dataset for training of the model</span>
-<span class="sd">    :param str val_dataset_path: File path of the validation dataset for evaluating trained models</span>
-<span class="sd">    :param str test_dataset_path: File path of the test dataset for testing the final best trained model, if provided</span>
-<span class="sd">    :param List[Any] queries: List of queries for testing predictions with the trained model</span>
+<span class="sd">    :param model_file_path: Path to a single Python file that contains the definition for the model class</span>
+<span class="sd">    :param model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`</span>
+<span class="sd">    :param task: Task type of model</span>
+<span class="sd">    :param dependencies: Model&#39;s dependencies</span>
+<span class="sd">    :param train_dataset_path: File path of the train dataset for training of the model</span>
+<span class="sd">    :param val_dataset_path: File path of the validation dataset for evaluating trained models</span>
+<span class="sd">    :param test_dataset_path: File path of the test dataset for testing the final best trained model, if provided</span>
+<span class="sd">    :param budget: Budget for model training</span>
+<span class="sd">    :param train_args: Additional arguments to pass to models during training, if any</span>
+<span class="sd">    :param queries: List of queries for testing predictions with the trained model</span>
 <span class="sd">    :returns: (&lt;predictions of best trained model&gt;, &lt;best trained model&gt;)</span>
 
 <span class="sd">    &#39;&#39;&#39;</span>
@@ -397,7 +418,8 @@
 
     <span class="c1"># Simulation of training</span>
     <span class="p">(</span><span class="n">best_proposal</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">best_params</span><span class="p">)</span> <span class="o">=</span> <span class="n">tune_model</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">,</span> <span class="n">train_dataset_path</span><span class="p">,</span> <span class="n">val_dataset_path</span><span class="p">,</span> 
-                                                <span class="n">test_dataset_path</span><span class="o">=</span><span class="n">test_dataset_path</span><span class="p">,</span> <span class="n">budget</span><span class="o">=</span><span class="n">budget</span><span class="p">)</span>
+                                                <span class="n">test_dataset_path</span><span class="o">=</span><span class="n">test_dataset_path</span><span class="p">,</span> <span class="n">budget</span><span class="o">=</span><span class="n">budget</span><span class="p">,</span> 
+                                                <span class="n">train_args</span><span class="o">=</span><span class="n">train_args</span><span class="p">)</span>
 
     <span class="c1"># Simulation of inference</span>
     <span class="n">model_inst</span> <span class="o">=</span> <span class="kc">None</span>
@@ -481,8 +503,8 @@
 <span class="k">def</span> <span class="nf">_maybe_read_budget_from_args</span><span class="p">():</span>
     <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
     <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--GPU_COUNT&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--TIME_HOURS&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span> <span class="c1"># 6 min</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--MODEL_TRIAL_COUNT&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># 6 min</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--TIME_HOURS&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span> <span class="c1"># &lt; 1 min</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--MODEL_TRIAL_COUNT&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">budget_from_args</span> <span class="o">=</span> <span class="nb">vars</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">parse_known_args</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
     <span class="k">return</span> <span class="n">budget_from_args</span>
 
@@ -575,7 +597,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
 
     </p>
   </div>
@@ -592,16 +614,33 @@
   
 
 
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>

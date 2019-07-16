@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Installing Python &mdash; Rafiki  documentation</title>
+  <title>Dataset Types &mdash; Rafiki  documentation</title>
   
 
   
@@ -28,8 +28,8 @@
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Model Development Guide" href="model-development.html" />
-    <link rel="prev" title="Dataset Types" href="datasets.html" /> 
+    <link rel="next" title="Installing Python" href="installing-python.html" />
+    <link rel="prev" title="Supported Tasks" href="tasks.html" /> 
 
   
   <script src="../../_static/js/modernizr.min.js"></script>
@@ -91,8 +91,13 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html">Quick Start (Admins)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="using-web-admin.html">Using Rafiki’s Web Admin</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tasks.html">Supported Tasks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="datasets.html">Dataset Types</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Installing Python</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Dataset Types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#image-files">IMAGE_FILES</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#corpus">CORPUS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tabular">TABULAR</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="installing-python.html">Installing Python</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model-development.html">Model Development Guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model-tuning.html">How Model Tuning Works</a></li>
 </ul>
@@ -146,13 +151,13 @@
         
           <li><a href="index.html">User Guide</a> &raquo;</li>
         
-      <li>Installing Python</li>
+      <li>Dataset Types</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../../_sources/src/user/installing-python.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../../_sources/src/user/datasets.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -165,39 +170,50 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="installing-python">
-<span id="id1"></span><h1>Installing Python<a class="headerlink" href="#installing-python" title="Permalink to this headline">¶</a></h1>
-<p>Usage of Rafiki requires Python 3.6. Specifically, you’ll need the command <code class="docutils literal notranslate"><span class="pre">python</span></code> to point to a Python 3.6 program, and <code class="docutils literal notranslate"><span class="pre">pip</span></code> to point to PIP for that Python 3.6 installation.</p>
-<p>To achieve this, we recommend using <em>Conda</em> with a Python 3.6 environment as per the instructions below:</p>
+  <div class="section" id="dataset-types">
+<h1>Dataset Types<a class="headerlink" href="#dataset-types" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Refer to <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/datasets/">./examples/datasets/</a> for examples on pre-processing
+common dataset formats to conform to the Rafiki’s own dataset formats.</p>
+</div>
+<div class="section" id="image-files">
+<span id="dataset-type-image-files"></span><h2>IMAGE_FILES<a class="headerlink" href="#image-files" title="Permalink to this headline">¶</a></h2>
+<p>The dataset file must be of the <code class="docutils literal notranslate"><span class="pre">.zip</span></code> archive format with a <code class="docutils literal notranslate"><span class="pre">images.csv</span></code> at the root of the directory.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">images.csv</span></code> should be of a <a class="reference external" href="https://en.wikipedia.org/wiki/Comma-separated_values">.CSV</a>
+format with columns of <code class="docutils literal notranslate"><span class="pre">path</span></code> and <code class="docutils literal notranslate"><span class="pre">N</span></code> other variable column names (<em>tag columns</em>).</p>
+<p>For each row,</p>
 <blockquote>
-<div><ol class="arabic">
-<li><p class="first">Install the latest version of <a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">miniconda</a></p>
-</li>
-<li><p class="first">Run the following commands on shell:</p>
+<div><p><code class="docutils literal notranslate"><span class="pre">path</span></code> should be a file path to a <code class="docutils literal notranslate"><span class="pre">.png</span></code>, <code class="docutils literal notranslate"><span class="pre">.jpg</span></code> or <code class="docutils literal notranslate"><span class="pre">.jpeg</span></code> image file within the archive,
+relative to the root of the directory.</p>
+<p>The other <code class="docutils literal notranslate"><span class="pre">N</span></code> columns describe the corresponding image, <em>depending on the task</em>.</p>
+</div></blockquote>
+</div>
+<div class="section" id="corpus">
+<span id="dataset-type-corpus"></span><h2>CORPUS<a class="headerlink" href="#corpus" title="Permalink to this headline">¶</a></h2>
+<p>The dataset file must be of the <code class="docutils literal notranslate"><span class="pre">.zip</span></code> archive format with a <code class="docutils literal notranslate"><span class="pre">corpus.tsv</span></code> at the root of the directory.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">corpus.tsv</span></code> should be of a <a class="reference external" href="https://en.wikipedia.org/wiki/Tab-separated_values">.TSV</a>
+format with columns of <code class="docutils literal notranslate"><span class="pre">token</span></code> and <code class="docutils literal notranslate"><span class="pre">N</span></code> other variable column names (<em>tag columns</em>).</p>
+<p>For each row,</p>
 <blockquote>
-<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>conda create --name rafiki <span class="nv">python</span><span class="o">=</span><span class="m">3</span>.6
+<div><p><code class="docutils literal notranslate"><span class="pre">token</span></code> should be a string, a token (e.g. word) in the corpus.
+These tokens should appear in the order as it is in the text of the corpus.
+To delimit sentences, <code class="docutils literal notranslate"><span class="pre">token</span></code> can be take the value of <code class="docutils literal notranslate"><span class="pre">\n</span></code>.</p>
+<p>The other <code class="docutils literal notranslate"><span class="pre">N</span></code> columns describe the corresponding token as part of the text of the corpus, <em>depending on the task</em>.</p>
+</div></blockquote>
+</div>
+<div class="section" id="tabular">
+<span id="dataset-type-tabular"></span><h2>TABULAR<a class="headerlink" href="#tabular" title="Permalink to this headline">¶</a></h2>
+<p>The dataset file must be a tabular dataset of the <code class="docutils literal notranslate"><span class="pre">.csv</span></code> format with <code class="docutils literal notranslate"><span class="pre">N</span></code> columns.</p>
+<p>An example of the dataset for the task <code class="docutils literal notranslate"><span class="pre">TABULAR_REGRESSION</span></code> follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>density,bodyfat,age,weight,height,neck,chest,abdomen,hip,thigh,knee,ankle,biceps,forearm,wrist
+1.0708,12.3,23,154.25,67.75,36.2,93.1,85.2,94.5,59,37.3,21.9,32,27.4,17.1
+1.0853,6.1,22,173.25,72.25,38.5,93.6,83,98.7,58.7,37.3,23.4,30.5,28.9,18.2
+1.0414,25.3,22,154,66.25,34,95.8,87.9,99.2,59.6,38.9,24,28.8,25.2,16.6
+...
 </pre></div>
 </div>
-</div></blockquote>
-</li>
-<li><p class="first">Every time you need to use <code class="docutils literal notranslate"><span class="pre">python</span></code> or <code class="docutils literal notranslate"><span class="pre">pip</span></code> for Rafiki, run the following command on shell:</p>
-<blockquote>
-<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>conda activate rafiki
-</pre></div>
 </div>
-</div></blockquote>
-</li>
-</ol>
-</div></blockquote>
-<p>Otherwise, you can refer to these links below on installing Python natively:</p>
-<blockquote>
-<div><ul class="simple">
-<li><a class="reference external" href="http://ubuntuhandbook.org/index.php/2017/07/install-python-3-6-1-in-ubuntu-16-04-lts/">Installing Python 3.6 for Ubuntu</a></li>
-<li><a class="reference external" href="https://www.python.org/downloads/mac-osx/">Python download page for MacOS</a></li>
-<li><a class="reference external" href="https://askubuntu.com/questions/320996/how-to-make-python-program-command-execute-python-3">Using aliases to set the correct ‘python’ program</a></li>
-<li><a class="reference external" href="https://stackoverflow.com/questions/38938205/how-to-override-the-pip-command-to-python3-x-instead-of-python2-7">Installing the correct PIP for ‘python’</a></li>
-</ul>
-</div></blockquote>
 </div>
 
 
@@ -208,10 +224,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="model-development.html" class="btn btn-neutral float-right" title="Model Development Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="installing-python.html" class="btn btn-neutral float-right" title="Installing Python" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="datasets.html" class="btn btn-neutral" title="Dataset Types" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="tasks.html" class="btn btn-neutral" title="Supported Tasks" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

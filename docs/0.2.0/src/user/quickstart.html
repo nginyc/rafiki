@@ -17,36 +17,34 @@
   
 
   
-  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../../_static/jquery.js"></script>
-        <script type="text/javascript" src="../../_static/underscore.js"></script>
-        <script type="text/javascript" src="../../_static/doctools.js"></script>
-        <script type="text/javascript" src="../../_static/language_data.js"></script>
-    
-    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
+  
+  
     
 
   
+
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Quick Start (Model Developers)" href="quickstart-model-developers.html" />
     <link rel="prev" title="User Guide" href="index.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
+
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+        <div class="wy-side-nav-search">
           
 
           
@@ -106,6 +104,7 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html">Quick Start (Admins)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="using-web-admin.html">Using Rafiki’s Web Admin</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tasks.html">Supported Tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datasets.html">Dataset Types</a></li>
 <li class="toctree-l2"><a class="reference internal" href="installing-python.html">Installing Python</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model-development.html">Model Development Guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model-tuning.html">How Model Tuning Works</a></li>
@@ -184,19 +183,18 @@
 <div class="contents topic" id="table-of-contents">
 <p class="topic-title first">Table of Contents</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="#quick-start" id="id2">Quick Start</a></p>
-<ul>
-<li><p><a class="reference internal" href="#installing-the-client" id="id3">Installing the client</a></p></li>
-<li><p><a class="reference internal" href="#initializing-the-client" id="id4">Initializing the client</a></p></li>
-<li><p><a class="reference internal" href="#creating-models" id="id5">Creating models</a></p></li>
-<li><p><a class="reference internal" href="#listing-available-models-by-task" id="id6">Listing available models by task</a></p></li>
-<li><p><a class="reference internal" href="#creating-datasets" id="id7">Creating datasets</a></p></li>
-<li><p><a class="reference internal" href="#creating-a-train-job" id="id8">Creating a train job</a></p></li>
-<li><p><a class="reference internal" href="#listing-train-jobs" id="id9">Listing train jobs</a></p></li>
-<li><p><a class="reference internal" href="#creating-an-inference-job-with-the-latest-train-job" id="id10">Creating an inference job with the latest train job</a></p></li>
-<li><p><a class="reference internal" href="#listing-inference-jobs" id="id11">Listing inference jobs</a></p></li>
-<li><p><a class="reference internal" href="#making-predictions" id="id12">Making predictions</a></p></li>
-<li><p><a class="reference internal" href="#stopping-a-running-inference-job" id="id13">Stopping a running inference job</a></p></li>
+<li><a class="reference internal" href="#quick-start" id="id2">Quick Start</a><ul>
+<li><a class="reference internal" href="#installing-the-client" id="id3">Installing the client</a></li>
+<li><a class="reference internal" href="#initializing-the-client" id="id4">Initializing the client</a></li>
+<li><a class="reference internal" href="#creating-models" id="id5">Creating models</a></li>
+<li><a class="reference internal" href="#listing-available-models-by-task" id="id6">Listing available models by task</a></li>
+<li><a class="reference internal" href="#creating-datasets" id="id7">Creating datasets</a></li>
+<li><a class="reference internal" href="#creating-a-train-job" id="id8">Creating a train job</a></li>
+<li><a class="reference internal" href="#listing-train-jobs" id="id9">Listing train jobs</a></li>
+<li><a class="reference internal" href="#creating-an-inference-job-with-the-latest-train-job" id="id10">Creating an inference job with the latest train job</a></li>
+<li><a class="reference internal" href="#listing-inference-jobs" id="id11">Listing inference jobs</a></li>
+<li><a class="reference internal" href="#making-predictions" id="id12">Making predictions</a></li>
+<li><a class="reference internal" href="#stopping-a-running-inference-job" id="id13">Stopping a running inference job</a></li>
 </ul>
 </li>
 </ul>
@@ -204,12 +202,12 @@
 <p>This guide assumes you have deployed your own empty instance of Rafiki and you want to try a <em>full</em> train-inference flow as the <em>Super Admin</em>:</p>
 <blockquote>
 <div><ol class="arabic simple">
-<li><p>Authenticating on Rafiki</p></li>
-<li><p>Submitting models</p></li>
-<li><p>Uploading datasets</p></li>
-<li><p>Creating a model training job</p></li>
-<li><p>Creating a model serving job after the model training job completes</p></li>
-<li><p>Making predictions</p></li>
+<li>Authenticating on Rafiki</li>
+<li>Submitting models</li>
+<li>Uploading datasets</li>
+<li>Creating a model training job</li>
+<li>Creating a model serving job after the model training job completes</li>
+<li>Making predictions</li>
 </ol>
 </div></blockquote>
 <p>Follow the sequence of examples below to submit the <a class="reference external" href="https://github.com/zalandoresearch/fashion-mnist">Fashion MNIST dataset</a> for training and inference.
@@ -217,23 +215,25 @@ Alternatively, refer and run the scripted version of this quickstart
 <a class="reference external" href="https://github.com/nginyc/rafiki/blob/master/examples/scripts/quickstart.py">./examples/scripts/quickstart.py</a>.</p>
 <p>To learn more about what else you can do on Rafiki, explore the methods of <a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client" title="rafiki.client.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.client.Client</span></code></a>.</p>
 <div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>If you haven’t set up Rafiki on your local machine, refer to <a class="reference internal" href="../dev/setup.html#quick-setup"><span class="std std-ref">Quick Setup</span></a> before continuing.</p>
+<p class="first admonition-title">Note</p>
+<p class="last">If you haven’t set up Rafiki on your local machine, refer to <a class="reference internal" href="../dev/setup.html#quick-setup"><span class="std std-ref">Quick Setup</span></a> before continuing.</p>
 </div>
 <div class="admonition note">
-<p class="admonition-title">Note</p>
-<ul class="simple">
-<li><p>For <em>Model Developers</em> just looking to contribute models, refer to <a class="reference internal" href="quickstart-model-developers.html#quickstart-model-developers"><span class="std std-ref">Quick Start (Model Developers)</span></a></p></li>
-<li><p>For <em>Application Developers</em> just looking to train and deploy models, refer to <a class="reference internal" href="quickstart-app-developers.html#quickstart-app-developers"><span class="std std-ref">Quick Start (Application Developers)</span></a></p></li>
-<li><p>For <em>Application Users</em> just looking to make predictions, refer to <a class="reference internal" href="quickstart-app-users.html#quickstart-app-users"><span class="std std-ref">Quick Start (Application Users)</span></a></p></li>
+<p class="first admonition-title">Note</p>
+<ul class="last simple">
+<li>For <em>Model Developers</em> just looking to contribute models, refer to <a class="reference internal" href="quickstart-model-developers.html#quickstart-model-developers"><span class="std std-ref">Quick Start (Model Developers)</span></a></li>
+<li>For <em>Application Developers</em> just looking to train and deploy models, refer to <a class="reference internal" href="quickstart-app-developers.html#quickstart-app-developers"><span class="std std-ref">Quick Start (Application Developers)</span></a></li>
+<li>For <em>Application Users</em> just looking to make predictions, refer to <a class="reference internal" href="quickstart-app-users.html#quickstart-app-users"><span class="std std-ref">Quick Start (Application Users)</span></a></li>
 </ul>
 </div>
 <div class="section" id="installing-the-client">
 <h2><a class="toc-backref" href="#id3">Installing the client</a><a class="headerlink" href="#installing-the-client" title="Permalink to this headline">¶</a></h2>
 <ol class="arabic">
-<li><p>Install Python 3.6 such that the <code class="docutils literal notranslate"><span class="pre">python</span></code> and <code class="docutils literal notranslate"><span class="pre">pip</span></code> point to the correct installation of Python (see <a class="reference internal" href="installing-python.html#installing-python"><span class="std std-ref">Installing Python</span></a>)</p></li>
-<li><p>Clone the project at <a class="reference external" href="https://github.com/nginyc/rafiki">https://github.com/nginyc/rafiki</a> (e.g. with <a class="reference external" href="https://git-scm.com/downloads">Git</a>)</p></li>
-<li><p>Within the project’s root folder, install Rafiki’s client-side Python dependencies by running:</p>
+<li><p class="first">Install Python 3.6 such that the <code class="docutils literal notranslate"><span class="pre">python</span></code> and <code class="docutils literal notranslate"><span class="pre">pip</span></code> point to the correct installation of Python (see <a class="reference internal" href="installing-python.html#installing-python"><span class="std std-ref">Installing Python</span></a>)</p>
+</li>
+<li><p class="first">Clone the project at <a class="reference external" href="https://github.com/nginyc/rafiki">https://github.com/nginyc/rafiki</a> (e.g. with <a class="reference external" href="https://git-scm.com/downloads">Git</a>)</p>
+</li>
+<li><p class="first">Within the project’s root folder, install Rafiki’s client-side Python dependencies by running:</p>
 <blockquote>
 <div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="o">./</span><span class="n">rafiki</span><span class="o">/</span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
 </pre></div>
@@ -253,8 +253,8 @@ Alternatively, refer and run the scripted version of this quickstart
 </div>
 </div></blockquote>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.login" title="rafiki.client.Client.login"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.login()</span></code></a></p>
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.login" title="rafiki.client.Client.login"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.login()</span></code></a></p>
 </div>
 </div>
 <div class="section" id="creating-models">
@@ -285,8 +285,8 @@ and refer to <a class="reference internal" href="model-development.html#model-de
 </div>
 </div></blockquote>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.create_model" title="rafiki.client.Client.create_model"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_model()</span></code></a></p>
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.create_model" title="rafiki.client.Client.create_model"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_model()</span></code></a></p>
 </div>
 </div>
 <div class="section" id="listing-available-models-by-task">
@@ -315,18 +315,19 @@ and refer to <a class="reference internal" href="model-development.html#model-de
 </div>
 </div></blockquote>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.get_available_models" title="rafiki.client.Client.get_available_models"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_available_models()</span></code></a></p>
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.get_available_models" title="rafiki.client.Client.get_available_models"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_available_models()</span></code></a></p>
 </div>
 </div>
 <div class="section" id="creating-datasets">
 <h2><a class="toc-backref" href="#id7">Creating datasets</a><a class="headerlink" href="#creating-datasets" title="Permalink to this headline">¶</a></h2>
-<p>You’ll first need to convert your dataset into a format specified by one of the tasks (see <a class="reference internal" href="tasks.html#tasks"><span class="std std-ref">Supported Tasks</span></a>), and split them into two files: one for training &amp; one for validation.
+<p>You’ll first need to convert your dataset into a format specified by one of the tasks (see <a class="reference internal" href="tasks.html#tasks"><span class="std std-ref">Supported Tasks</span></a>),
+and split them into two files: one for training &amp; one for validation.
 After doing so, you’ll create 2 corresponding datasets on Rafiki by uploading them from your filesystem.</p>
 <p>Example (pre-processing step):</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run this in shell</span>
-python examples/datasets/image_classification/load_mnist_format.py
+python examples/datasets/image_files/load_mnist_format.py
 </pre></div>
 </div>
 </div></blockquote>
@@ -335,13 +336,13 @@ python examples/datasets/image_classification/load_mnist_format.py
 <div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">client</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
     <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fashion_mnist_train&#39;</span><span class="p">,</span>
     <span class="n">task</span><span class="o">=</span><span class="s1">&#39;IMAGE_CLASSIFICATION&#39;</span><span class="p">,</span>
-    <span class="n">dataset_path</span><span class="o">=</span><span class="s1">&#39;data/fashion_mnist_for_image_classification_train.zip&#39;</span>
+    <span class="n">dataset_path</span><span class="o">=</span><span class="s1">&#39;data/fashion_mnist_train.zip&#39;</span>
 <span class="p">)</span>
 
 <span class="n">client</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
     <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fashion_mnist_val&#39;</span><span class="p">,</span>
     <span class="n">task</span><span class="o">=</span><span class="s1">&#39;IMAGE_CLASSIFICATION&#39;</span><span class="p">,</span>
-    <span class="n">dataset_path</span><span class="o">=</span><span class="s1">&#39;data/fashion_mnist_for_image_classification_val.zip&#39;</span>
+    <span class="n">dataset_path</span><span class="o">=</span><span class="s1">&#39;data/fashion_mnist_val.zip&#39;</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -359,12 +360,12 @@ python examples/datasets/image_classification/load_mnist_format.py
 </div>
 </div></blockquote>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.create_dataset" title="rafiki.client.Client.create_dataset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_dataset()</span></code></a></p>
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.create_dataset" title="rafiki.client.Client.create_dataset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_dataset()</span></code></a></p>
 </div>
 <div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The code that preprocesses the original Fashion MNIST dataset is available at <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/datasets/image_classification/load_mnist_format.py">./examples/datasets/image_classification/load_mnist_format.py</a>.</p>
+<p class="first admonition-title">Note</p>
+<p class="last">The code that preprocesses the original Fashion MNIST dataset is available at <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/datasets/image_files/load_mnist_format.py">./examples/datasets/image_files/load_mnist_format.py</a>.</p>
 </div>
 </div>
 <div class="section" id="creating-a-train-job">
@@ -391,8 +392,8 @@ python examples/datasets/image_classification/load_mnist_format.py
 </div>
 </div></blockquote>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.create_train_job" title="rafiki.client.Client.create_train_job"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_train_job()</span></code></a></p>
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.create_train_job" title="rafiki.client.Client.create_train_job"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_train_job()</span></code></a></p>
 </div>
 </div>
 <div class="section" id="listing-train-jobs">
@@ -417,8 +418,8 @@ python examples/datasets/image_classification/load_mnist_format.py
 </div>
 </div></blockquote>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.get_train_jobs_of_app" title="rafiki.client.Client.get_train_jobs_of_app"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_train_jobs_of_app()</span></code></a></p>
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.get_train_jobs_of_app" title="rafiki.client.Client.get_train_jobs_of_app"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_train_jobs_of_app()</span></code></a></p>
 </div>
 </div>
 <div class="section" id="creating-an-inference-job-with-the-latest-train-job">
@@ -441,8 +442,8 @@ The inference job would be created from the best trials from that train job.</p>
 </div>
 </div></blockquote>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.create_inference_job" title="rafiki.client.Client.create_inference_job"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_inference_job()</span></code></a></p>
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.create_inference_job" title="rafiki.client.Client.create_inference_job"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_inference_job()</span></code></a></p>
 </div>
 </div>
 <div class="section" id="listing-inference-jobs">
@@ -465,8 +466,8 @@ The inference job would be created from the best trials from that train job.</p>
 </div>
 </div></blockquote>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.get_inference_jobs_of_app" title="rafiki.client.Client.get_inference_jobs_of_app"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_inference_jobs_of_app()</span></code></a></p>
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.get_inference_jobs_of_app" title="rafiki.client.Client.get_inference_jobs_of_app"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_inference_jobs_of_app()</span></code></a></p>
 </div>
 </div>
 <div class="section" id="making-predictions">
@@ -545,8 +546,8 @@ curl -H <span class="s2">&quot;Content-Type: application/json&quot;</span> -X PO
 </div>
 </div></blockquote>
 <div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.stop_inference_job" title="rafiki.client.Client.stop_inference_job"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.stop_inference_job()</span></code></a></p>
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.stop_inference_job" title="rafiki.client.Client.stop_inference_job"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.stop_inference_job()</span></code></a></p>
 </div>
 </div>
 </div>
@@ -562,7 +563,7 @@ curl -H <span class="s2">&quot;Content-Type: application/json&quot;</span> -X PO
         <a href="quickstart-model-developers.html" class="btn btn-neutral float-right" title="Quick Start (Model Developers)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="index.html" class="btn btn-neutral float-left" title="User Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="index.html" class="btn btn-neutral" title="User Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -571,7 +572,7 @@ curl -H <span class="s2">&quot;Content-Type: application/json&quot;</span> -X PO
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
 
     </p>
   </div>
@@ -588,16 +589,33 @@ curl -H <span class="s2">&quot;Content-Type: application/json&quot;</span> -X PO
   
 
 
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>
