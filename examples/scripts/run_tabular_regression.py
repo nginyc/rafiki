@@ -18,25 +18,24 @@
 #
 
 from pprint import pprint
-import time
-import requests
 import argparse
 import os
 
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL
-from rafiki.constants import TaskType, BudgetType, UserType, ModelDependency, ModelAccessRight
+from rafiki.constants import BudgetOption, ModelDependency
+
 from examples.scripts.quickstart import get_predictor_host, \
-    wait_until_train_job_has_stopped, make_predictions,  gen_id
+    wait_until_train_job_has_stopped, make_predictions, gen_id
 
 from examples.datasets.tabular.csv_file import load
 
-def run_tabular_regression(client, csv_file_url, gpus, features=None, target=None, queries=None):
+def run_tabular_regression(client, csv_file_url, gpus, hours, features=None, target=None, queries=None):
     '''
     Runs a sample full train-inference flow for the task ``TABULAR_REGRESSION``.
     '''
 
-    task = TaskType.TABULAR_REGRESSION
+    task = 'TABULAR_REGRESSION'
 
     # Randomly generate app & model names to avoid naming conflicts
     app_id = gen_id()
@@ -61,8 +60,8 @@ def run_tabular_regression(client, csv_file_url, gpus, features=None, target=Non
 
     print('Creating train job for app "{}" on Rafiki...'.format(app))
     budget = {
-        BudgetType.MODEL_TRIAL_COUNT: 5,
-        BudgetType.GPU_COUNT: gpus
+        BudgetOption.TIME_HOURS: hours,
+        BudgetOption.GPU_COUNT: gpus
     }
     train_job = client.create_train_job(app, task, train_dataset['id'], val_dataset['id'], 
                                         budget, models=[xgb_model['id']], train_args={ 'features': features, 'target': target })
@@ -97,6 +96,7 @@ if __name__ == '__main__':
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
+    parser.add_argument('--hours', type=float, default=0.1, help='How long the train job should run for (in hours)') 
     parser.add_argument('--csv', type=str, default='https://course1.winona.edu/bdeppa/Stat%20425/Data/bodyfat.csv', help='Path to a standard CSV file to perform regression on')
     parser.add_argument('--features', type=str, default=None, help='List of feature columns\' names as comma separated values')
     parser.add_argument('--target', type=str, default=None, help='Target column\'s name')
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     client = Client()
     client.login(email=args.email, password=args.password)
 
-    run_tabular_regression(client, args.csv, args.gpus, 
+    run_tabular_regression(client, args.csv, args.gpus, args.hours,
                             features=['density',
                                     'age',
                                     'weight',

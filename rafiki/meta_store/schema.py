@@ -18,13 +18,13 @@
 #
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Float, ForeignKey, Integer, Binary, DateTime, UniqueConstraint
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import Column, String, Float, ForeignKey, Integer, LargeBinary, DateTime, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSON, ARRAY
 import uuid
 from datetime import datetime
 
-from rafiki.constants import InferenceJobStatus, ServiceStatus, TrainJobStatus, \
-    TrialStatus, ModelAccessRight
+from rafiki.constants import InferenceJobStatus, ServiceStatus, TrainJobStatus, TrialStatus, ModelAccessRight
 
 Base = declarative_base()
 
@@ -71,7 +71,7 @@ class Model(Base):
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
     name = Column(String, nullable=False)
     task = Column(String, nullable=False)
-    model_file_bytes = Column(Binary, nullable=False)
+    model_file_bytes = Column(LargeBinary, nullable=False)
     model_class = Column(String, nullable=False)
     docker_image = Column(String, nullable=False)
     dependencies = Column(JSON, nullable=False)
@@ -92,16 +92,24 @@ class Service(Base):
     ext_port = Column(Integer)
     hostname = Column(String)
     port = Column(Integer)
+    service_info = Column(JSON)
     container_service_name = Column(String)
     container_service_id = Column(String)
     container_service_info = Column(JSON)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     datetime_stopped = Column(DateTime, default=None)
 
+    @hybrid_property
+    def host(self):
+        if self.ext_hostname is None or self.ext_port is None:
+            return None
+        return f'{self.ext_hostname}:{self.ext_port}'
+
 class TrainJob(Base):
     __tablename__ = 'train_job'
 
     id = Column(String, primary_key=True, default=generate_uuid)
+    datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     app = Column(String, nullable=False)
     app_version = Column(Integer, nullable=False)
     task = Column(String, nullable=False)
@@ -121,9 +129,11 @@ class SubTrainJob(Base):
     id = Column(String, primary_key=True, default=generate_uuid)
     train_job_id = Column(String, ForeignKey('train_job.id'))
     model_id = Column(String, ForeignKey('model.id'))
-    user_id = Column(String, ForeignKey('user.id'), nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
+    train_job_id = Column(String, ForeignKey('train_job.id'))
+    status = Column(String, nullable=False, default=TrainJobStatus.STARTED)
     datetime_stopped = Column(DateTime, default=None)
+    advisor_service_id = Column(String, ForeignKey('service.id'))
 
 class TrainJobWorker(Base):
     __tablename__ = 'train_job_worker'
@@ -131,19 +141,29 @@ class TrainJobWorker(Base):
     service_id = Column(String, ForeignKey('service.id'), primary_key=True)
     sub_train_job_id = Column(String, ForeignKey('sub_train_job.id'), nullable=False)
 
+
 class Trial(Base):
     __tablename__ = 'trial'
 
     id = Column(String, primary_key=True, default=generate_uuid)
+    no = Column(Integer, nullable=False)
     sub_train_job_id = Column(String, ForeignKey('sub_train_job.id'), nullable=False)
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
-    status = Column(String, nullable=False, default=TrialStatus.STARTED)
+    datetime_updated = Column(DateTime, nullable=False, default=generate_datetime)
+    datetime_stopped = Column(DateTime, default=None)
+    status = Column(String, nullable=False, default=TrialStatus.PENDING)
     worker_id = Column(String, nullable=False)
     knobs = Column(JSON, default=None)
-    score = Column(Float, default=0)
-    params_file_path = Column(String, default=None)
-    datetime_stopped = Column(DateTime, default=None)
+    score = Column(Float, default=None)
+    store_params_id = Column(String, default=None)
+    proposal = Column(JSON, default=None)
+
+    @hybrid_property
+    def is_params_saved(self):
+        return self.store_params_id is not None
+
+    __table_args__ = (UniqueConstraint('sub_train_job_id', 'no', name='_sub_train_job_id_no_uc'),) # Unique by (sub train job, trial no)
 
 class TrialLog(Base):
     __tablename__ = 'trial_log'
@@ -159,7 +179,7 @@ class User(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     email = Column(String, unique=True, nullable=False)
-    password_hash = Column(Binary, nullable=False)
+    password_hash = Column(LargeBinary, nullable=False)
     user_type = Column(String, nullable=False)
     banned_date = Column(DateTime, default=None)
     

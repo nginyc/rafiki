@@ -19,11 +19,12 @@
 
 import pytest
 import os
+import time
 import uuid
 import random
 import numpy as np
 
-from rafiki.constants import UserType, ModelAccessRight
+from rafiki.constants import UserType, ModelAccessRight, TrainJobStatus, BudgetOption, InferenceJobStatus
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL
 
@@ -34,7 +35,9 @@ superadmin_password = os.environ['SUPERADMIN_PASSWORD']
 # Details for mocks
 DATASET_FILE_PATH = 'test/data/dataset.csv'
 MODEL_FILE_PATH = 'test/data/Model.py'
+MODEL_INVALID_FILE_PATH = 'test/data/ModelInvalid.py'
 MODEL_CLASS = 'Model'
+JOB_TIMEOUT_SECS = 60
 
 ####################################
 # General
@@ -97,16 +100,77 @@ def make_dataset(client: Client, task=None):
 # Models
 ####################################
 
-def make_private_model(**kwargs):
-    return make_model(access_right=ModelAccessRight.PRIVATE, **kwargs)
-
-def make_model(task=None, access_right=ModelAccessRight.PUBLIC):
+def make_model(task=None, access_right=ModelAccessRight.PUBLIC, model_file_path=MODEL_FILE_PATH):
     model_dev = make_model_dev()
     task = task or gen()
     name = gen()
-    model_file_path = MODEL_FILE_PATH
     model_class = MODEL_CLASS
     dependencies = {}
     model = model_dev.create_model(name, task, model_file_path, model_class, dependencies, access_right=access_right)
     model_id = model['id']
     return model_id
+
+def make_private_model(**kwargs):
+    return make_model(access_right=ModelAccessRight.PRIVATE, **kwargs)
+
+def make_invalid_model(**kwargs):
+    return make_model(model_file_path=MODEL_INVALID_FILE_PATH, **kwargs)
+
+####################################
+# Train Jobs
+####################################
+
+def make_train_job(client: Client, task=None, app=None, model_id=None):
+    task = task or gen()
+    app = app or gen()
+    train_dataset_id = make_dataset(client, task=task)
+    val_dataset_id = make_dataset(client, task=task)
+    model_id = model_id or make_model(task=task)
+    budget = {BudgetOption.MODEL_TRIAL_COUNT: 1, BudgetOption.GPU_COUNT: 0}
+    train_job = client.create_train_job(app, task, train_dataset_id, val_dataset_id, budget, models=[model_id])
+    return train_job['id']
+
+# Raise exception if train job errors or it timeouts
+def wait_for_train_job_status(client: Client, app, status):
+    length = 0
+    timeout = JOB_TIMEOUT_SECS
+    tick = 1
+
+    while True:
+        train_job = client.get_train_job(app)
+        if train_job['status'] == status:
+            return
+        elif train_job['status'] == TrainJobStatus.ERRORED:
+            raise Exception('Train job has errored')
+            
+        # Still running...
+        if length >= timeout:
+            raise TimeoutError('Waiting for too long')
+
+        length += tick
+        time.sleep(tick)
+
+####################################
+# Inference Jobs
+####################################
+
+# Raise exception if inference job errors or it timeouts
+def wait_for_inference_job_status(client: Client, app, status):
+    length = 0
+    timeout = JOB_TIMEOUT_SECS
+    tick = 1
+
+    while True:
+        inference_job = client.get_running_inference_job(app)
+        if inference_job['status'] == status:
+            return
+        elif inference_job['status'] == InferenceJobStatus.ERRORED:
+            raise Exception('Inference job has errored')
+            
+        # Still running...
+        if length >= timeout:
+            raise TimeoutError('Waiting for too long')
+
+        length += tick
+        time.sleep(tick)
+

@@ -39,11 +39,7 @@ else
 fi
 bash ./scripts/start_cache.sh || exit 1
 bash ./scripts/start_admin.sh || exit 1
-bash ./scripts/start_advisor.sh || exit 1
 bash ./scripts/start_web_admin.sh || exit 1
-
-title "Installing any dependencies..."
-pip install -r ./rafiki/requirements.txt
 
 echo "To use Rafiki, use Rafiki Client in the Python CLI"
 echo "A quickstart is available at https://nginyc.github.io/rafiki/docs/latest/docs/src/user/quickstart.html"

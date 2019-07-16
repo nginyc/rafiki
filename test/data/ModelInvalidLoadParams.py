@@ -17,13 +17,29 @@
 # under the License.
 #
 
-import os
+import random
 
-from rafiki.utils.log import configure_logging
-from rafiki.advisor.app import app
+from rafiki.model import BaseModel
 
-configure_logging('advisor')
+class Model(BaseModel):
+    '''
+    Model that errors while loading params
+    '''
+    @staticmethod
+    def get_knob_config():
+        return {}
+       
+    def train(self, dataset_path, **kwargs):
+        pass
 
-if __name__ == "__main__":
-    # No threading since data is in-memory
-    app.run(host='0.0.0.0', port=os.getenv('ADVISOR_PORT', 3002), threaded=False)
+    def evaluate(self, dataset_path):
+        return random.random()
+
+    def predict(self, queries):
+        return [1 for x in queries]
+
+    def dump_parameters(self):
+        return {}
+
+    def load_parameters(self, params):
+        raise Exception()
