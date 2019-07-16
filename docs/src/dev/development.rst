@@ -29,7 +29,7 @@ To test the lastet code changes e.g. in the ``dev`` branch, you'll need to do th
         bash scripts/clean.sh
 
 
-Connecting to Rafiki's DB
+Managing Rafiki's DB
 --------------------------------------------------------------------
 
 By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g `Postico <https://eggerapps.at/postico/>`_) with these credentials:
@@ -41,6 +41,15 @@ By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g 
         POSTGRES_USER=rafiki
         POSTGRES_DB=rafiki
         POSTGRES_PASSWORD=rafiki
+
+
+You can start & stop Rafiki's DB independently of the rest of Rafiki's stack with:
+
+    .. code-block:: shell
+
+        bash scripts/start_db.sh
+        bash scripts/stop_db.sh
+    
 
 Connecting to Rafiki's Cache
 --------------------------------------------------------------------
@@ -78,6 +87,18 @@ Build & view Rafiki's Sphinx documentation on your machine with the following co
         bash scripts/build_docs.sh latest
         open docs/index.html
 
+Testing
+--------------------------------------------------------------------
+
+Rafiki uses `pytest <https://docs.pytest.org>`_.  
+
+Running all tests:
+
+    ::
+
+        bash scripts/test.sh
+
+
 Troubleshooting
 --------------------------------------------------------------------
 
@@ -87,7 +108,7 @@ you might be running out of space allocated for Docker. Try one of the following
     ::
 
         # Prunes dangling images
-        docker system prune
+        docker system prune --all
 
     ::
 

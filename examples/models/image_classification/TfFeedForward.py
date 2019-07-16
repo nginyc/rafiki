@@ -1,98 +1,135 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.python.client import device_lib
 import json
-import os
 import tempfile
 import numpy as np
 import base64
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, dataset_utils, logger
-from rafiki.constants import TaskType, ModelDependency
+from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, PolicyKnob
+from rafiki.constants import ModelDependency
+from rafiki.model.dev import test_model_class
 
 class TfFeedForward(BaseModel):
     '''
     Implements a fully-connected feed-forward neural network with variable hidden layers on Tensorflow 
-    for simple image classification
+    for image classification
     '''
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': FixedKnob(2),
+            'max_epochs': FixedKnob(10),
             'hidden_layer_count': IntegerKnob(1, 2),
             'hidden_layer_units': IntegerKnob(2, 128),
             'learning_rate': FloatKnob(1e-5, 1e-1, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
-            'image_size': FixedKnob(32)
+            'max_image_size': CategoricalKnob([16, 32, 48]),
+            'quick_train': PolicyKnob('EARLY_STOP') # Whether early stopping would be used
         }
 
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
-        self._graph = tf.Graph()
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
+        self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph, config=config)
+        self._model = None
+        self._train_params = None
         
-    def train(self, dataset_uri):
-        im_sz = self._knobs.get('image_size')
-        bs = self._knobs.get('batch_size')
-        ep = self._knobs.get('epochs')
+    def train(self, dataset_path, **kwargs):
+        max_image_size = self._knobs['max_image_size']
+        bs = self._knobs['batch_size']
+        max_epochs = self._knobs['max_epochs']
+        quick_train = self._knobs['quick_train']
 
-        logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
+        # Define plot for loss against epochs
+        utils.logger.define_plot('Loss Over Epochs', ['loss', 'early_stop_val_loss'], x_axis='epoch')
 
-        # Define 2 plots: Loss against time, loss against epochs
-        logger.define_loss_plot()
-        logger.define_plot('Loss Over Time', ['loss'])
-
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[im_sz, im_sz])
+        # Load dataset
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, max_image_size=max_image_size, 
+                                                            mode='RGB')
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-        images = np.asarray(images)
-        classes = np.asarray(classes)
+        (images, norm_mean, norm_std) = utils.dataset.normalize_images(images)
 
+        # Setup callbacks, adding early stopping if quick train
+        callbacks = [tf.keras.callbacks.LambdaCallback(on_epoch_end=self._on_train_epoch_end)]
+        if quick_train:
+            callbacks.append(tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2))
+        
         with self._graph.as_default():
-            self._model = self._build_model(num_classes)
             with self._sess.as_default():
+                self._model = self._build_model(num_classes, dataset.image_size)
                 self._model.fit(
-                    images, 
-                    classes, 
+                    np.asarray(images), 
+                    np.asarray(classes), 
                     verbose=0,
-                    epochs=ep,
+                    epochs=max_epochs,
+                    validation_split=0.05,
                     batch_size=bs,
-                    callbacks=[
-                        tf.keras.callbacks.LambdaCallback(on_epoch_end=self._on_train_epoch_end)
-                    ]
+                    callbacks=callbacks
                 )
 
                 # Compute train accuracy
                 (loss, accuracy) = self._model.evaluate(images, classes)
-                logger.log('Train loss: {}'.format(loss))
-                logger.log('Train accuracy: {}'.format(accuracy))
 
-    def evaluate(self, dataset_uri):
-        im_sz = self._knobs.get('image_size')
+        utils.logger.log('Train loss: {}'.format(loss))
+        utils.logger.log('Train accuracy: {}'.format(accuracy))
 
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_uri, image_size=[im_sz, im_sz])
+        self._train_params = {
+            'image_size': dataset.image_size,
+            'norm_mean': norm_mean,
+            'norm_std': norm_std
+        }
+
+    def evaluate(self, dataset_path):
+        max_image_size = self._knobs['max_image_size']
+        norm_mean = self._train_params['norm_mean']
+        norm_std = self._train_params['norm_std']
+
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, max_image_size=max_image_size, 
+                                                            mode='RGB')
+
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
-        images = np.asarray(images)
-        classes = np.asarray(classes)
-
+        (images, _, _) = utils.dataset.normalize_images(images, norm_mean, norm_std)
         with self._graph.as_default():
             with self._sess.as_default():
-                (loss, accuracy) = self._model.evaluate(images, classes)
-                logger.log('Test loss: {}'.format(loss))
+                (loss, accuracy) = self._model.evaluate(np.asarray(images), np.asarray(classes))
+
+        utils.logger.log('Validation loss: {}'.format(loss))
 
         return accuracy
 
     def predict(self, queries):
-        im_sz = self._knobs.get('image_size')
+        image_size = self._train_params['image_size']
+        norm_mean = self._train_params['norm_mean']
+        norm_std = self._train_params['norm_std']
 
-        X = dataset_utils.resize_as_images(queries, image_size=[im_sz, im_sz])
+        images = utils.dataset.transform_images(queries, image_size=image_size, mode='RGB')
+        (images, _, _) = utils.dataset.normalize_images(images, norm_mean, norm_std)
+
         with self._graph.as_default():
             with self._sess.as_default():
-                probs = self._model.predict(X)
+                probs = self._model.predict(images)
                 
         return probs.tolist()
 
@@ -101,6 +138,9 @@ class TfFeedForward(BaseModel):
 
     def dump_parameters(self):
         params = {}
+
+        # Add train params
+        params['train_params'] = json.dumps(self._train_params)
 
         # Save model parameters
         with tempfile.NamedTemporaryFile() as tmp:
@@ -119,9 +159,7 @@ class TfFeedForward(BaseModel):
 
     def load_parameters(self, params):
         # Load model parameters
-        h5_model_base64 = params.get('h5_model_base64', None)
-        if h5_model_base64 is None:
-            raise InvalidModelParamsException()
+        h5_model_base64 = params['h5_model_base64']
 
         with tempfile.NamedTemporaryFile() as tmp:
             # Convert back to bytes & write to temp file
@@ -133,19 +171,22 @@ class TfFeedForward(BaseModel):
             with self._graph.as_default():
                 with self._sess.as_default():
                     self._model = keras.models.load_model(tmp.name)
+        
+        # Add train params
+        self._train_params = json.loads(params['train_params'])
 
     def _on_train_epoch_end(self, epoch, logs):
         loss = logs['loss']
-        logger.log_loss(loss, epoch)
+        early_stop_val_loss = logs['val_loss']
+        utils.logger.log(loss=loss, early_stop_val_loss=early_stop_val_loss, epoch=epoch)
 
-    def _build_model(self, num_classes):
-        units = self._knobs.get('hidden_layer_units')
-        layers = self._knobs.get('hidden_layer_count')
-        lr = self._knobs.get('learning_rate')
-        im_sz = self._knobs.get('image_size')
-
+    def _build_model(self, num_classes, image_size):
+        units = self._knobs['hidden_layer_units']
+        layers = self._knobs['hidden_layer_count']
+        lr = self._knobs['learning_rate']
+         
         model = keras.Sequential()
-        model.add(keras.layers.Flatten(input_shape=(im_sz, im_sz,)))
+        model.add(keras.layers.Flatten(input_shape=(image_size, image_size, 3)))
         model.add(keras.layers.BatchNormalization())
 
         for _ in range(layers):
@@ -168,12 +209,13 @@ if __name__ == '__main__':
     test_model_class(
         model_file_path=__file__,
         model_class='TfFeedForward',
-        task=TaskType.IMAGE_CLASSIFICATION,
+        task='IMAGE_CLASSIFICATION',
         dependencies={
             ModelDependency.TENSORFLOW: '1.12.0'
         },
-        train_dataset_uri='data/fashion_mnist_for_image_classification_train.zip',
-        test_dataset_uri='data/fashion_mnist_for_image_classification_test.zip',
+        train_dataset_path='data/fashion_mnist_train.zip',
+        val_dataset_path='data/fashion_mnist_val.zip',
+        test_dataset_path='data/fashion_mnist_test.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

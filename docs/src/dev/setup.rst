@@ -27,7 +27,7 @@ We assume development or deployment in a MacOS or Linux environment.
 
         bash scripts/start.sh
 
-*Rafiki Admin* and *Rafiki Admin Web* will be available at ``127.0.0.1:3000`` and ``127.0.0.1:3001`` respectively.
+*Rafiki Admin* and *Rafiki Web Admin* will be available at ``127.0.0.1:3000`` and ``127.0.0.1:3001`` respectively.
 
 To destroy Rafiki's complete stack:
 
@@ -86,7 +86,7 @@ To run Rafiki on multiple machines with GPUs, do the following:
 Exposing Rafiki Publicly
 --------------------------------------------------------------------
 
-Rafiki Admin and Rafiki Admin Web runs on the master node. 
+Rafiki Admin and Rafiki Web Admin runs on the master node. 
 Change ``RAFIKI_ADDR`` in ``.env.sh`` to the IP address of the master node
 in the network you intend to expose Rafiki in.
 
@@ -96,7 +96,7 @@ Example:
 
     export RAFIKI_ADDR=172.28.176.35
 
-Re-deploy Rafiki. Rafiki Admin and Rafiki Admin Web will be available at that IP address,
+Re-deploy Rafiki. Rafiki Admin and Rafiki Web Admin will be available at that IP address,
 over ports 3000 and 3001 (by default), assuming incoming connections to these ports are allowed.
 
 **Before you expose Rafiki to the public, 
@@ -105,7 +105,7 @@ it is highly recommended to change the master passwords for superadmin, server a
 Reading Rafiki's logs
 --------------------------------------------------------------------
 
-By default, you can read logs of Rafiki Admin, Rafiki Advisor & any of Rafiki's workers
+By default, you can read logs of Rafiki Admin & any of Rafiki's workers
 in ``./logs`` directory at the root of the project's directory of the master node. 
 
 

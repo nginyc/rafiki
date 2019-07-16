@@ -1,12 +1,33 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 from flask import Flask, request, jsonify, g, make_response
 from flask_cors import CORS
-import os
 import traceback
 import json
+import tempfile
+import requests
 from datetime import datetime
+import pickle
 
 from rafiki.constants import UserType
-from rafiki.utils.auth import generate_token, decode_token, auth, UnauthorizedError
+from rafiki.utils.auth import generate_token, auth, UnauthorizedError
 
 from .admin import Admin
 
@@ -87,6 +108,43 @@ def generate_user_token():
     })
 
 ####################################
+# Datasets
+####################################
+
+@app.route('/datasets', methods=['POST'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def create_dataset(auth):
+    admin = get_admin()
+    params = get_request_params()
+
+    # Temporarily store incoming dataset data as file
+    with tempfile.NamedTemporaryFile() as f:
+        if 'dataset' in request.files:
+            # Save dataset data in request body
+            file_storage = request.files['dataset']
+            file_storage.save(f.name)
+            file_storage.close()
+        else:
+            # Download dataset at URL and save it
+            assert 'dataset_url' in params
+            r = requests.get(params['dataset_url'], allow_redirects=True)
+            f.write(r.content)
+            del params['dataset_url']
+
+        params['data_file_path'] = f.name
+
+        with admin:
+            return jsonify(admin.create_dataset(auth['user_id'], **params))
+
+@app.route('/datasets', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def get_datasets(auth):
+    admin = get_admin()
+    params = get_request_params()
+    with admin:
+        return jsonify(admin.get_datasets(auth['user_id'], **params))
+
+####################################
 # Train Jobs
 ####################################
 
@@ -97,6 +155,15 @@ def create_train_job(auth):
     params = get_request_params()
 
     with admin:
+        # Ensure that datasets are owned by current user
+        dataset_attrs = ['train_dataset_id', 'val_dataset_id']
+        for attr in dataset_attrs:
+            if attr in params:
+                dataset_id = params[attr]
+                dataset = admin.get_dataset(dataset_id)
+                if auth['user_id'] != dataset['owner_id']:
+                    raise UnauthorizedError('You have no access to dataset of ID "{}"'.format(dataset_id))
+        
         return jsonify(admin.create_train_job(auth['user_id'], **params))
 
 @app.route('/train_jobs', methods=['GET'])
@@ -142,27 +209,6 @@ def stop_train_job(auth, app, app_version):
     with admin:
         return jsonify(admin.stop_train_job(auth['user_id'], app, app_version=int(app_version), **params))
 
-@app.route('/train_jobs/<app>/<app_version>/trials', methods=['GET'])
-@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_trials_of_train_job(auth, app, app_version):
-    admin = get_admin()
-    params = get_request_params()
-
-    # Return best trials by train job
-    if params.get('type') == 'best':
-        del params['type']
-
-        if 'max_count' in params:
-            params['max_count'] = int(params['max_count'])
-
-        with admin:
-            return jsonify(admin.get_best_trials_of_train_job(auth['user_id'], app, app_version=int(app_version), **params ))
-    
-    # Return all trials by train job
-    else:
-        with admin:
-            return jsonify(admin.get_trials_of_train_job(auth['user_id'], app, app_version=int(app_version), **params ))
-
 ####################################
 # Trials
 ####################################
@@ -183,9 +229,10 @@ def get_trial_parameters(auth, trial_id):
     params = get_request_params()
 
     with admin:
-        parameters = admin.get_trial_parameters(trial_id, **params)
-
-    res = make_response(parameters)
+        trial_params = admin.get_trial_parameters(trial_id, **params)
+ 
+    trial_params = pickle.dumps(trial_params) # Pickle to convert to bytes
+    res = make_response(trial_params)
     res.headers.set('Content-Type', 'application/octet-stream')
     return res
 
@@ -197,6 +244,27 @@ def get_trial(auth, trial_id):
 
     with admin:
         return jsonify(admin.get_trial(trial_id, **params))
+
+@app.route('/train_jobs/<app>/<app_version>/trials', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def get_trials_of_train_job(auth, app, app_version):
+    admin = get_admin()
+    params = get_request_params()
+
+    # Return best trials by train job
+    if params.get('type') == 'best':
+        del params['type']
+
+        if 'max_count' in params:
+            params['max_count'] = int(params['max_count'])
+
+        with admin:
+            return jsonify(admin.get_best_trials_of_train_job(auth['user_id'], app, app_version=int(app_version), **params))
+    
+    # Return all trials by train job
+    else:
+        with admin:
+            return jsonify(admin.get_trials_of_train_job(auth['user_id'], app, app_version=int(app_version), **params))
 
 ####################################
 # Inference Jobs
@@ -364,7 +432,8 @@ def handle_event(auth, name):
     params = get_request_params()
     with admin:
         return jsonify(admin.handle_event(name, **params))
-    
+
+
 # Handle uncaught exceptions with a server error & the error's stack trace (for development)
 @app.errorhandler(Exception)
 def handle_error(error):

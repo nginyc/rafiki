@@ -1,99 +1,46 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import abc
-import json
+from typing import Union, List
 
-class BaseKnob(abc.ABC):
+POLICIES = ['SHARE_PARAMS', 'EARLY_STOP', 'SKIP_TRAIN', 'QUICK_EVAL', 'DOWNSCALE']
+
+class KnobValue():
     '''
-    The base class for a knob type.
+        Wrapper for a ``CategoricalValue``.
     '''
-
-    # TODO: Support conditional and validation logic
-
-    def __init__(self, knob_args={}):
-        self._knob_args = knob_args
-
-    def to_json(self):
-        return json.dumps({
-            'type': self.__class__.__name__,
-            'args': self._knob_args
-        })
-
-    @classmethod
-    def from_json(cls, json_str):
-        json_dict = json.loads(json_str)
-
-        if 'type' not in json_dict or 'args' not in json_dict:
-            raise ValueError('Invalid JSON representation of knob: {}.'.format(json_str))
-
-        knob_type = json_dict['type']
-        knob_args = json_dict['args']
-        knob_classes = [CategoricalKnob, IntegerKnob, FloatKnob, FixedKnob]
-        for clazz in knob_classes:
-            if clazz.__name__ == knob_type:
-                return clazz(**knob_args)
-
-        raise ValueError('Invalid knob type: {}'.format(knob_type))
-
-class CategoricalKnob(BaseKnob):
-    '''
-    Knob type representing a categorical value of type ``int``, ``float``, ``bool`` or ``str``.
-    A generated value of this knob would be an element of ``values``.
-    '''
-    def __init__(self, values):
-        knob_args = { 'values': values }
-        super().__init__(knob_args)
-        self._values = values
-        (self._value_type) = self._validate_values(values)
-
-    @property
-    def value_type(self):
-        return self._value_type
-
-    @property
-    def values(self):
-        return self._values
-
-    @staticmethod
-    def _validate_values(values):
-        if len(values) == 0:
-            raise ValueError('Length of `values` should at least 1')
-    
-        if isinstance(values[0], int):
-            value_type = int
-        elif isinstance(values[0], float):
-            value_type = float
-        elif isinstance(values[0], bool):
-            value_type = bool
-        elif isinstance(values[0], str):
-            value_type = str
-        else:
-            raise TypeError('Only the following types for `values` are supported: `int`, `float`, `bool`, `str`')
-        
-        if any([not isinstance(x, value_type) for x in values]):
-            raise TypeError('`values` should have elements of the same type')
-
-        return (value_type)
-
-class FixedKnob(BaseKnob):
-    '''
-    Knob type representing a single fixed value of type ``int``, ``float``, ``bool`` or ``str``.
-    Essentially, this represents a knob that does not require tuning.
-    '''
-    def __init__(self, value):
-        knob_args = { 'value': value }
-        super().__init__(knob_args)
-        self._value = value
-        (self._value_type) = self._validate_value(value)
-
-    @property
-    def value_type(self):
-        return self._value_type
+    def __init__(self, value: Union[str, int, float, bool]):
+        (self._value, self._dtype) = self._parse_value(value)
 
     @property
     def value(self):
         return self._value
 
+    @property
+    def dtype(self) -> type:
+        return self._dtype
+
     @staticmethod
-    def _validate_value(value):
+    def _parse_value(value):
+        value_type = None
+
         if isinstance(value, int):
             value_type = int
         elif isinstance(value, float):
@@ -103,34 +50,121 @@ class FixedKnob(BaseKnob):
         elif isinstance(value, str):
             value_type = str
         else:
-            raise TypeError('Only the following types for `value` are supported: `int`, `float`, `bool`, `str`')
+            raise TypeError('Only the following knob value data types are supported: `int`, `float`, `bool` or `str`')
         
-        return (value_type)
+        return (value, value_type)
+
+
+CategoricalValue = Union[str, int, float, bool, KnobValue] 
+
+class BaseKnob(abc.ABC):
+    '''
+        The base class for a knob type.
+    '''
+
+    # Data type of a realized value of this knob
+    @property
+    def value_type(self) -> type:
+        raise NotImplementedError()
+
+
+class CategoricalKnob(BaseKnob):
+    '''
+        Knob type representing a categorical value of type ``int``, ``float``, ``bool`` or ``str``.
+        ``values`` is a list of candidate cateogrical values for this knob type; a realization of this knob type would be an element of ``values``.
+    '''
+    def __init__(self, values: List[CategoricalValue]):
+        (self._values, self._value_type) = self._validate_values(values)
+
+    @property
+    def value_type(self):
+        return self._value_type
+
+    @property
+    def values(self) -> list:
+        return self._values
+
+    @staticmethod
+    def _validate_values(values):
+        values = [KnobValue(x) if not isinstance(x, KnobValue) else x for x in values]
+
+        if len(values) == 0:
+            raise ValueError('Length of `values` should at least 1')
+
+        if any([values[0].dtype is not x.dtype for x in values]):
+            raise TypeError('`values` should have elements of the same type')
+
+        value_type = values[0].dtype
+
+        return (values, value_type)
+
+class FixedKnob(BaseKnob):
+    '''
+        Knob type representing a fixed value of type ``int``, ``float``, ``bool`` or ``str``.
+        Essentially, this represents a knob type that does not require tuning.
+    '''
+    def __init__(self, value: CategoricalValue):
+        self._value = KnobValue(value) if not isinstance(value, KnobValue) else value
+        self._value_type = self._value.dtype
+
+    @property
+    def value_type(self):
+        return self._value_type
+
+    @property
+    def value(self):
+        return self._value
+
+
+class PolicyKnob(BaseKnob):
+    '''
+    Knob type representing whether a certain policy should be activated, as a boolean.
+    E.g. the ``EARLY_STOP`` policy knob decides whether the model should stop model training early, or not. 
+    Offering the ability to activate different policies can optimize hyperparameter search for your model. 
+    Activation of all policies default to false.
+
+    Refer to :ref:`model-policies` to understand how to use this knob type.
+    '''
+    def __init__(self, policy: str):
+        if policy not in POLICIES:
+            raise ValueError('Policy type must be one of {}'.format(POLICIES))
+        self._policy = policy
+    
+    @property
+    def value_type(self):
+        return bool
+
+    @property
+    def policy(self):
+        return self._policy
+
 
 class IntegerKnob(BaseKnob):
     '''
-    Knob type representing `any` ``int`` value within a specific interval [``value_min``, ``value_max``].
+    Knob type representing an ``int`` value within a specific interval [``value_min``, ``value_max``].
     ``is_exp`` specifies whether the knob value should be scaled exponentially.
     '''
 
-    def __init__(self, value_min, value_max, is_exp=False):
-        knob_args = { 'value_min': value_min, 'value_max': value_max, 'is_exp': is_exp }
-        super().__init__(knob_args)
+    def __init__(self, value_min: int, value_max: int, is_exp: bool = False):
         self._validate_values(value_min, value_max)
         self._value_min = value_min
         self._value_max = value_max
         self._is_exp = is_exp
+
+    @property
+    def value_type(self):
+        return int
     
     @property
-    def value_min(self):
+    def value_min(self) -> int:
         return self._value_min
 
     @property
-    def value_max(self):
+    def value_max(self) -> int:
         return self._value_max
     
     @property
-    def is_exp(self):
+    def is_exp(self) -> bool:
         return self._is_exp
 
     @staticmethod
@@ -147,28 +181,29 @@ class IntegerKnob(BaseKnob):
 
 class FloatKnob(BaseKnob):
     '''
-    Knob type representing `any` ``float`` value within a specific interval [``value_min``, ``value_max``].
-    ``is_exp`` specifies whether the knob value should be scaled exponentially.
+        Knob type representing a ``float`` value within a specific interval [``value_min``, ``value_max``].
+        ``is_exp`` specifies whether the knob value should be scaled exponentially.
     '''
-
-    def __init__(self, value_min, value_max, is_exp=False):
-        knob_args = { 'value_min': value_min, 'value_max': value_max, 'is_exp': is_exp }
-        super().__init__(knob_args)
+    def __init__(self, value_min: float, value_max: float, is_exp: bool = False):
         self._validate_values(value_min, value_max)
-        self._value_min = value_min
-        self._value_max = value_max
+        self._value_min = float(value_min)
+        self._value_max = float(value_max)
         self._is_exp = is_exp
+
+    @property
+    def value_type(self):
+        return float
     
     @property
-    def value_min(self):
+    def value_min(self) -> float:
         return self._value_min
 
     @property
-    def value_max(self):
+    def value_max(self) -> float:
         return self._value_max
     
     @property
-    def is_exp(self):
+    def is_exp(self) -> bool:
         return self._is_exp
 
     @staticmethod
@@ -183,17 +218,55 @@ class FloatKnob(BaseKnob):
             raise ValueError('`value_max` should be at least `value_min`')
 
 
-def deserialize_knob_config(knob_config_str):
-    knob_config = {
-        name: BaseKnob.from_json(knob_str)
-        for (name, knob_str) in json.loads(knob_config_str).items()
-    }
-    return knob_config
+class ArchKnob(BaseKnob):
+    '''
+        Knob type representing part of a model's architecture as a fixed-size list of categorical values. 
+        ``items`` is a list of list of candidate categorical values; a realization of this knob type would be a list of categorical values, wIth the value at each index matching an element of the list of candidates at that index.
+        
+        To illustrate, the following can be a definition of 3-layer model's architecture search space inspired by the ENAS cell architecture construction strategy:
 
-def serialize_knob_config(knob_config):
-    knob_config_str = json.dumps({
-        name: knob.to_json()
-        for (name, knob) in knob_config.items()
-    })
-    return knob_config_str
-    
+        ::
+
+            l0 = KnobValue(0) # Input layer as input connection
+            l1 = KnobValue(1) # Layer 1 as input connection
+            l2 = KnobValue(2) # Layer 2 as input connection
+            ops = [KnobValue('conv3x3'), KnobValue('conv5x5'), KnobValue('avg_pool'), KnobValue('max_pool')]
+            arch_knob = ArchKnob([
+                [l0], ops, [l0], ops,                   # To form layer 1, choose input 1, op on input 1, input 2, op on input 2, then combine post-op inputs as preferred                                     
+                [l0, l1], ops, [l0, l1], ops,           # To form layer 2, ...
+                [l0, l1, l2], ops, [l0, l1, l2], ops,   # To form layer 3, ...
+            ])
+            
+
+        If the same ``KnobValue`` instance is reused at different indices in ``items``, they are considered to be *semantically* identical for the purposes of architecture search.
+        For example, in the above code snippet, the meaning of ``l0`` in the 1st item index and ``l0`` in the 3rd item index are identical - they refer to an input connection from the input layer.  
+
+        It is assumed that the realization of components of the architecture `later` in the list is influenced by the components of architecture `earlier` in the list. 
+        For example, which operation is to be applied on an input (e.g. which value in ``ops``) is somewhat dependent on the source of the input (e.g. which value in ``[l0, l1, l2]``).
+
+        Note that the exact model architecture space is not fully described with this knob - it still depends on how the model code constructs the computation graph and implements the various building blocks of the model. 
+
+        Encoding of the architecture with ``ArchKnob`` can be flexibly defined as necessary. You can search only over operations and have the connections in the architecture already hard-coded
+        as part of the model, or you can search only over input indices of various layers and have operations already decided. 
+    '''
+
+    def __init__(self, items: List[List[CategoricalValue]]):
+        self._items = self._validate_values(items)
+
+    @property
+    def value_type(self):
+        return list
+
+    @property  
+    def items(self) -> List[List[CategoricalValue]]:
+        return self._items
+
+    def __len__(self):
+        return len(self._items)
+
+    @staticmethod
+    def _validate_values(items):
+        for (i, values) in enumerate(items):
+            items[i] = [KnobValue(x) if not isinstance(x, KnobValue) else x for x in values]
+
+        return items

@@ -5,41 +5,49 @@ Folder Structure
 
 - `rafiki/`
 
-    Rafiki's Python Package 
+    Rafiki's Python package 
 
     - `admin/`
 
-        Code for Rafiki's `Admin` component
+        Rafiki's static Admin component
 
     - `advisor/`
 
-        Code for Rafiki's `Advisor` component
+        Rafiki's advisors
 
     - `client/`
 
-        Code for Rafiki's `Client` component
+        Rafiki's client-side SDK
 
-        .. seealso:: :class:`rafiki.client.Client`
+        .. seealso:: :class:`rafiki.client`
 
     - `worker/`
 
-        Code for Rafiki's `Train Worker` component and `Inference Worker` component
+        Rafiki's train, inference & advisor workers
     
     - `predictor/`
 
-        Code for Rafiki's `Predictor` component
+        Rafiki's predictor
 
-    - `db/`
+    - `meta_store/`
 
-        Code for Rafiki's *Metadata Store* as an abstract data access layer
+        Abstract data access layer for Rafiki's main metadata store (backed by PostgreSQL)
+    
+    - `param_store/`
+
+        Abstract data access layer for Rafiki's store of model parameters (backed by filesystem)
+
+    - `data_store/`
+
+        Abstract data access layer for Rafiki's store of datasets (backed by filesystem)
 
     - `cache/`
 
-        Code for Rafiki's *Cache* as an abstract data access layer
+        Abstract data access layer for Rafiki's temporary store of model parameters, train job metadata and queries & predictions in train & inference jobs (backed by Redis)
 
     - `container/`
 
-        Code for the deployment of Rafiki's dynamic stack (e.g. workers) as *services*
+        Abstract access layer for dynamic deployment of workers 
 
     - `utils/`
 
@@ -47,20 +55,17 @@ Folder Structure
 
     - `model/`
 
-        Stores definition of abstract :class:`rafiki.model.BaseModel` that all Rafiki models should extend,
-        as well as a collection of utility methods for model developers in the implementation of their own models.
+        Definition of abstract :class:`rafiki.model.BaseModel` that all Rafiki models should extend, programming 
+        abstractions used in model development, as well as a collection of utility methods for model developers 
+        in the implementation of their own models
     
-    - `config.py`
-
-        Stores Rafiki-internal application-level configuration variables
-
     - `constants.py`
 
-        Stores Rafiki's constants used internally & externally (e.g. valid values for user type, budget type, train job status)
+        Rafiki's programming abstractions & constants (e.g. valid values for user types, job statuses)
 
 - `web/`
 
-    Code for Rafiki's `Admin Web` component
+    Rafiki's Web Admin component
     
 - `dockerfiles/`
     
@@ -68,25 +73,20 @@ Folder Structure
 
 - `examples/`
     
-    Stores sample model definitions and usage of Rafiki.
+    Sample usage code for Rafiki.
 
 - `docs/`
 
-    Stores all source documentation for Rafiki (e.g. Sphinx documentation files)
+    Source documentation for Rafiki (e.g. Sphinx documentation files)
+
+- `test/`
+
+    Test code for Rafiki
 
 - `scripts/`
 
-    Stores shell & python scripts for initializing, starting and stopping various components of Rafiki's stack
+    Shell & python scripts for initializing, starting and stopping various components of Rafiki's stack
 
 - `.env.sh`
 
-    Stores Rafiki-internal build & deployment configuration variables 
-
-- `conf.py`
-
-    Sphinx documentation configuration file
-    
-- `index.rst`
-
-    Sphinx master documentation file
-
+    Stores configuration variables for Rafiki
