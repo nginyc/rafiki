@@ -97,8 +97,16 @@ class TrainWorker():
 
     def _perform_trial(self, proposal: Proposal) -> TrialResult:
         self._trial_id = proposal.trial_id
+        self._trial_no = proposal.trial_no
 
+        # Use OBOE proposed hyperparameters for the initialization
+        if self._monitor.train_args['model_selector'] != None and self._trial_no == 1:
+            model_class = self._monitor.model_class.__name__
+            proposal.knobs.update(**self._monitor.train_args['best_models'][model_class]['best_hyperparams'])
+            logger.info(f'Initializing the first trial with OBOE proposal {proposal}...')
+        
         logger.info(f'Starting trial {self._trial_id} with proposal {proposal}...')
+
         try:
             # Setup logging
             logger_info = self._start_logging_to_trial(

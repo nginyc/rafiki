@@ -201,8 +201,7 @@ class Admin(object):
 
         # Check if OBOE can be applied
         train_args['model_selector'] = train_args.get('model_selector', None)
-        if task != "TABULAR_CLASSIFICATION" and task != "TABULAR_REGRESSION" and \
-            train_args['model_selector'] == 'oboe':
+        if task != "TABULAR_CLASSIFICATION" and train_args['model_selector'] == 'oboe':
             raise InvalidModelSelectorError('OBOE can only be applied for tabular dataset!')
 
         # Compute auto-incremented app version

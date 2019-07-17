@@ -340,11 +340,11 @@ class Ensemble(Model):
         for (model, error) in zip(self.base_learners, errors):
             if model.algorithm in base_learner_names.keys():
                 if error < base_learner_names[model.algorithm]['error']:
-                    base_learner_names[model.algorithm]['best hyperparams'] = model.hyperparameters
+                    base_learner_names[model.algorithm]['best_hyperparams'] = model.hyperparameters
                     base_learner_names[model.algorithm]['error'] = error
             else:
                 base_learner_names[model.algorithm] = {}
-                base_learner_names[model.algorithm]['best hyperparams'] = model.hyperparameters
+                base_learner_names[model.algorithm]['best_hyperparams'] = model.hyperparameters
                 base_learner_names[model.algorithm]['error'] = error
 
         return base_learner_names
