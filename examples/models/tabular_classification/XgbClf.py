@@ -22,14 +22,11 @@ import pickle
 import base64
 import pandas as pd
 import numpy as np
+import json
 
-from pathlib import Path
-import sys
-import os
-
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, FloatKnob, logger
-from rafiki.constants import TaskType, ModelDependency
+from rafiki.model import BaseModel, IntegerKnob, FloatKnob, logger
+from rafiki.model.dev import test_model_class
+from rafiki.constants import ModelDependency
 
 class XgbClf(BaseModel):
     '''
@@ -49,7 +46,7 @@ class XgbClf(BaseModel):
     def __init__(self, **knobs):
         self.__dict__.update(knobs)
        
-    def train(self, dataset_path, features=None, target=None):
+    def train(self, dataset_path, features=None, target=None, **kwargs):
         # Record features & target
         self._features = features
         self._target = target
@@ -104,21 +101,21 @@ class XgbClf(BaseModel):
         clf_bytes = pickle.dumps(self._clf)
         clf_base64 = base64.b64encode(clf_bytes).decode('utf-8')
         params['clf_base64'] = clf_base64
-        params['encoding_dict'] = self._encoding_dict
-        params['features'] = pickle.dumps(self._features)
+        params['encoding_dict'] = json.dumps(self._encoding_dict)
+        params['features'] = json.dumps(self._features)
         params['target'] = self._target
 
         return params
 
     def load_parameters(self, params):
         # Load model parameters
+        assert 'clf_base64' in params
         clf_base64 = params['clf_base64']
-        if clf_base64 is None:
-            raise InvalidModelParamsException()
         clf_bytes = base64.b64decode(clf_base64.encode('utf-8'))
+
         self._clf = pickle.loads(clf_bytes)
-        self._encoding_dict = params['encoding_dict']
-        self._features = pickle.loads(params['features'])
+        self._encoding_dict = json.loads(params['encoding_dict'])
+        self._features = json.loads(params['features'])
         self._target = params['target']
 
     def _extract_xy(self, data):
@@ -163,9 +160,9 @@ class XgbClf(BaseModel):
         return df
 
     def _build_classifier(self, n_estimators, min_child_weight, max_depth, gamma, subsample, colsample_bytree, num_class):
-        if num_class < 2:
-            raise InvalidModelParamsException()
-        elif num_class == 2:
+        assert num_class >= 2
+        
+        if num_class == 2:
             clf = xgb.XGBClassifier(
             n_estimators=n_estimators,
             min_child_weight=min_child_weight,
@@ -191,14 +188,14 @@ if __name__ == '__main__':
     test_model_class(
         model_file_path=__file__,
         model_class='XgbClf',
-        task=TaskType.TABULAR_CLASSIFICATION,
+        task='TABULAR_CLASSIFICATION',
         dependencies={
             ModelDependency.XGBOOST: '0.90'
         },
         train_dataset_path='data/titanic_train.csv',
         val_dataset_path='data/titanic_val.csv',
         train_args={
-            'features': ['Pclass','Sex','Age'],
+            'features': ['Pclass', 'Sex', 'Age'],
             'target':'Survived'
         },
         queries=[

@@ -1,3 +1,6 @@
+# PIP
+.cache/pip/
+
 # Python virtualenv environments
 env/
 envs/
@@ -38,6 +41,10 @@ params/*
 # IPython notebooks
 .ipynb_checkpoints/*
 *.ipynb
+
+# Pytest
+.coverage*
+.pytest_cache/
 
 # SQL dump files
 *.sql

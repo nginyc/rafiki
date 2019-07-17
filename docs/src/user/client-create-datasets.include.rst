@@ -1,5 +1,6 @@
 
-You'll first need to convert your dataset into a format specified by one of the tasks (see :ref:`tasks`), and split them into two files: one for training & one for validation.
+You'll first need to convert your dataset into a format specified by one of the tasks (see :ref:`tasks`), 
+and split them into two files: one for training & one for validation.
 After doing so, you'll create 2 corresponding datasets on Rafiki by uploading them from your filesystem.
 
 Example (pre-processing step):
@@ -17,13 +18,13 @@ Example:
         client.create_dataset(
             name='fashion_mnist_train',
             task='IMAGE_CLASSIFICATION',
-            dataset_path='data/fashion_mnist_for_image_classification_train.zip'
+            dataset_path='data/fashion_mnist_train.zip'
         )
 
         client.create_dataset(
             name='fashion_mnist_val',
             task='IMAGE_CLASSIFICATION',
-            dataset_path='data/fashion_mnist_for_image_classification_val.zip'
+            dataset_path='data/fashion_mnist_val.zip'
         )
 
     Output:

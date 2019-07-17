@@ -1,4 +1,4 @@
-rafiki.client.Client
+rafiki.client
 ====================================================================
 
 .. autoclass:: rafiki.client.Client

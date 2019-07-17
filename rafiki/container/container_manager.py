@@ -18,13 +18,12 @@
 #
 
 import abc
-import os
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any
 
 class InvalidServiceRequestError(Exception): pass
 
 class ContainerService():
-    def __init__(self, id: str, hostname: str, port: int, info: Dict[str, any] = {}):
+    def __init__(self, id: str, hostname: str, port: int, info: Dict[str, Any] = {}):
         self.id = id # ID for the service created
         self.hostname = hostname # Hostname for the service created (in the internal network)
         self.port = port # Port for the service created (in the internal network), None if no container port is passed

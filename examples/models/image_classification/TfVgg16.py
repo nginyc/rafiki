@@ -19,74 +19,100 @@
 
 import tensorflow as tf
 from tensorflow import keras
-import json
-import os
+from tensorflow.python.client import device_lib
 import tempfile
 import numpy as np
+import json
 import base64
-import abc
-from urllib.parse import urlparse, parse_qs 
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, FloatKnob, CategoricalKnob, FixedKnob, dataset_utils
-from rafiki.constants import TaskType, ModelDependency
+from rafiki.model import BaseModel, FloatKnob, CategoricalKnob, FixedKnob, utils
+from rafiki.constants import ModelDependency
+from rafiki.model.dev import test_model_class
 
 class TfVgg16(BaseModel):
     '''
-    Implements VGG16 on Tensorflow for simple image classification
+    Implements VGG16 on Tensorflow for image classification
     '''
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': FixedKnob(1),
+            'max_epochs': FixedKnob(10),
             'learning_rate': FloatKnob(1e-5, 1e-2, is_exp=True),
             'batch_size': CategoricalKnob([16, 32, 64, 128]),
+            'max_image_size': CategoricalKnob([32, 64, 128, 224]),
         }
 
     def __init__(self, **knobs):
         super().__init__(**knobs)
         self._knobs = knobs
-        self._graph = tf.Graph()
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
+        self._graph = tf.Graph()
         self._sess = tf.Session(graph=self._graph, config=config)
 
-    def train(self, dataset_path):
-        ep = self._knobs.get('epochs')
+    def train(self, dataset_path, **kwargs):
+        max_image_size = self._knobs.get('max_image_size')
         bs = self._knobs.get('batch_size')
+        max_epochs = self._knobs.get('max_epochs')
 
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[48, 48])
+        utils.logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
+
+        # Define plot for loss against epochs
+        utils.logger.define_plot('Loss Over Epochs', ['loss', 'early_stop_val_loss'], x_axis='epoch')
+
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, min_image_size=32, 
+                                                            max_image_size=max_image_size, mode='RGB')
+        self._image_size = dataset.image_size
         num_classes = dataset.classes
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+        (images, self._normalize_mean, self._normalize_std) = utils.dataset.normalize_images(images)
         images = np.asarray(images)
-        images = np.stack([images] * 3, axis=-1)
-        classes = np.asarray(classes)
+        classes = np.asarray(keras.utils.to_categorical(classes))
 
         with self._graph.as_default():
-            self._model = self._build_model(num_classes)
             with self._sess.as_default():
+                self._model = self._build_model(num_classes, dataset.image_size)
                 self._model.fit(
                     images, 
                     classes, 
-                    epochs=ep, 
-                    batch_size=bs
+                    epochs=max_epochs, 
+                    validation_split=0.05,
+                    batch_size=bs,
+                    callbacks=[
+                        tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2),
+                        tf.keras.callbacks.LambdaCallback(on_epoch_end=self._on_train_epoch_end)
+                    ]
                 )
 
+                # Compute train accuracy
+                (loss, accuracy) = self._model.evaluate(images, classes)
+
+        utils.logger.log('Train loss: {}'.format(loss))
+        utils.logger.log('Train accuracy: {}'.format(accuracy))
+
     def evaluate(self, dataset_path):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[48, 48])
+        max_image_size = self._knobs.get('max_image_size')
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, min_image_size=32, 
+                                                            max_image_size=max_image_size, mode='RGB')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
+        (images, _, _) = utils.dataset.normalize_images(images, self._normalize_mean, self._normalize_std)
         images = np.asarray(images)
-        images = np.stack([images] * 3, axis=-1)
+        classes = keras.utils.to_categorical(classes)
         classes = np.asarray(classes)
 
         with self._graph.as_default():
             with self._sess.as_default():
                 (loss, accuracy) = self._model.evaluate(images, classes)
+
+        utils.logger.log('Validation loss: {}'.format(loss))
+
         return accuracy
 
     def predict(self, queries):
-        images = dataset_utils.resize_as_images(queries, image_size=[48, 48])
-        images = np.stack([images] * 3, axis=-1)
+        image_size = self._image_size
+        images = utils.dataset.transform_images(queries, image_size=image_size, mode='RGB')
+        (images, _, _) = utils.dataset.normalize_images(images, self._normalize_mean, self._normalize_std)
+
         with self._graph.as_default():
             with self._sess.as_default():
                 probs = self._model.predict(images)
@@ -112,13 +138,16 @@ class TfVgg16(BaseModel):
 
             params['h5_model_base64'] = base64.b64encode(h5_model_bytes).decode('utf-8')
 
+        # Save pre-processing params
+        params['image_size'] = self._image_size
+        params['normalize_mean'] = json.dumps(self._normalize_mean)
+        params['normalize_std'] = json.dumps(self._normalize_std)
+
         return params
 
     def load_parameters(self, params):
         # Load model parameters
-        h5_model_base64 = params.get('h5_model_base64', None)
-        if h5_model_base64 is None:
-            raise InvalidModelParamsException()
+        h5_model_base64 = params['h5_model_base64']
 
         with tempfile.NamedTemporaryFile() as tmp:
             # Convert back to bytes & write to temp file
@@ -130,34 +159,45 @@ class TfVgg16(BaseModel):
             with self._graph.as_default():
                 with self._sess.as_default():
                     self._model = keras.models.load_model(tmp.name)
-                
-    def _build_model(self, num_classes):
+        
+        # Load pre-processing params
+        self._image_size = params['image_size']
+        self._normalize_mean = json.loads(params['normalize_mean'])
+        self._normalize_std = json.loads(params['normalize_std'])
+
+    def _on_train_epoch_end(self, epoch, logs):
+        loss = logs['loss']
+        early_stop_val_loss = logs['val_loss']
+        utils.logger.log(loss=loss, early_stop_val_loss=early_stop_val_loss, epoch=epoch)
+
+    def _build_model(self, num_classes, image_size):
         lr = self._knobs.get('learning_rate')
 
         model = keras.applications.VGG16(
             include_top=True,
-            input_shape=(48, 48, 3),
+            input_shape=(image_size, image_size, 3),
             weights=None, 
             classes=num_classes
         )
 
         model.compile(
             optimizer=keras.optimizers.Adam(lr=lr),
-            loss='sparse_categorical_crossentropy',
+            loss='categorical_crossentropy',
             metrics=['accuracy']
         )
         return model
+
 
 if __name__ == '__main__':
     test_model_class(
         model_file_path=__file__,
         model_class='TfVgg16',
-        task=TaskType.IMAGE_CLASSIFICATION,
+        task='IMAGE_CLASSIFICATION',
         dependencies={
             ModelDependency.TENSORFLOW: '1.12.0'
         },
-        train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
-        val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
+        train_dataset_path='data/fashion_mnist_train.zip',
+        val_dataset_path='data/fashion_mnist_val.zip',
         queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

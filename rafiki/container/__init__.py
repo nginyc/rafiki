@@ -17,5 +17,5 @@
 # under the License.
 #
 
-from .container_manager import ContainerManager, ContainerService
+from .container_manager import ContainerManager, InvalidServiceRequestError, ContainerService
 from .docker_swarm import DockerSwarmContainerManager

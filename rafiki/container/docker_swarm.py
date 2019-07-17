@@ -21,9 +21,16 @@ import os
 import time
 import docker
 import logging
+import traceback
 from collections import namedtuple
+from functools import wraps
 
 from .container_manager import ContainerManager, InvalidServiceRequestError, ContainerService
+
+LABEL_AVAILBLE_GPUS = 'available_gpus'
+LABEL_NUM_SERVICES = 'num_services'
+RETRY_WAIT_SECS = 1
+RETRY_TIMES = 5
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +151,7 @@ class DockerSwarmContainerManager(ContainerManager):
         else:
             env.append('CUDA_VISIBLE_DEVICES=-1') # No GPU
 
-        docker_service = self._client.services.create(
+        docker_service = _retry(self._client.services.create)(
             image=docker_image,
             args=args,
             networks=[self._network],
@@ -191,7 +198,8 @@ class DockerSwarmContainerManager(ContainerManager):
         docker_node = self._client.nodes.get(node_id)
         spec = docker_node.attrs.get('Spec', {})
         spec_labels = spec.get('Labels', {})
-        docker_node.update({
+
+        _retry(docker_node.update)({
             **spec,
             'Labels': {
                 **spec_labels,
@@ -199,3 +207,27 @@ class DockerSwarmContainerManager(ContainerManager):
                 self._label_available_gpus: ','.join([str(x) for x in available_gpus])
             }
         })
+
+
+# Decorator that retries a method call a number of times
+def _retry(func):
+    wait_secs = RETRY_WAIT_SECS
+
+    @wraps(func)
+    def retried_func(*args, **kwargs):
+        for no in range(RETRY_TIMES + 1):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                logger.error(f'Error when calling `{func}`:')
+                logger.error(traceback.format_exc())
+
+                # Retried so many times but still errors - raise exception    
+                if no == RETRY_TIMES:
+                    raise e
+                
+            logger.info(f'Retrying {func} after {wait_secs}s...')
+            time.sleep(wait_secs)
+    
+    return retried_func
+            

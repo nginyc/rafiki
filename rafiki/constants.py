@@ -17,18 +17,15 @@
 # under the License.
 #
 
-class BudgetType():
-    MODEL_TRIAL_COUNT = 'MODEL_TRIAL_COUNT'
-    GPU_COUNT = 'GPU_COUNT'
+from typing import Dict, Any
 
-class ModelDependency():
-    TENSORFLOW = 'tensorflow'
-    KERAS = 'Keras'
-    SCIKIT_LEARN = 'scikit-learn'
-    PYTORCH = 'torch'
-    SINGA = 'singa'
-    DS_CTCDECODER = 'ds-ctcdecoder'
-    XGBOOST = 'xgboost'
+class BudgetOption():
+    GPU_COUNT = 'GPU_COUNT'
+    TIME_HOURS = 'TIME_HOURS'
+    MODEL_TRIAL_COUNT = 'MODEL_TRIAL_COUNT'
+
+Budget = Dict[BudgetOption, Any]
+ModelDependencies = Dict[str, str]
 
 class ModelAccessRight():
     PUBLIC = 'PUBLIC'
@@ -47,11 +44,22 @@ class TrainJobStatus():
     ERRORED = 'ERRORED'
 
 class TrialStatus():
-    STARTED = 'STARTED'
+    PENDING = 'PENDING'
     RUNNING = 'RUNNING'
     ERRORED = 'ERRORED'
-    TERMINATED = 'TERMINATED'
     COMPLETED = 'COMPLETED'
+
+class UserType():
+    SUPERADMIN = 'SUPERADMIN'
+    ADMIN = 'ADMIN'
+    MODEL_DEVELOPER = 'MODEL_DEVELOPER'
+    APP_DEVELOPER = 'APP_DEVELOPER'
+
+class ServiceType():
+    TRAIN = 'TRAIN'
+    ADVISOR = 'ADVISOR'
+    PREDICT = 'PREDICT'
+    INFERENCE = 'INFERENCE'
 
 class ServiceStatus():
     STARTED = 'STARTED'
@@ -60,26 +68,12 @@ class ServiceStatus():
     ERRORED = 'ERRORED'
     STOPPED = 'STOPPED'
 
-class ServiceType():
-    TRAIN = 'TRAIN'
-    PREDICT = 'PREDICT'
-    INFERENCE = 'INFERENCE'
-
-class UserType():
-    SUPERADMIN = 'SUPERADMIN'
-    ADMIN = 'ADMIN'
-    MODEL_DEVELOPER = 'MODEL_DEVELOPER'
-    APP_DEVELOPER = 'APP_DEVELOPER'
-
-class AdvisorType():
-    BTB_GP = 'BTB_GP'
-
-class DatasetType():
-    IMAGE_FILES = 'IMAGE_FILES'
-
-class TaskType():
-    IMAGE_CLASSIFICATION = 'IMAGE_CLASSIFICATION'
-    POS_TAGGING = 'POS_TAGGING'
-    SPEECH_RECOGNITION = 'SPEECH_RECOGNITION'
-    TABULAR_REGRESSION = 'TABULAR_REGRESSION'
-    TABULAR_CLASSIFICATION = 'TABULAR_CLASSIFICATION'
+class ModelDependency():
+    TENSORFLOW = 'tensorflow'
+    KERAS = 'Keras'
+    SCIKIT_LEARN = 'scikit-learn'
+    TORCH = 'torch'
+    TORCHVISION = 'torchvision'
+    SINGA = 'singa'
+    XGBOOST = 'xgboost'
+    DS_CTCDECODER = 'ds-ctcdecoder'

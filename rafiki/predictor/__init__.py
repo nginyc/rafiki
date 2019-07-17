@@ -17,4 +17,5 @@
 # under the License.
 #
 
-from .ensemble import ensemble_predictions
+from .constants import *
+from .ensemble import get_ensemble_method

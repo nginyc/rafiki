@@ -20,7 +20,7 @@
 import pytest
 
 from rafiki.constants import UserType
-from test.utils import gen, gen_email, make_admin, make_app_dev, make_model_dev
+from test.utils import global_setup, gen, gen_email, make_admin, make_app_dev, make_model_dev
 
 class TestUsers():
     

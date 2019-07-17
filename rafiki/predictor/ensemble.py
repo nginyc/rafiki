@@ -17,39 +17,60 @@
 # under the License.
 #
 
+import logging
 import numpy as np
+from typing import List, Callable, Any
 from collections import Iterable
 
-from rafiki.constants import TaskType
+logger = logging.getLogger(__name__)
 
-def ensemble_predictions(predictions_list, task):
-    if len(predictions_list) == 0 or len(predictions_list[0]) == 0:
-        return []
-
-    if task == TaskType.IMAGE_CLASSIFICATION:
-        # Compute mean of probabilities across predictions 
-        predictions = []
-        for preds in np.transpose(predictions_list, axes=[1, 0, 2]):
-            predictions.append(np.mean(preds, axis=0))
-    elif task == TaskType.SPEECH_RECOGNITION:
-        return predictions_list
+def get_ensemble_method(task: str) -> Callable[[List[Any]], Any]:
+    if task == 'IMAGE_CLASSIFICATION':
+        return ensemble_probabilities
+    if task == 'SPEECH_RECOGNITION'
+        return ensemble_strings
     else:
-        # By default, just return some trial's predictions
-        index = 0
-        predictions = predictions_list[index]
+        return ensemble
 
-    predictions = _simplify_predictions(predictions)
+def ensemble_probabilities(predictions: List[Any]) -> Any:
+    if len(predictions) == 0:
+        return None
 
-    return predictions
+    # All probs must have same length
+    probs_by_worker = predictions
+    assert all([len(x) == len(probs_by_worker[0]) for x in probs_by_worker])
 
-def _simplify_predictions(predictions):
+    # Compute mean of probabilities across predictions
+    probs = np.mean(probs_by_worker, axis=0)
+    prediction = probs
+    prediction = _simplify_prediction(prediction)
+    return prediction
+
+def ensemble_strings(predictions: List[Any]) -> Any:
+    if len(predictions) == 0:
+        return None
+
+    # Aviod inifinite loop in _simplify_prediction
+    return predictions[0]
+
+def ensemble(predictions: List[Any]) -> Any:
+    if len(predictions) == 0:
+        return None
+
+    # Return some worker's predictions
+    index = 0
+    prediction = predictions[index]
+    prediction = _simplify_prediction(prediction)
+    return prediction
+
+def _simplify_prediction(prediction):
     # Convert numpy arrays to lists
-    if isinstance(predictions, np.ndarray):
-        predictions = predictions.tolist()
+    if isinstance(prediction, np.ndarray):
+        prediction = prediction.tolist()
 
-    if isinstance(predictions, Iterable):
-        for i in range(len(predictions)):
-            if isinstance(predictions[i], np.ndarray):
-                predictions[i] = predictions[i].tolist()
+    # Recurvely apply to elements of iterables
+    if isinstance(prediction, Iterable):
+        for (i, x) in enumerate(prediction):
+            prediction[i] = _simplify_prediction(x)
 
-    return predictions
+    return prediction

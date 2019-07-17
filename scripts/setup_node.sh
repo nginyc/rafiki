@@ -24,7 +24,7 @@ docker node ls
 
 read -p "Hostname of node to configure? " hostname
 while true; do
-    read -p "GPUs available? (e.g. '' or '0,2') " gpus
+    read -p "GPU numbers available? (e.g. '' or '0,2') " gpus
     if echo "$gpus" | grep -Eq "^(([0-9],)*[0-9])?$"; then
         break
     fi
