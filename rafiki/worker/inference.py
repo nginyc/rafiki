@@ -30,6 +30,7 @@ from rafiki.advisor import Proposal
 from rafiki.param_store import FileParamStore
 from rafiki.predictor import Query, Prediction
 from rafiki.cache import InferenceCache
+from rafiki.cache import RQueue
 
 LOOP_SLEEP_SECS = 0.1
 PREDICT_BATCH_SIZE = 32
@@ -54,6 +55,7 @@ class InferenceWorker():
         self._proposal: Proposal = None
         self._store_params_id = None
         self._py_model_class: Type[BaseModel] = None
+        self._queue = RQueue()
 
     def start(self):
         self._pull_job_info()
@@ -139,7 +141,8 @@ class InferenceWorker():
         self._inference_cache.add_worker(self._worker_id)
 
     def _fetch_queries(self) -> List[Query]:
-        queries = self._inference_cache.pop_queries_for_worker(self._worker_id, self._batch_size)
+        queries = self._queue.pop_queries_for_worker(self._worker_id, self._batch_size)
+        # queries = self._inference_cache.pop_queries_for_worker(self._worker_id, self._batch_size)
         return queries
 
     def _predict(self, queries: List[Query]) -> List[Prediction]:
@@ -157,7 +160,8 @@ class InferenceWorker():
         return predictions
 
     def _submit_predictions(self, predictions: List[Prediction]):
-        self._inference_cache.add_predictions_for_worker(self._worker_id, predictions)
+        # self._inference_cache.add_predictions_for_worker(self._worker_id, predictions)
+        self._queue.add_predictions_for_worker(self._worker_id, predictions)
 
     def _notify_stop(self):
         self._inference_cache.delete_worker(self._worker_id)

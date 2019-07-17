@@ -29,6 +29,9 @@ bash ./scripts/create_docker_swarm.sh
 bash ./scripts/pull_images.sh || exit 1
 
 # Start whole Rafiki stack
+# Start Zookeeper and Kafka
+bash ./scripts/start_zookeeper.sh || exit 1
+bash ./scripts/start_kafka.sh || exit 1
 # Skip starting & loading DB if DB is already running
 if is_running $POSTGRES_HOST
 then

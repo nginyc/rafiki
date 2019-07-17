@@ -31,6 +31,8 @@ export ADMIN_EXT_PORT=3000
 export WEB_ADMIN_EXT_PORT=3001
 export POSTGRES_EXT_PORT=5433
 export REDIS_EXT_PORT=6380
+export ZOOKEEPER_EXT_PORT=2181
+export KAFKA_EXT_PORT=9092
 export HOST_WORKDIR_PATH=$PWD
 export APP_MODE=DEV # DEV or PROD
 export POSTGRES_DUMP_FILE_PATH=$PWD/db_dump.sql # PostgreSQL database dump file
@@ -50,6 +52,10 @@ export REDIS_HOST=rafiki_cache
 export REDIS_PORT=6379
 export PREDICTOR_PORT=3003
 export WEB_ADMIN_HOST=rafiki_admin_web
+export ZOOKEEPER_HOST=rafiki_zookeeper
+export ZOOKEEPER_PORT=2181
+export KAFKA_HOST=rafiki_kafka
+export KAFKA_PORT=9092
 export DOCKER_WORKDIR_PATH=/root
 export DATA_DIR_PATH=data # Shares a data folder with containers, relative to workdir
 export LOGS_DIR_PATH=logs # Shares a folder with containers that stores components' logs, relative to workdir
@@ -66,6 +72,8 @@ export RAFIKI_IMAGE_PREDICTOR=rafikiai/rafiki_predictor
 # Docker images for dependent services
 export IMAGE_POSTGRES=postgres:10.5-alpine
 export IMAGE_REDIS=redis:5.0.3-alpine3.8
+export IMAGE_ZOOKEEPER=zookeeper:3.5
+export IMAGE_KAFKA=wurstmeister/kafka:2.12-2.1.1
 
 # Utility configuration
 export PYTHONPATH=$PWD # Ensures that `rafiki` module can be imported at project root

@@ -27,6 +27,7 @@ import traceback
 from rafiki.utils.auth import superadmin_client
 from rafiki.meta_store import MetaStore
 from rafiki.cache import InferenceCache
+from rafiki.cache import RQueue
 
 from .constants import Prediction, Query
 from .ensemble import get_ensemble_method
@@ -51,6 +52,7 @@ class Predictor():
         self._inference_cache = InferenceCache(self._inference_job_id, 
                                                 self._redis_host, 
                                                 self._redis_port)
+        self._queue = RQueue()
         logger.info(f'Initialized predictor for inference job "{self._inference_job_id}"')
 
     # Only a single thread should run this
@@ -105,7 +107,8 @@ class Predictor():
         # For each worker, send queries to worker
         pending_queries = set() # {(query_id, worker_id)}
         for worker_id in worker_ids:
-            self._inference_cache.add_queries_for_worker(worker_id, queries)
+            self._queue.add_queries_for_worker(worker_id, queries)
+            # self._inference_cache.add_queries_for_worker(worker_id, queries)
             pending_queries.update([(x.id, worker_id) for x in queries])
 
         # Wait for all predictions to be made
@@ -114,7 +117,8 @@ class Predictor():
             # For every pending query to worker
             for (query_id, worker_id) in list(pending_queries):
                 # Check cache
-                prediction = self._inference_cache.take_prediction_for_worker(worker_id, query_id)
+                prediction = self._queue.take_prediction_for_worker(worker_id, query_id)
+                # prediction = self._inference_cache.take_prediction_for_worker(worker_id, query_id)
                 if prediction is None:
                     continue
                 
