@@ -2,17 +2,17 @@
 Automatically tuned scikit-learn model.
 """
 
-import convex_opt
+from . import convex_opt
 import json
-import linalg
+from . import linalg
 import multiprocessing as mp
 import numpy as np
 import os
 import pandas as pd
 import pkg_resources
 import time
-import util
-from model import Model, Ensemble, Model_collection
+from . import util
+from .model import Model, Ensemble, Model_collection
 from sklearn.model_selection import train_test_split
 import signal
 from contextlib import contextmanager
@@ -395,4 +395,36 @@ class AutoLearner:
         """ Get accuracies of selected models.
         """
         return self.ensemble.get_model_accuracy(y_test)
+
+    def get_best_models(self, y_test):
+        """Get the algorithm with the best hyperparameters of each type.
+        """
+        return self.ensemble.get_best_models(y_test)
+
+def propose(algos, data, features, target):
+    if features is None:
+        x = data.iloc[:,:-1]
+    else:
+        x = data[features]
+        
+    if target is None:
+        y = data.iloc[:,-1]
+    else:
+        y = data[target]
+
+    x = np.array(x)
+    y = np.array(y)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
+
+    autolearner_kwargs = {
+        'p_type': 'classification',
+        'runtime_limit': 30,
+        'algorithms': algos,
+    }
+
+    m = AutoLearner(**autolearner_kwargs)
+    m.fit(x_train, y_train)
+
+    best_algos = m.get_best_models(y_test)
+    return best_algos
 
