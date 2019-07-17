@@ -414,7 +414,7 @@ def propose(algos, data, features, target):
     else:
         y = data[target]
 
-    x = np.array(x)
+    x = np.array(util.encoding_categorical_type(x))
     y = np.array(y)
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
 
@@ -426,7 +426,8 @@ def propose(algos, data, features, target):
 
     m = AutoLearner(**autolearner_kwargs)
     m.fit(x_train, y_train)
-
+    
+    y_predicted = m.predict(x_test)
     best_algos = m.get_best_models(y_test)
     return best_algos
 
