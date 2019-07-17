@@ -17,20 +17,32 @@ from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-data = load_breast_cancer()
-x = np.array(data['data'])
-y = np.array(data['target'])
+data = pd.read_csv('/Users/pro/Desktop/rafiki_fork/data/titanic_train.csv')
+features = ['Pclass', 'Sex', 'Age']
+target = 'Survived'
+if features is None:
+    x = data.iloc[:,:-1]
+else:
+    x = data[features]
+    
+if target is None:
+    y = data.iloc[:,-1]
+else:
+    y = data[target]
+
+x = np.array(util.encoding_categorical_type(x))
+y = np.array(y)
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
 
-m = AutoLearner(p_type='classification', runtime_limit=18)
-start = time.time()
+autolearner_kwargs = {
+    'p_type': 'classification',
+    'runtime_limit': 30,
+    'algorithms': ['SkRf', 'XgbClf']
+}
+
+m = AutoLearner(**autolearner_kwargs)
 m.fit(x_train, y_train)
-elapsed_time = time.time() - start
 
-# use the fitted autolearner for prediction on test set
 y_predicted = m.predict(x_test)
-print("prediction error: {}".format(util.error(y_test, y_predicted, 'classification')))    
-print("elapsed time: {}".format(elapsed_time))
-print("individual accuracies of selected models: {}".format(m.get_model_accuracy(y_test)))
-
-print(m.get_models())
+best_algos = m.get_best_models(y_test)
+print(best_algos)

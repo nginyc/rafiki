@@ -348,6 +348,15 @@ def merge_rows(save_dir):
 #     pd.DataFrame(np.vstack(sizes), index=dataset_ids).to_csv(os.path.join(save_dir, 'dataset_sizes.csv'))    
     # dataset_sizes.to_csv(os.path.join(save_dir, 'dataset_sizes.csv'))
 
+def encoding_categorical_type(cols):
+        # Apply label encoding for those categorical columns
+        encoded_cols = pd.DataFrame({col: cols[col].astype('category').cat.codes \
+            if cols[col].dtype == 'object' else cols[col] for col in cols}, index=cols.index)
+
+        # Recover the missing elements (Use XGBoost to automatically handle them)
+        encoded_cols = encoded_cols.replace(to_replace = -1, value = np.nan)
+        return encoded_cols
+
     
 if __name__ == '__main__':
     merge_rows(sys.argv[1])
