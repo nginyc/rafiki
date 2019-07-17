@@ -14,7 +14,8 @@ import time
 from . import util
 from .model import Model, Ensemble, Model_collection
 from sklearn.model_selection import train_test_split
-import signal
+import threading
+import _thread
 from contextlib import contextmanager
 
 DEFAULTS = pkg_resources.resource_filename(__name__, 'defaults')
@@ -329,15 +330,16 @@ class AutoLearner:
         class TimeoutException(Exception): pass
 
         @contextmanager
-        def time_limit(seconds):
-            def signal_handler(signum, frame):
-                raise TimeoutException("Time limit reached.")
-            signal.signal(signal.SIGALRM, signal_handler)
-            signal.alarm(seconds)
+        def time_limit(seconds, msg=''):
+            timer = threading.Timer(seconds, lambda: _thread.interrupt_main())
+            timer.start()
             try:
                 yield
+            except KeyboardInterrupt:
+                raise TimeoutException("Timed limit reached.")
             finally:
-                signal.alarm(0)
+                # if the action ends in specified time, timer is canceled
+                timer.cancel()
 
         try:
             # set aside 3 seconds for initial and final processing steps
