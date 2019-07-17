@@ -27,7 +27,7 @@ import sys
 import re
 import time
 import util
-from model import Model
+from .model import Model
 import mkl
 
 mkl.set_num_threads(1)

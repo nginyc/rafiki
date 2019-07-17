@@ -3,7 +3,7 @@ Parent class for all ML models.
 """
 
 import numpy as np
-import util
+from . import util
 from scipy.stats import mode
 from sklearn.model_selection import StratifiedKFold, train_test_split
 
@@ -323,6 +323,32 @@ class Ensemble(Model):
             accuracies.append(util.error(y_test, self.x_te[:, iter], self.p_type))
         return accuracies
 
+    def get_best_models(self, y_test):
+        """ Get the algorithm with the best hyperparameters of each type.
+
+            Args:
+                y_test (np.array):      True labels of the test set.
+                
+            Returns:
+                base_learner_names (dict):      A string dict of each algorithm that had the best performance
+                                                with its hyperparams and accuracies.
+        """
+
+        base_learner_names = {}
+        errors = self.get_model_accuracy(y_test)
+
+        for (model, error) in zip(self.base_learners, errors):
+            if model.algorithm in base_learner_names.keys():
+                if error < base_learner_names[model.algorithm]['error']:
+                    base_learner_names[model.algorithm]['best hyperparams'] = model.hyperparameters
+                    base_learner_names[model.algorithm]['error'] = error
+            else:
+                base_learner_names[model.algorithm] = {}
+                base_learner_names[model.algorithm]['best hyperparams'] = model.hyperparameters
+                base_learner_names[model.algorithm]['error'] = error
+
+        return base_learner_names
+
 
 class Model_collection(Ensemble):
     """An object representing a collection of individual machine learning models.
@@ -378,13 +404,6 @@ class Model_collection(Ensemble):
             else:
                 base_learner_names[model.algorithm] = [model.hyperparameters]
         return base_learner_names
-
-
-
-
-
-
-
 
 
 
