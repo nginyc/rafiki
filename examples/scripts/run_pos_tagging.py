@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 from pprint import pprint
 import argparse
 import os
@@ -5,10 +24,11 @@ import os
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL
 from rafiki.constants import BudgetOption, ModelDependency
+
 from examples.scripts.quickstart import get_predictor_host, \
     wait_until_train_job_has_stopped, make_predictions, gen_id
 
-from examples.datasets.pos_tagging.load_ptb_format import load_sample_ptb
+from examples.datasets.corpus.load_sample_ptb import load_sample_ptb
 
 def run_pos_tagging(client, train_dataset_path, val_dataset_path, gpus, hours):
     '''
@@ -89,8 +109,8 @@ if __name__ == '__main__':
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
     parser.add_argument('--hours', type=float, default=0.1, help='How long the train job should run for (in hours)') 
     (args, _) = parser.parse_known_args()
-    out_train_dataset_path = 'data/ptb_for_pos_tagging_train.zip'
-    out_val_dataset_path = 'data/ptb_for_pos_tagging_val.zip'
+    out_train_dataset_path = 'data/ptb_train.zip'
+    out_val_dataset_path = 'data/ptb_val.zip'
 
     # Initialize client
     client = Client()

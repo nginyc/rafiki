@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import os
 import argparse
 from pprint import pprint
@@ -7,7 +26,7 @@ from rafiki.config import SUPERADMIN_EMAIL
 from rafiki.constants import BudgetOption, ModelDependency
 
 from examples.scripts.utils import gen_id
-from examples.datasets.image_classification.load_cifar_format import load_cifar10
+from examples.datasets.image_files.load_cifar10 import load_cifar10
 
 def run_enas(client, train_dataset_path, val_dataset_path, gpus, hours):    
     '''
@@ -57,8 +76,8 @@ if __name__ == '__main__':
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
     parser.add_argument('--hours', type=float, default=24, help='How long the train job should run for (in hours)') 
-    out_train_dataset_path = 'data/cifar10_for_image_classification_train.zip'
-    out_val_dataset_path = 'data/cifar10_for_image_classification_val.zip'
+    out_train_dataset_path = 'data/cifar10_train.zip'
+    out_val_dataset_path = 'data/cifar10_val.zip'
     (args, _) = parser.parse_known_args()
 
     # Initialize client

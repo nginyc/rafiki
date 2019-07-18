@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import tarfile
 import os
 import tempfile
@@ -8,38 +27,8 @@ import shutil
 from tqdm import tqdm
 from itertools import chain
 from PIL import Image
-import argparse
 
 from examples.datasets.utils import download_dataset_from_url
-
-# Loads the official CIFAR-10 dataset for `IMAGE_CLASSIFICATION` task
-def load_cifar10(out_train_dataset_path='data/cifar10_for_image_classification_train.zip',
-                out_val_dataset_path='data/cifar10_for_image_classification_val.zip',
-                out_test_dataset_path='data/cifar10_for_image_classification_test.zip',
-                out_meta_csv_path='data/cifar10_for_image_classification_meta.csv',
-                validation_split=0.1,
-                limit=None):
-    load(
-        dataset_url='https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
-        label_to_name={
-            0: 'airplane',
-            1: 'automobile',
-            2: 'bird',
-            3: 'cat',
-            4: 'deer',
-            5: 'dog',
-            6: 'frog',
-            7: 'horse',
-            8: 'ship',
-            9: 'truck'
-        },
-        out_train_dataset_path=out_train_dataset_path,
-        out_val_dataset_path=out_val_dataset_path,
-        out_test_dataset_path=out_test_dataset_path,
-        out_meta_csv_path=out_meta_csv_path,
-        validation_split=validation_split,
-        limit=limit
-    )
 
 def load(dataset_url, label_to_name, out_train_dataset_path, out_val_dataset_path, 
         out_test_dataset_path, out_meta_csv_path, validation_split, limit=None):
@@ -174,14 +163,5 @@ def _cifar_images_to_images(cifar_images):
     images = np.reshape(images, (-1, 32, 32, 3))
     return images
 
-if __name__ == '__main__':
-    # Read CLI args
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--limit', type=int, default=None)
-    parser.add_argument('--validation_split', type=float, default=0.1)
-    args = parser.parse_args()
-
-    load_cifar10(limit=args.limit, validation_split=args.validation_split)    
-    
     
     

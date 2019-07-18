@@ -62,7 +62,6 @@ Below is the list of officially recognized model policies:
 | ``DOWNSCALE``                | Whether a smaller version of the model should be constructed e.g. with fewer layers                                |
 +------------------------------+--------------------------------------------------------------------------------------------------------------------+
 
-Refer to the next section of :ref:`model-tuning-schemes` to better understand which policies your model should support to optimize hyperparameter search for your model.
 
 .. _`model-tuning-schemes`:
 
@@ -70,7 +69,8 @@ Model Tuning Schemes
 ====================================================================
 
 At a model level, Rafiki *automatically* selects the appropriate tuning scheme (*advisor*) based on the composition of the model's knob configuration 
-and the *incoming train job's budget*.
+and the *incoming train job's budget*. 
+
 Specifically, it employs the following rules, in the *given order*, to select the type of advisor to use:
 
 +-----------------------------------------------+-----------------------------------------------------------------------------------------------------------+
@@ -98,14 +98,28 @@ Specifically, it employs the following rules, in the *given order*, to select th
 | All others                                    | Hyperparameter tuning with uniformly random knobs                                                         |
 +-----------------------------------------------+-------------------------------------------------------------------+---------------------------------------+
 
+The following subsections briefly explain how to leverage on the various model tuning schemes on Rafiki.
+
+Hyperparameter Tuning with Bayesian Optimization
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+To tune the hyperparameters of your model, where the hyperparameters are *simply floats, integers or categorical*, use :class:`rafiki.model.FixedKnob`,
+:class:`rafiki.model.CategoricalKnob`, :class:`rafiki.model.FloatKnob` & :class:`rafiki.model.IntegerKnob`. 
+
+
+Hyperparameter Tuning with Bayesian Optimization & Early Stopping
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+To additionally employ early stopping during hyperparameter tuning to speed up the tuning process, declare an extra :class:`rafiki.model.PolicyKnob` of 
+the ``EARLY_STOP`` policy (see :ref:`model-policies`). 
+
+Refer to the sample model `./examples/models/image_classification/TfFeedForward.py <https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/TfFeedForward.py>`_.
+
 .. _`tuning-with-param-sharing`:
 
-Hyperparameter Tuning with Parameter Sharing
-====================================================================
-
-To tune the hyperparameters of your model across multiple trials and automatically have best-scoring model parameters shared between trials
-to improve speed of convergence (as outlined in `"Rafiki: Machine Learning as an Analytics Service System" <https://arxiv.org/pdf/1804.06087.pdf>`_),
-have your model offer the policy ``SHARE_PARAMS`` and optionally ``EARLY_STOP`` (see :ref:`model-policies`).
+Hyperparameter Tuning with Bayesian Optimization & Parameter Sharing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+To additionally have *best-scoring* model parameters shared between trials to speed up the tuning process 
+(as outlined in `"Rafiki: Machine Learning as an Analytics Service System" <https://arxiv.org/pdf/1804.06087.pdf>`_),
+declare an extra :class:`rafiki.model.PolicyKnob` of the ``SHARE_PARAMS`` policy (see :ref:`model-policies`). 
 
 Refer to the sample model `./examples/models/image_classification/PyDenseNetBc.py <https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/PyDenseNetBc.py>`_
 and its corresponding usage script `./examples/scripts/image_classification/train_densenet.py  <https://github.com/nginyc/rafiki/tree/master/examples/scripts/image_classification/train_densenet.py>`_
@@ -114,22 +128,23 @@ to better understand how to do parameter sharing.
 .. _`arch-tuning-with-enas`:
 
 Architecture Tuning with ENAS
-====================================================================
-
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To tune the architecture for your model with the modern architecture search algorithm 
 `"Efficient Neural Architecture Search via Parameter Sharing" <https://arxiv.org/abs/1802.03268>`_ (*ENAS*), 
-have a :class:`rafiki.model.ArchKnob` defined in your knob configuration,
-and offer the policies ``SHARE_PARAMS``, ``EARLY_STOP``, ``SKIP_TRAIN``, ``QUICK_EVAL`` and ``DOWNSCALE`` (see :ref:`model-policies`).
+declare a :class:`rafiki.model.ArchKnob` and offer the policies ``SHARE_PARAMS``, ``EARLY_STOP``, ``SKIP_TRAIN``, ``QUICK_EVAL`` and ``DOWNSCALE`` (see :ref:`model-policies`).
 Specifically, you'll need your model to support parameter sharing, stopping training early, skipping the training step, evaluating
 on a subset of the validation dataset, and *downscaling* the model e.g. to use fewer layers. These policies are critical in
-the speed & performance of ENAS.
+the speed & performance of ENAS. See :ref:`enas` to understand more about Rafiki's implementation of ENAS.
 
 Refer to the sample model `./examples/models/image_classification/TfEnas.py <https://github.com/nginyc/rafiki/tree/master/examples/models/image_classification/TfEnas.py>`_
 and its corresponding usage script `./examples/scripts/image_classification/run_enas.py <https://github.com/nginyc/rafiki/tree/master/examples/scripts/image_classification/run_enas.py>`_
 to better understand how to do architecture tuning.
 
+
+.. _`enas`:
+
 Deep Dive on ENAS 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+====================================================================
 
 The ENAS paper outlines a new methodology for automatic neural network construction, 
 speeding up the original Neural Architecture Search (NAS) methodology by 1000x without affecting its ability to search for a competitive architecture. 

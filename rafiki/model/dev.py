@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import json
 import traceback
 import inspect
@@ -16,7 +35,9 @@ from .model import BaseModel, BaseKnob, Params
 from .utils import serialize_knob_config, deserialize_knob_config, parse_model_install_command, load_model_class
                     
 def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dataset_path: str, 
-                test_dataset_path: str = None, budget: Budget = None) -> (Dict[str, Any], float, Params):
+                test_dataset_path: str = None, budget: Budget = None, 
+                train_args: Dict[str, any] = None) -> (Dict[str, Any], float, Params):
+
     worker_id = 'local'
 
     # Note start time
@@ -93,7 +114,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
 
         # Worker trains model
         print('Training model...')
-        model_inst.train(train_dataset_path, shared_params=shared_params)
+        model_inst.train(train_dataset_path, shared_params=shared_params, **(train_args or {}))
 
         # Worker evaluates model
         result = _evaluate_model(model_inst, proposal, val_dataset_path)
@@ -214,7 +235,7 @@ def make_predictions(queries: List[Any], task: str, py_model_class: Type[BaseMod
 # TODO: Fix method, more thorough testing of model API
 def test_model_class(model_file_path: str, model_class: str, task: str, dependencies: Dict[str, str], 
                     train_dataset_path: str, val_dataset_path: str, test_dataset_path: str = None, 
-                    budget: Budget = None, queries: List[Any] = None) -> (List[Any], BaseModel):
+                    budget: Budget = None, train_args: Dict[str, any] = None, queries: List[Any] = None) -> (List[Any], BaseModel):
     '''
     Tests whether a model class is *more likely* to be correctly defined by *locally* simulating a full train-inference flow on your model
     on a given dataset. The model's methods will be called in an manner similar to that in Rafiki.
@@ -224,14 +245,16 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
     This method also reads knob values and budget options from CLI arguments. 
     For example, you can pass e.g. ``--TIME_HOURS=0.01`` to configure the budget, or ``--learning_rate=0.01`` to fix a knob's value.
 
-    :param str model_file_path: Path to a single Python file that contains the definition for the model class
-    :param str model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
-    :param str task: Task type of model
-    :param dict[str, str] dependencies: Model's dependencies
-    :param str train_dataset_path: File path of the train dataset for training of the model
-    :param str val_dataset_path: File path of the validation dataset for evaluating trained models
-    :param str test_dataset_path: File path of the test dataset for testing the final best trained model, if provided
-    :param List[Any] queries: List of queries for testing predictions with the trained model
+    :param model_file_path: Path to a single Python file that contains the definition for the model class
+    :param model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
+    :param task: Task type of model
+    :param dependencies: Model's dependencies
+    :param train_dataset_path: File path of the train dataset for training of the model
+    :param val_dataset_path: File path of the validation dataset for evaluating trained models
+    :param test_dataset_path: File path of the test dataset for testing the final best trained model, if provided
+    :param budget: Budget for model training
+    :param train_args: Additional arguments to pass to models during training, if any
+    :param queries: List of queries for testing predictions with the trained model
     :returns: (<predictions of best trained model>, <best trained model>)
 
     '''
@@ -246,7 +269,8 @@ def test_model_class(model_file_path: str, model_class: str, task: str, dependen
 
     # Simulation of training
     (best_proposal, _, best_params) = tune_model(py_model_class, train_dataset_path, val_dataset_path, 
-                                                test_dataset_path=test_dataset_path, budget=budget)
+                                                test_dataset_path=test_dataset_path, budget=budget, 
+                                                train_args=train_args)
 
     # Simulation of inference
     model_inst = None
@@ -330,8 +354,8 @@ def _maybe_read_knobs_from_args(knob_config):
 def _maybe_read_budget_from_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--GPU_COUNT', type=int, default=0)
-    parser.add_argument('--TIME_HOURS', type=float, default=0.1) # 6 min
-    parser.add_argument('--MODEL_TRIAL_COUNT', type=int, default=-1) # 6 min
+    parser.add_argument('--TIME_HOURS', type=float, default=0.01) # < 1 min
+    parser.add_argument('--MODEL_TRIAL_COUNT', type=int, default=-1)
     budget_from_args = vars(parser.parse_known_args()[0])
     return budget_from_args
 

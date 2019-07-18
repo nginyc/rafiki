@@ -1,4 +1,4 @@
-.. _`tasks`:
+ .. _`tasks`:
 
 Supported Tasks
 ====================================================================
@@ -24,19 +24,12 @@ IMAGE_CLASSIFICATION
 Dataset Format
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The dataset file must be of the ``.zip`` archive format with a ``images.csv`` at the root of the directory.
+:ref:`dataset-type:IMAGE_FILES`
 
-The ``images.csv`` should be of a `.CSV <https://en.wikipedia.org/wiki/Comma-separated_values>`_
-format with 2 columns of ``path`` and ``class``.
+- There is only 1 tag column of ``class``, corresponding to the class of the image as an integer from ``0`` to ``k - 1``, where ``k`` is the total no. of classes.
+- The train & validation dataset's images should be have the same dimensions ``W x H`` and same total no. of classes.
 
-For each row,
-
-    ``path`` should be a file path to a ``.png``, ``.jpg`` or ``.jpeg`` image file within the archive, relative to the root of the directory.
-    All images in the train & validation datasets should have the **same** dimensions ``W x H``.
-
-    ``class`` should be an integer from ``0`` to ``k - 1``, where ``k`` is the number of classes in the classification of images.
-
-An example of ``images.csv`` follows:
+An example:
 
 .. code-block:: text
 
@@ -47,12 +40,10 @@ An example of ``images.csv`` follows:
     image-0-of-class-1.png,1
     ...
     image-99-of-class-9.png,9
-
-Additionally, the train & validation dataset's images should be have the same dimensions ``W x H``.
-
+    
 .. note::
 
-    You can refer to and run `./examples/datasets/image_classification/load_folder_format.py <https://github.com/nginyc/rafiki/tree/master/examples/datasets/load_folder_format.py>`_
+    You can refer to and run `./examples/datasets/image_files/load_folder_format.py <https://github.com/nginyc/rafiki/tree/master/examples/datasets/load_folder_format.py>`_
     for converting *directories of images* to Rafiki's ``IMAGE_CLASSIFICATION`` format. 
 
 
@@ -65,7 +56,8 @@ The query image can be of *any dimensions*.
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A size-``k`` array of floats, representing the probabilities of each class from ``0`` to ``k - 1``.
+A size-``k`` array of floats, representing the probabilities of each class, by index, from ``0`` to ``k-1``.
+For example, the float at index 0 corresponds to the probability of class 0.
 
 
 POS_TAGGING
@@ -74,21 +66,12 @@ POS_TAGGING
 Dataset Format
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The dataset file must be of the ``.zip`` archive format with a ``corpus.tsv`` at the root of the directory.
+:ref:`dataset-type:CORPUS`
 
-The ``corpus.tsv`` should be of a `.TSV <https://en.wikipedia.org/wiki/Tab-separated_values>`_ 
-format with 2 columns: ``token`` and ``tag``.
+- Sentences are delimited by  ``\n`` tokens.
+- There is only 1 tag column of ``tag`` corresponding to the POS tag of the token as an integer from ``0`` to ``k-1``.
 
-For each row,
-
-    ``token`` should be a string, a token (e.g. word) in the corpus. 
-    These tokens should appear in the order as it is in the text of the corpus.
-    To delimit sentences, ``token`` takes the value of ``\n``.
-
-    The other ``tag`` column are integers from ``0`` to ``k - 1``, where ``k`` is the total number of POS tags,
-    with each ``tag`` describing the POS tag of the corresponding token.
-
-An example of ``corpus.tsv`` for follows:
+An example:
 
 .. code-block:: text
 
@@ -108,6 +91,7 @@ An example of ``corpus.tsv`` for follows:
     .           4
     \n          0
 
+
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -116,4 +100,62 @@ An array of strings representing a sentence as a list of tokens in that sentence
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-An array of integers representing the list of predicted tags for each token, in sequence, for the sentence.
+A array of integers representing the list of predicted tag for each token, in sequence, for the sentence.
+
+TABULAR_CLASSIFICATION
+--------------------------------------------------------------------
+
+Dataset Type
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:ref:`dataset-type:TABULAR`
+
+The following optional train arguments are supported:
+
+    =====================       =====================
+    **Train Argument**          **Description**
+    ---------------------       ---------------------        
+    ``features``                List of feature columns' names as a list of strings (defaults to first ``N-1`` columns in the CSV file)
+    ``target``                  Target column name as a string (defaults to the *last* column in the CSV file)
+    =====================       =====================
+
+The train & validation datasets should have the same columns. 
+
+Query Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An size-``N-1`` dictionary representing feature-value pairs.
+
+Prediction Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A size-``k`` list of floats, representing the probabilities of each class from ``0`` to ``k-1`` for the target column.
+
+TABULAR_REGRESSION
+--------------------------------------------------------------------
+
+Dataset Type
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:ref:`dataset-type:TABULAR`
+
+The following optional train arguments are supported:
+
+    =====================       =====================
+    **Train Argument**          **Description**
+    ---------------------       ---------------------        
+    ``features``                List of feature columns' names as a list of strings (defaults to first ``N-1`` columns in the CSV file)
+    ``target``                  Target column name as a string (defaults to the *last* column in the CSV file)
+    =====================       =====================
+    
+The train & validation datasets should have the same columns. 
+
+Query Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An size-``N-1`` dictionary representing feature-value pairs.
+
+Prediction Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A float, representing the value of the target column.

@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import requests
 import json
 import pickle
@@ -329,7 +348,7 @@ class Client():
     ####################################
     
     def create_train_job(self, app: str, task: str, train_dataset_id: str, val_dataset_id: str, 
-                        budget: Budget, models: List[str] = None) -> Dict[str, Any]:
+                        budget: Budget, models: List[str] = None, train_args: Dict[str, any] = None) -> Dict[str, Any]:
         '''
         Creates and starts a train job on Rafiki. 
 
@@ -342,8 +361,10 @@ class Client():
             the train job will train models associated with the task
         :param train_dataset_id: ID of the train dataset, previously created on Rafiki
         :param val_dataset_id: ID of the validation dataset, previously created on Rafiki
-        :param budget: Budget for each model
-        :param  models: List of IDs of model to use for train job. Defaults to all available models
+        :param budget: Budget for model training
+        :param models: List of IDs of model to use for train job. Defaults to all available models
+        :param train_args: Additional arguments to pass to models during training, if any. 
+            Refer to the task's specification for appropriate arguments  
         :returns: Created train job as dictionary
 
         If ``models`` is unspecified, all models accessible to the user for the specified task will be used.
@@ -385,7 +406,8 @@ class Client():
             'train_dataset_id': train_dataset_id,
             'val_dataset_id': val_dataset_id,
             'budget': budget,
-            'model_ids': models
+            'model_ids': models,
+            'train_args': train_args
         })
         return data
 

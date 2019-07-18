@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import os
 import logging
 import bcrypt
@@ -164,7 +183,7 @@ class Admin(object):
     ####################################
 
     def create_train_job(self, user_id, app, task, train_dataset_id, 
-                        val_dataset_id, budget, model_ids):
+                        val_dataset_id, budget, model_ids, train_args):
         
         # Ensure there is no existing train job for app
         train_jobs = self._meta_store.get_train_jobs_by_app(user_id, app)
@@ -209,7 +228,8 @@ class Admin(object):
             task=task,
             budget=budget,
             train_dataset_id=train_dataset_id,
-            val_dataset_id=val_dataset_id
+            val_dataset_id=val_dataset_id,
+            train_args=train_args
         )
         self._meta_store.commit()
 
@@ -262,6 +282,7 @@ class Admin(object):
             'task': train_job.task,
             'train_dataset_id': train_job.train_dataset_id,
             'val_dataset_id': train_job.val_dataset_id,
+            'train_args': train_job.train_args,
             'datetime_started': train_job.datetime_started,
             'datetime_stopped': train_job.datetime_stopped
         }
@@ -277,6 +298,7 @@ class Admin(object):
                 'task': x.task,
                 'train_dataset_id': x.train_dataset_id,
                 'val_dataset_id': x.val_dataset_id,
+                'train_args': x.train_args,
                 'datetime_started': x.datetime_started,
                 'datetime_stopped': x.datetime_stopped,
                 'budget': x.budget
@@ -295,6 +317,7 @@ class Admin(object):
                 'task': x.task,
                 'train_dataset_id': x.train_dataset_id,
                 'val_dataset_id': x.val_dataset_id,
+                'train_args': x.train_args,
                 'datetime_started': x.datetime_started,
                 'datetime_stopped': x.datetime_stopped,
                 'budget': x.budget

@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 from pprint import pprint
 import time
 import requests
@@ -10,7 +29,7 @@ from rafiki.constants import BudgetOption, InferenceJobStatus, ModelDependency
 from rafiki.model import utils
 
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
-from examples.datasets.image_classification.load_mnist_format import load_fashion_mnist
+from examples.datasets.image_files.load_fashion_mnist import load_fashion_mnist
 
 # Returns `predictor_host` of inference job
 def get_predictor_host(client, app):
@@ -117,8 +136,8 @@ if __name__ == '__main__':
                         default='examples/data/image_classification/fashion_mnist_test_1.png,examples/data/image_classification/fashion_mnist_test_2.png', 
                         help='Path(s) to query image(s), delimited by commas')
     (args, _) = parser.parse_known_args()
-    out_train_dataset_path = 'data/fashion_mnist_for_image_classification_train.zip'
-    out_val_dataset_path = 'data/fashion_mnist_for_image_classification_val.zip'
+    out_train_dataset_path = 'data/fashion_mnist_train.zip'
+    out_val_dataset_path = 'data/fashion_mnist_val.zip'
 
     # Initialize client
     client = Client()
