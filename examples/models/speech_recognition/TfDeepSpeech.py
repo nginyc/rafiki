@@ -23,8 +23,9 @@ from examples.models.speech_recognition.utils.text import Alphabet, levenshtein,
 from ds_ctcdecoder import ctc_beam_search_decoder_batch, ctc_beam_search_decoder, Scorer
 
 from rafiki.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, \
-    dataset_utils, logger, test_model_class, InvalidModelParamsException
-from rafiki.constants import TaskType, ModelDependency
+    utils, logger
+from rafiki.constants import ModelDependency
+from rafiki.model.dev import test_model_class
 
 
 class ConfigSingleton:
@@ -62,9 +63,9 @@ class TfDeepSpeech(BaseModel):
             'n_hidden': CategoricalKnob([128, 256, 512, 1024, 2048]),
             # lm_alpha and lm_beta can be used for further hyperparameter tuning
             # the alpha hyperparameter of the CTC decoder. Language Model weight
-            'lm_alpha': FloatKnob(0.75, 0.75),
+            'lm_alpha': FloatKnob(0.74, 0.76),
             # the beta hyperparameter of the CTC decoder. Word insertion weight
-            'lm_beta': FloatKnob(1.85, 1.85)
+            'lm_beta': FloatKnob(1.84, 1.86)
         }
 
     @staticmethod
@@ -257,7 +258,7 @@ class TfDeepSpeech(BaseModel):
         batch_size = self._knobs.get('batch_size')
         Config = self.c
 
-        dataset = dataset_utils.load_dataset_of_audio_files(dataset_uri, dataset_dir)
+        dataset = utils.dataset.load_dataset_of_audio_files(dataset_uri, dataset_dir)
         df = dataset.df
 
         # Sort the samples by filesize (representative of lengths) so that only similarly-sized utterances are
@@ -684,14 +685,15 @@ class TfDeepSpeech(BaseModel):
 
         return inputs, outputs, layers
 
-    def train(self, dataset_uri):
+    def train(self, dataset_path, **kwargs):
         tf.reset_default_graph()
         tf.set_random_seed(FLAGS.random_seed)
 
         ep = self._knobs.get('epochs')
         Config = self.c
 
-        logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
+        # Uncomment this line to log available devices
+        # logger.log('Available devices: {}'.format(str(device_lib.list_local_devices())))
 
         # Define 2 plots: Loss against time, loss against epochs
         logger.define_loss_plot()
@@ -701,7 +703,7 @@ class TfDeepSpeech(BaseModel):
         dataset_dir = tempfile.TemporaryDirectory()
         logger.log('Train dataset will be extracted to {}'.format(dataset_dir.name))
 
-        train_set = self.create_dataset(dataset_uri, dataset_dir)
+        train_set = self.create_dataset(dataset_path, dataset_dir)
 
         iterator = tf.data.Iterator.from_structure(train_set.output_types,
                                                    train_set.output_shapes,
@@ -1102,7 +1104,7 @@ class TfDeepSpeech(BaseModel):
         # Load alphabet.txt
         alphabet_txt_base64 = params.get('alphabet_txt_base64', None)
         if alphabet_txt_base64 is None:
-            raise InvalidModelParamsException()
+            raise Exception(f'Alphabet params not provided: {alphabet_txt_base64}')
         alphabet_txt_bytes = base64.b64decode(alphabet_txt_base64.encode('utf-8'))
 
         # Write the bytes into /tmp/alphabet.txt, to be used later in the Scorer of predictor
@@ -1122,7 +1124,7 @@ class TfDeepSpeech(BaseModel):
         # Load model parameters
         pb_model_base64 = params.get('pb_model_base64', None)
         if pb_model_base64 is None:
-            raise InvalidModelParamsException()
+            raise Exception(f'Model params not provided: {pb_model_base64}')
         pb_model_bytes = base64.b64decode(pb_model_base64.encode('utf-8'))
 
         graph_def = tf.GraphDef()
@@ -1134,7 +1136,7 @@ if __name__ == '__main__':
     test_model_class(
         model_file_path=__file__,
         model_class='TfDeepSpeech',
-        task=TaskType.SPEECH_RECOGNITION,
+        task='SPEECH_RECOGNITION',
         dependencies={
             ModelDependency.TENSORFLOW: '1.12.0',
             # Use ds_ctcdecoder version compatible with the trie file you download or generate
@@ -1142,8 +1144,9 @@ if __name__ == '__main__':
         },
         # Demonstrative only, this dataset only contains one sample, we use batch_size = 1 to run
         # Replace with larger test data and larger batch_size in practice
-        train_dataset_uri='data/ldc93s1/ldc93s1.zip',
-        test_dataset_uri='data/ldc93s1/ldc93s1.zip',
+        train_dataset_path='data/ldc93s1/ldc93s1.zip',
+        val_dataset_path='data/ldc93s1/ldc93s1.zip',
+        test_dataset_path='data/ldc93s1/ldc93s1.zip',
         # Ensure the wav files have a sample rate of 16kHz
         queries=['data/ldc93s1/ldc93s1/LDC93S1.wav']
     )

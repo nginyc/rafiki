@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 def get_ensemble_method(task: str) -> Callable[[List[Any]], Any]:
     if task == 'IMAGE_CLASSIFICATION':
         return ensemble_probabilities
-    if task == 'SPEECH_RECOGNITION'
+    if task == 'SPEECH_RECOGNITION':
         return ensemble_strings
     else:
         return ensemble

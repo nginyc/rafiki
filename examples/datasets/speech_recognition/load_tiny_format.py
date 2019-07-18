@@ -3,7 +3,7 @@ import os
 
 import pandas
 import shutil
-from rafiki.model import dataset_utils
+from examples.datasets.utils import download_dataset_from_url
 
 
 def load(data_dir):
@@ -46,7 +46,7 @@ def maybe_download(archive_name, target_dir, archive_url):
 
     if not os.path.exists(archive_path):
         print('No archive "%s" - downloading...' % archive_path)
-        archive_path = dataset_utils.download_dataset_from_uri(archive_url)
+        archive_path = download_dataset_from_url(archive_url)
     else:
         print('Found archive "%s" - not downloading.' % archive_path)
     return archive_path

@@ -80,14 +80,13 @@ class DatasetUtils():
         return ImageFilesDataset(dataset_path, min_image_size=min_image_size, max_image_size=max_image_size,
                                 mode=mode, if_shuffle=if_shuffle)
 
-    def load_dataset_of_audio_files(self, dataset_uri, dataset_dir):
+    def load_dataset_of_audio_files(self, dataset_path, dataset_dir):
         '''
             Loads dataset with type `AUDIO_FILES`.
 
             :param str dataset_uri: URI of the dataset file
             :returns: An instance of ``AudioFilesDataset``.
         '''
-        dataset_path = self.download_dataset_from_uri(dataset_uri)
         return AudioFilesDataset(dataset_path, dataset_dir)
 
     def normalize_images(self, images, mean=None, std=None):
@@ -333,9 +332,6 @@ class AudioFilesDataset(ModelDataset):
         # Read images.csv, and read image paths & classes
         audios_csv_path = os.path.join(dataset_dir.name, 'audios.csv')
 
-
         df = pandas.read_csv(audios_csv_path, encoding='utf-8', na_filter=False)
 
         return df
-
-dataset_utils = ModelDatasetUtils()
