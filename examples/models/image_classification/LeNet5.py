@@ -34,9 +34,9 @@ from keras.utils.np_utils import to_categorical
 from keras.callbacks import TensorBoard
 from sklearn.model_selection import train_test_split
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        FixedKnob, CategoricalKnob, dataset_utils, logger
-from rafiki.constants import TaskType, ModelDependency
+from rafiki.model import BaseModel, FixedKnob, FloatKnob, CategoricalKnob, utils
+from rafiki.constants import ModelDependency
+from rafiki.model.dev import test_model_class
 
 class LeNet5(BaseModel):
     '''
@@ -45,8 +45,10 @@ class LeNet5(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': FixedKnob(10),
-            'batch_size': CategoricalKnob([1, 64, 128])
+            'epochs': FixedKnob(50),
+            'batch_size': CategoricalKnob([1, 64, 128]),
+            'l_rate': FloatKnob(0.0001, 0.001, 0.01),
+            'max_image_size': FixedKnob(32)
         }
 
 
@@ -54,14 +56,15 @@ class LeNet5(BaseModel):
         super().__init__(**knobs)
         self._knobs = knobs
         self.__dict__.update(knobs)
-        self._model = self._build_classifier(self.epochs, self.batch_size)
+        self._model = self._build_classifier(self.l_rate)
 
-    
-    def train(self, dataset_path):
-        ep = self._knobs.get('epochs')
-        bs = self._knobs.get('batch_size')
+  
+    def train(self, dataset_path, **kwargs):
+        ep = self._knobs['epochs']
+        bs = self._knobs['batch_size']
         
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[28,28])
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, max_image_size=self.max_image_size, mode='L')
+        self._image_size = dataset.image_size
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = self._prepare_X(images)
         train = {}
@@ -87,12 +90,12 @@ class LeNet5(BaseModel):
 
         # Compute train accuracy
         (train_loss, train_acc) = self._model.evaluate(X_validation, y_validation)
-        logger.log('Train loss: {}'.format(train_loss))
-        logger.log('Train accuracy: {}'.format(train_acc))
+        utils.logger.log('Train loss: {}'.format(train_loss))
+        utils.logger.log('Train accuracy: {}'.format(train_acc))
 
 
     def evaluate (self, dataset_path):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[28,28])
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, max_image_size=self.max_image_size, mode='L')        
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = self._prepare_X(images)
         images = np.pad(images, ((0,0),(2,2),(2,2),(0,0)), 'constant')
@@ -103,6 +106,7 @@ class LeNet5(BaseModel):
 
 
     def predict(self, queries):
+        queries = utils.dataset.transform_images(queries, image_size=self._image_size, mode='L')
         X = self._prepare_X(queries)
         X = np.pad(X, ((0,0),(2,2),(2,2),(0,0)), 'constant')
         probs = self._model.predict_proba(X)
@@ -124,13 +128,16 @@ class LeNet5(BaseModel):
 
 
     def load_parameters(self, params):
-        # Load model parameters
-        model_base64 = params.get('model_base64', None)
-        if model_base64 is None:
-            raise InvalidModelParamsException()
-        
-        model_bytes = base64.b64decode(params['model_base64'].encode('utf-8'))
-        self._model = pickle.loads(model_bytes)
+        params = {}
+        # Put model parameters
+        model_bytes = pickle.dumps(self._model)
+        model_base64 = base64.b64encode(model_bytes).decode('utf-8')
+        params['model_base64'] = model_base64
+
+        # Put image size
+        params['image_size'] = self._image_size
+
+        return params
     
     
     def _prepare_X(self, images):
@@ -138,7 +145,8 @@ class LeNet5(BaseModel):
         return X.reshape(-1,28,28,1)
             
     
-    def _build_classifier(self, epochs, batch_size):
+    def _build_classifier(self, l_rate):
+        l_rate = self._knobs['l_rate']
         model = models.Sequential()
         model.add(layers.Conv2D(filters=6, kernel_size=(3, 3), activation='relu', input_shape=(32,32,1)))
         model.add(layers.AveragePooling2D())
@@ -163,9 +171,10 @@ if __name__ == '__main__':
             ModelDependency.TENSORFLOW: '1.12.0',
             ModelDependency.KERAS: '2.2.4'
         },
-    train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
-    val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
-    queries=[
+        train_dataset_path='data/fashion_mnist_train.zip',
+        val_dataset_path='data/fashion_mnist_val.zip',
+        test_dataset_path='data/fashion_mnist_test.zip',
+        queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 

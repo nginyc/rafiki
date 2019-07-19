@@ -34,9 +34,9 @@ from keras.optimizers import RMSprop
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ReduceLROnPlateau
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        CategoricalKnob, FixedKnob, dataset_utils, logger
-from rafiki.constants import TaskType, ModelDependency
+from rafiki.model import BaseModel, FixedKnob, FloatKnob, CategoricalKnob, utils
+from rafiki.constants import ModelDependency
+from rafiki.model.dev import test_model_class
 
 class CNN(BaseModel):
     '''
@@ -45,8 +45,10 @@ class CNN(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': FixedKnob(50),
-            'batch_size': CategoricalKnob([16,32,64,86])
+            'epochs': FixedKnob(10),
+            'batch_size': CategoricalKnob([16,32,64,86]),
+            'l_rate': FloatKnob(0.001, 0.01),
+            'max_image_size': CategoricalKnob([28, 32])
         }
 
 
@@ -54,14 +56,16 @@ class CNN(BaseModel):
         super().__init__(**knobs)
         self._knobs = knobs
         self.__dict__.update(knobs)
-        self._model = self._build_classifier(self.epochs, self.batch_size)
+        self._model = self._build_classifier(self.l_rate)
+        
 
-
-    def train(self, dataset_path):
-        ep = self._knobs.get('epochs')
-        bs = self._knobs.get('batch_size')       
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[28,28])
-        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])          
+    def train(self, dataset_path, **kwargs):
+        ep = self._knobs['epochs']
+        bs = self._knobs['batch_size']   
+        
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, max_image_size=self.max_image_size, mode='L')
+        self._image_size = dataset.image_size
+        (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         train = {}
         train['images'] = self._prepare_X(images)
         train['classes'] = classes
@@ -76,7 +80,7 @@ class CNN(BaseModel):
                              height_shift_range=0.1,
                              fill_mode='nearest')  
         datagen.fit(X_train)
-        learning_rate_reduction = ReduceLROnPlateau(monitor='val_acc', 
+        learning_rate_reduction = ReduceLROnPlateau(monitor='train_acc', 
                                             patience=3, 
                                             verbose=1, 
                                             factor=0.5, 
@@ -88,12 +92,12 @@ class CNN(BaseModel):
         
         # Compute train accuracy
         (train_loss, train_acc) = self._model.evaluate(X_val, y_val)
-        logger.log('Train loss: {}'.format(train_loss))
-        logger.log('Train accuracy: {}'.format(train_acc))
+        utils.logger.log('Train loss: {}'.format(train_loss))
+        utils.logger.log('Train accuracy: {}'.format(train_acc))
 
 
     def evaluate (self, dataset_path):
-        dataset = dataset_utils.load_dataset_of_image_files(dataset_path, image_size=[28,28])
+        dataset = utils.dataset.load_dataset_of_image_files(dataset_path, max_image_size=self.max_image_size, mode='L')
         (images, classes) = zip(*[(image, image_class) for (image, image_class) in dataset])
         images = self._prepare_X(images)
         X_test, y_test = images, to_categorical(classes, num_classes = 10)
@@ -104,31 +108,33 @@ class CNN(BaseModel):
 
 
     def predict(self, queries):
+        queries = utils.dataset.transform_images(queries, image_size=self._image_size, mode='L')
         X = self._prepare_X(queries)
         probs = self._model.predict_proba(X)
         return probs.tolist()
 
 
-    def destroy(self):
-        pass
-
-
     def dump_parameters(self):
         params = {}
-        # Save model parameters
+        # Put model parameters
         model_bytes = pickle.dumps(self._model)
         model_base64 = base64.b64encode(model_bytes).decode('utf-8')
         params['model_base64'] = model_base64
+
+        # Put image size
+        params['image_size'] = self._image_size
+
         return params
 
 
     def load_parameters(self, params):
         # Load model parameters
-        model_base64 = params.get('model_base64', None)
-        if model_base64 is None:
-                raise InvalidModelParamsException()
-                model_bytes = base64.b64decode(params['model_base64'].encode('utf-8'))
-                self._model = pickle.loads(model_bytes)
+        model_base64 = params['model_base64']
+        model_bytes = base64.b64decode(model_base64.encode('utf-8'))
+        self._model = pickle.loads(model_bytes)
+
+        # Load image size
+        self._image_size = params['image_size']
 
 
     def _prepare_X(self, images):
@@ -136,7 +142,9 @@ class CNN(BaseModel):
         return X.reshape(-1,28,28,1)
 
 
-    def _build_classifier(self, epochs, batch_size):
+    def _build_classifier(self, l_rate):
+        l_rate = self._knobs['l_rate']
+        
         model = models.Sequential()
         model.add(Conv2D(filters = 32, kernel_size = (5,5),padding = 'Same', activation ='relu', input_shape = (28,28,1)))
         model.add(Conv2D(filters = 32, kernel_size = (5,5),padding = 'Same', activation ='relu'))
@@ -150,7 +158,7 @@ class CNN(BaseModel):
         model.add(Dense(256, activation = "relu"))
         model.add(BatchNormalization())
         model.add(Dense(10, activation = "softmax"))
-        my_optimizer = RMSprop(lr=0.001, rho=0.9, epsilon=1e-08, decay=0.0)
+        my_optimizer = RMSprop(lr=l_rate, rho=0.9, epsilon=1e-08, decay=0.0)
         model.compile(optimizer=my_optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
         
         return model
@@ -158,16 +166,17 @@ class CNN(BaseModel):
 
 if __name__ == '__main__':
     test_model_class(
-    model_file_path=__file__,
-    model_class='CNN',
-    task=TaskType.IMAGE_CLASSIFICATION,
-    dependencies={
-        ModelDependency.TENSORFLOW: '1.12.0',
-        ModelDependency.KERAS: '2.2.4'
-        },
-    train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
-    val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
-    queries=[
+        model_file_path=__file__,
+        model_class='CNN',
+        task='IMAGE_CLASSIFICATION',
+        dependencies={
+            ModelDependency.TENSORFLOW: '1.12.0',
+            ModelDependency.KERAS: '2.2.4'
+            },
+        train_dataset_path='data/fashion_mnist_train.zip',
+        val_dataset_path='data/fashion_mnist_val.zip',
+        test_dataset_path='data/fashion_mnist_test.zip',
+        queries=[
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
@@ -198,4 +207,3 @@ if __name__ == '__main__':
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
         ]
     )
-
