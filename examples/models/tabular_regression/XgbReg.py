@@ -1,18 +1,33 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import xgboost as xgb
 from sklearn.metrics import mean_squared_error
-from collections import OrderedDict
 import pickle
 import base64
 import numpy as np
 import pandas as pd
+import json
 
-from pathlib import Path
-import sys
-import os
-
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, FloatKnob, logger
-from rafiki.constants import TaskType, ModelDependency
+from rafiki.model import BaseModel, IntegerKnob, FloatKnob, logger
+from rafiki.model.dev import test_model_class
+from rafiki.constants import ModelDependency
 
 class XgbReg(BaseModel):
     '''
@@ -34,7 +49,7 @@ class XgbReg(BaseModel):
         self._clf = self._build_classifier(self.n_estimators, self.min_child_weight, \
             self.max_depth, self.gamma, self.subsample, self.colsample_bytree)
        
-    def train(self, dataset_path, features=None, target=None):
+    def train(self, dataset_path, features=None, target=None, **kwargs):
         # Record features & target
         self._features = features
         self._target = target
@@ -86,21 +101,21 @@ class XgbReg(BaseModel):
         clf_bytes = pickle.dumps(self._clf)
         clf_base64 = base64.b64encode(clf_bytes).decode('utf-8')
         params['clf_base64'] = clf_base64
-        params['encoding_dict'] = self._encoding_dict
-        params['features'] = pickle.dumps(self._features)
+        params['encoding_dict'] = json.dumps(self._encoding_dict)
+        params['features'] = json.dumps(self._features)
         params['target'] = self._target
 
         return params
 
     def load_parameters(self, params):
         # Load model parameters
+        assert 'clf_base64' in params
         clf_base64 = params['clf_base64']
-        if clf_base64 is None:
-            raise InvalidModelParamsException()
         clf_bytes = base64.b64decode(clf_base64.encode('utf-8'))
         self._clf = pickle.loads(clf_bytes)
-        self._encoding_dict = params['encoding_dict']
-        self._features = pickle.loads(params['features'])
+
+        self._encoding_dict = json.loads(params['encoding_dict'])
+        self._features = json.loads(params['features'])
         self._target = params['target']
 
     def _extract_xy(self, data):
@@ -159,7 +174,7 @@ if __name__ == '__main__':
     test_model_class(
         model_file_path=__file__,
         model_class='XgbReg',
-        task=TaskType.TABULAR_REGRESSION,
+        task='TABULAR_REGRESSION',
         dependencies={
             ModelDependency.XGBOOST: '0.90'
         },

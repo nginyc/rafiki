@@ -1,9 +1,25 @@
-import requests
-import pprint
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import os
 import re
 import tempfile
-import numpy as np
 import glob
 import traceback
 import shutil
@@ -12,15 +28,16 @@ import zipfile
 
 from examples.datasets.utils import download_dataset_from_url
 
-def load(dataset_url, out_train_dataset_path, out_val_dataset_path, out_meta_tsv_path):
+def load(dataset_url, out_train_dataset_path, out_val_dataset_path, out_meta_tsv_path, validation_split):
     '''
         Loads and converts a dataset of the format of the Penn Treebank sample 
-        at http://www.nltk.org/nltk_data/ to the DatasetType `CORPUS` for the Task `POS_TAGGING`.
+        at http://www.nltk.org/nltk_data/ to the dataset type `CORPUS` for the task `POS_TAGGING`.
 
         :param str dataset_url: URL to download the dataset stored in the format similar to the Penn Treebank sample
         :param str out_train_dataset_path: Path to save the output train dataset file
         :param str out_val_dataset_path: Path to save the output validation dataset file
         :param str out_meta_tsv_path: Path to save the output dataset metadata .TSV file
+        :param float validation_split: Proportion (0-1) to carve out validation dataset from the original dataset
     '''
     if all([os.path.exists(x) for x in [out_train_dataset_path, out_val_dataset_path, out_meta_tsv_path]]):
         print('Dataset already loaded in local filesystem - skipping...')
@@ -29,19 +46,20 @@ def load(dataset_url, out_train_dataset_path, out_val_dataset_path, out_meta_tsv
     dataset_path = download_dataset_from_url(dataset_url)
 
     print('Loading dataset and writing to output dataset files...')
-    _convert_dataset(dataset_path, out_meta_tsv_path, \
-                    out_train_dataset_path, out_val_dataset_path)
+    _convert_dataset(dataset_path, out_meta_tsv_path, out_train_dataset_path, 
+                    out_val_dataset_path, validation_split)
 
     print('Dataset metadata file is saved at {}'.format(out_meta_tsv_path))
-    print('Train dataset file is saved at {}'.format(out_train_dataset_path))
-    print('Validation dataset file is saved at {}'.format(out_val_dataset_path))
+    print('Train dataset file is saved at {}. This should be submitted as `train_dataset` of a train job.'
+            .format(out_train_dataset_path))
+    print('Validation dataset file is saved at {}. This should be submitted as `val_dataset` of a train job.'
+            .format(out_val_dataset_path))
 
-def _convert_dataset(dataset_path, out_meta_tsv_path, \
-                    out_train_dataset_path, out_val_dataset_path):
+def _convert_dataset(dataset_path, out_meta_tsv_path, out_train_dataset_path, 
+                    out_val_dataset_path, validation_split):
     TAGGED_DIRNAME = 'treebank/tagged'
     SENTS_FILENAME_GLOB = '*.pos'
     TSV_FILENAME = 'corpus.tsv'
-    TEST_FILES_RATIO = 0.05
 
     # Create train dataset dir & start TSV
     train_d = tempfile.TemporaryDirectory()
@@ -49,9 +67,9 @@ def _convert_dataset(dataset_path, out_meta_tsv_path, \
     train_tsv.write('token\ttag\n') 
 
     # Same for validation dataset
-    test_d = tempfile.TemporaryDirectory()
-    test_tsv = open(os.path.join(test_d.name, TSV_FILENAME), 'w')
-    test_tsv.write('token\ttag\n')
+    val_d = tempfile.TemporaryDirectory()
+    val_tsv = open(os.path.join(val_d.name, TSV_FILENAME), 'w')
+    val_tsv.write('token\ttag\n')
 
     tag_to_index = {}
 
@@ -65,7 +83,7 @@ def _convert_dataset(dataset_path, out_meta_tsv_path, \
         sents_filepaths.sort()
 
         # Compute no. of sents files for train
-        train_files_count = round(len(sents_filepaths) * (1 - TEST_FILES_RATIO))
+        train_files_count = round(len(sents_filepaths) * (1 - validation_split))
         
         # Convert sentences for train dataset
         for sents_filepath in tqdm(sents_filepaths[0:train_files_count], unit='files'):
@@ -81,14 +99,14 @@ def _convert_dataset(dataset_path, out_meta_tsv_path, \
                 while True:
                     sent = _read_next_sentence(f, tag_to_index)
                     if len(sent) == 0: break
-                    _write_next_sentence(test_tsv, sent)
+                    _write_next_sentence(val_tsv, sent)
 
     # Zip train & validation datasets
-    test_tsv.close()
+    val_tsv.close()
     train_tsv.close()
     out_path = shutil.make_archive(out_train_dataset_path, 'zip', train_d.name)
     os.rename(out_path, out_train_dataset_path) # Remove additional trailing `.zip`
-    out_path = shutil.make_archive(out_val_dataset_path, 'zip', test_d.name)
+    out_path = shutil.make_archive(out_val_dataset_path, 'zip', val_d.name)
     os.rename(out_path, out_val_dataset_path) # Remove additional trailing `.zip`
 
     # Write to out meta file

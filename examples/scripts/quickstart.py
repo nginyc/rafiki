@@ -1,55 +1,44 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 from pprint import pprint
 import time
 import requests
 import argparse
-import traceback
 import os
-import string
-import random
 
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL
-from rafiki.constants import TaskType, UserType, BudgetType, TrainJobStatus, \
-                                InferenceJobStatus, ModelDependency, ModelAccessRight
+from rafiki.constants import BudgetOption, InferenceJobStatus, ModelDependency
 
+from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
 from examples.datasets.image_files.load_fashion_mnist import load_fashion_mnist
-
-# Generates a random ID
-def gen_id(length=16):
-    return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
-
-def wait_until_train_job_has_stopped(client, app, timeout=60*20, tick=10):
-    length = 0
-    while True:
-        train_job = client.get_train_job(app)
-        status = train_job['status']
-        if status not in [TrainJobStatus.STARTED, TrainJobStatus.RUNNING]:
-            # Train job has stopped
-            return
-            
-        # Still running...
-        if length >= timeout:
-            raise TimeoutError('Train job is running for too long')
-
-        length += tick
-        time.sleep(tick)
 
 # Returns `predictor_host` of inference job
 def get_predictor_host(client, app):
     while True:
-        try:
             inference_job = client.get_running_inference_job(app)
             status = inference_job.get('status')
             if status == InferenceJobStatus.RUNNING:
                 return inference_job.get('predictor_host')
-            elif status in [InferenceJobStatus.ERRORED, InferenceJobStatus.STOPPED]:
-                # Inference job has either errored or been stopped
-                return False
             else:
                 time.sleep(10)
-                continue
-        except:
-            pass
 
 def make_predictions(client, predictor_host, queries):
     predictions = []
@@ -68,12 +57,13 @@ def make_predictions(client, predictor_host, queries):
     return predictions
 
 
-def quickstart(client, train_dataset_path, val_dataset_path, gpus, trials):
+def quickstart(client, train_dataset_path, val_dataset_path, gpus, hours):
     '''
-    Runs a sample full train-inference flow for the task ``IMAGE_CLASSIFICATION``.
+        Conducts a full train-inference flow on the Fashion MNIST dataset with
+        models `SkDt` and `TfFeedForward` for the task `IMAGE_CLASSIFICATION`.
     '''
 
-    task = TaskType.IMAGE_CLASSIFICATION
+    task = 'IMAGE_CLASSIFICATION'
 
     # Randomly generate app & model names to avoid naming conflicts
     app_id = gen_id()
@@ -100,9 +90,10 @@ def quickstart(client, train_dataset_path, val_dataset_path, gpus, trials):
     model_ids = [tf_model['id'], sk_model['id']]
 
     print('Creating train job for app "{}" on Rafiki...'.format(app)) 
+
     budget = {
-        BudgetType.MODEL_TRIAL_COUNT: trials,
-        BudgetType.GPU_COUNT: gpus
+        BudgetOption.TIME_HOURS: hours,
+        BudgetOption.GPU_COUNT: gpus
     }
     train_job = client.create_train_job(app, task, train_dataset['id'], val_dataset['id'], 
                                         budget, models=model_ids)
@@ -119,7 +110,7 @@ def quickstart(client, train_dataset_path, val_dataset_path, gpus, trials):
     print('Creating inference job for app "{}" on Rafiki...'.format(app))
     pprint(client.create_inference_job(app))
     predictor_host = get_predictor_host(client, app)
-    if not predictor_host: raise Exception('Inference job has errored or stopped')
+    if not predictor_host: raise Exception('Inference job has errored')
     print('Inference job is running!')
 
     print('Making predictions for queries:')
@@ -164,14 +155,14 @@ def quickstart(client, train_dataset_path, val_dataset_path, gpus, trials):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', type=str, default='localhost', help='Host of Rafiki instance')
-    parser.add_argument('--web_admin_port', type=int, default=os.environ.get('WEB_ADMIN_EXT_PORT', 3001), help='Port for Rafiki Admin Web on host')
+    parser.add_argument('--web_admin_port', type=int, default=os.environ.get('WEB_ADMIN_EXT_PORT', 3001), help='Port for Rafiki Web Admin on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
-    parser.add_argument('--trials', type=int, default=5, help='How many trials to conduct for each model')
+    parser.add_argument('--hours', type=float, default=0.1, help='How long the train job should run for (in hours)') # 6min
     (args, _) = parser.parse_known_args()
-    out_train_dataset_path = 'data/fashion_mnist_for_image_classification_train.zip'
-    out_val_dataset_path = 'data/fashion_mnist_for_image_classification_val.zip'
+    out_train_dataset_path = 'data/fashion_mnist_train.zip'
+    out_val_dataset_path = 'data/fashion_mnist_val.zip'
 
     # Initialize client
     client = Client()
@@ -180,4 +171,4 @@ if __name__ == '__main__':
     print('During training, you can view the status of the train job at {}'.format(web_admin_url))
     print('Login with email "{}" and password "{}"'.format(args.email, args.password)) 
     
-    quickstart(client, out_train_dataset_path, out_val_dataset_path, args.gpus, args.trials)
+    quickstart(client, out_train_dataset_path, out_val_dataset_path, args.gpus, args.hours)

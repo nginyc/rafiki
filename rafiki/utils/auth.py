@@ -1,11 +1,29 @@
-from flask import request
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import os
 import jwt
 from functools import wraps
 from datetime import datetime, timedelta
 
 from rafiki.constants import UserType
-from rafiki.config import APP_SECRET
+from rafiki.config import APP_SECRET, SUPERADMIN_EMAIL
 
 TOKEN_EXPIRATION_HOURS = 1
 
@@ -26,7 +44,8 @@ def decode_token(token):
     return payload
 
 def auth(user_types=[]):
-    # Superadmins can do anything
+    from flask import request
+    
     user_types.append(UserType.SUPERADMIN)
 
     def decorator(f):
@@ -58,3 +77,12 @@ def extract_token_from_header(header):
 
     token = parts[1]
     return token
+
+def superadmin_client():
+    from rafiki.client import Client
+    admin_host = os.environ['ADMIN_HOST']
+    admin_port = os.environ['ADMIN_PORT']
+    client = Client(admin_host=admin_host, 
+                    admin_port=admin_port)
+    client.login(email=SUPERADMIN_EMAIL, password=os.environ['SUPERADMIN_PASSWORD'])
+    return client

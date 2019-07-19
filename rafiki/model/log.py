@@ -1,8 +1,28 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import os
 import traceback
 from datetime import datetime
 import json
 import logging
+import numpy as np
 
 MODEL_LOG_DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S'
 
@@ -11,30 +31,29 @@ class LogType():
     METRICS = 'METRICS'
     MESSAGE = 'MESSAGE'
 
-class ModelLogger():
+class LoggerUtils():
     '''
-    Allows models to log messages and metrics during model training, and 
-    define plots for visualization of model training.
+    Allows models to log messages & metrics during model training.
 
-    To use this logger, import the global ``logger`` instance from the module ``rafiki.model``.
-
+    This should NOT be initiailized outside of the module. Instead,
+    import the global ``utils`` instance from the module ``rafiki.model``
+    and use ``utils.logger``.
+    
     For example:
 
     ::
 
-        from rafiki.model import logger, BaseModel
+        from rafiki.model import utils
         ...
-        class MyModel(BaseModel):
+        def train(self, dataset_path, **kwargs):
             ...
-            def train(self, dataset_uri):
-                ...
-                logger.log('Starting model training...')
-                logger.define_plot('Precision & Recall', ['precision', 'recall'], x_axis='epoch')
-                ...
-                logger.log(precision=0.1, recall=0.6, epoch=1)
-                ...
-                logger.log('Ending model training...')
-                ...
+            utils.logger.log('Starting model training...')
+            utils.logger.define_plot('Precision & Recall', ['precision', 'recall'], x_axis='epoch')
+            ...
+            utils.logger.log(precision=0.1, recall=0.6, epoch=1)
+            ...
+            utils.logger.log('Ending model training...')
+            ...
 
     '''
     
@@ -42,20 +61,20 @@ class ModelLogger():
         # By default, set a logging handler to print to stdout (for debugging)
         logger = logging.getLogger(__name__)
         logger.setLevel(level=logging.INFO)
-        logger.addHandler(ModelLoggerDebugHandler())
+        logger.addHandler(LoggerUtilsDebugHandler())
         self._logger = logger
 
     def define_loss_plot(self):
         '''
         Convenience method of defining a plot of ``loss`` against ``epoch``.
-        To be used with :meth:`rafiki.model.ModelLogger.log_loss`.
+        To be used with :meth:`rafiki.model.LoggerUtils.log_loss`.
         '''
         self.define_plot('Loss Over Epochs', ['loss'], x_axis='epoch')
   
     def log_loss(self, loss, epoch):
         '''
         Convenience method for logging `loss` against `epoch`.
-        To be used with :meth:`rafiki.model.ModelLogger.define_loss_plot`.
+        To be used with :meth:`rafiki.model.LoggerUtils.define_loss_plot`.
         '''
         self.log(loss=loss, epoch=epoch)
 
@@ -84,7 +103,7 @@ class ModelLogger():
 
         Logged messages will be viewable on Rafiki's administrative UI. 
         
-        To visualize logged metrics on plots, a plot must be defined via :meth:`rafiki.model.ModelLogger.define_plot`.
+        To visualize logged metrics on plots, a plot must be defined via :meth:`rafiki.model.LoggerUtils.define_plot`.
 
         Only call this method in :meth:`rafiki.model.BaseModel.train` and :meth:`rafiki.model.BaseModel.evaluate`.
 
@@ -93,22 +112,39 @@ class ModelLogger():
         :type metrics: dict[str, int|float]
         '''
         if msg:
-            self._log(LogType.MESSAGE, { 'message': msg })
+            self._log(LogType.MESSAGE, { 'message': str(msg) })
         
         if metrics:
+            metrics = self._validate_metrics(metrics)
             self._log(LogType.METRICS, metrics)
-    
+
+    # - INTERNAL METHOD -
     # Set the Python logger internally used.
     # During model training, this method will be called by Rafiki to inject a Python logger 
     # to generate logs for an instance of model training.
     def set_logger(self, logger):
         self._logger = logger
 
+    def _validate_metrics(self, metrics):
+        return { n: self._validate_metric(n, v) for (n, v) in metrics.items() }
+
     def _log(self, log_type, log_dict={}):
         log_dict['type'] = log_type
         log_dict['time'] = datetime.now().strftime(MODEL_LOG_DATETIME_FORMAT)
         log_line = json.dumps(log_dict)
         self._logger.info(log_line)
+
+    def _validate_metric(self, name, value):
+        if isinstance(value, np.int64) or isinstance(value, np.int32):
+            return int(value)
+        elif isinstance(value, np.float64) or isinstance(value, np.float32):
+            return float(value)
+
+        if not isinstance(value, int) and not isinstance(value, float):
+            raise TypeError('Metric of name "{}" should be an `int` or `float`, but is of `{}`'
+                                .format(name, type(value)))
+        
+        return value
 
     @staticmethod
     # Parses a logged line into a dictionary.
@@ -130,7 +166,7 @@ class ModelLogger():
         messages = []
 
         for log_line in log_lines:
-            log_dict = ModelLogger.parse_log_line(log_line)            
+            log_dict = LoggerUtils.parse_log_line(log_line)            
 
             if 'type' not in log_dict:
                 continue
@@ -157,13 +193,13 @@ class ModelLogger():
             
         return (messages, metrics, plots)
 
-class ModelLoggerDebugHandler(logging.Handler):
+class LoggerUtilsDebugHandler(logging.Handler):
     def __init__(self):
         logging.Handler.__init__(self)
 
     def emit(self, record):
         log_line = record.msg
-        log_dict = ModelLogger.parse_log_line(log_line)
+        log_dict = LoggerUtils.parse_log_line(log_line)
         log_type = log_dict.get('type')
 
         if log_type == LogType.PLOT:
@@ -172,7 +208,7 @@ class ModelLoggerDebugHandler(logging.Handler):
             metrics = log_dict.get('metrics')
             x_axis = log_dict.get('x_axis')
 
-            self._print('Plot `{}` of {} against {} will be registered when this model is being trained on Rafiki' \
+            self._print('Plot `{}` will be registered when this model is being trained on Rafiki' \
                 .format(title, ', '.join(metrics), x_axis or 'time'))
 
         elif log_type == LogType.METRICS:
@@ -187,6 +223,4 @@ class ModelLoggerDebugHandler(logging.Handler):
             self._print(log_line)
         
     def _print(self, message):
-        print('[{}]'.format(__name__), message)
-
-logger = ModelLogger()
+        print('[{}][{}]'.format(__name__, str(datetime.now())), message)
