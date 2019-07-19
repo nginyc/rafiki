@@ -8,6 +8,8 @@ class ModelDependency():
     SCIKIT_LEARN = 'scikit-learn'
     PYTORCH = 'torch'
     SINGA = 'singa'
+    LIGHTGBM = 'lightgbm'
+    LIEF = 'lief' 
 
 class ModelAccessRight():
     PUBLIC = 'PUBLIC'
