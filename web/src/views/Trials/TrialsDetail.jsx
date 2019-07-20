@@ -109,8 +109,8 @@ class TrialDetails extends React.Component {
                 <TableCell>{trial.score}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell>Knobs</TableCell>
-                <TableCell>{JSON.stringify(trial.knobs, null, 2)}</TableCell>
+                <TableCell>Proposal</TableCell>
+                <TableCell>{JSON.stringify(trial.proposal, null, 2)}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell>Started at</TableCell>
