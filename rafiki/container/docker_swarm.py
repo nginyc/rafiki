@@ -29,7 +29,7 @@ from .container_manager import ContainerManager, InvalidServiceRequestError, Con
 
 LABEL_AVAILBLE_GPUS = 'available_gpus'
 LABEL_NUM_SERVICES = 'num_services'
-RETRY_WAIT_SECS = 1
+RETRY_WAIT_SECS = 2
 RETRY_TIMES = 5
 
 logger = logging.getLogger(__name__)
