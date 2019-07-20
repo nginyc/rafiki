@@ -237,7 +237,7 @@ class RafikiClient {
       return null;
     }
 
-    return new Date();
+    return new Date(timestamp);
   }
 
   _initializeStorage(storage) {
