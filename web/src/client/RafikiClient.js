@@ -232,10 +232,15 @@ class RafikiClient {
   }
   
    _toDate(dateString) {
-    return new Date(Date.parse(dateString));
+    const timestamp = Date.parse(dateString);
+    if (isNaN(timestamp)) {
+      return null;
+    }
+
+    return new Date();
   }
 
-  _initializeStorage(storage?) {
+  _initializeStorage(storage) {
     if (storage) {
       return storage;
     } else if (window && window.localStorage) {

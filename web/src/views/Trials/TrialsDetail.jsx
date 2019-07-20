@@ -67,26 +67,18 @@ class TrialDetails extends React.Component {
   }
 
   componentDidUpdate() {
-    this.updateCharts();
+    this.updatePlots();
   }
 
-  updateCharts() {
+  updatePlots() {
     const { logs } = this.state;
+    const { appUtils: { plotManager } } = this.props;
 
     if (!logs) return;
-    
-    this.charts = [];
-    const chartOptions = getPlotChartOptions(logs);
 
-    for (const i in chartOptions) {
-      const chartOption = chartOptions[i];
-      const dom = document.getElementById(`plot-${i}`);
-
-      if (!dom) continue;
-
-      // @ts-ignore
-      const chart = echarts.init(dom);  
-      chart.setOption(chartOption);
+    for (const i in logs.plots) {
+      const { series, plotOption } = getPlotDetails(logs.plots[i], logs.metrics)
+      plotManager.updatePlot(`plot-${i}`, series, plotOption);
     }
   }
 
@@ -227,63 +219,42 @@ class TrialDetails extends React.Component {
   }
 }
 
-function getPlotChartOptions(logs) {
-  const chartOptions = [];
+function getPlotDetails(plot, metrics) {
+  const seriesByName = {}
+  for (const plotMetric of plot.metrics) {
+    seriesByName[plotMetric] = {
+      data: [],
+      name: plotMetric
+    }
+  }
+  const xAxis = plot.x_axis || 'time';
 
-  for (const plot of logs.plots) {
-    const points = [];
+  for (const metric of metrics) {
+    // Check if x axis value exists
+    if (!(xAxis in metric)) {
+      continue;
+    }
 
-    for (const metric of logs.metrics) {
-      // Check if x axis value exists
-      const xAxis = plot.x_axis || 'time';
-      if (!(xAxis in metric)) {
+    // For each of plot's y axis metrics, push the [x, y] to data array
+    for (const plotMetric of plot.metrics) {
+      if (!(plotMetric in metric)) {
         continue;
       }
 
-      // Initialize point
-      const point = [metric[xAxis]];
-
-      // For each of plot's y axis metrics, add it to point data
-      for (const plotMetric of plot.metrics) {
-        point.push(plotMetric in metric ? metric[plotMetric] : null);
-      }
-
-      points.push(point);
+      // Push x axis value to data array
+      seriesByName[plotMetric].data.push([metric[xAxis], metric[plotMetric]]);
     }
-
-    const series = [];
-    series.push({
-      name: "Radom Name",
-      type: 'line',
-      data: points
-    });
-
-    const chartOption = {
-      title: {
-        text: plot.title
-      },
-      tooltip: {
-        trigger: 'axis'
-      },
-      xAxis: {
-        type:  plot.x_axis ? 'value' : 'time',
-        splitLine: {
-          show: false
-        }
-      },
-      yAxis: {
-        type: 'value',
-        splitLine: {
-          show: false
-        }
-      },
-      series
-    };
-
-    chartOptions.push(chartOption);
   }
 
-  return chartOptions;
+  const plotOption = {
+    title: plot.title,
+    xAxis: {
+      type: (xAxis == 'time') ? 'time' : 'number',
+      name: xAxis
+    }
+  }
+
+  return { series: Object.values(seriesByName), plotOption };
 }
 
 const styles = (theme) => ({
