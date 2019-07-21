@@ -162,7 +162,7 @@ class Details extends React.Component {
               { !this.state.trials ? <CircularProgress /> : 
               <TableTrials
                 tableHeaderColor="primary"
-                tableHead={["#", "ID", "Model", "Score", "Status", "Start time", "Stop time", "Duration"]}
+                tableHead={["", "Model", "Trial No", "Score", "Status", "Started", "Stopped", "Duration"]}
                 tableData={this.state.trials}
                 appUtils={appUtils}
               />

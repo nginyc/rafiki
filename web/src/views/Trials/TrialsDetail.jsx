@@ -104,23 +104,29 @@ class TrialDetails extends React.Component {
                 <TableCell>Status</TableCell>
                 <TableCell>{trial.status}</TableCell>
               </TableRow>
+              {
+                trial.score !== null && 
+                <TableRow>
+                  <TableCell>Score</TableCell>
+                  <TableCell>{trial.score}</TableCell>
+                </TableRow>
+              }
+              {
+                trial.proposal &&
+                <TableRow>
+                  <TableCell>Proposal</TableCell>
+                  <TableCell>{JSON.stringify(trial.proposal, null, 2)}</TableCell>
+                </TableRow>
+              }
               <TableRow>
-                <TableCell>Score</TableCell>
-                <TableCell>{trial.score}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Proposal</TableCell>
-                <TableCell>{JSON.stringify(trial.proposal, null, 2)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Started at</TableCell>
+                <TableCell>Started</TableCell>
                 <TableCell>{moment(trial.datetime_started).format('llll')}</TableCell>
               </TableRow>
               {
                 trial.datetime_stopped &&
                 <React.Fragment>
                   <TableRow>
-                    <TableCell>Stopped at</TableCell>
+                    <TableCell>Stopped</TableCell>
                     <TableCell>{moment(trial.datetime_stopped).format('llll')}</TableCell>
                   </TableRow>
                   <TableRow>

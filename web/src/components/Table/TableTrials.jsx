@@ -64,9 +64,9 @@ function CustomTable({ ...props }) {
                     <Pageview />
                   </IconButton>
                 </TableCell>
-                <TableCell>{x.id}</TableCell>
                 <TableCell>{x.model_name}</TableCell>
-                <TableCell>{x.score}</TableCell>
+                <TableCell>{x.no}</TableCell>
+                <TableCell>{x.score !== null ? x.score : '-'}</TableCell>
                 <TableCell>{x.status}</TableCell>
                 <TableCell>{moment(x.datetime_started).fromNow()}</TableCell>
                 <TableCell>{x.datetime_stopped ? moment(x.datetime_stopped).fromNow() : '-'}</TableCell>
