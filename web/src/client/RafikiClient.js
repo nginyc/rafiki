@@ -115,8 +115,10 @@ class RafikiClient {
    * Models
    * ***************************************/
 
-  async getAvailableModels() {
-    const models = await this._get('/models/available')
+  async getAvailableModels(task) {
+    const models = await this._get('/models/available', {
+      task
+    });
     return models
   }
 

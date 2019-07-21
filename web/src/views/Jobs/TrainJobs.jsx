@@ -86,7 +86,7 @@ class TrainJobs extends React.Component {
   async componentDidMount() {
     const { appUtils: { rafikiClient, showError } } = this.props;
     try {
-      const availableModels = await rafikiClient.getAvailableModels()
+      const availableModels = await rafikiClient.getAvailableModels('IMAGE_CLASSIFICATION')
       const availableDatasets = await rafikiClient.getDatasets({"task": this.state.task})
       this.setState({availableModels, availableDatasets})
     } catch(error) {
