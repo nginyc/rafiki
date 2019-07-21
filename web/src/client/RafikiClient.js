@@ -145,6 +145,15 @@ class RafikiClient {
   }
 
   /*
+    Get a train job associated with an app & version
+  */
+  async getTrainJob(app, appVersion = -1) {
+    const data = await this._get(`/train_jobs/${app}/${appVersion}`);
+    const trainJob = data;
+    return trainJob;
+  }
+
+  /*
     Lists all trials of an train job with associated app & app version.
   */
   async getTrialsOfTrainJob(app, appVersion = -1) {
