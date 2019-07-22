@@ -119,7 +119,7 @@ def load(data_dir, label_filter):
     train_360.to_csv(os.path.join(work_dir, "train-clean-360-wav", "audios.csv"), index=False)
     shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "train-clean-360-wav", "alphabet.txt"))
     train_500.to_csv(os.path.join(work_dir, "train-other-500-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "train-clean-500-wav", "alphabet.txt"))
+    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "train-other-500-wav", "alphabet.txt"))
 
     dev_clean.to_csv(os.path.join(work_dir, "dev-clean-wav", "audios.csv"), index=False)
     shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "dev-clean-wav", "alphabet.txt"))
