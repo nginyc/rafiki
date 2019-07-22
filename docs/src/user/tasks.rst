@@ -130,6 +130,7 @@ Prediction Format
 
 A size-``k`` list of floats, representing the probabilities of each class from ``0`` to ``k-1`` for the target column.
 
+
 TABULAR_REGRESSION
 --------------------------------------------------------------------
 
@@ -149,6 +150,16 @@ The following optional train arguments are supported:
     
 The train & validation datasets should have the same columns. 
 
+An example of the dataset follows:
+
+.. code-block:: text
+
+    density,bodyfat,age,weight,height,neck,chest,abdomen,hip,thigh,knee,ankle,biceps,forearm,wrist
+    1.0708,12.3,23,154.25,67.75,36.2,93.1,85.2,94.5,59,37.3,21.9,32,27.4,17.1
+    1.0853,6.1,22,173.25,72.25,38.5,93.6,83,98.7,58.7,37.3,23.4,30.5,28.9,18.2
+    1.0414,25.3,22,154,66.25,34,95.8,87.9,99.2,59.6,38.9,24,28.8,25.2,16.6
+    ...
+
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -158,3 +169,27 @@ Prediction Format
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A float, representing the value of the target column.
+
+
+SPEECH_RECOGNITION
+--------------------------------------------------------------------
+
+Dataset Type
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:ref:`dataset-type:AUDIO_FILES`
+
+- Audio sample rate equals to 16kHz
+- Transcripts should only contain permitted alphabets stated in ``alphabet.txt`` (this file is used for training)
+
+
+Query Format
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A list of strings representing the paths to the audio files that meet the above requirements.
+
+
+Prediction Format
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A list of strings representing the predicted transcripts for each audio file in sequence.

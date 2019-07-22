@@ -49,12 +49,33 @@ TABULAR
 
 The dataset file must be a tabular dataset of the ``.csv`` format with ``N`` columns.
 
-An example of the dataset for the task ``TABULAR_REGRESSION`` follows:
+ .. _`dataset-type:AUDIO_FILES`:
 
-.. code-block:: text
+AUDIO_FILES
+--------------------------------------------------------------------
 
-    density,bodyfat,age,weight,height,neck,chest,abdomen,hip,thigh,knee,ankle,biceps,forearm,wrist
-    1.0708,12.3,23,154.25,67.75,36.2,93.1,85.2,94.5,59,37.3,21.9,32,27.4,17.1
-    1.0853,6.1,22,173.25,72.25,38.5,93.6,83,98.7,58.7,37.3,23.4,30.5,28.9,18.2
-    1.0414,25.3,22,154,66.25,34,95.8,87.9,99.2,59.6,38.9,24,28.8,25.2,16.6
+ The dataset file must be of the ``.zip`` archive format with a ``audios.csv`` at the root of the directory.
+
+ The ``images.csv`` should be of a `.CSV <https://en.wikipedia.org/wiki/Comma-separated_values>`_
+format with 3 columns of ``wav_filename``, ``wav_filesize`` and ``transcript``.
+
+ For each row,
+
+     ``wav_filename`` should be a file path to a ``.wav`` audio file within the archive, relative to the root of the directory.
+
+     ``wav_filesize`` should be an integer representing the size of the ``.wav`` audio file, in number of bytes.
+
+     ``transcript`` should be a string of the true transcript for the audio file.
+
+ An example of ``audios.csv`` follows:
+
+ .. code-block:: text
+
+    wav_filename,wav_filesize,transcript
+    6930-81414-0000.wav,412684,audio transcript one
+    6930-81414-0001.wav,559564,audio transcript two
     ...
+    672-122797-0005.wav,104364,audio transcript one thousand
+    ...
+    1995-1837-0001.wav,279404,audio transcript three thousand
+    
