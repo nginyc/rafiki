@@ -18,8 +18,10 @@ QUERIES_QUEUE = 'QUERIES'
 PREDICTIONS_QUEUE = 'PREDICTIONS'
 
 class RQueue(object):
-    def __init__(self, host=os.environ.get('KAFKA_HOST', 'localhost'), port=os.environ.get('KAFKA_PORT', 9092)):
-        self.connection_url = '{}:{}'.format(host, port)
+    def __init__(self, hosts=os.environ.get('KAFKA_HOST', 'localhost'), ports=os.environ.get('KAFKA_PORT', 9092)):
+        hostlist = hosts.split(',')
+        portlist = ports.split(',')
+        self.connection_url = [f'{host}:{port}' for host, port in zip(hostlist, portlist)]
         self.producer = KafkaProducer(bootstrap_servers=self.connection_url)   
 
     def add_predictions_for_worker(self, worker_id: str, predictions: List[Prediction]):
