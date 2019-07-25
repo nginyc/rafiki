@@ -35,10 +35,10 @@ else
     echo "Not stopping Rafiki's DB!"
 fi
 
-title "Stopping Rafiki's Zookeeper"
+title "Stopping Rafiki's Zookeeper..."
 docker rm -f $ZOOKEEPER_HOST || echo "Failed to stop Rafiki's Zookeeper"
 
-title "Stopping Rafiki's Kafka"
+title "Stopping Rafiki's Kafka..."
 docker rm -f $KAFKA_HOST || echo "Failed to stop Rafiki's Kafka"
 
 title "Stopping Rafiki's Cache..."
