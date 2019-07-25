@@ -22,7 +22,7 @@ import base64
 from examples.models.speech_recognition.utils.text import Alphabet, levenshtein, text_to_char_array
 from ds_ctcdecoder import ctc_beam_search_decoder_batch, ctc_beam_search_decoder, Scorer
 
-from rafiki.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, \
+from rafiki.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, PolicyKnob, \
     utils, logger
 from rafiki.constants import ModelDependency
 from rafiki.model.dev import test_model_class
@@ -66,6 +66,7 @@ class TfDeepSpeech(BaseModel):
             'lm_alpha': FloatKnob(0.74, 0.76),
             # the beta hyperparameter of the CTC decoder. Word insertion weight
             'lm_beta': FloatKnob(1.84, 1.86)
+            'early_stop': PolicyKnob('EARLY_STOP')
         }
 
     @staticmethod
@@ -117,6 +118,13 @@ class TfDeepSpeech(BaseModel):
         # Initialization
 
         f.DEFINE_integer('random_seed', 4568, 'default random seed that is used to initialize variables')
+
+        # Early Stopping (when PolicyKnob('EARLY_STOP') is used)
+
+        f.DEFINE_float('es_dev_ratio', 0.05, 'Proportion of the training set to be used for early stopping validation')
+        f.DEFINE_integer('es_steps', 4, 'number of validations to consider for early stopping')
+        f.DEFINE_float('es_mean_th', 0.5, 'mean threshold for loss to determine the condition if early stopping is required')
+        f.DEFINE_float('es_std_th', 0.5, 'standard deviation threshold for loss to determine the condition if early stopping is required')
 
         # Decoder
 
@@ -223,7 +231,7 @@ class TfDeepSpeech(BaseModel):
 
         return features, features_len
 
-    def create_dataset(self, dataset_uri, dataset_dir, cache_path=''):
+    def create_dataset(self, dataset_uri, dataset_dir, dataset_type='', cache_path=''):
         def to_sparse_tuple(sequence):
             r"""Creates a sparse representention of ``sequence``.
                 Returns a tuple with (indices, values, shape)
@@ -234,6 +242,10 @@ class TfDeepSpeech(BaseModel):
 
         def generate_values():
             for _, row in df.iterrows():
+                yield os.path.join(dataset_dir.name, row.wav_filename), to_sparse_tuple(row.transcript)
+
+        def generate_values_dev():
+            for _, row in dev_df.iterrows():
                 yield os.path.join(dataset_dir.name, row.wav_filename), to_sparse_tuple(row.transcript)
 
         # Batching a dataset of 2D SparseTensors creates 3D batches, which fail
@@ -261,10 +273,6 @@ class TfDeepSpeech(BaseModel):
         dataset = utils.dataset.load_dataset_of_audio_files(dataset_uri, dataset_dir)
         df = dataset.df
 
-        # Sort the samples by filesize (representative of lengths) so that only similarly-sized utterances are
-        # combined into minibatches. This is done for the ease of data parallelism.
-        df.sort_values(by='wav_filesize', inplace=True)
-
         # Config Alphabet
 
         # See the comment in alphabet.txt file for a description of the format
@@ -277,6 +285,16 @@ class TfDeepSpeech(BaseModel):
         # Convert to character index arrays
         df['transcript'] = df['transcript'].apply(partial(text_to_char_array, alphabet=Config.alphabet))
 
+        dev_df = None
+        # Split some of the training set for early stopping validation
+        if dataset_type == 'train' and self._knobs.get('early_stop'):
+            dev_df = df.sample(frac=FLAGS.es_dev_ratio)
+            df = df.drop(dev_df.index)
+
+        # Sort the samples by filesize (representative of lengths) so that only similarly-sized utterances are
+        # combined into minibatches. This is done for the ease of data parallelism.
+        df.sort_values(by='wav_filesize', inplace=True)
+
         num_gpus = len(Config.available_devices)
 
         dataset = (tf.data.Dataset.from_generator(generate_values,
@@ -286,7 +304,14 @@ class TfDeepSpeech(BaseModel):
                    .window(batch_size, drop_remainder=True).flat_map(batch_fn)
                    .prefetch(num_gpus))
 
-        return dataset
+        dev_dataset = (tf.data.Dataset.from_generator(generate_values_dev,
+                                                      output_types=(tf.string, (tf.int64, tf.int32, tf.int64)))
+                       .map(entry_to_features)
+                       .cache(cache_path)
+                       .window(batch_size, drop_remainder=True).flat_map(batch_fn)
+                       .prefetch(num_gpus)) if dev_df is not None else None
+
+        return dataset, dev_dataset
 
     def create_optimizer(self):
 
@@ -703,11 +728,13 @@ class TfDeepSpeech(BaseModel):
         dataset_dir = tempfile.TemporaryDirectory()
         logger.log('Train dataset will be extracted to {}'.format(dataset_dir.name))
 
-        train_set = self.create_dataset(dataset_path, dataset_dir)
+        train_set, dev_set = self.create_dataset(dataset_path, dataset_dir, dataset_type='train')
 
         iterator = tf.data.Iterator.from_structure(train_set.output_types,
                                                    train_set.output_shapes,
                                                    output_classes=train_set.output_classes)
+        if dev_set:
+            dev_init_ops = iterator.make_initializer(dev_set)
 
         # Make initialization ops for switching between the two sets
         train_init_op = iterator.make_initializer(train_set)
@@ -755,7 +782,7 @@ class TfDeepSpeech(BaseModel):
         logger.log('Initializing variables...')
         session.run(initializer)
 
-        def run_set(set_name, epoch, init_op, dataset=None):
+        def run_set(set_name, epoch, init_op):
             is_train = set_name == 'train'
             train_op = apply_gradient_op if is_train else []
             feed_dict = dropout_feed_dict if is_train else no_dropout_feed_dict
@@ -786,6 +813,7 @@ class TfDeepSpeech(BaseModel):
 
         logger.log('STARTING OPTIMIZATION')
         train_start_time = datetime.utcnow()
+        dev_losses = []
         try:
             for epoch in range(ep):
                 # Training
@@ -800,6 +828,27 @@ class TfDeepSpeech(BaseModel):
                 logger.log_loss(train_loss, epoch)
                 checkpoint_saver.save(session, checkpoint_path, global_step=global_step)
 
+                if dev_set:
+                    # Validation for early stopping
+                    dev_loss = 0.0
+                    set_loss, steps = run_set('dev', epoch, dev_init_ops)
+                    dev_loss += set_loss * steps
+                    logger.log('Finished validating epoch %d - loss: %f' % (epoch, set_loss))
+                    dev_losses.append(dev_loss)
+
+                    # Early stopping
+                    if self._knobs.get('early_stop') and len(dev_losses) >= FLAGS.es_steps:
+                        mean_loss = np.mean(dev_losses[-FLAGS.es_steps:-1])
+                        std_loss = np.std(dev_losses[-FLAGS.es_steps:-1])
+                        dev_losses = dev_losses[-FLAGS.es_steps:]
+
+                        if dev_losses[-1] > np.max(dev_losses[:-1]) or \
+                           (abs(dev_losses[-1] - mean_loss) < FLAGS.es_mean_th and std_loss < FLAGS.es_std_th):
+                            logger.log('Early stop triggered as (for last %d steps) validation loss: '
+                                       '%f with standard deviation: %f and mean: %f' %
+                                       (FLAGS.es_steps, dev_losses[-1], std_loss, mean_loss))
+                            break
+
         except KeyboardInterrupt:
             pass
         logger.log('FINISHED optimization in {}'.format(datetime.utcnow() - train_start_time))
@@ -811,7 +860,7 @@ class TfDeepSpeech(BaseModel):
         dataset_dir = tempfile.TemporaryDirectory()
         logger.log('Test dataset will be extracted to {}'.format(dataset_dir.name))
 
-        test_set = self.create_dataset(dataset_uri, dataset_dir)
+        test_set, _ = self.create_dataset(dataset_uri, dataset_dir, dataset_type='test')
 
         iterator = tf.data.Iterator.from_structure(test_set.output_types,
                                                    test_set.output_shapes,
