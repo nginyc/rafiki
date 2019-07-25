@@ -29,7 +29,7 @@ from rafiki.constants import ModelDependency, Budget
 from rafiki.advisor import ParamsType, Proposal, TrialResult, make_advisor
 from rafiki.predictor import get_ensemble_method, Query, Prediction
 from rafiki.param_store import FileParamStore, ParamStore
-from rafiki.cache import ParamCache, TrainCache, InferenceCache
+from rafiki.redis import ParamCache, TrainCache, InferenceCache
 
 from .model import BaseModel, BaseKnob, Params
 from .utils import serialize_knob_config, deserialize_knob_config, parse_model_install_command, load_model_class

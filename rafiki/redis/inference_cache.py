@@ -22,7 +22,6 @@ import pickle
 import logging
 
 from rafiki.predictor import Prediction, Query
-
 from .redis import RedisSession
 
 logger = logging.getLogger(__name__)

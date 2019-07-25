@@ -28,7 +28,7 @@ from rafiki.utils.auth import superadmin_client
 from rafiki.meta_store import MetaStore
 from rafiki.model import BaseModel, load_model_class, logger as model_logger
 from rafiki.advisor import Proposal, TrialResult, ParamsType
-from rafiki.cache import TrainCache, ParamCache
+from rafiki.redis import TrainCache, ParamCache
 from rafiki.data_store import FileDataStore
 from rafiki.param_store import FileParamStore, ParamStore
 

@@ -41,8 +41,8 @@ docker rm -f $ZOOKEEPER_HOST || echo "Failed to stop Rafiki's Zookeeper"
 title "Stopping Rafiki's Kafka..."
 docker rm -f $KAFKA_HOST || echo "Failed to stop Rafiki's Kafka"
 
-title "Stopping Rafiki's Cache..."
-docker rm -f $REDIS_HOST || echo "Failed to stop Rafiki's Cache"
+title "Stopping Rafiki's Redis..."
+docker rm -f $REDIS_HOST || echo "Failed to stop Rafiki's Redis"
 
 title "Stopping Rafiki's Admin..."
 docker rm -f $ADMIN_HOST || echo "Failed to stop Rafiki's Admin"

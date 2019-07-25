@@ -17,15 +17,15 @@
 # under the License.
 #
 
-LOG_FILE_PATH=$PWD/logs/start_cache.log
+LOG_FILE_PATH=$PWD/logs/start_redis.log
 
 source ./scripts/utils.sh
 
-title "Starting Rafiki's Cache..."
+title "Starting Rafiki's Redis..."
 (docker run --rm --name $REDIS_HOST \
   --network $DOCKER_NETWORK \
   -p $REDIS_EXT_PORT:$REDIS_PORT \
   $IMAGE_REDIS \
   &> $LOG_FILE_PATH) &
 
-ensure_stable "Rafiki's Cache" $LOG_FILE_PATH 10
+ensure_stable "Rafiki's Redis" $LOG_FILE_PATH 10

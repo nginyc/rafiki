@@ -51,7 +51,7 @@ You can start & stop Rafiki's DB independently of the rest of Rafiki's stack wit
         bash scripts/stop_db.sh
     
 
-Connecting to Rafiki's Cache
+Connecting to Rafiki's Redis
 --------------------------------------------------------------------
 
 You can connect to Redis DB with `rebrow <https://github.com/marians/rebrow>`_:
