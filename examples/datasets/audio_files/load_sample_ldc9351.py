@@ -24,7 +24,7 @@ import shutil
 from examples.datasets.utils import download_dataset_from_url
 
 
-def load(data_dir):
+def load_sample_ldc9351(data_dir):
     '''
         Loads and converts an sample voice from dataset "LDC93S1" to the DatasetType `AUDIO_FILES`.
         This file only serves a demonstrative purpose since the full LDC93S1 corpus is not free.
@@ -47,7 +47,6 @@ def load(data_dir):
     df = pandas.DataFrame(data=[(LDC93S1_BASE + ".wav", os.path.getsize(audio_file), transcript)],
                           columns=["wav_filename", "wav_filesize", "transcript"])
     df.to_csv(os.path.join(work_dir, "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "alphabet.txt"))
 
     print("Zipping required dataset formats...")
     _write_dataset(work_dir, os.path.join(data_dir, "ldc93s1.zip"))
@@ -76,4 +75,4 @@ def _write_dataset(dir_path, out_dataset_path):
     os.rename(out_path, out_dataset_path) # Remove additional trailing `.zip`
 
 if __name__ == "__main__":
-    load('data/ldc93s1')
+    load_sample_ldc9351('data/ldc93s1')

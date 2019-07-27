@@ -25,13 +25,15 @@ import pandas
 import progressbar
 import tarfile
 import shutil
+import re
 import unicodedata
 from sox import Transformer
 from tensorflow.python.platform import gfile
 from examples.datasets.utils import download_dataset_from_url
-from examples.models.speech_recognition.utils.text import Alphabet, validate_label
 
-def load(data_dir, label_filter):
+LIBRIVOX_DIR = "LibriSpeech"
+
+def load_librispeech(data_dir):
     '''
         Loads and converts an voice dataset called "librispeech" to the DatasetType `AUDIO_FILES`.
         Refer to http://www.openslr.org/resources/12 for more details on the dataset.
@@ -44,60 +46,26 @@ def load(data_dir, label_filter):
     print("You can skip the download by putting the downloaded tar.gz files into {} directory on your own..."
           .format(data_dir))
 
-    with progressbar.ProgressBar(max_value=7, widget=progressbar.AdaptiveETA) as bar:
-        TRAIN_CLEAN_100_URL = "http://www.openslr.org/resources/12/train-clean-100.tar.gz"
-        TRAIN_CLEAN_360_URL = "http://www.openslr.org/resources/12/train-clean-360.tar.gz"
-        TRAIN_OTHER_500_URL = "http://www.openslr.org/resources/12/train-other-500.tar.gz"
+    tar_gz_urls = ['http://www.openslr.org/resources/12/train-clean-100.tar.gz',
+                    'http://www.openslr.org/resources/12/train-clean-360.tar.gz',
+                    'http://www.openslr.org/resources/12/train-other-500.tar.gz',
+                    'http://www.openslr.org/resources/12/dev-clean.tar.gz',
+                    'http://www.openslr.org/resources/12/dev-other.tar.gz',
+                    'http://www.openslr.org/resources/12/test-clean.tar.gz',
+                    'http://www.openslr.org/resources/12/test-other.tar.gz']
 
-        DEV_CLEAN_URL = "http://www.openslr.org/resources/12/dev-clean.tar.gz"
-        DEV_OTHER_URL = "http://www.openslr.org/resources/12/dev-other.tar.gz"
+    for tar_gz_url in tar_gz_urls:
+        _load_chunk(data_dir, tar_gz_url)
 
-        TEST_CLEAN_URL = "http://www.openslr.org/resources/12/test-clean.tar.gz"
-        TEST_OTHER_URL = "http://www.openslr.org/resources/12/test-other.tar.gz"
-
-        def filename_of(x): return os.path.split(x)[1]
-        train_clean_100 = maybe_download(filename_of(TRAIN_CLEAN_100_URL), data_dir, TRAIN_CLEAN_100_URL)
-        bar.update(0)
-        train_clean_360 = maybe_download(filename_of(TRAIN_CLEAN_360_URL), data_dir, TRAIN_CLEAN_360_URL)
-        bar.update(1)
-        train_other_500 = maybe_download(filename_of(TRAIN_OTHER_500_URL), data_dir, TRAIN_OTHER_500_URL)
-        bar.update(2)
-
-        dev_clean = maybe_download(filename_of(DEV_CLEAN_URL), data_dir, DEV_CLEAN_URL)
-        bar.update(3)
-        dev_other = maybe_download(filename_of(DEV_OTHER_URL), data_dir, DEV_OTHER_URL)
-        bar.update(4)
-
-        test_clean = maybe_download(filename_of(TEST_CLEAN_URL), data_dir, TEST_CLEAN_URL)
-        bar.update(5)
-        test_other = maybe_download(filename_of(TEST_OTHER_URL), data_dir, TEST_OTHER_URL)
-        bar.update(6)
-
+def _load_chunk(data_dir, tar_gz_url):
+    filename = os.path.split(tar_gz_url)[1]
+    tar_gz_path = _maybe_download(filename, data_dir, tar_gz_url)
 
     # Conditionally extract LibriSpeech data
     # We extract each archive into data_dir, but test for existence in
     # data_dir/LibriSpeech because the archives share that root.
     print("Extracting librivox data if not already extracted...")
-    with progressbar.ProgressBar(max_value=7, widget=progressbar.AdaptiveETA) as bar:
-        LIBRIVOX_DIR = "LibriSpeech"
-        work_dir = os.path.join(data_dir, LIBRIVOX_DIR)
-
-        _maybe_extract(data_dir, os.path.join(LIBRIVOX_DIR, "train-clean-100"), train_clean_100)
-        bar.update(0)
-        _maybe_extract(data_dir, os.path.join(LIBRIVOX_DIR, "train-clean-360"), train_clean_360)
-        bar.update(1)
-        _maybe_extract(data_dir, os.path.join(LIBRIVOX_DIR, "train-other-500"), train_other_500)
-        bar.update(2)
-
-        _maybe_extract(data_dir, os.path.join(LIBRIVOX_DIR, "dev-clean"), dev_clean)
-        bar.update(3)
-        _maybe_extract(data_dir, os.path.join(LIBRIVOX_DIR, "dev-other"), dev_other)
-        bar.update(4)
-
-        _maybe_extract(data_dir, os.path.join(LIBRIVOX_DIR, "test-clean"), test_clean)
-        bar.update(5)
-        _maybe_extract(data_dir, os.path.join(LIBRIVOX_DIR, "test-other"), test_other)
-        bar.update(6)
+    _maybe_extract(data_dir, os.path.join(LIBRIVOX_DIR, filename), tar_gz_path)
 
     # Convert FLAC data to wav, from:
     #  data_dir/LibriSpeech/split/1/2/1-2-3.flac
@@ -112,66 +80,19 @@ def load(data_dir, label_filter):
     #  data_dir/LibriSpeech/split-wav/1-2-2.txt
     #  ...
     print("Converting FLAC to WAV and splitting transcriptions...")
-    with progressbar.ProgressBar(max_value=7,  widget=progressbar.AdaptiveETA) as bar:
-        train_100 = _convert_audio_and_split_sentences(work_dir, "train-clean-100", "train-clean-100-wav", label_filter)
-        bar.update(0)
-        train_360 = _convert_audio_and_split_sentences(work_dir, "train-clean-360", "train-clean-360-wav", label_filter)
-        bar.update(1)
-        train_500 = _convert_audio_and_split_sentences(work_dir, "train-other-500", "train-other-500-wav", label_filter)
-        bar.update(2)
+    work_dir = os.path.join(data_dir, LIBRIVOX_DIR)
+    wav = _convert_audio_and_split_sentences(work_dir, filename, f'{filename}-wav')
 
-        dev_clean = _convert_audio_and_split_sentences(work_dir, "dev-clean", "dev-clean-wav", label_filter)
-        bar.update(3)
-        dev_other = _convert_audio_and_split_sentences(work_dir, "dev-other", "dev-other-wav", label_filter)
-        bar.update(4)
+    print("Writing to CSV file...")
+    wav.to_csv(os.path.join(work_dir, f'{filename}-wav', "audios.csv"), index=False)
 
-        test_clean = _convert_audio_and_split_sentences(work_dir, "test-clean", "test-clean-wav", label_filter)
-        bar.update(5)
-        test_other = _convert_audio_and_split_sentences(work_dir, "test-other", "test-other-wav", label_filter)
-        bar.update(6)
+    print("Zipping required dataset format...")
+    dataset_path = os.path.join(data_dir, f'{filename}.zip')
+    _write_dataset(os.path.join(work_dir, f'{filename}-wav'), dataset_path) 
 
-    # Write sets to disk as CSV files
-    print("Writing CSV files...")
-    train_100.to_csv(os.path.join(work_dir, "train-clean-100-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "train-clean-100-wav", "alphabet.txt"))
-    train_360.to_csv(os.path.join(work_dir, "train-clean-360-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "train-clean-360-wav", "alphabet.txt"))
-    train_500.to_csv(os.path.join(work_dir, "train-other-500-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "train-other-500-wav", "alphabet.txt"))
+    print('Dataset file is saved at {}'.format(dataset_path))
 
-    dev_clean.to_csv(os.path.join(work_dir, "dev-clean-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "dev-clean-wav", "alphabet.txt"))
-    dev_other.to_csv(os.path.join(work_dir, "dev-other-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "dev-other-wav", "alphabet.txt"))
-
-    test_clean.to_csv(os.path.join(work_dir, "test-clean-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "test-clean-wav", "alphabet.txt"))
-    test_other.to_csv(os.path.join(work_dir, "test-other-wav", "audios.csv"), index=False)
-    shutil.copyfile('examples/datasets/speech_recognition/alphabet.txt', os.path.join(work_dir, "test-other-wav", "alphabet.txt"))
-
-    print("Zipping required dataset formats...")
-    _write_dataset(os.path.join(work_dir, "train-clean-100-wav"), os.path.join(data_dir, "train-clean-100.zip"))
-    print('Train-clean-100 dataset file is saved at {}'.format(os.path.join(data_dir, "train-clean-100.zip")))
-
-    _write_dataset(os.path.join(work_dir, "train-clean-360-wav"), os.path.join(data_dir, "train-clean-360.zip"))
-    print('Train-clean-360 dataset file is saved at {}'.format(os.path.join(data_dir, "train-clean-360.zip")))
-
-    _write_dataset(os.path.join(work_dir, "train-other-500-wav"), os.path.join(data_dir, "train-other-500.zip"))
-    print('Train-other-500 dataset file is saved at {}'.format(os.path.join(data_dir, "train-other-500.zip")))
-
-    _write_dataset(os.path.join(work_dir, "dev-clean-wav"), os.path.join(data_dir, "dev-clean.zip"))
-    print('Dev-clean dataset file is saved at {}'.format(os.path.join(data_dir, "dev-clean.zip")))
-
-    _write_dataset(os.path.join(work_dir, "dev-other-wav"), os.path.join(data_dir, "dev-other.zip"))
-    print('Dev-other dataset file is saved at {}'.format(os.path.join(data_dir, "dev-other.zip")))
-
-    _write_dataset(os.path.join(work_dir, "test-clean-wav"), os.path.join(data_dir, "test-clean.zip"))
-    print('Test-clean dataset file is saved at {}'.format(os.path.join(data_dir, "test-clean.zip")))
-
-    _write_dataset(os.path.join(work_dir, "test-other-wav"), os.path.join(data_dir, "test-other.zip"))
-    print('Test-other dataset file is saved at {}'.format(os.path.join(data_dir, "test-other.zip")))
-
-def maybe_download(archive_name, target_dir, archive_url):
+def _maybe_download(archive_name, target_dir, archive_url):
     # If no downloaded file is provided, download it...
     archive_path = os.path.join(target_dir, archive_name)
 
@@ -195,7 +116,7 @@ def _maybe_extract(data_dir, extracted_data, archive):
         tar.close()
 
 
-def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir, label_filter):
+def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir):
     source_dir = os.path.join(extracted_dir, data_set)
     target_dir = os.path.join(extracted_dir, dest_dir)
 
@@ -227,19 +148,13 @@ def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir, label_
                     seqid, transcript = line[:first_space], line[first_space+1:]
 
                     # We need to do the encode-decode dance here because encode
-                    # returns a bytes() object on Python 3, and text_to_char_array
-                    # expects a string.
+                    # returns a bytes() object on Python 3
                     transcript = unicodedata.normalize("NFKD", transcript)  \
                                             .encode("ascii", "ignore")      \
                                             .decode("ascii", "ignore")
 
                     transcript = transcript.lower().strip()
-
-                    # Filter samples with invalid characters
-                    transcript = label_filter(transcript)
-                    if transcript is None:
-                        counter['invalid'] += 1
-                        continue
+                    transcript = _validate_label(transcript)
 
                     # Convert corresponding FLAC to a WAV
                     flac_file = os.path.join(root, seqid + ".flac")
@@ -250,11 +165,26 @@ def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir, label_
 
                     files.append((seqid + ".wav", wav_filesize, transcript))
 
-    if counter['invalid']:
-        print('Warning: {} samples with invalid characters are removed! '
-              'You can change the allowed set of characters in alphabet.txt file.'.format(counter['invalid']))
     return pandas.DataFrame(data=files, columns=["wav_filename", "wav_filesize", "transcript"])
 
+
+# Validate and normalize transcriptions. Returns a cleaned version of the label
+# or None if it's invalid.
+def _validate_label(label):
+    # For now we can only handle [a-z ']
+    if re.search(r"[0-9]|[(<\[\]&*{]", label) is not None:
+        return None
+
+    label = label.replace("-", "")
+    label = label.replace("_", "")
+    label = label.replace(".", "")
+    label = label.replace(",", "")
+    label = label.replace("?", "")
+    label = label.replace("\"", "")
+    label = label.strip()
+    label = label.lower()
+
+    return label if label else None
 
 def _write_dataset(dir_path, out_dataset_path):
     # Zip and export folder as dataset
@@ -262,16 +192,4 @@ def _write_dataset(dir_path, out_dataset_path):
     os.rename(out_path, out_dataset_path) # Remove additional trailing `.zip`
 
 if __name__ == "__main__":
-    # Modify the alphabet.txt file to change the language alphabets you wish to include in the model
-    alphabet = Alphabet('examples/datasets/speech_recognition/alphabet.txt')
-
-    def label_filter(label):
-        label = validate_label(label)
-        if alphabet and label:
-            try:
-                [alphabet.label_from_string(c) for c in label]
-            except KeyError:
-                label = None
-        return label
-
-    load('data/libri', label_filter)
+    load_librispeech('data/libri')

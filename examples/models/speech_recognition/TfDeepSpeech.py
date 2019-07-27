@@ -3,13 +3,12 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 import time
-
+import codecs
 import tensorflow as tf
 from tensorflow.python.tools import freeze_graph
 from tensorflow.python.client import device_lib
 from tensorflow.python.framework.ops import Tensor, Operation
 from tensorflow.contrib.framework.python.ops import audio_ops as contrib_audio
-
 import numpy as np
 from datetime import datetime
 from multiprocessing import cpu_count
@@ -18,40 +17,32 @@ from functools import partial
 import itertools
 import tempfile
 import base64
-
-from examples.models.speech_recognition.utils.text import Alphabet, levenshtein, text_to_char_array
 from ds_ctcdecoder import ctc_beam_search_decoder_batch, ctc_beam_search_decoder, Scorer
 
-from rafiki.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, PolicyKnob, \
-    utils, logger
+from rafiki.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, \
+    PolicyKnob, utils, logger
 from rafiki.constants import ModelDependency
 from rafiki.model.dev import test_model_class
 
-
-class ConfigSingleton:
-    _config = None
-
-    def __getattr__(self, name):
-        if not ConfigSingleton._config:
-            raise RuntimeError("Global configuration not yet initialized.")
-        if not hasattr(ConfigSingleton._config, name):
-            raise RuntimeError("Configuration option {} not found in config.".format(name))
-        return ConfigSingleton._config[name]
-
-
-class AttrDict(dict):
-    def __init__(self, *args, **kwargs):
-        super(AttrDict, self).__init__(*args, **kwargs)
-        self.__dict__ = self
-
-
 FLAGS = tf.app.flags.FLAGS
-
 
 class TfDeepSpeech(BaseModel):
     '''
     Implements a speech recognition neural network model developed by Baidu. It contains five hiddlen layers.
-    Validation set not implemented
+    By default, this model works only for the *English* language.
+    
+    To run this model locally, you'll need to first download this model's file dependencies by running (in Rafiki's root folder):
+    
+    ```
+    bash examples/models/speech_recognition/tfdeepspeech/download_file_deps.sh
+    ```
+
+    To add this model to Rafiki, you'll need to build the model's custom Docker image by running (in Rafiki's root folder):
+ 
+    ```
+    bash examples/models/speech_recognition/tfdeepspeech/build_image.sh
+    ```
+    ...and subsequently create the model with an additional `docker_image` option pointing to that Docker image.
     '''
     @staticmethod
     def get_knob_config():
@@ -65,7 +56,7 @@ class TfDeepSpeech(BaseModel):
             # the alpha hyperparameter of the CTC decoder. Language Model weight
             'lm_alpha': FloatKnob(0.74, 0.76),
             # the beta hyperparameter of the CTC decoder. Word insertion weight
-            'lm_beta': FloatKnob(1.84, 1.86)
+            'lm_beta': FloatKnob(1.84, 1.86),
             'early_stop': PolicyKnob('EARLY_STOP')
         }
 
@@ -127,10 +118,11 @@ class TfDeepSpeech(BaseModel):
         f.DEFINE_float('es_std_th', 0.5, 'standard deviation threshold for loss to determine the condition if early stopping is required')
 
         # Decoder
-
-        f.DEFINE_string('lm_binary_path', 'data/lm.binary',
+        f.DEFINE_string('alphabet_txt_path', 'tfdeepspeech/alphabet.txt',
+                        'path to the the alphabets text file')
+        f.DEFINE_string('lm_binary_path', 'tfdeepspeech/lm.binary',
                         'path to the language model binary file created with KenLM')
-        f.DEFINE_string('lm_trie_path', 'data/trie',
+        f.DEFINE_string('lm_trie_path', 'tfdeepspeech/trie',
                         'path to the language model trie file created with native_client/generate_trie')
         f.DEFINE_integer('beam_width', 1024,
                          'beam width used in the CTC decoder when building candidate transcriptions')
@@ -273,11 +265,7 @@ class TfDeepSpeech(BaseModel):
         dataset = utils.dataset.load_dataset_of_audio_files(dataset_uri, dataset_dir)
         df = dataset.df
 
-        # Config Alphabet
-
-        # See the comment in alphabet.txt file for a description of the format
-        self.alphabet_path = os.path.join(dataset._dataset_dir.name, 'alphabet.txt')
-        Config.alphabet = Alphabet(self.alphabet_path)
+        Config.alphabet = Alphabet(FLAGS.alphabet_txt_path)
 
         # Units in the sixth layer = number of characters in the target language plus one
         Config.n_hidden_6 = Config.alphabet.size() + 1  # +1 for CTC blank label
@@ -621,7 +609,7 @@ class TfDeepSpeech(BaseModel):
         except tf.errors.InvalidArgumentError as e:
             logger.log(str(e))
             logger.log('The checkpoint in {0} does not match the shapes of the model.'
-                       ' Did you change alphabet.txt or the --n_hidden parameter'
+                       ' Did you change the list of alphabets or the --n_hidden parameter'
                        ' between train runs using the same checkpoint dir? Try moving'
                        ' or removing the contents of {0}.'.format(checkpoint_path))
             sys.exit(1)
@@ -1139,28 +1127,13 @@ class TfDeepSpeech(BaseModel):
 
             params['pb_model_base64'] = base64.b64encode(pb_model_bytes).decode('utf-8')
 
-            with open(self.alphabet_path, 'rb') as f:
-                alphabet_txt_bytes = f.read()
-
-            params['alphabet_txt_base64'] = base64.b64encode(alphabet_txt_bytes).decode('utf-8')
-
             return params
 
         except RuntimeError as e:
             logger.log('Error occured! {}'.format(e))
 
     def load_parameters(self, params):
-        # Load alphabet.txt
-        alphabet_txt_base64 = params.get('alphabet_txt_base64', None)
-        if alphabet_txt_base64 is None:
-            raise Exception(f'Alphabet params not provided: {alphabet_txt_base64}')
-        alphabet_txt_bytes = base64.b64decode(alphabet_txt_base64.encode('utf-8'))
-
-        # Write the bytes into /tmp/alphabet.txt, to be used later in the Scorer of predictor
-        with open('/tmp/alphabet.txt', 'wb') as f:
-            f.write(alphabet_txt_bytes)
-
-        self.c.alphabet = Alphabet('/tmp/alphabet.txt')
+        self.c.alphabet = Alphabet(FLAGS.alphabet_txt_path)
 
         # Units in the sixth layer = number of characters in the target language plus one
         self.c.n_hidden_6 = self.c.alphabet.size() + 1  # +1 for CTC blank label
@@ -1179,6 +1152,99 @@ class TfDeepSpeech(BaseModel):
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(pb_model_bytes)
         self._loaded_graph_def = graph_def
+
+class ConfigSingleton():
+    _config = None
+
+    def __getattr__(self, name):
+        if not ConfigSingleton._config:
+            raise RuntimeError("Global configuration not yet initialized.")
+        if not hasattr(ConfigSingleton._config, name):
+            raise RuntimeError("Configuration option {} not found in config.".format(name))
+        return ConfigSingleton._config[name]
+
+
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+
+class Alphabet(object):
+    def __init__(self, config_file):
+        self._config_file = config_file
+        self._label_to_str = []
+        self._str_to_label = {}
+        self._size = 0
+        with codecs.open(config_file, 'r', 'utf-8') as fin:
+            for line in fin:
+                if line[0:2] == '\\#':
+                    line = '#\n'
+                elif line[0] == '#':
+                    continue
+                self._label_to_str += line[:-1] # remove the line ending
+                self._str_to_label[line[:-1]] = self._size
+                self._size += 1
+
+    def string_from_label(self, label):
+        return self._label_to_str[label]
+
+    def label_from_string(self, string):
+        try:
+            return self._str_to_label[string]
+        except KeyError as e:
+            raise KeyError(
+                '''ERROR: Your transcripts contain characters which do not occur in `alphabet.txt`!'''
+            ).with_traceback(e.__traceback__)
+
+    def decode(self, labels):
+        res = ''
+        for label in labels:
+            res += self.string_from_label(label)
+        return res
+
+    def size(self):
+        return self._size
+
+    def config_file(self):
+        return self._config_file
+
+def text_to_char_array(original, alphabet):
+    r"""
+    Given a Python string ``original``, remove unsupported characters, map characters
+    to integers and return a numpy array representing the processed string.
+    """
+    return np.asarray([alphabet.label_from_string(c) for c in original])
+
+
+# The following code is from: http://hetland.org/coding/python/levenshtein.py
+
+# This is a straightforward implementation of a well-known algorithm, and thus
+# probably shouldn't be covered by copyright to begin with. But in case it is,
+# the author (Magnus Lie Hetland) has, to the extent possible under law,
+# dedicated all copyright and related and neighboring rights to this software
+# to the public domain worldwide, by distributing it under the CC0 license,
+# version 1.0. This software is distributed without any warranty. For more
+# information, see <http://creativecommons.org/publicdomain/zero/1.0>
+
+def levenshtein(a, b):
+    "Calculates the Levenshtein distance between a and b."
+    n, m = len(a), len(b)
+    if n > m:
+        # Make sure n <= m, to use O(min(n,m)) space
+        a, b = b, a
+        n, m = m, n
+
+    current = list(range(n+1))
+    for i in range(1, m+1):
+        previous, current = current, [i]+[0]*n
+        for j in range(1, n+1):
+            add, delete = previous[j]+1, current[j-1]+1
+            change = previous[j-1]
+            if a[j-1] != b[i-1]:
+                change = change + 1
+            current[j] = min(add, delete, change)
+
+    return current[n]
 
 
 if __name__ == '__main__':
