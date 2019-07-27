@@ -241,10 +241,10 @@ For each row,
 Query Format
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A list of strings representing the paths to the audio files that meet the above requirements.
+A `Base64-encoded <https://en.wikipedia.org/wiki/Base64>`_ string of the bytes of the audio as a 16kHz `.wav` file
 
 
 Prediction Format
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A list of strings representing the predicted transcripts for each audio file in sequence.
+A string, representing the predicted transcript for the audio.
