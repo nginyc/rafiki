@@ -166,11 +166,11 @@ def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir):
                     # Convert corresponding FLAC to a WAV
                     flac_file = os.path.join(root, seqid + ".flac")
                     wav_file = os.path.join(target_dir, seqid + ".wav")
-                    if not os.path.exists(wav_file):
-                        Transformer().build(flac_file, wav_file)
-                    wav_filesize = os.path.getsize(wav_file)
 
-                    files.append((seqid + ".wav", wav_filesize, transcript))
+                    if not os.path.exists(wav_file) and os.path.exists(flac_file):
+                        Transformer().build(flac_file, wav_file)
+                        wav_filesize = os.path.getsize(wav_file)
+                        files.append((seqid + ".wav", wav_filesize, transcript))
 
     return pandas.DataFrame(data=files, columns=["wav_filename", "wav_filesize", "transcript"])
 
