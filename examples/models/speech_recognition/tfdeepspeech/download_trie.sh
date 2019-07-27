@@ -17,7 +17,7 @@
 # under the License.
 #
 
-TRIE_PATH=data/trie
+TRIE_PATH=tfdeepspeech/trie
 
 # Download pre-built trie from https://github.com/mozilla/DeepSpeech/tree/v0.6.0-alpha.4/data/lm
 mkdir -p tfdeepspeech/
