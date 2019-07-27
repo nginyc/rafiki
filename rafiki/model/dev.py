@@ -67,7 +67,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
     train_cache: TrainCache = TrainCache()
     
     # Variables to track over trials
-    best_model_score = 0
+    best_model_score = -1
     best_trial_no = 0 
     best_model_test_score = None
     best_proposal = None
