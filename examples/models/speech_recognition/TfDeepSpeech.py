@@ -17,6 +17,7 @@ from functools import partial
 import itertools
 import tempfile
 import base64
+import argparse
 from ds_ctcdecoder import ctc_beam_search_decoder_batch, ctc_beam_search_decoder, Scorer
 
 from rafiki.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, \
@@ -31,7 +32,7 @@ class TfDeepSpeech(BaseModel):
     Implements a speech recognition neural network model developed by Baidu. It contains five hiddlen layers.
     By default, this model works only for the *English* language.
     
-    To run this model locally, you'll need to first download this model's file dependencies by running (in Rafiki's root folder):
+    To run this model locally, you'll first need to download this model's file dependencies by running (in Rafiki's root folder):
     
     ```
     bash examples/models/speech_recognition/tfdeepspeech/download_file_deps.sh
@@ -216,9 +217,8 @@ class TfDeepSpeech(BaseModel):
 
         return mfccs, tf.shape(mfccs)[0]
 
-    def audiofile_to_features(self, wav_filename):
-        samples = tf.read_file(wav_filename)
-        decoded = contrib_audio.decode_wav(samples, desired_channels=1)
+    def audiofile_to_features(self, wav_bytes):
+        decoded = contrib_audio.decode_wav(wav_bytes, desired_channels=1)
         features, features_len = self.samples_to_mfccs(decoded.audio, decoded.sample_rate)
 
         return features, features_len
@@ -256,7 +256,8 @@ class TfDeepSpeech(BaseModel):
 
         def entry_to_features(wav_filename, transcript):
             # https://bugs.python.org/issue32117
-            features, features_len = self.audiofile_to_features(wav_filename)
+            wav_bytes = tf.read_file(wav_filename)
+            features, features_len = self.audiofile_to_features(wav_bytes)
             return features, features_len, tf.SparseTensor(*transcript)
 
         batch_size = self._knobs.get('batch_size')
@@ -1039,8 +1040,9 @@ class TfDeepSpeech(BaseModel):
         session = self._sess
 
         predictions = []
-        for input_file_path in queries:
-            features, features_len = self.audiofile_to_features(input_file_path)
+        for query in queries:
+            wav_bytes = base64.b64decode(query.encode('utf-8'))
+            features, features_len = self.audiofile_to_features(wav_bytes)
 
             # Add batch dimension
             features = tf.expand_dims(features, 0)
@@ -1248,6 +1250,25 @@ def levenshtein(a, b):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    # You'll need to first run `examples/datasets/audio_files/load_sample_ldc93s1.py`
+    # Demonstrative only, this dataset only contains one sample, we use batch_size = 1 to run
+    # Replace with larger test data and larger batch_size in practice
+    parser.add_argument('--train_path', type=str, default='data/ldc93s1/ldc93s1.zip', help='Path to train dataset')
+    parser.add_argument('--val_path', type=str, default='data/ldc93s1/ldc93s1.zip', help='Path to validation dataset')
+    # Ensure the wav files have a sample rate of 16kHz
+    parser.add_argument('--query_path', type=str, default='data/ldc93s1/ldc93s1/LDC93S1.wav', 
+                        help='Path(s) to query audios(s), delimited by commas')
+    (args, _) = parser.parse_known_args()
+
+    # For each query audio file, encode it as base64 string as per task specification
+    queries = []
+    for wav_path in args.query_path.split(','):
+        with open(wav_path, 'rb') as f:
+            wav_bytes = f.read()
+            wav_b64 = base64.b64encode(wav_bytes).decode('utf-8')
+            queries.append(wav_b64)
+
     test_model_class(
         model_file_path=__file__,
         model_class='TfDeepSpeech',
@@ -1257,11 +1278,7 @@ if __name__ == '__main__':
             # Use ds_ctcdecoder version compatible with the trie file you download or generate
             ModelDependency.DS_CTCDECODER: '0.6.0-alpha.1'
         },
-        # Demonstrative only, this dataset only contains one sample, we use batch_size = 1 to run
-        # Replace with larger test data and larger batch_size in practice
-        train_dataset_path='data/ldc93s1/ldc93s1.zip',
-        val_dataset_path='data/ldc93s1/ldc93s1.zip',
-        test_dataset_path='data/ldc93s1/ldc93s1.zip',
-        # Ensure the wav files have a sample rate of 16kHz
-        queries=['data/ldc93s1/ldc93s1/LDC93S1.wav']
+        train_dataset_path=args.train_path,
+        val_dataset_path=args.val_path,
+        queries=queries
     )
