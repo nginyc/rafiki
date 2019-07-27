@@ -24,7 +24,7 @@ import shutil
 from examples.datasets.utils import download_dataset_from_url
 
 
-def load_sample_ldc9351(data_dir):
+def load_sample_ldc93s1(data_dir):
     '''
         Loads and converts an sample voice from dataset "LDC93S1" to the DatasetType `AUDIO_FILES`.
         This file only serves a demonstrative purpose since the full LDC93S1 corpus is not free.

@@ -22,7 +22,6 @@ import os
 import codecs
 import fnmatch
 import pandas
-import progressbar
 import tarfile
 import shutil
 import re
@@ -38,27 +37,36 @@ def load_librispeech(data_dir):
         Loads and converts an voice dataset called "librispeech" to the DatasetType `AUDIO_FILES`.
         Refer to http://www.openslr.org/resources/12 for more details on the dataset.
 
+        Before running this, you'll need to install SOX http://sox.sourceforge.net/
+        and run `pip install sox==1.3.7`.
+
         :param str data_dir: Directory to save the output zip files
     '''
 
-    # Conditionally download data to data_dir
-    print("Downloading LibriSppech data set (55GB) into a tmp file...")
-    print("You can skip the download by putting the downloaded tar.gz files into {} directory on your own..."
-          .format(data_dir))
+    print("Downloading LibriSppech dataset (55GB) into a tmp file...")
 
     tar_gz_urls = ['http://www.openslr.org/resources/12/train-clean-100.tar.gz',
+                    'http://www.openslr.org/resources/12/dev-clean.tar.gz',
+                    'http://www.openslr.org/resources/12/test-clean.tar.gz',
                     'http://www.openslr.org/resources/12/train-clean-360.tar.gz',
                     'http://www.openslr.org/resources/12/train-other-500.tar.gz',
-                    'http://www.openslr.org/resources/12/dev-clean.tar.gz',
                     'http://www.openslr.org/resources/12/dev-other.tar.gz',
-                    'http://www.openslr.org/resources/12/test-clean.tar.gz',
                     'http://www.openslr.org/resources/12/test-other.tar.gz']
 
     for tar_gz_url in tar_gz_urls:
-        _load_chunk(data_dir, tar_gz_url)
+        _maybe_load_chunk(data_dir, tar_gz_url)
+        
 
-def _load_chunk(data_dir, tar_gz_url):
-    filename = os.path.split(tar_gz_url)[1]
+def _maybe_load_chunk(data_dir, tar_gz_url):
+    filename = os.path.split(tar_gz_url)[1].split('.')[0]
+    dataset_path = os.path.join(data_dir, f'{filename}.zip')
+
+    if os.path.exists(dataset_path):
+        print(f'{dataset_path} already loaded in local filesystem - skipping...')
+        return
+
+    print("You can skip the download by putting the downloaded tar.gz files into {} directory on your own..."
+          .format(data_dir))
     tar_gz_path = _maybe_download(filename, data_dir, tar_gz_url)
 
     # Conditionally extract LibriSpeech data
@@ -87,14 +95,13 @@ def _load_chunk(data_dir, tar_gz_url):
     wav.to_csv(os.path.join(work_dir, f'{filename}-wav', "audios.csv"), index=False)
 
     print("Zipping required dataset format...")
-    dataset_path = os.path.join(data_dir, f'{filename}.zip')
     _write_dataset(os.path.join(work_dir, f'{filename}-wav'), dataset_path) 
 
     print('Dataset file is saved at {}'.format(dataset_path))
 
 def _maybe_download(archive_name, target_dir, archive_url):
     # If no downloaded file is provided, download it...
-    archive_path = os.path.join(target_dir, archive_name)
+    archive_path = os.path.join(target_dir, archive_name + '.tar.gz')
 
     if not os.path.exists(target_dir):
         print('No path "%s" - creating ...' % target_dir)
