@@ -20,15 +20,12 @@
 import logging
 import numpy as np
 from typing import List, Callable, Any
-from collections import Iterable
 
 logger = logging.getLogger(__name__)
 
 def get_ensemble_method(task: str) -> Callable[[List[Any]], Any]:
     if task == 'IMAGE_CLASSIFICATION':
         return ensemble_probabilities
-    if task == 'SPEECH_RECOGNITION':
-        return ensemble_strings
     else:
         return ensemble
 
@@ -46,13 +43,6 @@ def ensemble_probabilities(predictions: List[Any]) -> Any:
     prediction = _simplify_prediction(prediction)
     return prediction
 
-def ensemble_strings(predictions: List[Any]) -> Any:
-    if len(predictions) == 0:
-        return None
-
-    # Aviod inifinite loop in _simplify_prediction
-    return predictions[0]
-
 def ensemble(predictions: List[Any]) -> Any:
     if len(predictions) == 0:
         return None
@@ -68,8 +58,8 @@ def _simplify_prediction(prediction):
     if isinstance(prediction, np.ndarray):
         prediction = prediction.tolist()
 
-    # Recurvely apply to elements of iterables
-    if isinstance(prediction, Iterable):
+    # Recurvely apply to elements of lists
+    if isinstance(prediction, list):
         for (i, x) in enumerate(prediction):
             prediction[i] = _simplify_prediction(x)
 
