@@ -49,33 +49,9 @@ TABULAR
 
 The dataset file must be a tabular dataset of the ``.csv`` format with ``N`` columns.
 
- .. _`dataset-type:AUDIO_FILES`:
+.. _`dataset-type:AUDIO_FILES`:
 
 AUDIO_FILES
 --------------------------------------------------------------------
 
- The dataset file must be of the ``.zip`` archive format with a ``audios.csv`` at the root of the directory.
-
- The ``images.csv`` should be of a `.CSV <https://en.wikipedia.org/wiki/Comma-separated_values>`_
-format with 3 columns of ``wav_filename``, ``wav_filesize`` and ``transcript``.
-
- For each row,
-
-     ``wav_filename`` should be a file path to a ``.wav`` audio file within the archive, relative to the root of the directory.
-
-     ``wav_filesize`` should be an integer representing the size of the ``.wav`` audio file, in number of bytes.
-
-     ``transcript`` should be a string of the true transcript for the audio file.
-
- An example of ``audios.csv`` follows:
-
- .. code-block:: text
-
-    wav_filename,wav_filesize,transcript
-    6930-81414-0000.wav,412684,audio transcript one
-    6930-81414-0001.wav,559564,audio transcript two
-    ...
-    672-122797-0005.wav,104364,audio transcript one thousand
-    ...
-    1995-1837-0001.wav,279404,audio transcript three thousand
-    
+The dataset file must be of the ``.zip`` archive format with a ``audios.csv`` at the root of the directory.
