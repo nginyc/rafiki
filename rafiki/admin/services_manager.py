@@ -24,7 +24,7 @@ import socket
 from collections import defaultdict
 from contextlib import closing
 
-from rafiki.constants import ServiceStatus, ServiceType, BudgetOption, TrainJobStatus, InferenceJobStatus
+from rafiki.constants import ServiceStatus, ServiceType, BudgetOption, InferenceBudgetOption, TrainJobStatus, InferenceJobStatus
 from rafiki.meta_store import MetaStore
 from rafiki.container import DockerSwarmContainerManager, ContainerManager, ContainerService
 from rafiki.model import parse_model_install_command
@@ -40,6 +40,7 @@ ENVIRONMENT_VARIABLES_AUTOFORWARD = [
     'ADMIN_HOST', 'ADMIN_PORT', 'DATA_DIR_PATH', 'LOGS_DIR_PATH', 'PARAMS_DIR_PATH'
 ]
 DEFAULT_TRAIN_GPU_COUNT = 0
+DEFAULT_INFERENCE_GPU_COUNT = 0
 SERVICE_STATUS_WAIT_SECS = 1
 
 class ServicesManager(object):
@@ -71,16 +72,20 @@ class ServicesManager(object):
 
     def create_inference_services(self, inference_job_id):
         inference_job = self._meta_store.get_inference_job(inference_job_id)
-        trial_ids = self._get_deployment_for_inference_job(inference_job)
+        sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(inference_job.train_job_id)
+
+        # Determine trials to be deployed & GPU allocation for these trials
+        total_gpus = int(inference_job.budget.get(InferenceBudgetOption.GPU_COUNT, DEFAULT_INFERENCE_GPU_COUNT))
+        (trial_ids, jobs_gpus) = self._get_deployment_for_inference_job(total_gpus, sub_train_jobs)
 
         try:
             # Create predictor
             predictor_service = self._create_predictor(inference_job)
 
             # Create worker for each trial to be deployed
-            for trial_id in trial_ids:
+            for (trial_id, gpus) in zip(trial_ids, jobs_gpus):
                 trial = self._meta_store.get_trial(trial_id)
-                self._create_inference_job_worker(inference_job, trial)
+                self._create_inference_job_worker(inference_job, trial, gpus=gpus)
 
             return (inference_job, predictor_service)
 
@@ -280,9 +285,7 @@ class ServicesManager(object):
 
         return (jobs_gpus, jobs_cpus)
 
-    def _get_deployment_for_inference_job(self, inference_job):
-        sub_train_jobs = self._meta_store.get_sub_train_jobs_of_train_job(inference_job.train_job_id)
-
+    def _get_deployment_for_inference_job(self, total_gpus, sub_train_jobs):
         trial_ids = []
         # For each sub train job, to deploy best-scoring trial
         for sub_train_job in sub_train_jobs:
@@ -290,14 +293,20 @@ class ServicesManager(object):
             if len(trials) == 0:
                 continue
             trial_ids.append(trials[0].id)
+        
+        # Evenly distribute GPus across trials, letting first few trials have 1 more GPU to fully allocate
+        N = len(trial_ids)
+        base_gpus = total_gpus // N
+        extra_gpus = total_gpus - base_gpus * N
+        jobs_gpus = ([base_gpus + 1] * extra_gpus) + [base_gpus] * (N - extra_gpus)
 
-        return trial_ids
+        return (trial_ids, jobs_gpus)
 
-    def _create_inference_job_worker(self, inference_job, trial):
+    def _create_inference_job_worker(self, inference_job, trial, gpus=0):
         sub_train_job = self._meta_store.get_sub_train_job(trial.sub_train_job_id)
         model = self._meta_store.get_model(sub_train_job.model_id)
         service_type = ServiceType.INFERENCE
-        install_command = parse_model_install_command(model.dependencies, enable_gpu=False)
+        install_command = parse_model_install_command(model.dependencies, enable_gpu=(gpus > 0))
         environment_vars = {
             'WORKER_INSTALL_COMMAND': install_command,
         }
@@ -305,7 +314,8 @@ class ServicesManager(object):
         service = self._create_service(
             service_type=service_type,
             docker_image=model.docker_image,
-            environment_vars=environment_vars
+            environment_vars=environment_vars,
+            gpus=gpus
         )
 
         self._meta_store.create_inference_job_worker(

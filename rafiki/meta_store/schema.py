@@ -40,6 +40,7 @@ class InferenceJob(Base):
     id = Column(String, primary_key=True, default=generate_uuid)
     datetime_started = Column(DateTime, nullable=False, default=generate_datetime)
     train_job_id = Column(String, ForeignKey('train_job.id'))
+    budget = Column(JSON, default={})
     status = Column(String, nullable=False, default=InferenceJobStatus.STARTED)
     user_id = Column(String, ForeignKey('user.id'), nullable=False)
     predictor_service_id = Column(String, ForeignKey('service.id'))
