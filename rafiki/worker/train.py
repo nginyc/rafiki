@@ -33,6 +33,7 @@ from rafiki.data_store import FileDataStore
 from rafiki.param_store import FileParamStore, ParamStore
 
 LOOP_SLEEP_SECS = 0.1
+MAX_CONSEC_TRIAL_ERRORS = 100
 
 class InvalidWorkerError(Exception): pass
 class InvalidDatasetError(Exception): pass
@@ -49,6 +50,7 @@ class TrainWorker():
         self._trial_id = None # ID of currently running trial
         self._train_cache: TrainCache = None
         self._param_cache: ParamCache = None
+        self._trial_errors = 0 # Consecutive traial errors
 
     def start(self):
         self._monitor.pull_job_info()
@@ -114,12 +116,20 @@ class TrainWorker():
             model_inst.destroy()
 
             self._monitor.mark_trial_as_completed(self._trial_id, result.score, store_params_id)
+            self._trial_errors = 0
             return result
         except Exception as e:
             logger.error('Error while running trial:')
             logger.error(traceback.format_exc())
             self._monitor.mark_trial_as_errored(self._trial_id)
-            raise e
+
+            # Ensure that trial doesn't error too many times consecutively
+            self._trial_errors += 1
+            if self._trial_errors > MAX_CONSEC_TRIAL_ERRORS:
+                logger.error(f'Reached {MAX_CONSEC_TRIAL_ERRORS} consecutive errors - raising exception')
+                raise e
+
+            return TrialResult(proposal)
         finally:
             self._stop_logging_to_trial(logger_info)
 
@@ -171,7 +181,7 @@ class TrainWorker():
         if not proposal.to_eval: 
             return TrialResult(proposal)
             
-        logger.info('Evaluting model...')
+        logger.info('Evaluating model...')
         score = model_inst.evaluate(val_dataset_path)
         logger.info(f'Score on validation dataset: {score}')
         return TrialResult(proposal, score=score)

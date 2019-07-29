@@ -132,7 +132,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
 
             # Test best model, if test dataset provided
             if test_dataset_path is not None:
-                print('Evaluting new best model on test dataset...')
+                print('Evaluating new best model on test dataset...')
                 best_model_test_score = model_inst.evaluate(test_dataset_path)
                 inform_user('Score on test dataset: {}'.format(best_model_test_score))
 
@@ -303,7 +303,7 @@ def _evaluate_model(model_inst: BaseModel, proposal: Proposal,
     if not proposal.to_eval: 
         return TrialResult(proposal)
         
-    print('Evaluting model...')
+    print('Evaluating model...')
     score = model_inst.evaluate(val_dataset_path)
 
     if not isinstance(score, float):
