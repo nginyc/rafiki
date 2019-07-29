@@ -39,4 +39,6 @@ docker build -t $RAFIKI_IMAGE_PREDICTOR:$RAFIKI_VERSION -f ./dockerfiles/predict
 title "Building Rafiki Web Admin's image..."
 docker build -t $RAFIKI_IMAGE_WEB_ADMIN:$RAFIKI_VERSION -f ./dockerfiles/web_admin.Dockerfile \
     --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH $PWD || exit 1 
+title "Building example model TfDeepSpeech's image..."
+bash examples/models/speech_recognition/tfdeepspeech/build_image.sh || exit 1
 echo "Finished building all Rafiki's images successfully!"
