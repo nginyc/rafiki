@@ -17,34 +17,36 @@
   
 
   
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Users of Rafiki" href="user-types.html" />
     <link rel="prev" title="Setup &amp; Configuration" href="setup.html" /> 
-
-  
-  <script src="../../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -183,13 +185,13 @@
 <p>To test the lastet code changes e.g. in the <code class="docutils literal notranslate"><span class="pre">dev</span></code> branch, you’ll need to do the following:</p>
 <blockquote>
 <div><ol class="arabic simple">
-<li>Build Rafiki’s images on each participating node (the quickstart instructions pull pre-built <a class="reference external" href="https://hub.docker.com/r/rafikiai/">Rafiki’s images</a> from Docker Hub):</li>
+<li><p>Build Rafiki’s images on each participating node (the quickstart instructions pull pre-built <a class="reference external" href="https://hub.docker.com/r/rafikiai/">Rafiki’s images</a> from Docker Hub):</p></li>
 </ol>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/build_images.sh
 </pre></div>
 </div>
 <ol class="arabic simple" start="2">
-<li>Purge all of Rafiki’s data (since there might be database schema changes):</li>
+<li><p>Purge all of Rafiki’s data (since there might be database schema changes):</p></li>
 </ol>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/clean.sh
 </pre></div>
@@ -257,7 +259,10 @@ open docs/index.html
 <p>Rafiki uses <a class="reference external" href="https://docs.pytest.org">pytest</a>.</p>
 <p>Running all tests:</p>
 <blockquote>
-<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bash</span> <span class="n">scripts</span><span class="o">/</span><span class="n">test</span><span class="o">.</span><span class="n">sh</span>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">rafiki</span><span class="o">/</span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">rafiki</span><span class="o">/</span><span class="n">advisor</span><span class="o">/</span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">test</span><span class="o">/</span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
+<span class="n">bash</span> <span class="n">scripts</span><span class="o">/</span><span class="n">test</span><span class="o">.</span><span class="n">sh</span>
 </pre></div>
 </div>
 </div></blockquote>
@@ -303,7 +308,7 @@ and subsequently add the <cite>Authorization</cite> header for every other call:
         <a href="user-types.html" class="btn btn-neutral float-right" title="Users of Rafiki" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="setup.html" class="btn btn-neutral" title="Setup &amp; Configuration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="setup.html" class="btn btn-neutral float-left" title="Setup &amp; Configuration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -312,7 +317,7 @@ and subsequently add the <cite>Authorization</cite> header for every other call:
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
 
     </p>
   </div>
@@ -329,33 +334,16 @@ and subsequently add the <cite>Authorization</cite> header for every other call:
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../',
-            VERSION:'',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

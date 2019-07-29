@@ -17,34 +17,36 @@
   
 
   
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Developer Guide" href="../dev/index.html" />
     <link rel="prev" title="Model Development Guide" href="model-development.html" /> 
-
-  
-  <script src="../../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -193,12 +195,12 @@ At the very end of the train job, Rafiki could deploy the best-scoring trials fo
 The method should return a mapping of hyperparameter names (<em>knob names</em>) to hyperparameter specifications (<em>knob specifications</em>).
 A hyperparameter specification is an instance of a class that extends <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.BaseKnob" title="rafiki.model.BaseKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.BaseKnob</span></code></a>, which is limited to any of the following:</p>
 <ul class="simple">
-<li><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.FixedKnob" title="rafiki.model.FixedKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.FixedKnob</span></code></a></li>
-<li><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.CategoricalKnob" title="rafiki.model.CategoricalKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.CategoricalKnob</span></code></a></li>
-<li><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.FloatKnob" title="rafiki.model.FloatKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.FloatKnob</span></code></a></li>
-<li><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.IntegerKnob" title="rafiki.model.IntegerKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.IntegerKnob</span></code></a></li>
-<li><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.PolicyKnob" title="rafiki.model.PolicyKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.PolicyKnob</span></code></a></li>
-<li><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.ArchKnob" title="rafiki.model.ArchKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.ArchKnob</span></code></a></li>
+<li><p><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.FixedKnob" title="rafiki.model.FixedKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.FixedKnob</span></code></a></p></li>
+<li><p><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.CategoricalKnob" title="rafiki.model.CategoricalKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.CategoricalKnob</span></code></a></p></li>
+<li><p><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.FloatKnob" title="rafiki.model.FloatKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.FloatKnob</span></code></a></p></li>
+<li><p><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.IntegerKnob" title="rafiki.model.IntegerKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.IntegerKnob</span></code></a></p></li>
+<li><p><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.PolicyKnob" title="rafiki.model.PolicyKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.PolicyKnob</span></code></a></p></li>
+<li><p><a class="reference internal" href="../python/rafiki.model.html#rafiki.model.ArchKnob" title="rafiki.model.ArchKnob"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.ArchKnob</span></code></a></p></li>
 </ul>
 <p>Refer to their documentation for more details on each type of knob specification, and refer to <a class="reference internal" href="model-development.html#sample-models"><span class="std std-ref">Sample Models</span></a> to see examples of
 how knob configurations are declared.</p>
@@ -215,32 +217,32 @@ by <em>realising</em> the values of <code class="docutils literal notranslate"><
 if your model has <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">'early_stop':</span> <span class="pre">PolicyKnob('EARLY_STOP'),</span> <span class="pre">...</span> <span class="pre">}</span></code>, Rafiki will pass <code class="docutils literal notranslate"><span class="pre">early_stop=False</span></code> for just the final trial as part of its knobs, and
 pass <code class="docutils literal notranslate"><span class="pre">early_stop=True</span></code> for all other trials. Your model would <em>situationally</em> do early-stopping based on the value of the knob <cite>early-stop</cite>.</p>
 <p>Below is the list of officially recognized model policies:</p>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <colgroup>
-<col width="21%" />
-<col width="79%" />
+<col style="width: 21%" />
+<col style="width: 79%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head"><strong>Policy</strong></th>
-<th class="head">Description</th>
+<thead>
+<tr class="row-odd"><th class="head"><p><strong>Policy</strong></p></th>
+<th class="head"><p>Description</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">SHARE_PARAMS</span></code></td>
-<td>Whether model should load the shared parameters passed in <code class="docutils literal notranslate"><span class="pre">train()</span></code></td>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SHARE_PARAMS</span></code></p></td>
+<td><p>Whether model should load the shared parameters passed in <code class="docutils literal notranslate"><span class="pre">train()</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">EARLY_STOP</span></code></td>
-<td>Whether model should stop training early in <code class="docutils literal notranslate"><span class="pre">train()</span></code>, e.g. with use of early stopping or reduced no. of epochs</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">EARLY_STOP</span></code></p></td>
+<td><p>Whether model should stop training early in <code class="docutils literal notranslate"><span class="pre">train()</span></code>, e.g. with use of early stopping or reduced no. of epochs</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">SKIP_TRAIN</span></code></td>
-<td>Whether model should skip training its parameters</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SKIP_TRAIN</span></code></p></td>
+<td><p>Whether model should skip training its parameters</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">QUICK_EVAL</span></code></td>
-<td>Whether model should stop evaluation early in <code class="docutils literal notranslate"><span class="pre">evaluate()</span></code>, e.g. by evaluating on only a subset of their
-validation dataset</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">QUICK_EVAL</span></code></p></td>
+<td><p>Whether model should stop evaluation early in <code class="docutils literal notranslate"><span class="pre">evaluate()</span></code>, e.g. by evaluating on only a subset of their
+validation dataset</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">DOWNSCALE</span></code></td>
-<td>Whether a smaller version of the model should be constructed e.g. with fewer layers</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">DOWNSCALE</span></code></p></td>
+<td><p>Whether a smaller version of the model should be constructed e.g. with fewer layers</p></td>
 </tr>
 </tbody>
 </table>
@@ -251,25 +253,25 @@ validation dataset</td>
 <p>At a model level, Rafiki <em>automatically</em> selects the appropriate tuning scheme (<em>advisor</em>) based on the composition of the model’s knob configuration
 and the <em>incoming train job’s budget</em>.</p>
 <p>Specifically, it employs the following rules, in the <em>given order</em>, to select the type of advisor to use:</p>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <colgroup>
-<col width="31%" />
-<col width="44%" />
-<col width="25%" />
+<col style="width: 31%" />
+<col style="width: 44%" />
+<col style="width: 25%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head"><strong>Rule</strong></th>
-<th class="head" colspan="2">Tuning Scheme</th>
+<thead>
+<tr class="row-odd"><th class="head"><p><strong>Rule</strong></p></th>
+<th class="head" colspan="2"><p>Tuning Scheme</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td><div class="first last line-block">
+<tbody>
+<tr class="row-even"><td><div class="line-block">
 <div class="line">Only <code class="docutils literal notranslate"><span class="pre">PolicyKnob</span></code>, <code class="docutils literal notranslate"><span class="pre">FixedKnob</span></code></div>
 </div>
 </td>
-<td colspan="2">Only conduct a single trial</td>
+<td colspan="2"><p>Only conduct a single trial</p></td>
 </tr>
-<tr class="row-odd"><td><div class="first last line-block">
+<tr class="row-odd"><td><div class="line-block">
 <div class="line">Only <code class="docutils literal notranslate"><span class="pre">PolicyKnob</span></code>, <code class="docutils literal notranslate"><span class="pre">FixedKnob</span></code>,</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">FloatKnob</span></code>, <code class="docutils literal notranslate"><span class="pre">IntegerKnob</span></code>,</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">CategoricalKnob</span></code>, with policy</div>
@@ -277,7 +279,7 @@ and the <em>incoming train job’s budget</em>.</p>
 <div class="line"><br /></div>
 </div>
 </td>
-<td colspan="2"><div class="first last line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">Hyperparameter tuning with Bayesian Optimization &amp; cross-trial parameter sharing.</div>
 <div class="line">Share globally best-scoring parameters across workers in a epsilon greedy manner.</div>
 <div class="line">Optionally employ early stopping (<code class="docutils literal notranslate"><span class="pre">EARLY_STOP</span></code> policy) for all trials.</div>
@@ -286,19 +288,19 @@ and the <em>incoming train job’s budget</em>.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><div class="first last line-block">
+<tr class="row-even"><td><div class="line-block">
 <div class="line">Only <code class="docutils literal notranslate"><span class="pre">PolicyKnob</span></code>, <code class="docutils literal notranslate"><span class="pre">FixedKnob</span></code>,</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">FloatKnob</span></code>, <code class="docutils literal notranslate"><span class="pre">IntegerKnob</span></code>,</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">CategoricalKnob</span></code></div>
 </div>
 </td>
-<td colspan="2"><div class="first last line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">Hyperparameter tuning with Bayesian Optimization. Optionally employ early stopping</div>
 <div class="line">(<code class="docutils literal notranslate"><span class="pre">EARLY_STOP</span></code> policy) before the last 1h, and perform standard trials during the last 1h.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><div class="first last line-block">
+<tr class="row-odd"><td><div class="line-block">
 <div class="line">Only <code class="docutils literal notranslate"><span class="pre">PolicyKnob</span></code>, <code class="docutils literal notranslate"><span class="pre">FixedKnob</span></code>,</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">ArchKnob</span></code>, with policies</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">SHARE_PARAMS</span></code>, <code class="docutils literal notranslate"><span class="pre">EARLY_STOP</span></code></div>
@@ -307,7 +309,7 @@ and the <em>incoming train job’s budget</em>.</p>
 <div class="line">&gt;= 12h</div>
 </div>
 </td>
-<td colspan="2"><div class="first last line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">Architecture tuning with cell-based</div>
 <div class="line"><a class="reference external" href="https://arxiv.org/abs/1802.03268">“Efficient Neural Architecture Search via Parameter Sharing”</a>.</div>
 <div class="line">It conducts <em>ENAS architecture search</em> before the last 12h, then performs the final</div>
@@ -317,8 +319,8 @@ and the <em>incoming train job’s budget</em>.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td>All others</td>
-<td colspan="2">Hyperparameter tuning with uniformly random knobs</td>
+<tr class="row-even"><td><p>All others</p></td>
+<td colspan="2"><p>Hyperparameter tuning with uniformly random knobs</p></td>
 </tr>
 </tbody>
 </table>
@@ -399,7 +401,7 @@ ENAS <em>locally at each worker</em> in a train job, with these workers sharing 
         <a href="../dev/index.html" class="btn btn-neutral float-right" title="Developer Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="model-development.html" class="btn btn-neutral" title="Model Development Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="model-development.html" class="btn btn-neutral float-left" title="Model Development Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -408,7 +410,7 @@ ENAS <em>locally at each worker</em> in a train job, with these workers sharing 
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
 
     </p>
   </div>
@@ -425,33 +427,16 @@ ENAS <em>locally at each worker</em> in a train job, with these workers sharing 
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../',
-            VERSION:'',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

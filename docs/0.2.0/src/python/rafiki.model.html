@@ -17,34 +17,36 @@
   
 
   
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="rafiki.constants" href="rafiki.constants.html" />
     <link rel="prev" title="rafiki.client" href="rafiki.client.html" /> 
-
-  
-  <script src="../../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -168,7 +170,7 @@
 <h2>Core<a class="headerlink" href="#core" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="rafiki.model.BaseModel">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">BaseModel</code><span class="sig-paren">(</span><em>**knobs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">BaseModel</code><span class="sig-paren">(</span><em class="sig-param">**knobs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Rafiki’s base model class that Rafiki models must extend.</p>
 <p>Rafiki models must implement all abstract methods below, according to the specification of its associated task (see <a class="reference internal" href="../user/tasks.html#tasks"><span class="std std-ref">Supported Tasks</span></a>).
 They configure how this model template will be trained, evaluated, tuned, serialized and served on Rafiki.</p>
@@ -184,110 +186,93 @@ a set of generated knob values for the created model instance.</p>
     <span class="bp">self</span><span class="o">.</span><span class="n">_build_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">knob1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">knob2</span><span class="p">)</span>
 </pre></div>
 </div>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>knobs</strong> (<a class="reference internal" href="#rafiki.model.Knobs" title="rafiki.model.Knobs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rafiki.model.Knobs</span></code></a>) – Dictionary mapping knob names to knob values</td>
-</tr>
-</tbody>
-</table>
-<dl class="staticmethod">
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>knobs</strong> (<a class="reference internal" href="#rafiki.model.Knobs" title="rafiki.model.Knobs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rafiki.model.Knobs</span></code></a>) – Dictionary mapping knob names to knob values</p>
+</dd>
+</dl>
+<dl class="method">
 <dt id="rafiki.model.BaseModel.get_knob_config">
-<em class="property">static </em><code class="descname">get_knob_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Dict[str, rafiki.model.knob.BaseKnob]<a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.get_knob_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.get_knob_config" title="Permalink to this definition">¶</a></dt>
+<em class="property">abstract static </em><code class="sig-name descname">get_knob_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Dict[str, rafiki.model.knob.BaseKnob]<a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.get_knob_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.get_knob_config" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a dictionary that defines the search space for this model template’s knobs 
 (i.e. knobs’ names, their types &amp; their ranges).</p>
 <p>Over the course of training, your model will be initialized with different values of knobs within this search space
 to maximize this model’s performance.</p>
 <p>Refer to <a class="reference internal" href="../user/model-tuning.html#model-tuning"><span class="std std-ref">How Model Tuning Works</span></a> to understand more about how this works.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Dictionary mapping knob names to knob specifications</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Dictionary mapping knob names to knob specifications</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.train">
-<code class="descname">train</code><span class="sig-paren">(</span><em>dataset_path: str</em>, <em>shared_params: Optional[Dict[str</em>, <em>Union[str</em>, <em>int</em>, <em>float</em>, <em>numpy.ndarray]]] = None</em>, <em>**train_args</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.train" title="Permalink to this definition">¶</a></dt>
+<em class="property">abstract </em><code class="sig-name descname">train</code><span class="sig-paren">(</span><em class="sig-param">dataset_path: str</em>, <em class="sig-param">shared_params: Optional[Dict[str</em>, <em class="sig-param">Union[str</em>, <em class="sig-param">int</em>, <em class="sig-param">float</em>, <em class="sig-param">numpy.ndarray]]] = None</em>, <em class="sig-param">**train_args</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.train" title="Permalink to this definition">¶</a></dt>
 <dd><p>Train this model instance with the given traing dataset and initialized knob values.
 Additional keyword arguments could be passed depending on the task’s specification.</p>
 <p>Additionally, trained parameters shared from previous trials could be passed, 
 as part of the <code class="docutils literal notranslate"><span class="pre">SHARE_PARAMS</span></code> policy (see <a class="reference internal" href="../user/model-tuning.html#model-policies"><span class="std std-ref">Model Policies</span></a>).</p>
 <p>Subsequently, the model is considered <em>trained</em>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>dataset_path</strong> – File path of the train dataset file in the <em>local filesystem</em>, in a format specified by the task</li>
-<li><strong>shared_params</strong> – Dictionary mapping parameter names to values, as produced by your model’s <a class="reference internal" href="#rafiki.model.BaseModel.dump_parameters" title="rafiki.model.BaseModel.dump_parameters"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.BaseModel.dump_parameters()</span></code></a>.</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset_path</strong> – File path of the train dataset file in the <em>local filesystem</em>, in a format specified by the task</p></li>
+<li><p><strong>shared_params</strong> – Dictionary mapping parameter names to values, as produced by your model’s <a class="reference internal" href="#rafiki.model.BaseModel.dump_parameters" title="rafiki.model.BaseModel.dump_parameters"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.BaseModel.dump_parameters()</span></code></a>.</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.evaluate">
-<code class="descname">evaluate</code><span class="sig-paren">(</span><em>dataset_path: str</em><span class="sig-paren">)</span> &#x2192; float<a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.evaluate" title="Permalink to this definition">¶</a></dt>
+<em class="property">abstract </em><code class="sig-name descname">evaluate</code><span class="sig-paren">(</span><em class="sig-param">dataset_path: str</em><span class="sig-paren">)</span> &#x2192; float<a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.evaluate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate this model instance with the given validation dataset after training.</p>
 <p>This will be called only when model is <em>trained</em>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dataset_path</strong> – File path of the validation dataset file in the <em>local filesystem</em>, in a format specified by the task</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A score associated with the validation performance for the trained model instance, the higher the better e.g. classification accuracy.</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dataset_path</strong> – File path of the validation dataset file in the <em>local filesystem</em>, in a format specified by the task</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A score associated with the validation performance for the trained model instance, the higher the better e.g. classification accuracy.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.predict">
-<code class="descname">predict</code><span class="sig-paren">(</span><em>queries: List[Any]</em><span class="sig-paren">)</span> &#x2192; List[Any]<a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.predict" title="Permalink to this definition">¶</a></dt>
+<em class="property">abstract </em><code class="sig-name descname">predict</code><span class="sig-paren">(</span><em class="sig-param">queries: List[Any]</em><span class="sig-paren">)</span> &#x2192; List[Any]<a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.predict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Make predictions on a batch of queries after training.</p>
 <p>This will be called only when model is <em>trained</em>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>queries</strong> – List of queries, where a query is in the format specified by the task</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">List of predictions, in an order corresponding to the queries, where a prediction is in the format specified by the task</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>queries</strong> – List of queries, where a query is in the format specified by the task</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>List of predictions, in an order corresponding to the queries, where a prediction is in the format specified by the task</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.dump_parameters">
-<code class="descname">dump_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Dict[str, Union[str, int, float, numpy.ndarray]]<a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.dump_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.dump_parameters" title="Permalink to this definition">¶</a></dt>
+<em class="property">abstract </em><code class="sig-name descname">dump_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Dict[str, Union[str, int, float, numpy.ndarray]]<a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.dump_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.dump_parameters" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a dictionary of model parameters that <em>fully define the trained state of the model</em>.
 This dictionary must conform to the format <a class="reference internal" href="#rafiki.model.Params" title="rafiki.model.Params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rafiki.model.Params</span></code></a>.
 This will be used to save the trained model in Rafiki.</p>
 <p>Additionally, trained parameters produced by this method could be shared with future trials, as
 part of the <code class="docutils literal notranslate"><span class="pre">SHARE_PARAMS</span></code> policy (see <a class="reference internal" href="../user/model-tuning.html#model-policies"><span class="std std-ref">Model Policies</span></a>).</p>
 <p>This will be called only when model is <em>trained</em>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Dictionary mapping parameter names to values</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Dictionary mapping parameter names to values</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.load_parameters">
-<code class="descname">load_parameters</code><span class="sig-paren">(</span><em>params: Dict[str, Union[str, int, float, numpy.ndarray]]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.load_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.load_parameters" title="Permalink to this definition">¶</a></dt>
+<em class="property">abstract </em><code class="sig-name descname">load_parameters</code><span class="sig-paren">(</span><em class="sig-param">params: Dict[str, Union[str, int, float, numpy.ndarray]]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.load_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.load_parameters" title="Permalink to this definition">¶</a></dt>
 <dd><p>Loads this model instance with previously trained model parameters produced by your model’s <a class="reference internal" href="#rafiki.model.BaseModel.dump_parameters" title="rafiki.model.BaseModel.dump_parameters"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.BaseModel.dump_parameters()</span></code></a>. 
 <em>This model instance’s initialized knob values will match those during training</em>.</p>
 <p>Subsequently, the model is considered <em>trained</em>.</p>
@@ -295,14 +280,14 @@ part of the <code class="docutils literal notranslate"><span class="pre">SHARE_P
 
 <dl class="method">
 <dt id="rafiki.model.BaseModel.destroy">
-<code class="descname">destroy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.destroy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.destroy" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">destroy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.destroy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.destroy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Destroy this model instance, freeing any resources held by this model instance.
 No other instance methods will be called subsequently.</p>
 </dd></dl>
 
-<dl class="staticmethod">
+<dl class="method">
 <dt id="rafiki.model.BaseModel.teardown">
-<em class="property">static </em><code class="descname">teardown</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.teardown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.teardown" title="Permalink to this definition">¶</a></dt>
+<em class="property">static </em><code class="sig-name descname">teardown</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.teardown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.teardown" title="Permalink to this definition">¶</a></dt>
 <dd><p>Runs class-wide teardown logic (e.g. close a training session shared across trials).</p>
 </dd></dl>
 
@@ -310,107 +295,65 @@ No other instance methods will be called subsequently.</p>
 
 <dl class="class">
 <dt id="rafiki.model.BaseKnob">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">BaseKnob</code><a class="reference internal" href="../../_modules/rafiki/model/knob.html#BaseKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseKnob" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">BaseKnob</code><a class="reference internal" href="../../_modules/rafiki/model/knob.html#BaseKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseKnob" title="Permalink to this definition">¶</a></dt>
 <dd><p>The base class for a knob type.</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="rafiki.model.Knobs">
-<code class="descclassname">rafiki.model.</code><code class="descname">Knobs</code><em class="property"> = typing.Dict[str, typing.Any]</em><a class="headerlink" href="#rafiki.model.Knobs" title="Permalink to this definition">¶</a></dt>
-<dd><p>dict() -&gt; new empty dictionary
-dict(mapping) -&gt; new dictionary initialized from a mapping object’s</p>
-<blockquote>
-<div>(key, value) pairs</div></blockquote>
-<dl class="docutils">
-<dt>dict(iterable) -&gt; new dictionary initialized as if via:</dt>
-<dd><p class="first">d = {}
-for k, v in iterable:</p>
-<blockquote class="last">
-<div>d[k] = v</div></blockquote>
-</dd>
-<dt>dict(<a href="#id1"><span class="problematic" id="id2">**</span></a>kwargs) -&gt; new dictionary initialized with the name=value pairs</dt>
-<dd>in the keyword argument list.  For example:  dict(one=1, two=2)</dd>
-</dl>
-</dd></dl>
+<code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">Knobs</code><em class="property"> = typing.Dict[str, typing.Any]</em><a class="headerlink" href="#rafiki.model.Knobs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="data">
 <dt id="rafiki.model.KnobConfig">
-<code class="descclassname">rafiki.model.</code><code class="descname">KnobConfig</code><em class="property"> = typing.Dict[str, rafiki.model.knob.BaseKnob]</em><a class="headerlink" href="#rafiki.model.KnobConfig" title="Permalink to this definition">¶</a></dt>
-<dd><p>dict() -&gt; new empty dictionary
-dict(mapping) -&gt; new dictionary initialized from a mapping object’s</p>
-<blockquote>
-<div>(key, value) pairs</div></blockquote>
-<dl class="docutils">
-<dt>dict(iterable) -&gt; new dictionary initialized as if via:</dt>
-<dd><p class="first">d = {}
-for k, v in iterable:</p>
-<blockquote class="last">
-<div>d[k] = v</div></blockquote>
-</dd>
-<dt>dict(<a href="#id3"><span class="problematic" id="id4">**</span></a>kwargs) -&gt; new dictionary initialized with the name=value pairs</dt>
-<dd>in the keyword argument list.  For example:  dict(one=1, two=2)</dd>
-</dl>
-</dd></dl>
+<code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">KnobConfig</code><em class="property"> = typing.Dict[str, rafiki.model.knob.BaseKnob]</em><a class="headerlink" href="#rafiki.model.KnobConfig" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="data">
 <dt id="rafiki.model.Params">
-<code class="descclassname">rafiki.model.</code><code class="descname">Params</code><em class="property"> = typing.Dict[str, typing.Union[str, int, float, numpy.ndarray]]</em><a class="headerlink" href="#rafiki.model.Params" title="Permalink to this definition">¶</a></dt>
-<dd><p>dict() -&gt; new empty dictionary
-dict(mapping) -&gt; new dictionary initialized from a mapping object’s</p>
-<blockquote>
-<div>(key, value) pairs</div></blockquote>
-<dl class="docutils">
-<dt>dict(iterable) -&gt; new dictionary initialized as if via:</dt>
-<dd><p class="first">d = {}
-for k, v in iterable:</p>
-<blockquote class="last">
-<div>d[k] = v</div></blockquote>
-</dd>
-<dt>dict(<a href="#id5"><span class="problematic" id="id6">**</span></a>kwargs) -&gt; new dictionary initialized with the name=value pairs</dt>
-<dd>in the keyword argument list.  For example:  dict(one=1, two=2)</dd>
-</dl>
-</dd></dl>
+<code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">Params</code><em class="property"> = typing.Dict[str, typing.Union[str, int, float, numpy.ndarray]]</em><a class="headerlink" href="#rafiki.model.Params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </div>
 <div class="section" id="knobs">
 <h2>Knobs<a class="headerlink" href="#knobs" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="rafiki.model.CategoricalKnob">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">CategoricalKnob</code><span class="sig-paren">(</span><em>values: List[Union[str, int, float, rafiki.model.knob.KnobValue]]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#CategoricalKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.CategoricalKnob" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">CategoricalKnob</code><span class="sig-paren">(</span><em class="sig-param">values: List[Union[str, int, float, rafiki.model.knob.KnobValue]]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#CategoricalKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.CategoricalKnob" title="Permalink to this definition">¶</a></dt>
 <dd><p>Knob type representing a categorical value of type <code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">bool</span></code> or <code class="docutils literal notranslate"><span class="pre">str</span></code>.
 <code class="docutils literal notranslate"><span class="pre">values</span></code> is a list of candidate cateogrical values for this knob type; a realization of this knob type would be an element of <code class="docutils literal notranslate"><span class="pre">values</span></code>.</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="rafiki.model.KnobValue">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">KnobValue</code><span class="sig-paren">(</span><em>value: Union[str, int, float]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#KnobValue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.KnobValue" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">KnobValue</code><span class="sig-paren">(</span><em class="sig-param">value: Union[str, int, float]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#KnobValue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.KnobValue" title="Permalink to this definition">¶</a></dt>
 <dd><p>Wrapper for a <code class="docutils literal notranslate"><span class="pre">CategoricalValue</span></code>.</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="rafiki.model.IntegerKnob">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">IntegerKnob</code><span class="sig-paren">(</span><em>value_min: int</em>, <em>value_max: int</em>, <em>is_exp: bool = False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#IntegerKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.IntegerKnob" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">IntegerKnob</code><span class="sig-paren">(</span><em class="sig-param">value_min: int</em>, <em class="sig-param">value_max: int</em>, <em class="sig-param">is_exp: bool = False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#IntegerKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.IntegerKnob" title="Permalink to this definition">¶</a></dt>
 <dd><p>Knob type representing an <code class="docutils literal notranslate"><span class="pre">int</span></code> value within a specific interval [<code class="docutils literal notranslate"><span class="pre">value_min</span></code>, <code class="docutils literal notranslate"><span class="pre">value_max</span></code>].
 <code class="docutils literal notranslate"><span class="pre">is_exp</span></code> specifies whether the knob value should be scaled exponentially.</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="rafiki.model.FloatKnob">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">FloatKnob</code><span class="sig-paren">(</span><em>value_min: float</em>, <em>value_max: float</em>, <em>is_exp: bool = False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#FloatKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.FloatKnob" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">FloatKnob</code><span class="sig-paren">(</span><em class="sig-param">value_min: float</em>, <em class="sig-param">value_max: float</em>, <em class="sig-param">is_exp: bool = False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#FloatKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.FloatKnob" title="Permalink to this definition">¶</a></dt>
 <dd><p>Knob type representing a <code class="docutils literal notranslate"><span class="pre">float</span></code> value within a specific interval [<code class="docutils literal notranslate"><span class="pre">value_min</span></code>, <code class="docutils literal notranslate"><span class="pre">value_max</span></code>].
 <code class="docutils literal notranslate"><span class="pre">is_exp</span></code> specifies whether the knob value should be scaled exponentially.</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="rafiki.model.FixedKnob">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">FixedKnob</code><span class="sig-paren">(</span><em>value: Union[str, int, float, rafiki.model.knob.KnobValue]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#FixedKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.FixedKnob" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">FixedKnob</code><span class="sig-paren">(</span><em class="sig-param">value: Union[str, int, float, rafiki.model.knob.KnobValue]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#FixedKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.FixedKnob" title="Permalink to this definition">¶</a></dt>
 <dd><p>Knob type representing a fixed value of type <code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">bool</span></code> or <code class="docutils literal notranslate"><span class="pre">str</span></code>.
 Essentially, this represents a knob type that does not require tuning.</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="rafiki.model.PolicyKnob">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">PolicyKnob</code><span class="sig-paren">(</span><em>policy: str</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#PolicyKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.PolicyKnob" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">PolicyKnob</code><span class="sig-paren">(</span><em class="sig-param">policy: str</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#PolicyKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.PolicyKnob" title="Permalink to this definition">¶</a></dt>
 <dd><p>Knob type representing whether a certain policy should be activated, as a boolean.
 E.g. the <code class="docutils literal notranslate"><span class="pre">EARLY_STOP</span></code> policy knob decides whether the model should stop model training early, or not. 
 Offering the ability to activate different policies can optimize hyperparameter search for your model. 
@@ -420,7 +363,7 @@ Activation of all policies default to false.</p>
 
 <dl class="class">
 <dt id="rafiki.model.ArchKnob">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">ArchKnob</code><span class="sig-paren">(</span><em>items: List[List[Union[str, int, float, rafiki.model.knob.KnobValue]]]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#ArchKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.ArchKnob" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">ArchKnob</code><span class="sig-paren">(</span><em class="sig-param">items: List[List[Union[str, int, float, rafiki.model.knob.KnobValue]]]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#ArchKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.ArchKnob" title="Permalink to this definition">¶</a></dt>
 <dd><p>Knob type representing part of a model’s architecture as a fixed-size list of categorical values. 
 <code class="docutils literal notranslate"><span class="pre">items</span></code> is a list of list of candidate categorical values; a realization of this knob type would be a list of categorical values, wIth the value at each index matching an element of the list of candidates at that index.</p>
 <p>To illustrate, the following can be a definition of 3-layer model’s architecture search space inspired by the ENAS cell architecture construction strategy:</p>
@@ -449,40 +392,36 @@ as part of the model, or you can search only over input indices of various layer
 <span id="utility"></span><h2>Utility<a class="headerlink" href="#module-rafiki.model.dev" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="rafiki.model.dev.test_model_class">
-<code class="descclassname">rafiki.model.dev.</code><code class="descname">test_model_class</code><span class="sig-paren">(</span><em>model_file_path: str, model_class: str, task: str, dependencies: Dict[str, str], train_dataset_path: str, val_dataset_path: str, test_dataset_path: str = None, budget: Dict[rafiki.constants.BudgetOption, Any] = None, train_args: Dict[str, any] = None, queries: List[Any] = None) -&gt; (typing.List[typing.Any], &lt;class 'rafiki.model.model.BaseModel'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dev.html#test_model_class"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.dev.test_model_class" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">rafiki.model.dev.</code><code class="sig-name descname">test_model_class</code><span class="sig-paren">(</span><em class="sig-param">model_file_path: str, model_class: str, task: str, dependencies: Dict[str, str], train_dataset_path: str, val_dataset_path: str, test_dataset_path: str = None, budget: Dict[rafiki.constants.BudgetOption, Any] = None, train_args: Dict[str, any] = None, queries: List[Any] = None) -&gt; (typing.List[typing.Any], &lt;class 'rafiki.model.model.BaseModel'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dev.html#test_model_class"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.dev.test_model_class" title="Permalink to this definition">¶</a></dt>
 <dd><p>Tests whether a model class is <em>more likely</em> to be correctly defined by <em>locally</em> simulating a full train-inference flow on your model
 on a given dataset. The model’s methods will be called in an manner similar to that in Rafiki.</p>
 <p>This method assumes that your model’s Python dependencies have already been installed.</p>
 <p>This method also reads knob values and budget options from CLI arguments. 
 For example, you can pass e.g. <code class="docutils literal notranslate"><span class="pre">--TIME_HOURS=0.01</span></code> to configure the budget, or <code class="docutils literal notranslate"><span class="pre">--learning_rate=0.01</span></code> to fix a knob’s value.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>model_file_path</strong> – Path to a single Python file that contains the definition for the model class</li>
-<li><strong>model_class</strong> – The name of the model class inside the Python file. This class should implement <a class="reference internal" href="#rafiki.model.BaseModel" title="rafiki.model.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.BaseModel</span></code></a></li>
-<li><strong>task</strong> – Task type of model</li>
-<li><strong>dependencies</strong> – Model’s dependencies</li>
-<li><strong>train_dataset_path</strong> – File path of the train dataset for training of the model</li>
-<li><strong>val_dataset_path</strong> – File path of the validation dataset for evaluating trained models</li>
-<li><strong>test_dataset_path</strong> – File path of the test dataset for testing the final best trained model, if provided</li>
-<li><strong>budget</strong> – Budget for model training</li>
-<li><strong>train_args</strong> – Additional arguments to pass to models during training, if any</li>
-<li><strong>queries</strong> – List of queries for testing predictions with the trained model</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_file_path</strong> – Path to a single Python file that contains the definition for the model class</p></li>
+<li><p><strong>model_class</strong> – The name of the model class inside the Python file. This class should implement <a class="reference internal" href="#rafiki.model.BaseModel" title="rafiki.model.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.BaseModel</span></code></a></p></li>
+<li><p><strong>task</strong> – Task type of model</p></li>
+<li><p><strong>dependencies</strong> – Model’s dependencies</p></li>
+<li><p><strong>train_dataset_path</strong> – File path of the train dataset for training of the model</p></li>
+<li><p><strong>val_dataset_path</strong> – File path of the validation dataset for evaluating trained models</p></li>
+<li><p><strong>test_dataset_path</strong> – File path of the test dataset for testing the final best trained model, if provided</p></li>
+<li><p><strong>budget</strong> – Budget for model training</p></li>
+<li><p><strong>train_args</strong> – Additional arguments to pass to models during training, if any</p></li>
+<li><p><strong>queries</strong> – List of queries for testing predictions with the trained model</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">(&lt;predictions of best trained model&gt;, &lt;best trained model&gt;)</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>(&lt;predictions of best trained model&gt;, &lt;best trained model&gt;)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="class">
 <dt id="rafiki.model.LoggerUtils">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">LoggerUtils</code><a class="reference internal" href="../../_modules/rafiki/model/log.html#LoggerUtils"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.LoggerUtils" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">LoggerUtils</code><a class="reference internal" href="../../_modules/rafiki/model/log.html#LoggerUtils"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.LoggerUtils" title="Permalink to this definition">¶</a></dt>
 <dd><p>Allows models to log messages &amp; metrics during model training.</p>
 <p>This should NOT be initiailized outside of the module. Instead,
 import the global <code class="docutils literal notranslate"><span class="pre">utils</span></code> instance from the module <code class="docutils literal notranslate"><span class="pre">rafiki.model</span></code>
@@ -503,21 +442,21 @@ and use <code class="docutils literal notranslate"><span class="pre">utils.logge
 </div>
 <dl class="method">
 <dt id="rafiki.model.LoggerUtils.define_loss_plot">
-<code class="descname">define_loss_plot</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/log.html#LoggerUtils.define_loss_plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.LoggerUtils.define_loss_plot" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">define_loss_plot</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/log.html#LoggerUtils.define_loss_plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.LoggerUtils.define_loss_plot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convenience method of defining a plot of <code class="docutils literal notranslate"><span class="pre">loss</span></code> against <code class="docutils literal notranslate"><span class="pre">epoch</span></code>.
 To be used with <a class="reference internal" href="#rafiki.model.LoggerUtils.log_loss" title="rafiki.model.LoggerUtils.log_loss"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.LoggerUtils.log_loss()</span></code></a>.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.model.LoggerUtils.log_loss">
-<code class="descname">log_loss</code><span class="sig-paren">(</span><em>loss</em>, <em>epoch</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/log.html#LoggerUtils.log_loss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.LoggerUtils.log_loss" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">log_loss</code><span class="sig-paren">(</span><em class="sig-param">loss</em>, <em class="sig-param">epoch</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/log.html#LoggerUtils.log_loss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.LoggerUtils.log_loss" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convenience method for logging <cite>loss</cite> against <cite>epoch</cite>.
 To be used with <a class="reference internal" href="#rafiki.model.LoggerUtils.define_loss_plot" title="rafiki.model.LoggerUtils.define_loss_plot"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.LoggerUtils.define_loss_plot()</span></code></a>.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.model.LoggerUtils.define_plot">
-<code class="descname">define_plot</code><span class="sig-paren">(</span><em>title</em>, <em>metrics</em>, <em>x_axis=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/log.html#LoggerUtils.define_plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.LoggerUtils.define_plot" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">define_plot</code><span class="sig-paren">(</span><em class="sig-param">title</em>, <em class="sig-param">metrics</em>, <em class="sig-param">x_axis=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/log.html#LoggerUtils.define_plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.LoggerUtils.define_plot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Defines a plot for a set of metrics for analysis of model training.
 By default, metrics will be plotted against time.</p>
 <p>For example, a model’s precision &amp; recall logged with e.g. <code class="docutils literal notranslate"><span class="pre">log(precision=0.1,</span> <span class="pre">recall=0.6,</span> <span class="pre">epoch=1)</span></code>
@@ -525,47 +464,39 @@ can be visualized in the plots generated by
 <code class="docutils literal notranslate"><span class="pre">define_plot('Precision</span> <span class="pre">&amp;</span> <span class="pre">Recall',</span> <span class="pre">['precision',</span> <span class="pre">'recall'])</span></code> (against time) or
 <code class="docutils literal notranslate"><span class="pre">define_plot('Precision</span> <span class="pre">&amp;</span> <span class="pre">Recall',</span> <span class="pre">['precision',</span> <span class="pre">'recall'],</span> <span class="pre">x_axis='epoch')</span></code> (against epochs).</p>
 <p>Only call this method in <a class="reference internal" href="#rafiki.model.BaseModel.train" title="rafiki.model.BaseModel.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.BaseModel.train()</span></code></a>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>title</strong> (<em>str</em>) – Title of the plot</li>
-<li><strong>metrics</strong> (<em>str</em><em>[</em><em>]</em>) – List of metrics that should be plotted on the y-axis</li>
-<li><strong>x_axis</strong> (<em>str</em>) – Metric that should be plotted on the x-axis, against all other metrics. Defaults to <code class="docutils literal notranslate"><span class="pre">'time'</span></code>, which is automatically logged</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>title</strong> (<em>str</em>) – Title of the plot</p></li>
+<li><p><strong>metrics</strong> (<em>str</em><em>[</em><em>]</em>) – List of metrics that should be plotted on the y-axis</p></li>
+<li><p><strong>x_axis</strong> (<em>str</em>) – Metric that should be plotted on the x-axis, against all other metrics. Defaults to <code class="docutils literal notranslate"><span class="pre">'time'</span></code>, which is automatically logged</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.model.LoggerUtils.log">
-<code class="descname">log</code><span class="sig-paren">(</span><em>msg=''</em>, <em>**metrics</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/log.html#LoggerUtils.log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.LoggerUtils.log" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param">msg=''</em>, <em class="sig-param">**metrics</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/log.html#LoggerUtils.log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.LoggerUtils.log" title="Permalink to this definition">¶</a></dt>
 <dd><p>Logs a message and/or a set of metrics at a single point in time.</p>
 <p>Logged messages will be viewable on Rafiki’s administrative UI.</p>
 <p>To visualize logged metrics on plots, a plot must be defined via <a class="reference internal" href="#rafiki.model.LoggerUtils.define_plot" title="rafiki.model.LoggerUtils.define_plot"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.LoggerUtils.define_plot()</span></code></a>.</p>
 <p>Only call this method in <a class="reference internal" href="#rafiki.model.BaseModel.train" title="rafiki.model.BaseModel.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.BaseModel.train()</span></code></a> and <a class="reference internal" href="#rafiki.model.BaseModel.evaluate" title="rafiki.model.BaseModel.evaluate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.BaseModel.evaluate()</span></code></a>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>msg</strong> (<em>str</em>) – Message to be logged</li>
-<li><strong>metrics</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>int|float</em><em>]</em>) – Set of metrics &amp; their values to be logged as <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">&lt;metric&gt;:</span> <span class="pre">&lt;value&gt;</span> <span class="pre">}</span></code>, where <code class="docutils literal notranslate"><span class="pre">&lt;value&gt;</span></code> should be a number.</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> (<em>str</em>) – Message to be logged</p></li>
+<li><p><strong>metrics</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>int|float</em><em>]</em>) – Set of metrics &amp; their values to be logged as <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">&lt;metric&gt;:</span> <span class="pre">&lt;value&gt;</span> <span class="pre">}</span></code>, where <code class="docutils literal notranslate"><span class="pre">&lt;value&gt;</span></code> should be a number.</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="class">
 <dt id="rafiki.model.DatasetUtils">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">DatasetUtils</code><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#DatasetUtils"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.DatasetUtils" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">DatasetUtils</code><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#DatasetUtils"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.DatasetUtils" title="Permalink to this definition">¶</a></dt>
 <dd><p>Collection of utility methods to help with the loading of datasets.</p>
 <p>Usage of these methods are optional. 
 In fact, you are encouraged to rely on your preferred ML libraries’ dataset loading methods, or hand-roll your own.</p>
@@ -583,108 +514,112 @@ and use <code class="docutils literal notranslate"><span class="pre">utils.datas
 </div>
 <dl class="method">
 <dt id="rafiki.model.DatasetUtils.load_dataset_of_corpus">
-<code class="descname">load_dataset_of_corpus</code><span class="sig-paren">(</span><em>dataset_path</em>, <em>tags=None</em>, <em>split_by='\\n'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#DatasetUtils.load_dataset_of_corpus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.DatasetUtils.load_dataset_of_corpus" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">load_dataset_of_corpus</code><span class="sig-paren">(</span><em class="sig-param">dataset_path</em>, <em class="sig-param">tags=None</em>, <em class="sig-param">split_by='\\n'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#DatasetUtils.load_dataset_of_corpus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.DatasetUtils.load_dataset_of_corpus" title="Permalink to this definition">¶</a></dt>
 <dd><p>Loads dataset for the task <code class="docutils literal notranslate"><span class="pre">POS_TAGGING</span></code></p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dataset_path</strong> (<em>str</em>) – File path of the dataset</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">An instance of <code class="docutils literal notranslate"><span class="pre">CorpusDataset</span></code>.</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dataset_path</strong> (<em>str</em>) – File path of the dataset</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>An instance of <code class="docutils literal notranslate"><span class="pre">CorpusDataset</span></code>.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.model.DatasetUtils.load_dataset_of_image_files">
-<code class="descname">load_dataset_of_image_files</code><span class="sig-paren">(</span><em>dataset_path</em>, <em>min_image_size=None</em>, <em>max_image_size=None</em>, <em>mode='RGB'</em>, <em>if_shuffle=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#DatasetUtils.load_dataset_of_image_files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.DatasetUtils.load_dataset_of_image_files" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">load_dataset_of_image_files</code><span class="sig-paren">(</span><em class="sig-param">dataset_path</em>, <em class="sig-param">min_image_size=None</em>, <em class="sig-param">max_image_size=None</em>, <em class="sig-param">mode='RGB'</em>, <em class="sig-param">if_shuffle=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#DatasetUtils.load_dataset_of_image_files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.DatasetUtils.load_dataset_of_image_files" title="Permalink to this definition">¶</a></dt>
 <dd><p>Loads dataset for the task <code class="docutils literal notranslate"><span class="pre">IMAGE_CLASSIFICATION</span></code>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>dataset_path</strong> (<em>str</em>) – File path of the dataset</li>
-<li><strong>min_image_size</strong> (<em>int</em>) – minimum width <em>and</em> height to resize all images to</li>
-<li><strong>max_image_size</strong> (<em>int</em>) – maximum width <em>and</em> height to resize all images to</li>
-<li><strong>mode</strong> (<em>str</em>) – Pillow image mode. Refer to <a class="reference external" href="https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes">https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes</a></li>
-<li><strong>if_shuffle</strong> (<em>bool</em>) – Whether to shuffle the dataset</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset_path</strong> (<em>str</em>) – File path of the dataset</p></li>
+<li><p><strong>min_image_size</strong> (<em>int</em>) – minimum width <em>and</em> height to resize all images to</p></li>
+<li><p><strong>max_image_size</strong> (<em>int</em>) – maximum width <em>and</em> height to resize all images to</p></li>
+<li><p><strong>mode</strong> (<em>str</em>) – Pillow image mode. Refer to <a class="reference external" href="https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes">https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes</a></p></li>
+<li><p><strong>if_shuffle</strong> (<em>bool</em>) – Whether to shuffle the dataset</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">An instance of <code class="docutils literal notranslate"><span class="pre">ImageFilesDataset</span></code></p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>An instance of <code class="docutils literal notranslate"><span class="pre">ImageFilesDataset</span></code></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.model.DatasetUtils.normalize_images">
-<code class="descname">normalize_images</code><span class="sig-paren">(</span><em>images</em>, <em>mean=None</em>, <em>std=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#DatasetUtils.normalize_images"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.DatasetUtils.normalize_images" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">normalize_images</code><span class="sig-paren">(</span><em class="sig-param">images</em>, <em class="sig-param">mean=None</em>, <em class="sig-param">std=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#DatasetUtils.normalize_images"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.DatasetUtils.normalize_images" title="Permalink to this definition">¶</a></dt>
 <dd><p>Normalize all images.</p>
 <p>If mean <cite>mean</cite> and standard deviation <cite>std</cite> are <cite>None</cite>, they will be computed on the images.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>images</strong> – (N x width x height x channels) array-like of images to resize</li>
-<li><strong>mean</strong> (<em>float</em><em>[</em><em>]</em>) – Mean for normalization, by channel</li>
-<li><strong>std</strong> (<em>float</em><em>[</em><em>]</em>) – Standard deviation for normalization, by channel</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>images</strong> – (N x width x height x channels) array-like of images to resize</p></li>
+<li><p><strong>mean</strong> (<em>float</em><em>[</em><em>]</em>) – Mean for normalization, by channel</p></li>
+<li><p><strong>std</strong> (<em>float</em><em>[</em><em>]</em>) – Standard deviation for normalization, by channel</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">(images, mean, std)</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>(images, mean, std)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="rafiki.model.DatasetUtils.transform_images">
-<code class="descname">transform_images</code><span class="sig-paren">(</span><em>images</em>, <em>image_size=None</em>, <em>mode=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#DatasetUtils.transform_images"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.DatasetUtils.transform_images" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">transform_images</code><span class="sig-paren">(</span><em class="sig-param">images</em>, <em class="sig-param">image_size=None</em>, <em class="sig-param">mode=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#DatasetUtils.transform_images"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.DatasetUtils.transform_images" title="Permalink to this definition">¶</a></dt>
 <dd><p>Resize or convert a list of N images to another size and/or mode</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>images</strong> – (N x width x height x channels) array-like of images to resize</li>
-<li><strong>image_size</strong> (<em>int</em>) – width <em>and</em> height to resize all images to</li>
-<li><strong>mode</strong> (<em>str</em>) – Pillow image mode to convert all images to. Refer to <a class="reference external" href="https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes">https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes</a></li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>images</strong> – (N x width x height x channels) array-like of images to resize</p></li>
+<li><p><strong>image_size</strong> (<em>int</em>) – width <em>and</em> height to resize all images to</p></li>
+<li><p><strong>mode</strong> (<em>str</em>) – Pillow image mode to convert all images to. Refer to <a class="reference external" href="https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes">https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes</a></p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">numpy array of output images as a (N x width x height x channels) numpy</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>output images as a (N x width x height x channels) numpy array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.model.DatasetUtils.load_images">
+<code class="sig-name descname">load_images</code><span class="sig-paren">(</span><em class="sig-param">image_paths: List[str], mode: str = 'RGB'</em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="reference internal" href="../../_modules/rafiki/model/dataset.html#DatasetUtils.load_images"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.DatasetUtils.load_images" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads multiple images from the local filesystem.
+Assumes that images are of the same dimensions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>images</strong> – Paths to images</p></li>
+<li><p><strong>mode</strong> (<em>str</em>) – Pillow image mode to convert all images to. Refer to <a class="reference external" href="https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes">https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes</a></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>images as a (N x width x height x channels) numpy array</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="class">
 <dt id="rafiki.model.ImageFilesDataset">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">ImageFilesDataset</code><span class="sig-paren">(</span><em>dataset_path</em>, <em>min_image_size=None</em>, <em>max_image_size=None</em>, <em>mode='RGB'</em>, <em>if_shuffle=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#ImageFilesDataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.ImageFilesDataset" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">ImageFilesDataset</code><span class="sig-paren">(</span><em class="sig-param">dataset_path</em>, <em class="sig-param">min_image_size=None</em>, <em class="sig-param">max_image_size=None</em>, <em class="sig-param">mode='RGB'</em>, <em class="sig-param">if_shuffle=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#ImageFilesDataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.ImageFilesDataset" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class that helps loading of dataset for task <code class="docutils literal notranslate"><span class="pre">IMAGE_CLASSIFICATION</span></code>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">classes</span></code> is the number of image classes.</p>
 <p>Each dataset example is (image, class) where:</p>
 <blockquote>
 <div><ul class="simple">
-<li>Each image is a 3D numpy array (width x height x channels)</li>
-<li>Each class is an integer from 0 to (k - 1)</li>
+<li><p>Each image is a 3D numpy array (width x height x channels)</p></li>
+<li><p>Each class is an integer from 0 to (k - 1)</p></li>
 </ul>
 </div></blockquote>
 </dd></dl>
 
 <dl class="class">
 <dt id="rafiki.model.CorpusDataset">
-<em class="property">class </em><code class="descclassname">rafiki.model.</code><code class="descname">CorpusDataset</code><span class="sig-paren">(</span><em>dataset_path</em>, <em>tags</em>, <em>split_by</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#CorpusDataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.CorpusDataset" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">CorpusDataset</code><span class="sig-paren">(</span><em class="sig-param">dataset_path</em>, <em class="sig-param">tags</em>, <em class="sig-param">split_by</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#CorpusDataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.CorpusDataset" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class that helps loading of dataset for task <code class="docutils literal notranslate"><span class="pre">POS_TAGGING</span></code>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">tags</span></code> is the expected list of tags for each token in the corpus.
 Dataset samples are grouped as sentences by a delimiter token corresponding to <code class="docutils literal notranslate"><span class="pre">split_by</span></code>.</p>
@@ -708,7 +643,7 @@ with tags appearing in the same order as <code class="docutils literal notransla
         <a href="rafiki.constants.html" class="btn btn-neutral float-right" title="rafiki.constants" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="rafiki.client.html" class="btn btn-neutral" title="rafiki.client" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="rafiki.client.html" class="btn btn-neutral float-left" title="rafiki.client" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -717,7 +652,7 @@ with tags appearing in the same order as <code class="docutils literal notransla
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
 
     </p>
   </div>
@@ -734,33 +669,16 @@ with tags appearing in the same order as <code class="docutils literal notransla
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../',
-            VERSION:'',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

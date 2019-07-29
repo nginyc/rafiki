@@ -17,34 +17,36 @@
   
 
   
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Using Rafiki’s Web Admin" href="using-web-admin.html" />
     <link rel="prev" title="Quick Start (Application Users)" href="quickstart-app-users.html" /> 
-
-  
-  <script src="../../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -182,11 +184,9 @@ and <em>Rafiki Web Admin</em> at <code class="docutils literal notranslate"><spa
 <div class="section" id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
 <ol class="arabic">
-<li><p class="first">Install Python 3.6 such that the <code class="docutils literal notranslate"><span class="pre">python</span></code> and <code class="docutils literal notranslate"><span class="pre">pip</span></code> point to the correct installation of Python (see <a class="reference internal" href="installing-python.html#installing-python"><span class="std std-ref">Installing Python</span></a>)</p>
-</li>
-<li><p class="first">Clone the project at <a class="reference external" href="https://github.com/nginyc/rafiki">https://github.com/nginyc/rafiki</a> (e.g. with <a class="reference external" href="https://git-scm.com/downloads">Git</a>)</p>
-</li>
-<li><p class="first">Within the project’s root folder, install Rafiki’s client-side Python dependencies by running:</p>
+<li><p>Install Python 3.6 such that the <code class="docutils literal notranslate"><span class="pre">python</span></code> and <code class="docutils literal notranslate"><span class="pre">pip</span></code> point to the correct installation of Python (see <a class="reference internal" href="installing-python.html#installing-python"><span class="std std-ref">Installing Python</span></a>)</p></li>
+<li><p>Clone the project at <a class="reference external" href="https://github.com/nginyc/rafiki">https://github.com/nginyc/rafiki</a> (e.g. with <a class="reference external" href="https://git-scm.com/downloads">Git</a>)</p></li>
+<li><p>Within the project’s root folder, install Rafiki’s client-side Python dependencies by running:</p>
 <blockquote>
 <div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="o">./</span><span class="n">rafiki</span><span class="o">/</span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
 </pre></div>
@@ -206,8 +206,8 @@ and <em>Rafiki Web Admin</em> at <code class="docutils literal notranslate"><spa
 </div>
 </div></blockquote>
 <div class="admonition seealso">
-<p class="first admonition-title">See also</p>
-<p class="last"><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.login" title="rafiki.client.Client.login"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.login()</span></code></a></p>
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.login" title="rafiki.client.Client.login"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.login()</span></code></a></p>
 </div>
 </div>
 <div class="section" id="creating-users">
@@ -235,8 +235,8 @@ and <em>Rafiki Web Admin</em> at <code class="docutils literal notranslate"><spa
 </div>
 </div></blockquote>
 <div class="admonition seealso">
-<p class="first admonition-title">See also</p>
-<p class="last"><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.create_user" title="rafiki.client.Client.create_user"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_user()</span></code></a></p>
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.create_user" title="rafiki.client.Client.create_user"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_user()</span></code></a></p>
 </div>
 </div>
 <div class="section" id="listing-all-users">
@@ -262,8 +262,8 @@ and <em>Rafiki Web Admin</em> at <code class="docutils literal notranslate"><spa
 </div>
 </div></blockquote>
 <div class="admonition seealso">
-<p class="first admonition-title">See also</p>
-<p class="last"><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.get_users" title="rafiki.client.Client.get_users"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_users()</span></code></a></p>
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.get_users" title="rafiki.client.Client.get_users"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.get_users()</span></code></a></p>
 </div>
 </div>
 <div class="section" id="banning-a-user">
@@ -275,8 +275,8 @@ and <em>Rafiki Web Admin</em> at <code class="docutils literal notranslate"><spa
 </div>
 </div></blockquote>
 <div class="admonition seealso">
-<p class="first admonition-title">See also</p>
-<p class="last"><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.ban_user" title="rafiki.client.Client.ban_user"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.ban_user()</span></code></a></p>
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.ban_user" title="rafiki.client.Client.ban_user"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.ban_user()</span></code></a></p>
 </div>
 </div>
 </div>
@@ -292,7 +292,7 @@ and <em>Rafiki Web Admin</em> at <code class="docutils literal notranslate"><spa
         <a href="using-web-admin.html" class="btn btn-neutral float-right" title="Using Rafiki’s Web Admin" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="quickstart-app-users.html" class="btn btn-neutral" title="Quick Start (Application Users)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="quickstart-app-users.html" class="btn btn-neutral float-left" title="Quick Start (Application Users)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -301,7 +301,7 @@ and <em>Rafiki Web Admin</em> at <code class="docutils literal notranslate"><spa
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
 
     </p>
   </div>
@@ -318,33 +318,16 @@ and <em>Rafiki Web Admin</em> at <code class="docutils literal notranslate"><spa
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../',
-            VERSION:'',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

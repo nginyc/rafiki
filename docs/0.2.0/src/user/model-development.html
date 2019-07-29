@@ -17,34 +17,36 @@
   
 
   
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="How Model Tuning Works" href="model-tuning.html" />
     <link rel="prev" title="Installing Python" href="installing-python.html" /> 
-
-  
-  <script src="../../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -189,13 +191,13 @@ submit it to Rafiki with the <a class="reference internal" href="../python/rafik
 <h2>Implementing the Base Model Interface<a class="headerlink" href="#implementing-the-base-model-interface" title="Permalink to this headline">¶</a></h2>
 <p>As an overview, your model template needs to provide the following logic for deployment on Rafiki:</p>
 <ul class="simple">
-<li>Definition of the space of your model’s hyperparameters (<em>knob configuration</em>)</li>
-<li>Initialization of the model with a concrete set of hyperparameters (<em>knobs</em>)</li>
-<li>Training of the model given a (train) dataset on the local file system</li>
-<li>Evaluation of the model given a (validation) dataset onthe local file system</li>
-<li>Dumping of the model’s parameters for serialization, after training</li>
-<li>Loading of the model with trained parameters</li>
-<li>Making batch predictions with the model, after being trained</li>
+<li><p>Definition of the space of your model’s hyperparameters (<em>knob configuration</em>)</p></li>
+<li><p>Initialization of the model with a concrete set of hyperparameters (<em>knobs</em>)</p></li>
+<li><p>Training of the model given a (train) dataset on the local file system</p></li>
+<li><p>Evaluation of the model given a (validation) dataset onthe local file system</p></li>
+<li><p>Dumping of the model’s parameters for serialization, after training</p></li>
+<li><p>Loading of the model with trained parameters</p></li>
+<li><p>Making batch predictions with the model, after being trained</p></li>
 </ul>
 <p>Full details of Rafiki’s base model interface is documented at <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.BaseModel" title="rafiki.model.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.BaseModel</span></code></a>.
 Your model implementation has to follow a specific task’s specification (see <a class="reference internal" href="tasks.html#tasks"><span class="std std-ref">Supported Tasks</span></a>).</p>
@@ -211,8 +213,8 @@ Refer to its documentation for more details on how to use it, or refer to the sa
 These messages &amp; metrics would be displayed on Rafiki Web Admin for monitoring &amp; debugging purposes.
 Refer to <a class="reference internal" href="../python/rafiki.model.html#rafiki.model.LoggerUtils" title="rafiki.model.LoggerUtils"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.model.LoggerUtils</span></code></a> for more details.</p>
 <div class="admonition seealso">
-<p class="first admonition-title">See also</p>
-<p class="last"><a class="reference internal" href="using-web-admin.html#using-web-admin"><span class="std std-ref">Using Rafiki’s Web Admin</span></a></p>
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="using-web-admin.html#using-web-admin"><span class="std std-ref">Using Rafiki’s Web Admin</span></a></p>
 </div>
 </div>
 <div class="section" id="dataset-loading">
@@ -230,21 +232,21 @@ Refer to <a class="reference internal" href="../python/rafiki.model.html#rafiki.
 <p>To illustrate how to write models for Rafiki, we have written the following:</p>
 <blockquote>
 <div><ul class="simple">
-<li>Sample pre-processing logic to convert common dataset formats to Rafiki’s own dataset formats in <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/datasets/">./examples/datasets/</a></li>
-<li>Sample models in <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/models/">./examples/models/</a></li>
+<li><p>Sample pre-processing logic to convert common dataset formats to Rafiki’s own dataset formats in <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/datasets/">./examples/datasets/</a></p></li>
+<li><p>Sample models in <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/models/">./examples/models/</a></p></li>
 </ul>
 </div></blockquote>
 <div class="section" id="example-testing-models-for-image-classification">
 <h3>Example: Testing Models for <code class="docutils literal notranslate"><span class="pre">IMAGE_CLASSIFICATION</span></code><a class="headerlink" href="#example-testing-models-for-image-classification" title="Permalink to this headline">¶</a></h3>
 <ol class="arabic">
-<li><p class="first">Download &amp; pre-process the original Fashion MNIST dataset to the dataset format specified by <code class="docutils literal notranslate"><span class="pre">IMAGE_CLASSIFICATION</span></code>:</p>
+<li><p>Download &amp; pre-process the original Fashion MNIST dataset to the dataset format specified by <code class="docutils literal notranslate"><span class="pre">IMAGE_CLASSIFICATION</span></code>:</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python examples/datasets/image_files/load_fashion_mnist.py
 </pre></div>
 </div>
 </div></blockquote>
 </li>
-<li><p class="first">Install the Python dependencies for the sample models:</p>
+<li><p>Install the Python dependencies for the sample models:</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install scikit-learn<span class="o">==</span><span class="m">0</span>.20.0
 pip install <span class="nv">tensorflow</span><span class="o">==</span><span class="m">1</span>.12.0
@@ -252,7 +254,7 @@ pip install <span class="nv">tensorflow</span><span class="o">==</span><span cla
 </div>
 </div></blockquote>
 </li>
-<li><p class="first">Test the sample models in <code class="docutils literal notranslate"><span class="pre">./examples/models/image_classification</span></code>:</p>
+<li><p>Test the sample models in <code class="docutils literal notranslate"><span class="pre">./examples/models/image_classification</span></code>:</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python examples/models/image_classification/SkDt.py
 python examples/models/image_classification/TfFeedForward.py
@@ -265,21 +267,21 @@ python examples/models/image_classification/TfFeedForward.py
 <div class="section" id="example-testing-models-for-pos-tagging">
 <h3>Example: Testing Models for <code class="docutils literal notranslate"><span class="pre">POS_TAGGING</span></code><a class="headerlink" href="#example-testing-models-for-pos-tagging" title="Permalink to this headline">¶</a></h3>
 <ol class="arabic">
-<li><p class="first">Download &amp; pre-process the subsample of the Penn Treebank dataset to the dataset format specified by <code class="docutils literal notranslate"><span class="pre">POS_TAGGING</span></code>:</p>
+<li><p>Download &amp; pre-process the subsample of the Penn Treebank dataset to the dataset format specified by <code class="docutils literal notranslate"><span class="pre">POS_TAGGING</span></code>:</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python examples/datasets/corpus/load_sample_ptb.py
 </pre></div>
 </div>
 </div></blockquote>
 </li>
-<li><p class="first">Install the Python dependencies for the sample models:</p>
+<li><p>Install the Python dependencies for the sample models:</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install <span class="nv">torch</span><span class="o">==</span><span class="m">0</span>.4.1
 </pre></div>
 </div>
 </div></blockquote>
 </li>
-<li><p class="first">Test the sample models in <code class="docutils literal notranslate"><span class="pre">./examples/models/pos_tagging</span></code>:</p>
+<li><p>Test the sample models in <code class="docutils literal notranslate"><span class="pre">./examples/models/pos_tagging</span></code>:</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python examples/models/pos_tagging/BigramHmm.py
 python examples/models/pos_tagging/PyBiLstm.py
@@ -309,29 +311,29 @@ Rafiki could also parse specific dependency names to install certain non-PyPI pa
 For example, <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">'singa':</span> <span class="pre">'1.1.1'</span> <span class="pre">}</span></code> will be installed as <code class="docutils literal notranslate"><span class="pre">singa-cpu=1.1.1</span></code> or <code class="docutils literal notranslate"><span class="pre">singa-gpu=1.1.1</span></code> using <code class="docutils literal notranslate"><span class="pre">conda</span></code>.</p>
 <p>Refer to the list of officially supported dependencies below. For dependencies that are not listed,
 they will be installed as PyPI packages of the specified name and version.</p>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <colgroup>
-<col width="17%" />
-<col width="83%" />
+<col style="width: 17%" />
+<col style="width: 83%" />
 </colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td><strong>Dependency</strong></td>
-<td><strong>Installation Command</strong></td>
+<tbody>
+<tr class="row-odd"><td><p><strong>Dependency</strong></p></td>
+<td><p><strong>Installation Command</strong></p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">tensorflow</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">tensorflow==${ver}</span></code> or <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">tensorflow-gpu==${ver}</span></code></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tensorflow</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">tensorflow==${ver}</span></code> or <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">tensorflow-gpu==${ver}</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">singa</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">-c</span> <span class="pre">nusdbsystem</span> <span class="pre">singa-cpu=${ver}</span></code> or <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">-c</span> <span class="pre">nusdbsystem</span> <span class="pre">singa-gpu=${ver}</span></code></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">singa</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">-c</span> <span class="pre">nusdbsystem</span> <span class="pre">singa-cpu=${ver}</span></code> or <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">-c</span> <span class="pre">nusdbsystem</span> <span class="pre">singa-gpu=${ver}</span></code></p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">Keras</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">Keras==${ver}</span></code></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Keras</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">Keras==${ver}</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">scikit-learn</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">scikit-learn==${ver}</span></code></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">scikit-learn</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">scikit-learn==${ver}</span></code></p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">torch</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">torch==${ver}</span></code></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">torch</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">torch==${ver}</span></code></p></td>
 </tr>
 </tbody>
 </table>
@@ -339,8 +341,8 @@ they will be installed as PyPI packages of the specified name and version.</p>
 installing the required dependencies for your model. This is configurable with <code class="docutils literal notranslate"><span class="pre">docker_image</span></code> option
 during model creation.</p>
 <div class="admonition seealso">
-<p class="first admonition-title">See also</p>
-<p class="last"><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.create_model" title="rafiki.client.Client.create_model"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_model()</span></code></a></p>
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="../python/rafiki.client.html#rafiki.client.Client.create_model" title="rafiki.client.Client.create_model"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.client.Client.create_model()</span></code></a></p>
 </div>
 <p>Your model should be GPU-sensitive based on the environment variable <code class="docutils literal notranslate"><span class="pre">CUDA_AVAILABLE_DEVICES</span></code>
 (see <a class="reference external" href="https://devblogs.nvidia.com/cuda-pro-tip-control-gpu-visibility-cuda_visible_devices/">here</a>).
@@ -360,7 +362,7 @@ You can assume that your model has exclusive access to the GPUs listed in <code 
         <a href="model-tuning.html" class="btn btn-neutral float-right" title="How Model Tuning Works" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="installing-python.html" class="btn btn-neutral" title="Installing Python" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="installing-python.html" class="btn btn-neutral float-left" title="Installing Python" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -369,7 +371,7 @@ You can assume that your model has exclusive access to the GPUs listed in <code 
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
 
     </p>
   </div>
@@ -386,33 +388,16 @@ You can assume that your model has exclusive access to the GPUs listed in <code 
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../',
-            VERSION:'',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

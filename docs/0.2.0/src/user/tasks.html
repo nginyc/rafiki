@@ -17,34 +17,36 @@
   
 
   
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Dataset Types" href="datasets.html" />
     <link rel="prev" title="Using Rafiki’s Web Admin" href="using-web-admin.html" /> 
-
-  
-  <script src="../../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -211,8 +213,8 @@ and received by <em>Application Users</em> as predictions to their queries sent 
 <h3>Dataset Format<a class="headerlink" href="#dataset-format" title="Permalink to this headline">¶</a></h3>
 <p><a class="reference internal" href="datasets.html#dataset-type-image-files"><span class="std std-ref">IMAGE_FILES</span></a></p>
 <ul class="simple">
-<li>There is only 1 tag column of <code class="docutils literal notranslate"><span class="pre">class</span></code>, corresponding to the class of the image as an integer from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">-</span> <span class="pre">1</span></code>, where <code class="docutils literal notranslate"><span class="pre">k</span></code> is the total no. of classes.</li>
-<li>The train &amp; validation dataset’s images should be have the same dimensions <code class="docutils literal notranslate"><span class="pre">W</span> <span class="pre">x</span> <span class="pre">H</span></code> and same total no. of classes.</li>
+<li><p>There is only 1 tag column of <code class="docutils literal notranslate"><span class="pre">class</span></code>, corresponding to the class of the image as an integer from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">-</span> <span class="pre">1</span></code>, where <code class="docutils literal notranslate"><span class="pre">k</span></code> is the total no. of classes.</p></li>
+<li><p>The train &amp; validation dataset’s images should be have the same dimensions <code class="docutils literal notranslate"><span class="pre">W</span> <span class="pre">x</span> <span class="pre">H</span></code> and same total no. of classes.</p></li>
 </ul>
 <p>An example:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>path,class
@@ -225,18 +227,19 @@ image-99-of-class-9.png,9
 </pre></div>
 </div>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">You can refer to and run <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/datasets/load_folder_format.py">./examples/datasets/image_files/load_folder_format.py</a>
+<p class="admonition-title">Note</p>
+<p>You can refer to and run <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/datasets/load_folder_format.py">./examples/datasets/image_files/load_folder_format.py</a>
 for converting <em>directories of images</em> to Rafiki’s <code class="docutils literal notranslate"><span class="pre">IMAGE_CLASSIFICATION</span></code> format.</p>
 </div>
 </div>
 <div class="section" id="query-format">
 <h3>Query Format<a class="headerlink" href="#query-format" title="Permalink to this headline">¶</a></h3>
-<p>A <code class="docutils literal notranslate"><span class="pre">W</span> <span class="pre">x</span> <span class="pre">H</span></code> 2D list representing a grayscale version of the query image.</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">W</span> <span class="pre">x</span> <span class="pre">H</span> <span class="pre">x</span> <span class="pre">3</span></code> 3D array representing a <em>RGB</em> version of the query image.
+The query image can be of <em>any dimensions</em>.</p>
 </div>
 <div class="section" id="prediction-format">
 <h3>Prediction Format<a class="headerlink" href="#prediction-format" title="Permalink to this headline">¶</a></h3>
-<p>A size-<code class="docutils literal notranslate"><span class="pre">k</span></code> list of floats, representing the probabilities of each class, by index, from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k-1</span></code>.
+<p>A size-<code class="docutils literal notranslate"><span class="pre">k</span></code> array of floats, representing the probabilities of each class, by index, from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k-1</span></code>.
 For example, the float at index 0 corresponds to the probability of class 0.</p>
 </div>
 </div>
@@ -246,8 +249,8 @@ For example, the float at index 0 corresponds to the probability of class 0.</p>
 <h3>Dataset Format<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
 <p><a class="reference internal" href="datasets.html#dataset-type-corpus"><span class="std std-ref">CORPUS</span></a></p>
 <ul class="simple">
-<li>Sentences are delimited by  <code class="docutils literal notranslate"><span class="pre">\n</span></code> tokens.</li>
-<li>There is only 1 tag column of <code class="docutils literal notranslate"><span class="pre">tag</span></code> corresponding to the POS tag of the token as an integer from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k-1</span></code>.</li>
+<li><p>Sentences are delimited by  <code class="docutils literal notranslate"><span class="pre">\n</span></code> tokens.</p></li>
+<li><p>There is only 1 tag column of <code class="docutils literal notranslate"><span class="pre">tag</span></code> corresponding to the POS tag of the token as an integer from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">k-1</span></code>.</p></li>
 </ul>
 <p>An example:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>token       tag
@@ -270,11 +273,11 @@ presidents  8
 </div>
 <div class="section" id="id2">
 <h3>Query Format<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
-<p>A list of strings representing a sentence as a list of tokens in that sentence.</p>
+<p>An array of strings representing a sentence as a list of tokens in that sentence.</p>
 </div>
 <div class="section" id="id3">
 <h3>Prediction Format<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
-<p>A list of integers representing the list of predicted tag for each token, in sequence, for the sentence.</p>
+<p>A array of integers representing the list of predicted tag for each token, in sequence, for the sentence.</p>
 </div>
 </div>
 <div class="section" id="tabular-classification">
@@ -284,20 +287,20 @@ presidents  8
 <p><a class="reference internal" href="datasets.html#dataset-type-tabular"><span class="std std-ref">TABULAR</span></a></p>
 <p>The following optional train arguments are supported:</p>
 <blockquote>
-<div><table border="1" class="docutils">
+<div><table class="docutils align-default">
 <colgroup>
-<col width="17%" />
-<col width="83%" />
+<col style="width: 17%" />
+<col style="width: 83%" />
 </colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td><strong>Train Argument</strong></td>
-<td><strong>Description</strong></td>
+<tbody>
+<tr class="row-odd"><td><p><strong>Train Argument</strong></p></td>
+<td><p><strong>Description</strong></p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">features</span></code></td>
-<td>List of feature columns’ names as a list of strings (defaults to first <code class="docutils literal notranslate"><span class="pre">N-1</span></code> columns in the CSV file)</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">features</span></code></p></td>
+<td><p>List of feature columns’ names as a list of strings (defaults to first <code class="docutils literal notranslate"><span class="pre">N-1</span></code> columns in the CSV file)</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">target</span></code></td>
-<td>Target column name as a string (defaults to the <em>last</em> column in the CSV file)</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">target</span></code></p></td>
+<td><p>Target column name as a string (defaults to the <em>last</em> column in the CSV file)</p></td>
 </tr>
 </tbody>
 </table>
@@ -320,20 +323,20 @@ presidents  8
 <p><a class="reference internal" href="datasets.html#dataset-type-tabular"><span class="std std-ref">TABULAR</span></a></p>
 <p>The following optional train arguments are supported:</p>
 <blockquote>
-<div><table border="1" class="docutils">
+<div><table class="docutils align-default">
 <colgroup>
-<col width="17%" />
-<col width="83%" />
+<col style="width: 17%" />
+<col style="width: 83%" />
 </colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td><strong>Train Argument</strong></td>
-<td><strong>Description</strong></td>
+<tbody>
+<tr class="row-odd"><td><p><strong>Train Argument</strong></p></td>
+<td><p><strong>Description</strong></p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">features</span></code></td>
-<td>List of feature columns’ names as a list of strings (defaults to first <code class="docutils literal notranslate"><span class="pre">N-1</span></code> columns in the CSV file)</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">features</span></code></p></td>
+<td><p>List of feature columns’ names as a list of strings (defaults to first <code class="docutils literal notranslate"><span class="pre">N-1</span></code> columns in the CSV file)</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">target</span></code></td>
-<td>Target column name as a string (defaults to the <em>last</em> column in the CSV file)</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">target</span></code></p></td>
+<td><p>Target column name as a string (defaults to the <em>last</em> column in the CSV file)</p></td>
 </tr>
 </tbody>
 </table>
@@ -362,7 +365,7 @@ presidents  8
         <a href="datasets.html" class="btn btn-neutral float-right" title="Dataset Types" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="using-web-admin.html" class="btn btn-neutral" title="Using Rafiki’s Web Admin" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="using-web-admin.html" class="btn btn-neutral float-left" title="Using Rafiki’s Web Admin" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -371,7 +374,7 @@ presidents  8
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
 
     </p>
   </div>
@@ -388,33 +391,16 @@ presidents  8
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../',
-            VERSION:'',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>
