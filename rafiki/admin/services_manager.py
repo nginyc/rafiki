@@ -383,13 +383,14 @@ class ServicesManager(object):
         try:
             container_service = self._get_container_service_from_service(service)
             self._container_manager.destroy_service(container_service)
-            self._meta_store.mark_service_as_stopped(service)
-            self._meta_store.commit()
         except:
             # Allow exception to be thrown if deleting service fails (maybe concurrent service deletion)
             logger.info('Error while deleting service with ID {} - maybe already deleted'.format(service.id))
             logger.info(traceback.format_exc())
 
+        self._meta_store.mark_service_as_stopped(service)
+        self._meta_store.commit()
+        
     def _create_service(self, service_type, docker_image,
                         replicas=1, environment_vars={}, args=[], 
                         container_port=None, gpus=0):

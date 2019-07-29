@@ -50,12 +50,13 @@ An example:
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A ``W x H`` 2D list representing a grayscale version of the query image. 
+A ``W x H x 3`` 3D array representing a *RGB* version of the query image.
+The query image can be of *any dimensions*.
 
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A size-``k`` list of floats, representing the probabilities of each class, by index, from ``0`` to ``k-1``.
+A size-``k`` array of floats, representing the probabilities of each class, by index, from ``0`` to ``k-1``.
 For example, the float at index 0 corresponds to the probability of class 0.
 
 
@@ -94,12 +95,12 @@ An example:
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A list of strings representing a sentence as a list of tokens in that sentence.
+An array of strings representing a sentence as a list of tokens in that sentence.
 
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A list of integers representing the list of predicted tag for each token, in sequence, for the sentence.
+A array of integers representing the list of predicted tag for each token, in sequence, for the sentence.
 
 TABULAR_CLASSIFICATION
 --------------------------------------------------------------------

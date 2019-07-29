@@ -74,12 +74,12 @@ class TrainWorker():
     def stop(self):
         self._notify_stop()
 
-        # If worker is currently running a trial, mark it has terminated
+        # If worker is currently running a trial, mark it has errored
         try:
             if self._trial_id is not None: 
-                self._monitor.mark_trial_as_terminated(self._trial_id)
+                self._monitor.mark_trial_as_errored(self._trial_id)
         except:
-            logger.error('Error marking trial as terminated:')
+            logger.error('Error marking trial as errored:')
             logger.error(traceback.format_exc())
 
         # Run model class teardown
@@ -224,6 +224,7 @@ class _SubTrainJobMonitor():
         self.model_class = None
         self.train_dataset_path = None
         self.val_dataset_path = None
+        self.train_args = None
         self._meta_store = meta_store or MetaStore()
         self._service_id = service_id
         self._data_store = FileDataStore()
@@ -272,12 +273,6 @@ class _SubTrainJobMonitor():
         with self._meta_store:
             trial = self._meta_store.get_trial(trial_id)
             self._meta_store.mark_trial_as_completed(trial, score, store_params_id)
-
-    def mark_trial_as_terminated(self, trial_id):
-        logger.info('Marking trial as terminated in store...')
-        with self._meta_store:
-            trial = self._meta_store.get_trial(trial_id)
-            self._meta_store.mark_trial_as_terminated(trial)
 
     def log_to_trial(self, trial_id, log_line, log_lvl):
         with self._meta_store:

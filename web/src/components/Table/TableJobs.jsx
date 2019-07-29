@@ -65,7 +65,6 @@ function CustomTable({ ...props }) {
                       <Pageview /> 
                     </IconButton>
                   </TableCell>
-                  <TableCell>{x.id}</TableCell>
                   <TableCell>{x.app}</TableCell>
                   <TableCell>{x.app_version}</TableCell>
                   <TableCell>{x.task}</TableCell>

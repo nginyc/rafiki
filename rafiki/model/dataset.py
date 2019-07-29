@@ -21,6 +21,7 @@ from PIL import Image
 import numpy as np
 import random
 import logging
+from typing import List
 import os
 import traceback
 import zipfile
@@ -123,7 +124,7 @@ class DatasetUtils():
             :param images: (N x width x height x channels) array-like of images to resize
             :param int image_size: width *and* height to resize all images to
             :param str mode: Pillow image mode to convert all images to. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes
-            :returns: numpy array of output images as a (N x width x height x channels) numpy
+            :returns: output images as a (N x width x height x channels) numpy array
         '''
         images = [Image.fromarray(np.asarray(x, dtype=np.uint8)) for x in images]
 
@@ -134,6 +135,19 @@ class DatasetUtils():
             images = [x.convert(mode) for x in images]
 
         return np.asarray([np.asarray(x) for x in images])
+
+    def load_images(self, image_paths: List[str], mode: str = 'RGB') -> np.ndarray:
+        '''
+            Loads multiple images from the local filesystem.
+            Assumes that images are of the same dimensions.
+
+            :param images: Paths to images
+            :param str mode: Pillow image mode to convert all images to. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes
+            :returns: images as a (N x width x height x channels) numpy array
+        '''
+        pil_images = _load_pil_images(image_paths, mode=mode)
+        images = np.array([np.asarray(x) for x in pil_images])
+        return images
 
 class ModelDataset():
     '''
@@ -284,13 +298,8 @@ class ImageFilesDataset(ModelDataset):
                 raise InvalidDatasetFormatException()
 
             # Load images from files
-            pil_images = []
-            for image_path in image_paths:
-                full_image_path = os.path.join(d, image_path)
-                with open(full_image_path, 'rb') as f:
-                    encoded = io.BytesIO(f.read())
-                    pil_image = Image.open(encoded).convert(mode)
-                    pil_images.append(pil_image)
+            full_image_paths = [os.path.join(d, x) for x in image_paths]
+            pil_images = _load_pil_images(full_image_paths, mode=mode)
 
         num_classes = len(set(image_classes))
         num_samples = len(image_paths)
@@ -335,3 +344,13 @@ class AudioFilesDataset(ModelDataset):
         df = pandas.read_csv(audios_csv_path, encoding='utf-8', na_filter=False)
 
         return df
+        
+def _load_pil_images(image_paths, mode='RGB'):
+    pil_images = []
+    for image_path in image_paths:
+        with open(image_path, 'rb') as f:
+            encoded = io.BytesIO(f.read())
+            pil_image = Image.open(encoded).convert(mode)
+            pil_images.append(pil_image)
+    
+    return pil_images
