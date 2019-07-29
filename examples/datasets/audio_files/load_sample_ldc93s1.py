@@ -75,4 +75,4 @@ def _write_dataset(dir_path, out_dataset_path):
     os.rename(out_path, out_dataset_path) # Remove additional trailing `.zip`
 
 if __name__ == "__main__":
-    load_sample_ldc9351('data/ldc93s1')
+    load_sample_ldc93s1('data/ldc93s1')
