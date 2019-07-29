@@ -27,6 +27,79 @@ from rafiki.model.dev import test_model_class
 
 FLAGS = tf.app.flags.FLAGS
 
+# Clear all set TF flags
+flags_dict = FLAGS._flags()
+keys_list = [keys for keys in flags_dict]
+for keys in keys_list:
+    FLAGS.__delattr__(keys)
+
+# Importer
+# ========
+
+f = tf.app.flags
+
+f.DEFINE_integer('feature_win_len', 32, 'feature extraction audio window length in milliseconds')
+f.DEFINE_integer('feature_win_step', 20, 'feature extraction window step length in milliseconds')
+f.DEFINE_integer('audio_sample_rate', 16000, 'sample rate value expected by model')
+
+# Global Constants
+# ================
+
+f.DEFINE_float('dropout_rate', 0.05, 'dropout rate for feedforward layers')
+f.DEFINE_float('dropout_rate2', -1.0, 'dropout rate for layer 2 - defaults to dropout_rate')
+f.DEFINE_float('dropout_rate3', -1.0, 'dropout rate for layer 3 - defaults to dropout_rate')
+f.DEFINE_float('dropout_rate4', 0.0, 'dropout rate for layer 4 - defaults to 0.0')
+f.DEFINE_float('dropout_rate5', 0.0, 'dropout rate for layer 5 - defaults to 0.0')
+f.DEFINE_float('dropout_rate6', -1.0, 'dropout rate for layer 6 - defaults to dropout_rate')
+
+f.DEFINE_float('relu_clip', 20.0, 'ReLU clipping value for non-recurrent layers')
+
+# Adam optimizer(http://arxiv.org/abs/1412.6980) parameters
+
+f.DEFINE_float('beta1', 0.9, 'beta 1 parameter of Adam optimizer')
+f.DEFINE_float('beta2', 0.999, 'beta 2 parameter of Adam optimizer')
+f.DEFINE_float('epsilon', 1e-8, 'epsilon parameter of Adam optimizer')
+
+# Checkpointing
+
+f.DEFINE_string('checkpoint_dir', '',
+                'directory in which checkpoints are stored - defaults to directory "/tmp/deepspeech/checkpoints" within user\'s home')
+f.DEFINE_integer('checkpoint_secs', 600, 'checkpoint saving interval in seconds')
+f.DEFINE_integer('max_to_keep', 3, 'number of checkpoint files to keep - default value is 5')
+
+# Exporting
+
+f.DEFINE_boolean('use_seq_length', True,
+                    'have sequence_length in the exported graph(will make tfcompile unhappy)')
+
+# Reporting
+
+f.DEFINE_integer('report_count', 10,
+                    'number of phrases with lowest WER(best matching) to print out during a WER report')
+
+# Initialization
+
+f.DEFINE_integer('random_seed', 4568, 'default random seed that is used to initialize variables')
+
+# Early Stopping (when PolicyKnob('EARLY_STOP') is used)
+
+f.DEFINE_float('es_dev_ratio', 0.05, 'Proportion of the training set to be used for early stopping validation')
+f.DEFINE_integer('es_steps', 4, 'number of validations to consider for early stopping')
+f.DEFINE_float('es_mean_th', 0.5, 'mean threshold for loss to determine the condition if early stopping is required')
+f.DEFINE_float('es_std_th', 0.5, 'standard deviation threshold for loss to determine the condition if early stopping is required')
+
+# Decoder
+f.DEFINE_string('alphabet_txt_path', 'tfdeepspeech/alphabet.txt',
+                'path to the the alphabets text file')
+f.DEFINE_string('lm_binary_path', 'tfdeepspeech/lm.binary',
+                'path to the language model binary file created with KenLM')
+f.DEFINE_string('lm_trie_path', 'tfdeepspeech/trie',
+                'path to the language model trie file created with native_client/generate_trie')
+f.DEFINE_integer('beam_width', 1024,
+                    'beam width used in the CTC decoder when building candidate transcriptions')
+f.DEFINE_float('lm_alpha', 0.75, 'the alpha hyperparameter of the CTC decoder. Language Model weight.')
+f.DEFINE_float('lm_beta', 1.85, 'the beta hyperparameter of the CTC decoder. Word insertion weight.')
+
 class TfDeepSpeech(BaseModel):
     '''
     Implements a speech recognition neural network model developed by Baidu. It contains five hiddlen layers.
@@ -59,75 +132,6 @@ class TfDeepSpeech(BaseModel):
             'lm_beta': FloatKnob(1.84, 1.86),
             'early_stop': PolicyKnob('EARLY_STOP')
         }
-
-    @staticmethod
-    def create_flags():
-        # Importer
-        # ========
-
-        f = tf.app.flags
-
-        f.DEFINE_integer('feature_win_len', 32, 'feature extraction audio window length in milliseconds')
-        f.DEFINE_integer('feature_win_step', 20, 'feature extraction window step length in milliseconds')
-        f.DEFINE_integer('audio_sample_rate', 16000, 'sample rate value expected by model')
-
-        # Global Constants
-        # ================
-
-        f.DEFINE_float('dropout_rate', 0.05, 'dropout rate for feedforward layers')
-        f.DEFINE_float('dropout_rate2', -1.0, 'dropout rate for layer 2 - defaults to dropout_rate')
-        f.DEFINE_float('dropout_rate3', -1.0, 'dropout rate for layer 3 - defaults to dropout_rate')
-        f.DEFINE_float('dropout_rate4', 0.0, 'dropout rate for layer 4 - defaults to 0.0')
-        f.DEFINE_float('dropout_rate5', 0.0, 'dropout rate for layer 5 - defaults to 0.0')
-        f.DEFINE_float('dropout_rate6', -1.0, 'dropout rate for layer 6 - defaults to dropout_rate')
-
-        f.DEFINE_float('relu_clip', 20.0, 'ReLU clipping value for non-recurrent layers')
-
-        # Adam optimizer(http://arxiv.org/abs/1412.6980) parameters
-
-        f.DEFINE_float('beta1', 0.9, 'beta 1 parameter of Adam optimizer')
-        f.DEFINE_float('beta2', 0.999, 'beta 2 parameter of Adam optimizer')
-        f.DEFINE_float('epsilon', 1e-8, 'epsilon parameter of Adam optimizer')
-
-        # Checkpointing
-
-        f.DEFINE_string('checkpoint_dir', '',
-                        'directory in which checkpoints are stored - defaults to directory "/tmp/deepspeech/checkpoints" within user\'s home')
-        f.DEFINE_integer('checkpoint_secs', 600, 'checkpoint saving interval in seconds')
-        f.DEFINE_integer('max_to_keep', 3, 'number of checkpoint files to keep - default value is 5')
-
-        # Exporting
-
-        f.DEFINE_boolean('use_seq_length', True,
-                         'have sequence_length in the exported graph(will make tfcompile unhappy)')
-
-        # Reporting
-
-        f.DEFINE_integer('report_count', 10,
-                         'number of phrases with lowest WER(best matching) to print out during a WER report')
-
-        # Initialization
-
-        f.DEFINE_integer('random_seed', 4568, 'default random seed that is used to initialize variables')
-
-        # Early Stopping (when PolicyKnob('EARLY_STOP') is used)
-
-        f.DEFINE_float('es_dev_ratio', 0.05, 'Proportion of the training set to be used for early stopping validation')
-        f.DEFINE_integer('es_steps', 4, 'number of validations to consider for early stopping')
-        f.DEFINE_float('es_mean_th', 0.5, 'mean threshold for loss to determine the condition if early stopping is required')
-        f.DEFINE_float('es_std_th', 0.5, 'standard deviation threshold for loss to determine the condition if early stopping is required')
-
-        # Decoder
-        f.DEFINE_string('alphabet_txt_path', 'tfdeepspeech/alphabet.txt',
-                        'path to the the alphabets text file')
-        f.DEFINE_string('lm_binary_path', 'tfdeepspeech/lm.binary',
-                        'path to the language model binary file created with KenLM')
-        f.DEFINE_string('lm_trie_path', 'tfdeepspeech/trie',
-                        'path to the language model trie file created with native_client/generate_trie')
-        f.DEFINE_integer('beam_width', 1024,
-                         'beam width used in the CTC decoder when building candidate transcriptions')
-        f.DEFINE_float('lm_alpha', 0.75, 'the alpha hyperparameter of the CTC decoder. Language Model weight.')
-        f.DEFINE_float('lm_beta', 1.85, 'the beta hyperparameter of the CTC decoder. Word insertion weight.')
 
     def initialize_globals(self):
 
@@ -200,8 +204,6 @@ class TfDeepSpeech(BaseModel):
                                            inter_op_parallelism_threads=0, intra_op_parallelism_threads=0)
         self._sess_config.gpu_options.allow_growth = True
 
-        self.create_flags()
-        self.f = tf.app.flags.FLAGS
         self.c = ConfigSingleton()
         self.initialize_globals()
 
@@ -1072,13 +1074,6 @@ class TfDeepSpeech(BaseModel):
             predictions.append(decoded[0][1])
 
         return predictions
-
-    def destroy(self):
-        flags_dict = FLAGS._flags()
-        keys_list = [keys for keys in flags_dict]
-        for keys in keys_list:
-            FLAGS.__delattr__(keys)
-        pass
 
     def dump_parameters(self):
         r'''
