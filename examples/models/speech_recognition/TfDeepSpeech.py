@@ -49,8 +49,7 @@ class TfDeepSpeech(BaseModel):
     def get_knob_config():
         return {
             'epochs': FixedKnob(3),
-            # batch_size should be no larger than the number of samples in the dataset
-            'batch_size': CategoricalKnob([1]),
+            'batch_size': CategoricalKnob([2, 4, 8, 16, 32]),
             'learning_rate': FloatKnob(1e-5, 1e-2, is_exp=True),
             'n_hidden': CategoricalKnob([128, 256, 512, 1024, 2048]),
             # lm_alpha and lm_beta can be used for further hyperparameter tuning
@@ -260,11 +259,17 @@ class TfDeepSpeech(BaseModel):
             features, features_len = self.audiofile_to_features(wav_bytes)
             return features, features_len, tf.SparseTensor(*transcript)
 
-        batch_size = self._knobs.get('batch_size')
         Config = self.c
 
         dataset = utils.dataset.load_dataset_of_audio_files(dataset_uri, dataset_dir)
         df = dataset.df
+        
+        # Make batch size at most length of dataset 
+        batch_size = self._knobs.get('batch_size')
+        dataset_size = len(df)
+        if batch_size > dataset_size:
+            logger.log(f'Capping batch size to {dataset_size} (length of dataset)...')
+            batch_size = dataset_size
 
         Config.alphabet = Alphabet(FLAGS.alphabet_txt_path)
 
@@ -1083,7 +1088,6 @@ class TfDeepSpeech(BaseModel):
 
         Config = self.c
         tf.reset_default_graph()
-        batch_size = self._knobs.get('batch_size')
         input, outputs, _ = self.create_inference_graph(batch_size=-1, n_steps=-1)
         output_names_tensor = [tensor.op.name for tensor in outputs.values() if isinstance(tensor, Tensor)]
         output_names_ops = [op.name for op in outputs.values() if isinstance(op, Operation)]
