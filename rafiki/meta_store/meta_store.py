@@ -179,6 +179,7 @@ class MetaStore(object):
 
     def mark_train_job_as_errored(self, train_job):
         train_job.status = TrainJobStatus.ERRORED
+        train_job.datetime_stopped = datetime.utcnow()
         self._session.add(train_job)
 
     def mark_train_job_as_stopped(self, train_job):

@@ -29,7 +29,7 @@ from .container_manager import ContainerManager, InvalidServiceRequestError, Con
 
 LABEL_AVAILBLE_GPUS = 'available_gpus'
 LABEL_NUM_SERVICES = 'num_services'
-RETRY_WAIT_SECS = 1
+RETRY_WAIT_SECS = 2
 RETRY_TIMES = 5
 
 logger = logging.getLogger(__name__)
@@ -117,7 +117,7 @@ class DockerSwarmContainerManager(ContainerManager):
 
     def _destroy_sevice(self, service_id):
         service = self._client.services.get(service_id)
-        service.remove()
+        _retry(service.remove)()
 
     def _create_service(self, deployment, service_name, docker_image, replicas, 
                         args, environment_vars, mounts, publish_port):
@@ -224,6 +224,7 @@ def _retry(func):
 
                 # Retried so many times but still errors - raise exception    
                 if no == RETRY_TIMES:
+                    logger.info(f'Giving up on `{func} call...')
                     raise e
                 
             logger.info(f'Retrying {func} after {wait_secs}s...')

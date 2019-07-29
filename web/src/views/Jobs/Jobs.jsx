@@ -159,7 +159,7 @@ class JobsList extends React.Component {
               <CircularProgress /> :
               <TableJobs
               tableHeaderColor="primary"
-              tableHead={["#","ID", "App", "App version", "Task", "Budget", "Start time", "Stop time", "Phase", "Status"]}
+              tableHead={["", "App", "App version", "Task", "Budget", "Started", "Stopped", "Status"]}
               tableData={ tableData }
               appUtils = { appUtils }
             />

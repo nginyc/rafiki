@@ -107,8 +107,8 @@ class Details extends React.Component {
   async componentDidMount() {
     const { appUtils: { rafikiClient, showError }, app, appVersion } = this.props;
     try {
-      const trials = await rafikiClient.getTrialsOfTrainJob(app, appVersion);
-      this.setState({ trials });
+      const [trials, trainJob] = await Promise.all([rafikiClient.getTrialsOfTrainJob(app, appVersion), rafikiClient.getTrainJob(app, appVersion)]);
+      this.setState({ trials, trainJob });
     } catch (error) {
       showError(error, 'Failed to retrieve trials for train job');
     }
@@ -131,7 +131,7 @@ class Details extends React.Component {
   };
 
   render() {
-
+    const { trainJob } = this.state;
     const { classes } = this.props;
     const { app, appVersion, appUtils } = this.props
 
@@ -142,12 +142,12 @@ class Details extends React.Component {
             <CardHeader color="primary">
               <h4 className={classes.cardTitleWhite}>Selected Train Job</h4>
             </CardHeader>
-            { app !== null && appVersion !== null &&
+            { trainJob && app && appVersion !== null &&
             (<CardBody>
               <Table
                 tableHeaderColor="primary"
-                tableHead={["App", "App Version"]}
-                tableData={[[app, appVersion]]}
+                tableHead={["ID", "App", "App Version"]}
+                tableData={[[trainJob.id, app, appVersion]]}
               />
             </CardBody>)
             }
@@ -162,7 +162,7 @@ class Details extends React.Component {
               { !this.state.trials ? <CircularProgress /> : 
               <TableTrials
                 tableHeaderColor="primary"
-                tableHead={["#", "ID", "Model", "Score", "Status", "Start time", "Stop time", "Duration"]}
+                tableHead={["", "Model", "Trial No", "Score", "Status", "Started", "Stopped", "Duration"]}
                 tableData={this.state.trials}
                 appUtils={appUtils}
               />

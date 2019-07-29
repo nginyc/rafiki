@@ -76,7 +76,7 @@ class BaseAdvisor(abc.ABC):
     
     def __init__(self, knob_config: KnobConfig, budget: BudgetOption):
         self.knob_config = knob_config
-        self.total_train_hours = budget.get(BudgetOption.TIME_HOURS, DEFAULT_TRAIN_HOURS)
+        self.total_train_hours = float(budget.get(BudgetOption.TIME_HOURS, DEFAULT_TRAIN_HOURS))
         self.max_trials = budget.get(BudgetOption.MODEL_TRIAL_COUNT, DEFAULT_MAX_TRIALS)
 
         # Keep track of time budget

@@ -183,7 +183,7 @@ class Admin(object):
     ####################################
 
     def create_train_job(self, user_id, app, task, train_dataset_id, 
-                        val_dataset_id, budget, model_ids, train_args):
+                        val_dataset_id, budget, model_ids, train_args={}):
         
         # Ensure there is no existing train job for app
         train_jobs = self._meta_store.get_train_jobs_by_app(user_id, app)
