@@ -115,8 +115,10 @@ class RafikiClient {
    * Models
    * ***************************************/
 
-  async getAvailableModels() {
-    const models = await this._get('/models/available')
+  async getAvailableModels(task) {
+    const models = await this._get('/models/available', {
+      task
+    });
     return models
   }
 
@@ -142,6 +144,15 @@ class RafikiClient {
     });
     const trainJobs = data.map((x) => this._toTrainJob(x));
     return trainJobs;
+  }
+
+  /*
+    Get a train job associated with an app & version
+  */
+  async getTrainJob(app, appVersion = -1) {
+    const data = await this._get(`/train_jobs/${app}/${appVersion}`);
+    const trainJob = data;
+    return trainJob;
   }
 
   /*
@@ -232,10 +243,15 @@ class RafikiClient {
   }
   
    _toDate(dateString) {
-    return new Date(Date.parse(dateString));
+    const timestamp = Date.parse(dateString);
+    if (isNaN(timestamp)) {
+      return null;
+    }
+
+    return new Date(timestamp);
   }
 
-  _initializeStorage(storage?) {
+  _initializeStorage(storage) {
     if (storage) {
       return storage;
     } else if (window && window.localStorage) {
