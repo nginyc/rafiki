@@ -264,10 +264,11 @@ class MetaStore(object):
     # Inference Jobs
     ####################################
     
-    def create_inference_job(self, user_id, train_job_id):
+    def create_inference_job(self, user_id, train_job_id, budget):
         inference_job = InferenceJob(
             user_id=user_id,
-            train_job_id=train_job_id
+            train_job_id=train_job_id,
+            budget=budget
         )
         self._session.add(inference_job)
         return inference_job
