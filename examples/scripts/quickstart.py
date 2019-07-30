@@ -25,7 +25,7 @@ import os
 
 from rafiki.client import Client
 from rafiki.config import SUPERADMIN_EMAIL
-from rafiki.constants import BudgetOption, InferenceJobStatus, ModelDependency
+from rafiki.constants import BudgetOption, InferenceBudgetOption, InferenceJobStatus, ModelDependency
 from rafiki.model import utils
 
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
@@ -130,7 +130,7 @@ if __name__ == '__main__':
     parser.add_argument('--web_admin_port', type=int, default=os.environ.get('WEB_ADMIN_EXT_PORT', 3001), help='Port for Rafiki Web Admin on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
-    parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
+    parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use for training')
     parser.add_argument('--hours', type=float, default=0.1, help='How long the train job should run for (in hours)') # 6min
     parser.add_argument('--query_path', type=str, 
                         default='examples/data/image_classification/fashion_mnist_test_1.png,examples/data/image_classification/fashion_mnist_test_2.png', 

@@ -9,6 +9,8 @@ rafiki.constants
 
 .. autoclass:: rafiki.constants.BudgetOption
 
+.. autoclass:: rafiki.constants.InferenceBudgetOption
+
 .. autoclass:: rafiki.constants.UserType
 
 .. autoclass:: rafiki.constants.ModelDependency

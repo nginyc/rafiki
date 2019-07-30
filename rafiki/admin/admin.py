@@ -437,7 +437,7 @@ class Admin(object):
     # Inference Job
     ####################################
 
-    def create_inference_job(self, user_id, app, app_version):
+    def create_inference_job(self, user_id, app, app_version, budget):
         train_job = self._meta_store.get_train_job_by_app_version(user_id, app, app_version=app_version)
         if train_job is None:
             raise InvalidTrainJobError('Have you started a train job for this app?')
@@ -455,10 +455,11 @@ class Admin(object):
         if len(best_trials) == 0:
             raise InvalidTrainJobError('Train job has no trials with saved models!')
 
-        # Create inference & sub inference jobs in DB
+        # Create inference job in DB
         inference_job = self._meta_store.create_inference_job(
             user_id=user_id,
-            train_job_id=train_job.id
+            train_job_id=train_job.id,
+            budget=budget
         )
         self._meta_store.commit()
 
