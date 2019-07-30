@@ -29,8 +29,8 @@ from rafiki.model import load_model_class, BaseModel
 from rafiki.advisor import Proposal
 from rafiki.param_store import FileParamStore
 from rafiki.predictor import Query, Prediction
-from rafiki.cache import InferenceCache
-from rafiki.cache import RQueue
+from rafiki.redis import InferenceCache as RedisInferenceCache
+from rafiki.kafka import InferenceCache as KafkaInferenceCache
 
 LOOP_SLEEP_SECS = 0.1
 PREDICT_BATCH_SIZE = 32
@@ -49,17 +49,17 @@ class InferenceWorker():
         self._redis_host = os.environ['REDIS_HOST']
         self._redis_port = os.environ['REDIS_PORT']
         self._batch_size = PREDICT_BATCH_SIZE
-        self._inference_cache: InferenceCache = None
+        self._redis_cache: RedisInferenceCache = None
         self._inference_job_id = None
         self._model_inst: BaseModel = None
         self._proposal: Proposal = None
         self._store_params_id = None
         self._py_model_class: Type[BaseModel] = None
-        self._queue = RQueue()
+        self._kafka_cache = KafkaInferenceCache()
 
     def start(self):
         self._pull_job_info()
-        self._inference_cache = InferenceCache(self._inference_job_id, 
+        self._redis_cache = RedisInferenceCache(self._inference_job_id, 
                                             self._redis_host, 
                                             self._redis_port)
 
@@ -138,11 +138,10 @@ class InferenceWorker():
 
     def _notify_start(self):
         superadmin_client().send_event('inference_job_worker_started', inference_job_id=self._inference_job_id)
-        self._inference_cache.add_worker(self._worker_id)
+        self._redis_cache.add_worker(self._worker_id)
 
     def _fetch_queries(self) -> List[Query]:
-        queries = self._queue.pop_queries_for_worker(self._worker_id, self._batch_size)
-        # queries = self._inference_cache.pop_queries_for_worker(self._worker_id, self._batch_size)
+        queries = self._kafka_cache.pop_queries_for_worker(self._worker_id, self._batch_size)
         return queries
 
     def _predict(self, queries: List[Query]) -> List[Prediction]:
@@ -160,9 +159,8 @@ class InferenceWorker():
         return predictions
 
     def _submit_predictions(self, predictions: List[Prediction]):
-        # self._inference_cache.add_predictions_for_worker(self._worker_id, predictions)
-        self._queue.add_predictions_for_worker(self._worker_id, predictions)
+        self._kafka_cache.add_predictions_for_worker(self._worker_id, predictions)
 
     def _notify_stop(self):
-        self._inference_cache.delete_worker(self._worker_id)
+        self._redis_cache.delete_worker(self._worker_id)
         superadmin_client().send_event('inference_job_worker_stopped', inference_job_id=self._inference_job_id)

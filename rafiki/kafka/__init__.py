@@ -17,17 +17,4 @@
 # under the License.
 #
 
-LOG_FILE_PATH=$PWD/logs/start_kafka.log
-
-source ./scripts/utils.sh
-
-title "Starting Rafiki's Kafka..."
-(docker run --rm --name $KAFKA_HOST \
-  --network $DOCKER_NETWORK \
-  -e KAFKA_ZOOKEEPER_CONNECT=$ZOOKEEPER_HOST:$ZOOKEEPER_PORT \
-  -e KAFKA_ADVERTISED_HOST_NAME=$KAFKA_HOST \
-  -e KAFKA_ADVERTISED_PORT=$KAFKA_PORT \
-  -p $KAFKA_EXT_PORT:$KAFKA_PORT \
-  -d $IMAGE_KAFKA \
-  &> $LOG_FILE_PATH) &
-ensure_stable "Rafiki's Kafka" $LOG_FILE_PATH 30
+from .inference_cache import InferenceCache

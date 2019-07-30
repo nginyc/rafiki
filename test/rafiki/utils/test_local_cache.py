@@ -20,8 +20,7 @@
 import pytest
 import numpy as np
 
-from rafiki.cache.local_cache import LocalCache
-
+from rafiki.utils.local_cache import LocalCache
 from test.utils import global_setup
 
 class TestLocalCache():

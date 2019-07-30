@@ -1,7 +1,23 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import os
-import json
-import uuid
-import kafka
 from kafka import KafkaConsumer
 from kafka import KafkaProducer 
 from kafka.errors import KafkaError
@@ -9,6 +25,7 @@ from kafka import TopicPartition
 import pickle
 import logging
 from typing import Union, List
+
 from rafiki.predictor import Prediction, Query
 
 logger = logging.getLogger(__name__)
@@ -17,7 +34,11 @@ RUNNING_INFERENCE_WORKERS = 'INFERENCE_WORKERS'
 QUERIES_QUEUE = 'QUERIES'
 PREDICTIONS_QUEUE = 'PREDICTIONS'
 
-class RQueue(object):
+class InferenceCache(object):
+    '''
+    Caches queries & predictions to facilitate communication between predictor & inference workers.
+    '''
+
     def __init__(self, hosts=os.environ.get('KAFKA_HOST', 'localhost'), ports=os.environ.get('KAFKA_PORT', 9092)):
         hostlist = hosts.split(',')
         portlist = ports.split(',')
@@ -30,7 +51,7 @@ class RQueue(object):
         for prediction in predictions:
             name = f'workers_{worker_id}_{prediction.query_id}_prediction'
             prediction = pickle.dumps(prediction)
-            self.producer.send(name,key=name.encode('utf-8'),value=prediction)
+            self.producer.send(name, key=name.encode('utf-8'),value=prediction)
             self.producer.flush()
 
     def take_prediction_for_worker(self, worker_id: str, query_id: str) -> Union[Prediction, None]:
