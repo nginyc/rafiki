@@ -405,7 +405,7 @@ Refer to <a class="reference internal" href="../user/model-development.html#conf
 the train job will train models associated with the task</p></li>
 <li><p><strong>train_dataset_id</strong> – ID of the train dataset, previously created on Rafiki</p></li>
 <li><p><strong>val_dataset_id</strong> – ID of the validation dataset, previously created on Rafiki</p></li>
-<li><p><strong>budget</strong> – Budget for model training</p></li>
+<li><p><strong>budget</strong> – Budget for train job</p></li>
 <li><p><strong>models</strong> – List of IDs of model to use for train job. Defaults to all available models</p></li>
 <li><p><strong>train_args</strong> – Additional arguments to pass to models during training, if any. 
 Refer to the task’s specification for appropriate arguments</p></li>
@@ -608,7 +608,7 @@ imported and passed into this method.</p>
 
 <dl class="method">
 <dt id="rafiki.client.Client.create_inference_job">
-<code class="sig-name descname">create_inference_job</code><span class="sig-paren">(</span><em class="sig-param">app: str</em>, <em class="sig-param">app_version: int = -1</em><span class="sig-paren">)</span> &#x2192; Dict[str, Any]<a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.create_inference_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_inference_job" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">create_inference_job</code><span class="sig-paren">(</span><em class="sig-param">app: str</em>, <em class="sig-param">app_version: int = -1</em>, <em class="sig-param">budget: Dict[rafiki.constants.InferenceBudgetOption</em>, <em class="sig-param">Any] = None</em><span class="sig-paren">)</span> &#x2192; Dict[str, Any]<a class="reference internal" href="../../_modules/rafiki/client/client.html#Client.create_inference_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.client.Client.create_inference_job" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates and starts a inference job on Rafiki with the best-scoring trials of the associated train job. 
 The train job must have the status of <code class="docutils literal notranslate"><span class="pre">STOPPED</span></code>.The inference job would be tagged with the train job’s app and app version. 
 Throws an error if an inference job of the same train job is already running.</p>
@@ -619,12 +619,31 @@ Throws an error if an inference job of the same train job is already running.</p
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>app</strong> – Name of the app identifying the train job to use</p></li>
 <li><p><strong>app_version</strong> – Version of the app identifying the train job to use</p></li>
+<li><p><strong>budget</strong> – Budget for inference job</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>Created inference job as dictionary</p>
 </dd>
 </dl>
+<p><code class="docutils literal notranslate"><span class="pre">budget</span></code> should be a dictionary of <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">&lt;budget_type&gt;:</span> <span class="pre">&lt;budget_amount&gt;</span> <span class="pre">}</span></code>, where 
+<code class="docutils literal notranslate"><span class="pre">&lt;budget_type&gt;</span></code> is one of <a class="reference internal" href="rafiki.constants.html#rafiki.constants.InferenceBudgetOption" title="rafiki.constants.InferenceBudgetOption"><code class="xref py py-class docutils literal notranslate"><span class="pre">rafiki.constants.InferenceBudgetOption</span></code></a> and 
+<code class="docutils literal notranslate"><span class="pre">&lt;budget_amount&gt;</span></code> specifies the amount for the associated budget option.</p>
+<p>The following describes the budget options available:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>Budget Option</strong></p></td>
+<td><p><strong>Description</strong></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">GPU_COUNT</span></code></p></td>
+<td><p>No. of GPUs to allocate for inference, across all trials. Defaults to 0.</p></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">

@@ -175,7 +175,8 @@
 <span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">wraps</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Type</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Any</span>
 
-<span class="kn">from</span> <span class="nn">rafiki.constants</span> <span class="k">import</span> <span class="n">ModelAccessRight</span><span class="p">,</span> <span class="n">ModelDependencies</span><span class="p">,</span> <span class="n">Budget</span><span class="p">,</span> <span class="n">BudgetOption</span><span class="p">,</span> <span class="n">UserType</span>
+<span class="kn">from</span> <span class="nn">rafiki.constants</span> <span class="k">import</span> <span class="n">ModelAccessRight</span><span class="p">,</span> <span class="n">ModelDependencies</span><span class="p">,</span> <span class="n">Budget</span><span class="p">,</span> <span class="n">BudgetOption</span><span class="p">,</span> \
+                            <span class="n">InferenceBudget</span><span class="p">,</span> <span class="n">InferenceBudgetOption</span><span class="p">,</span> <span class="n">UserType</span>
 <span class="kn">from</span> <span class="nn">rafiki.model</span> <span class="k">import</span> <span class="n">Params</span><span class="p">,</span> <span class="n">BaseModel</span>
 
 <span class="k">class</span> <span class="nc">RafikiConnectionError</span><span class="p">(</span><span class="ne">ConnectionError</span><span class="p">):</span> <span class="k">pass</span>
@@ -512,7 +513,7 @@
 <span class="sd">            the train job will train models associated with the task</span>
 <span class="sd">        :param train_dataset_id: ID of the train dataset, previously created on Rafiki</span>
 <span class="sd">        :param val_dataset_id: ID of the validation dataset, previously created on Rafiki</span>
-<span class="sd">        :param budget: Budget for model training</span>
+<span class="sd">        :param budget: Budget for train job</span>
 <span class="sd">        :param models: List of IDs of model to use for train job. Defaults to all available models</span>
 <span class="sd">        :param train_args: Additional arguments to pass to models during training, if any. </span>
 <span class="sd">            Refer to the task&#39;s specification for appropriate arguments  </span>
@@ -547,7 +548,7 @@
         <span class="c1"># Have defaults for budget</span>
         <span class="n">budget</span> <span class="o">=</span> <span class="p">{</span>
             <span class="n">BudgetOption</span><span class="o">.</span><span class="n">TIME_HOURS</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span>
-            <span class="n">BudgetOption</span><span class="o">.</span><span class="n">GPU_COUNT</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="n">BudgetOption</span><span class="o">.</span><span class="n">GPU_COUNT</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
             <span class="o">**</span><span class="n">budget</span>
         <span class="p">}</span>
 
@@ -697,7 +698,7 @@
     <span class="c1"># Inference Jobs</span>
     <span class="c1">####################################</span>
 
-<div class="viewcode-block" id="Client.create_inference_job"><a class="viewcode-back" href="../../../src/python/rafiki.client.html#rafiki.client.Client.create_inference_job">[docs]</a>    <span class="k">def</span> <span class="nf">create_inference_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">app_version</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<div class="viewcode-block" id="Client.create_inference_job"><a class="viewcode-back" href="../../../src/python/rafiki.client.html#rafiki.client.Client.create_inference_job">[docs]</a>    <span class="k">def</span> <span class="nf">create_inference_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">app_version</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">budget</span><span class="p">:</span> <span class="n">InferenceBudget</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Creates and starts a inference job on Rafiki with the best-scoring trials of the associated train job. </span>
 <span class="sd">        The train job must have the status of ``STOPPED``.The inference job would be tagged with the train job&#39;s app and app version. </span>
@@ -709,11 +710,32 @@
 
 <span class="sd">        :param app: Name of the app identifying the train job to use</span>
 <span class="sd">        :param app_version: Version of the app identifying the train job to use</span>
+<span class="sd">        :param budget: Budget for inference job</span>
 <span class="sd">        :returns: Created inference job as dictionary</span>
+
+<span class="sd">        ``budget`` should be a dictionary of ``{ &lt;budget_type&gt;: &lt;budget_amount&gt; }``, where </span>
+<span class="sd">        ``&lt;budget_type&gt;`` is one of :class:`rafiki.constants.InferenceBudgetOption` and </span>
+<span class="sd">        ``&lt;budget_amount&gt;`` specifies the amount for the associated budget option.</span>
+<span class="sd">        </span>
+<span class="sd">        The following describes the budget options available:</span>
+
+<span class="sd">        =====================       =====================</span>
+<span class="sd">        **Budget Option**             **Description**</span>
+<span class="sd">        ---------------------       ---------------------</span>
+<span class="sd">        ``GPU_COUNT``               No. of GPUs to allocate for inference, across all trials. Defaults to 0.</span>
+<span class="sd">        =====================       =====================</span>
 <span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="c1"># Have defaults for budget</span>
+        <span class="n">budget</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">InferenceBudgetOption</span><span class="o">.</span><span class="n">GPU_COUNT</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="o">**</span><span class="p">(</span><span class="n">budget</span> <span class="ow">or</span> <span class="p">{})</span>
+        <span class="p">}</span>
+
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post</span><span class="p">(</span><span class="s1">&#39;/inference_jobs&#39;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span>
             <span class="s1">&#39;app&#39;</span><span class="p">:</span> <span class="n">app</span><span class="p">,</span>
-            <span class="s1">&#39;app_version&#39;</span><span class="p">:</span> <span class="n">app_version</span>
+            <span class="s1">&#39;app_version&#39;</span><span class="p">:</span> <span class="n">app_version</span><span class="p">,</span>
+            <span class="s1">&#39;budget&#39;</span><span class="p">:</span> <span class="n">budget</span>
         <span class="p">})</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
