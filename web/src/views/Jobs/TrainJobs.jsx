@@ -74,7 +74,8 @@ class TrainJobs extends React.Component {
       "train_dataset": "",
       "val_dataset": "",
       "availableDatasets": [],
-      "budget": { "MODEL_TRIAL_COUNT": 2 },
+      "budgetGpus": 0,
+      "budgetHours": 1,
       "models": [],
       "availableModels": [],
       "submit_status": "none" // "none", "submitting", "success", "failed"
@@ -85,7 +86,7 @@ class TrainJobs extends React.Component {
   async componentDidMount() {
     const { appUtils: { rafikiClient, showError } } = this.props;
     try {
-      const availableModels = await rafikiClient.getAvailableModels()
+      const availableModels = await rafikiClient.getAvailableModels('IMAGE_CLASSIFICATION')
       const availableDatasets = await rafikiClient.getDatasets({"task": this.state.task})
       this.setState({availableModels, availableDatasets})
     } catch(error) {
@@ -116,7 +117,10 @@ class TrainJobs extends React.Component {
         "task": this.state.task,
         "train_dataset_id": this.state.train_dataset.id,
         "val_dataset_id": this.state.val_dataset.id,
-        "budget": this.state.budget,
+        "budget": {
+          "GPU_COUNT": parseInt(this.state.budgetGpus),
+          "TIME_HOURS": parseFloat(this.state.budgetHours)
+        },
         "model_ids": this.state.models.map(model=>model.id)
       }
       await rafikiClient.createTrainJob(json_params)
@@ -226,6 +230,24 @@ class TrainJobs extends React.Component {
                       </Select>
                       <FormHelperText>Dataset for Validation</FormHelperText>
                     </FormControl>
+                    <TextField
+                      name="budgetGpus"
+                      onChange={this.handleInputChange}
+                      label="Budget (GPUs)"
+                      value={this.state.budgetGpus}
+                      fullWidth
+                      type="number"
+                      margin="normal"
+                    />
+                    <TextField
+                      name="budgetHours"
+                      onChange={this.handleInputChange}
+                      label="Budget (Hours)"
+                      value={this.state.budgetHours}
+                      fullWidth
+                      type="number"
+                      margin="normal"
+                    />
                     <FormControl fullWidth>
                       <InputLabel htmlFor="model-multiple-checkbox">Models</InputLabel>
                       <Select

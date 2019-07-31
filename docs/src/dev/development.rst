@@ -96,6 +96,9 @@ Running all tests:
 
     ::
 
+        pip install -r rafiki/requirements.txt
+        pip install -r rafiki/advisor/requirements.txt
+        pip install -r test/requirements.txt
         bash scripts/test.sh
 
 
