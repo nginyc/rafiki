@@ -101,7 +101,7 @@ class Predictor():
         # Wait for at least 1 free worker
         worker_ids = []
         while len(worker_ids) == 0:
-            worker_ids = self._inference_cache.get_workers()
+            worker_ids = self._redis_cache.get_workers()
 
         # For each worker, send queries to worker
         pending_queries = set() # {(query_id, worker_id)}
