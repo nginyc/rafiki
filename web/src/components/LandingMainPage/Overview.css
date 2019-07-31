@@ -1,0 +1,220 @@
+.section_copy{
+  -webkit-font-smoothing: antialiased;
+  margin: 0 auto;
+  padding: 100px 20px 100px 20px;
+  position: relative;
+  max-width: 85%;
+  align-items: center;
+  box-shadow: inset 0 200px 200px -200px #fff, inset 0 -200px 200px -200px #fff;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-pack: justify;
+  flex-flow: row wrap;
+  justify-content: space-between;
+  border-bottom: 1px solid #dfdfdf;
+  width: 935px;
+}
+
+.description__text {
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 40px;
+  max-width: 440px;
+  color: #414141;
+  font-family: 'Roboto', sans-serif;
+}
+
+.conversation__description .description__heading {
+  text-align: left;
+  color: #414141;
+  font-family: 'Roboto', sans-serif;
+  /*max-width: 440px;*/
+  font-size: 43px;
+  font-weight: 100;
+  margin: 20px 0;
+  margin-bottom: 10px;
+}
+
+.img-container{
+  width: 45%;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.landing-img{
+  max-width: 100%;
+  margin-left: 5%;
+  text-align: left;
+  width: 100%;
+}
+
+.section_center {
+  -webkit-font-smoothing: antialiased;
+  margin: 0 auto;
+  max-width: none;
+  padding: 50px 20px 100px 20px;
+  position: relative;
+  max-width: 935px;
+  align-items: center;
+  box-shadow: inset 0 200px 200px -200px #fff, inset 0 -200px 200px -200px #fff;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-pack: justify;
+  flex-flow: row wrap;
+  justify-content: space-between;
+  border-bottom: 1px solid #dfdfdf;
+}
+.section_center .img-container {
+  width: 100%;
+  margin-left: 10%;
+  margin-right: 10%;
+}
+.center__description {
+  width: 100%;
+}
+
+.center__description .description__text {
+  font-size: 18px;
+  margin-left: 1%;
+  font-weight: 300;
+  max-width: 100%;
+  line-height: 40px;
+  color: #414141;
+  font-family: 'Roboto', sans-serif;
+  padding-bottom: 50px;
+}
+
+@media only screen and (min-width: 1400px){
+  .section_copy{
+    width: 1050px;
+    margin:0 auto;
+    padding: 100px 20px 100px 20px;
+  }
+}
+
+@media only screen and (max-width: 1139px){
+  .conversation__description .description__heading {
+    font-size: 36px;
+  }
+}
+
+@media only screen and (max-width: 1080px){
+  .section_copy {
+    max-width: 940px;
+    padding-left: 20px;
+  }
+  .section_center {
+    max-width: 940px;
+    padding-left: 20px;
+  }
+}
+
+@media only screen and (min-width: 801px) and (max-width: 1095px){
+  .landing-img{
+      max-width: 95%;
+      text-align: left;
+      width: 90%;
+      margin-left: 0%;
+  }
+  .conversation__description{
+      width: 50%;
+  }
+  .description__text{
+      max-width: 100%;
+  }
+  
+  .img-container{
+      width: 50%;
+      text-align: center;
+  }
+  .img-conatainer img{
+      margin:auto;
+      width: 50%;
+  }
+}
+
+@media only screen and (max-width: 1000px){
+  .conversation__description .description__heading {
+      font-size: 36px;
+      margin-top: 0;
+      text-align: center;
+  }
+
+  .landing-img{
+      max-width: 400px;
+      margin-left: 0%;
+      width: 100%;
+      text-align: center;
+      margin: 0 0 0 0px;
+  }
+  .conversation__description{
+      width: 100% !important;
+      text-align: center;
+  }
+  .description__text{
+      max-width: 100%;
+  }
+  .center__description .description__text {
+    text-align: center;
+  }
+
+  .img-container{
+      max-width: 100%;
+      margin: 0 auto 20px auto;
+      padding: 0px;
+  }
+
+  .img-conatainer img{
+      margin:auto;
+  }
+
+  .section_copy{
+      width: 90%;
+  }
+
+  .section_center{
+    padding: 60px 0px;
+  }
+}
+
+@media only screen and (min-width: 542px) and (max-width: 799px){
+  .landing-img{
+    max-width: 100%;
+    margin-left: 0%;
+    text-align: center;
+  }
+}
+
+@media only screen and (max-width: 480px){
+  .conversation__description{
+      width: 100% !important;
+      text-align: center;
+  }
+  .center__description .description__text {
+    text-align: center;
+  }
+  .img-container{
+      width: 90% !important;
+  }
+  .section_copy{
+      padding: 10px 0 0 0;
+      width: 90%;
+      margin: 0 auto;
+  }
+  .section_center{
+    padding: 10px 0 0 0;
+    width: 90%;
+    margin: 0 auto;
+  }
+  .section_center .img-container {
+    margin: 0 auto 50px auto;
+  }
+  .fullWidthImg{
+    max-width: 400px;
+    margin-left: 0%;
+    width: 100%;
+  }
+}

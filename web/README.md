@@ -1,22 +1,3 @@
-<!--
-    Licensed to the Apache Software Foundation (ASF) under one
-    or more contributor license agreements.  See the NOTICE file
-    distributed with this work for additional information
-    regarding copyright ownership.  The ASF licenses this file
-    to you under the Apache License, Version 2.0 (the
-    "License"); you may not use this file except in compliance
-    with the License.  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing,
-    software distributed under the License is distributed on an
-    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-    KIND, either express or implied.  See the License for the
-    specific language governing permissions and limitations
-    under the License.
--->
-
 # Rafiki Dashboard
 
 ## How to run the app
@@ -31,7 +12,6 @@ yarn start
 rafiki $ source env.sh
 ```
 
-
 ```
 rafiki/web $ vim .env
 ```
@@ -41,6 +21,18 @@ PORT=$WEB_ADMIN_EXT_PORT
 NODE_PATH=./src
 REACT_APP_API_POINT_HOST=$RAFIKI_ADDR
 REACT_APP_API_POINT_PORT=$ADMIN_EXT_PORT
+```
+
+## How to SET input path
+
+- https://facebook.github.io/create-react-app/docs/importing-a-component#absolute-imports
+
+## How to SET docker to auto recompile when file changed
+- https://stackoverflow.com/questions/46379727/react-webpack-not-rebuilding-when-edited-file-outside-docker-container-on-mac
+
+```
+ENV CHOKIDAR_USEPOLLING=true
+ENV CHOKIDAR_INTERVAL=1000
 ```
 
 ## How to TEST the app
@@ -62,6 +54,8 @@ echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo s
 ```
 react-testing-library has moved to @testing-library/react. Please uninstall react-testing-library and install @testing-library/react instead, or use an older version of react-testing-library. Learn more about this change here: https://github.com/testing-library/dom-testing-library/issues/260 Thanks! :)
 ```
+
+### Test library
 
 ## API Endpoints
 
@@ -276,13 +270,37 @@ https://stackoverflow.com/questions/47508564/migrating-create-react-app-from-jav
 
 #### TODO
 
-- enabling the ui to add new application page as plugin (by 15.June), this needs to refractor the code.
+- Add test to the whole app
+    - Unit test
+        - Add test to sagas
+        - Add test to redux action and reducer
+    - Integreted Tests
+    - End to end test
+- Implement Authorization [Done]
+- Redesign the Datasets Page with Gridsystem
+- Redirect to mainpage
 
-- uploading data(both traning data & application data) (by 30.May)
+## Dependencies
 
-- sync data/application status with backend (by 30.May)
+This is for MUI-form-field
+```
+yarn add @date-io/core @date-io/moment @material-ui/core @material-ui/icons classnames core-js css-vendor final-form is-plain-object jss moment react react-dom react-dropzone react-final-form react-select react-number-format
+```
+# For Developers
 
-- fixed trial page (by 30.May)
+This app use redux to manage the state and the state shape is like this 
 
-- using redux to handle the data (by 7.June)
+```
+{
+    "datasets": [{
+        // Datasets details accodring to the REST API
+    }]
+    "trials": [{
+        // Trial details according to the REST API
+    }]
+    "appUtils": [{
 
+    }]
+}
+
+```

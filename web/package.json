@@ -1,91 +1,61 @@
 {
-  "name": "rafiki_web_admin",
-  "version": "0.2.0",
-  "description": "Web Admin Portal for Rafiki",
-  "private": false,
+  "name": "rafiki-webapp",
+  "description": "web application serving rafiki engine",
+  "version": "0.3.0",
+  "private": true,
   "dependencies": {
-    "@material-ui/core": "3.9.2",
-    "@material-ui/icons": "3.0.2",
-    "@testing-library/react": "^8.0.1",
-    "chartist": "0.10.1",
-    "classnames": "2.2.6",
-    "echarts": "^4.2.1",
-    "ejs": "^2.6.1",
-    "express": "^4.17.1",
-    "history": "4.7.2",
+    "@date-io/core": "^1.3.8",
+    "@date-io/moment": "^1.3.8",
+    "@material-ui/core": "^4.3.0",
+    "@material-ui/icons": "^4.2.1",
+    "@redux-saga/testing-utils": "^1.0.5",
+    "axios": "^0.18.0",
+    "classnames": "^2.2.6",
+    "connected-react-router": "^6.5.2",
+    "core-js": "^3.1.4",
+    "css-vendor": "^2.0.5",
+    "final-form": "^4.18.2",
+    "gitgraph.js": "^1.15.1",
+    "is-plain-object": "^3.0.0",
+    "jss": "^9.8.7",
     "moment": "^2.24.0",
-    "perfect-scrollbar": "1.4.0",
-    "prettier": "1.16.4",
-    "prop-types": "15.7.1",
-    "react": "16.8.1",
-    "react-chartist": "0.13.3",
-    "react-dom": "16.8.1",
-    "react-google-maps": "9.4.5",
-    "react-router-dom": "4.3.1",
+    "mui-form-fields": "^0.1.0",
+    "query-string": "^6.2.0",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "react-dropzone": "^10.1.6",
+    "react-final-form": "^6.3.0",
+    "react-ga": "^2.5.7",
+    "react-loadable": "^5.5.0",
+    "react-number-format": "^4.0.8",
+    "react-redux": "^6.0.0",
+    "react-redux-loading-bar": "^4.2.0",
+    "react-router-dom": "^4.3.1",
     "react-scripts": "2.1.5",
-    "react-swipeable-views": "0.13.1",
-    "react-syntax-highlighter": "^10.2.1"
+    "react-select": "^3.0.4",
+    "react-stylable-diff": "^2.0.0",
+    "react-sweet-progress": "^1.1.2",
+    "react-syntax-highlighter": "^10.2.1",
+    "redux": "^4.0.1",
+    "redux-saga": "^1.0.1",
+    "simplebar-react": "^0.1.4",
+    "typeface-roboto": "^0.0.54",
+    "validator": "^10.11.0"
   },
-  "license": "Apache-2.0",
   "scripts": {
-    "start": "react-scripts start",
+    "start": "react-scripts start --watch --watch-poll",
     "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
-    "test:debug": "react-scripts --inspect-brk test --runInBand",
-    "eject": "react-scripts eject",
-    "install:clean": "rm -rf node_modules/ && rm -rf package-lock.json && npm install && npm start",
-    "lint:check": "eslint . --ext=js,jsx;  exit 0",
-    "lint:fix": "eslint . --ext=js,jsx --fix;  exit 0",
-    "build-package-css": "cp src/assets/css/material-dashboard-react.css dist/material-dashboard-react.css",
-    "build-package": "npm run build-package-css && babel src --out-dir dist",
-    "start_nus": "echo \"This script is for personal use and to inject the config automatically\" & REACT_APP_API_POINT_HOST=rafiki.nus REACT_APP_API_POINT_PORT=3000 react-scripts start"
+    "test": "react-scripts test --env=jsdom --verbose=false",
+    "coverage": "CI=true react-scripts test --env=jsdom --coverage",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
   },
   "browserslist": [
     ">0.2%",
     "not dead",
     "not ie <= 11",
     "not op_mini all"
-  ],
-  "devDependencies": {
-    "eslint-config-prettier": "4.0.0",
-    "eslint-plugin-prettier": "3.0.1",
-    "jest-dom": "^3.5.0"
-  },
-  "eslintConfig": 
-  {
-    "parserOptions": {
-      "ecmaVersion": 2018,
-      "ecmaFeatures": {
-        "jsx": true
-      },
-      "sourceType": "module"
-    },
-  
-    "settings": {
-      "react": {
-        "version": "16.0"
-      }
-    },
-  
-    "plugins": [
-      "react"
-    ],
-  
-    "extends": [
-      "standard-jsx"
-    ],
-  
-    "rules": {
-      "react/jsx-no-bind": ["error", {
-        "allowArrowFunctions": true,
-        "allowBind": false,
-        "ignoreRefs": true
-      }],
-      "react/no-did-update-set-state": "error",
-      "react/no-unknown-property": "error",
-      "react/no-unused-prop-types": "error",
-      "react/prop-types": "error",
-      "react/react-in-jsx-scope": "error"
-    }
-  }
+  ]
 }
