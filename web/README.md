@@ -49,6 +49,10 @@ If you cannot test on Ubuntu, maybe it is because jest is watching too many file
 echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
 ```
 
+## How the environment variable is processed in React
+
+- https://facebook.github.io/create-react-app/docs/adding-custom-environment-variables
+
 ### migrate from `react-testing-library` to `@testing-library/react`
 
 ```
