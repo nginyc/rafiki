@@ -23,6 +23,10 @@ ARG DOCKER_WORKDIR_PATH
 RUN mkdir -p $DOCKER_WORKDIR_PATH
 WORKDIR $DOCKER_WORKDIR_PATH
 
+ENV RAFIKI_ADDR=ncrs.d2.comp.nus.edu.sg
+ENV ADMIN_EXT_PORT=7500
+ENV WEB_ADMIN_EXT_PORT=7501
+
 COPY web/package.json web/package.json
 COPY web/yarn.lock web/yarn.lock
 

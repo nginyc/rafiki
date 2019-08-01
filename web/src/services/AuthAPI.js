@@ -3,7 +3,7 @@ import axios from 'axios'
 import HTTPconfig from "../HTTPconfig"
 
 export const requestSignIn = (authData) => {
-  // console.log("requestSignIn", `${HTTPconfig.gateway}tokens`)
+  console.log("requestSignIn", `${HTTPconfig.gateway}tokens`)
   return axios({
     method: 'post',
     url: `${HTTPconfig.gateway}tokens`,
