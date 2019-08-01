@@ -277,8 +277,10 @@ https://stackoverflow.com/questions/47508564/migrating-create-react-app-from-jav
     - Integreted Tests
     - End to end test
 - Implement Authorization [Done]
-- Redesign the Datasets Page with Gridsystem
+- Redesign the Datasets Page with Gridsystem [Done]
 - Redirect to mainpage
+- Pagination
+
 
 ## Dependencies
 

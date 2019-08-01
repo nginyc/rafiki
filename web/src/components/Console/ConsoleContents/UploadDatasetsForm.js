@@ -85,7 +85,7 @@ class UploadDatasetsForm extends React.Component {
                             return (
                                 <React.Fragment>
                                     <Grid container spacing={3}>
-                                        <Grid item md={12} lg={7}>
+                                        <Grid item xs={12} lg={7}>
                                             <FormTextField icon="chrome_reader_mode" name="name" label="Dataset Name" />
                                             <FormSwitchField
                                                 icon="attach_file"
@@ -106,7 +106,7 @@ class UploadDatasetsForm extends React.Component {
                                                 Submit
                                             </Button>
                                         </Grid>
-                                        <Grid item md={12} lg={4}>
+                                        <Grid item xs={12} lg={4}>
                                             <div style={{ background: "#ddd" }}>
                                                 <p>{JSON.stringify(values, null, 2)}</p>
                                             </div>
