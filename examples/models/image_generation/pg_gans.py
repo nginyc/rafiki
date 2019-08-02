@@ -26,19 +26,17 @@ import scipy.misc
 import zipfile
 import time
 import tempfile
-import logging
 
 from rafiki.model import BaseModel, \
                         IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, utils
 from rafiki.constants import ModelDependency
 
 from rafiki.model.dev import test_model_class
-logger = logging.getLogger(__name__)
+
 #----------------------------------------------------------------------------
 # Implements Progressive Growing of GANs for image generation
 
 # Global vars
-_flag = False
 _network_import_handlers = []
 
 # Model class
@@ -47,8 +45,8 @@ class PG_GANs(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            #'D_repeats': FixedKnob(1),
-            'D_repeats': IntegerKnob(1, 3),
+            'D_repeats': FixedKnob(1),
+            #'D_repeats': IntegerKnob(1, 3),
             'minibatch_base': FixedKnob(4),
             'G_lrate': FloatKnob(1e-3, 3e-3, is_exp=False),
             'D_lrate': FloatKnob(1e-3, 3e-3, is_exp=False),
@@ -67,7 +65,7 @@ class PG_GANs(BaseModel):
 
         # TODO: ensure at least one GPU available
         if self.num_gpus == 0:
-            print('GPU needed for training!')
+            utils.logger.log('GPU needed for training!')
         
         np.random.seed(1000)
         utils.logger.log('Initializing TensorFlow...')
@@ -85,7 +83,7 @@ class PG_GANs(BaseModel):
         self._train_progressive_gan(dataset_uri=dataset_path, num_gpus=self.num_gpus, D_repeats=D_repeats)
 
     def evaluate(self, dataset_path):
-        #return 1.222
+
         dataset_uri = dataset_path
         MODEL_DIR = '/var/tmp/imagenet'
         DATA_URL = 'http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz'
@@ -105,9 +103,8 @@ class PG_GANs(BaseModel):
             print('Successfully download', filename, statinfo.st_size, 'bytes.')
             tarfile.open(filepath, 'r:gz').extractall(MODEL_DIR)'''
             zip_inception = zipfile.ZipFile(os.path.expanduser(dataset_uri))
-            utils.logger.log(os.path.expanduser(dataset_uri))
             zip_inception.extractall('/var/tmp/imagenet')
-            utils.logger.log(os.listdir('/var/tmp/imagenet'))
+
         with tf.gfile.FastGFile(os.path.join(MODEL_DIR, 'classify_image_graph_def.pb'), 'rb') as f:
             graph_def = tf.GraphDef()
             graph_def.ParseFromString(f.read())
@@ -190,9 +187,7 @@ class PG_GANs(BaseModel):
             return float(np.mean(scores))
 
     def predict(self, queries):
-        #return queries
-        #return [1,2,3]
-        logger.info(queries)
+
         random_state = np.random.RandomState(1000)
         queries = queries[0]
         grid_size = [queries[0], queries[1]]
@@ -226,19 +221,13 @@ class PG_GANs(BaseModel):
 
             grid = np.rint(grid).clip(0, 255).astype(np.uint8)
             format = 'RGB' if grid.ndim == 3 else 'L'
-
-            #print(type(grid))
             
             image = Image.fromarray(grid, format)
-            image.save('output%d.jpeg' % idx, 'JPEG')
-            print('output%d.jpeg is saved' % idx)
             output_buffer = BytesIO()
             image.save(output_buffer, format='JPEG')
             byte_data = output_buffer.getvalue()
             base64_str = base64.b64encode(byte_data)
 
-            #list_imgs.append(os.path.abspath('output%d.jpeg' % idx))
-            #list_imgs.append(grid.tolist())
             list_imgs.append(str(base64_str))
 
         return [list_imgs]
@@ -302,17 +291,12 @@ class PG_GANs(BaseModel):
 
     def _load_dataset(self, **kwargs):
         adjusted_kwargs = dict(kwargs)
-        #if 'tfrecord_dir' in adjusted_kwargs and data_dir is not None:
-            #adjusted_kwargs['tfrecord_dir'] = os.path.join(data_dir, adjusted_kwargs['tfrecord_dir'])
-        #adjusted_kwargs['tfrecord_dir'] = utils.download_dataset_from_uri(adjusted_kwargs['tfrecord_dir'])
-        #utils.logger.log(os.path.abspath(os.curdir))
-        #d = tempfile.TemporaryDirectory()
+
         zip_dataset = zipfile.ZipFile(adjusted_kwargs['tfrecord_dir'])
         zip_dataset.extractall('/var/tmp/dataset')
         #base = os.path.basename(adjusted_kwargs['tfrecord_dir'])
         adjusted_kwargs['tfrecord_dir'] = '/var/tmp/dataset'
-        utils.logger.log(os.listdir(adjusted_kwargs['tfrecord_dir']))
-        utils.logger.log(adjusted_kwargs['tfrecord_dir'])
+
         dataset = TFRecordDataset(**adjusted_kwargs)
         return dataset
 
@@ -323,7 +307,7 @@ class PG_GANs(BaseModel):
         D_repeats               = 1,
         minibatch_repeats       = 4,
         reset_opt_for_new_lod   = True,
-        total_kimg              = 5000,          # length of training
+        total_kimg              = 8000,          # length of training
         mirror_augment          = False,
         drange_net              = [-1, 1]):
 
@@ -392,11 +376,6 @@ class PG_GANs(BaseModel):
                     D_opt.reset_optimizer_state()
             prev_lod = sched.lod
             print('Tick %d' % n)
-            global _flag
-            if n == 0:
-                _flag = True
-            else:
-                _flag = False
             
             for repeat in range(minibatch_repeats):
                 for _ in range(D_repeats):
@@ -473,8 +452,6 @@ class TFRecordDataset:
         self._cur_lod = -1
 
         print(self.tfrecord_dir)
-        utils.logger.log(self.tfrecord_dir)
-        utils.logger.log(os.listdir(self.tfrecord_dir))
         
         assert os.path.isdir(self.tfrecord_dir)
 
@@ -592,78 +569,7 @@ class TFRecordDataset:
             'data': tf.FixedLenFeature([], tf.string)})
         data = tf.decode_raw(features['data'], tf.uint8)
         return tf.reshape(data, features['shape'])
-'''
-# Dataset export class
-class TFRecordExporter:
-    def __init__(self, tfrecord_dir, expected_images, print_progress=True, progress_interval=10):
-        self.tfrecord_dir       = tfrecord_dir
-        self.tfr_prefix         = os.path.join(self.tfrecord_dir, os.path.basename(self.tfrecord_dir))
-        self.expected_images    = expected_images
-        self.cur_images         = 0
-        self.shape              = None
-        self.resolution_log2    = None
-        self.tfr_writers        = []
-        self.print_progress     = print_progress
-        self.progress_interval  = progress_interval
-        if self.print_progress:
-            print('Creating dataset "%s"' % tfrecord_dir)
-        if not os.path.isdir(self.tfrecord_dir):
-            os.makedirs(self.tfrecord_dir)
-        assert(os.path.isdir(self.tfrecord_dir))
-        
-    def close(self):
-        if self.print_progress:
-            print('%-40s\r' % 'Flushing data...', end='', flush=True)
-        for tfr_writer in self.tfr_writers:
-            tfr_writer.close()
-        self.tfr_writers = []
-        if self.print_progress:
-            print('%-40s\r' % '', end='', flush=True)
-            print('Added %d images.' % self.cur_images)
 
-    def choose_shuffled_order(self): # Note: Images and labels must be added in shuffled order.
-        order = np.arange(self.expected_images)
-        np.random.RandomState(123).shuffle(order)
-        return order
-
-    def add_image(self, img):
-        if self.print_progress and self.cur_images % self.progress_interval == 0:
-            print('%d / %d\r' % (self.cur_images, self.expected_images), end='', flush=True)
-        if self.shape is None:
-            self.shape = img.shape
-            self.resolution_log2 = int(np.log2(self.shape[1]))
-            assert self.shape[0] in [1, 3]
-            assert self.shape[1] == self.shape[2]
-            assert self.shape[1] == 2**self.resolution_log2
-            tfr_opt = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.NONE)
-            for lod in range(self.resolution_log2 - 1):
-                tfr_file = self.tfr_prefix + '-r%02d.tfrecords' % (self.resolution_log2 - lod)
-                self.tfr_writers.append(tf.python_io.TFRecordWriter(tfr_file, tfr_opt))
-        assert img.shape == self.shape
-        for lod, tfr_writer in enumerate(self.tfr_writers):
-            if lod:
-                img = img.astype(np.float32)
-                img = (img[:, 0::2, 0::2] + img[:, 0::2, 1::2] + img[:, 1::2, 0::2] + img[:, 1::2, 1::2]) * 0.25
-            quant = np.rint(img).clip(0, 255).astype(np.uint8)
-            ex = tf.train.Example(features=tf.train.Features(feature={
-                'shape': tf.train.Feature(int64_list=tf.train.Int64List(value=quant.shape)),
-                'data': tf.train.Feature(bytes_list=tf.train.BytesList(value=[quant.tostring()]))}))
-            tfr_writer.write(ex.SerializeToString())
-        self.cur_images += 1
-
-    def add_labels(self, labels):
-        if self.print_progress:
-            print('%-40s\r' % 'Saving labels...', end='', flush=True)
-        assert labels.shape[0] == self.cur_images
-        with open(self.tfr_prefix + '-rxx.labels', 'wb') as f:
-            np.save(f, labels.astype(np.float32))
-            
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.close()
-'''
 # Main network
 class Network:
     def __init__(self,
@@ -779,21 +685,7 @@ class Network:
                                 out_expr = [tf.round(x) for x in out_expr]
                             out_expr = [tf.saturate_cast(x, out_dtype) for x in out_expr]
                         out_split.append(out_expr)
-                '''else:
-                    with tf.device('/cpu:0'):
-                        out_expr = self.get_output_for(*in_split[0], return_as_list=True, **dynamic_kwargs)
-                        if out_mul != 1.0:
-                            out_expr = [x * out_mul for x in out_expr]
-                        if out_add != 0.0:
-                            out_expr = [x + out_add for x in out_expr]
-                        if out_shrink > 1:
-                            ksize = [1, 1, out_shrink, out_shrink]
-                            out_expr = [tf.nn.avg_pool(x, ksize=ksize, strides=ksize, padding='VALID', data_format='NCHW') for x in out_expr]
-                        if out_dtype is not None:
-                            if tf.as_dtype(out_dtype).is_integer:
-                                out_expr = [tf.round(x) for x in out_expr]
-                            out_expr = [tf.saturate_cast(x, out_dtype) for x in out_expr]
-                        out_split.append(out_expr)'''
+
                 self._run_cache[key] = [tf.concat(outputs, axis=0) for outputs in zip(*out_split)]
 
         out_expr = self._run_cache[key]
@@ -832,10 +724,9 @@ class Network:
         net.static_kwargs = dict(self.static_kwargs)
         net._build_func_name = self._build_func_name
         net._build_func = self._build_func
-        #print(net._build_func)
         net._init_graph()
         net.copy_vars_from(self)
-        #print(net.vars)
+
         return net
 
     def get_var_localname(self, var_or_globalname):
@@ -1150,11 +1041,6 @@ class Network:
         if factor == 1: return x
         with tf.variable_scope('Downscale2D'):
             ksize = [1, 1, factor, factor]
-            #utils.logger.log('Before sleeping')
-            #global _flag
-            #if _flag == True:
-                #time.sleep(5)
-            #utils.logger.log('Before pooling')
             return tf.nn.avg_pool(x, ksize=ksize, strides=ksize, padding='VALID', data_format='NCHW')   # NOTE: requires tf_config['graph_options.place_pruned_graph'] = True
 
     # minibatch standard deviation
@@ -1336,12 +1222,12 @@ class TrainingSchedule:
 
         if minibatch_base == 4:
             minibatch_dict = {4: 128, 8: 128, 16: 128, 32: 64, 64: 32, 128: 16, 256: 8, 512: 4}
-        elif minibatch_base == 8:
+        '''elif minibatch_base == 8:
             minibatch_dict = {4: 256, 8: 256, 16: 128, 32: 64, 64: 32, 128: 16, 256: 8}
         elif minibatch_base == 16:
             minibatch_dict = {4: 512, 8: 256, 16: 128, 32: 64, 64: 32, 128: 16}
         elif minibatch_base == 32:
-            minibatch_dict = {4: 512, 8: 256, 16: 128, 32: 64, 64: 32}
+            minibatch_dict = {4: 512, 8: 256, 16: 128, 32: 64, 64: 32}'''
 
         self.kimg = cur_nimg / 1000.0
         phase_dur = lod_training_kimg + lod_transition_kimg
@@ -1534,8 +1420,7 @@ if __name__ == '__main__':
             ModelDependency.TENSORFLOW: '1.12.0'
         },
         train_dataset_path='data/mnist_dataset.zip',
-        val_dataset_path='data/mnist_dataset.zip',
-        test_dataset_path='data/mnist_dataset.zip',
+        val_dataset_path='data/imagenet.zip',
         queries=[[2, 2, 5]]
         
     )
