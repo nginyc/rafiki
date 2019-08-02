@@ -53,7 +53,7 @@ def run_speech_recognition(client, train_dataset_path, val_dataset_path, gpus, h
     pprint(val_dataset)
 
     print('Adding models "{}" to Rafiki...'.format(tf_model_name)) 
-    tf_model = client.create_model(tf_model_name, task, 'examples/models/speech_recognition/TfDeepSpeech.py', \
+    tf_model = client.create_model(tf_model_name, task, 'examples/models/speech_recognition/TfDeepSpeech.py',
                         'TfDeepSpeech',
                         docker_image=IMAGE_TFDEEPSPEECH,
                         dependencies={ 
@@ -87,7 +87,8 @@ if __name__ == '__main__':
 
     print('Preprocessing dataset...')
     data_dir = 'data/libri'
-    load_librispeech(data_dir)
+    parts_to_load = ['train-clean-100', 'dev-clean']
+    load_librispeech(data_dir, parts=parts_to_load)
     train_dataset_path = os.path.join(data_dir, 'train-clean-100.zip')
     val_dataset_path = os.path.join(data_dir, 'dev-clean.zip')
     

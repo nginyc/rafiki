@@ -31,8 +31,18 @@ from tensorflow.python.platform import gfile
 from examples.datasets.utils import download_dataset_from_url
 
 LIBRIVOX_DIR = "LibriSpeech"
+part_to_url = {
+    'train-clean-100':  'http://www.openslr.org/resources/12/train-clean-100.tar.gz',
+    'train-clean-360':  'http://www.openslr.org/resources/12/train-clean-360.tar.gz',
+    'train-other-500':  'http://www.openslr.org/resources/12/train-other-500.tar.gz',
+    'dev-clean': 'http://www.openslr.org/resources/12/dev-clean.tar.gz',
+    'dev-other': 'http://www.openslr.org/resources/12/dev-other.tar.gz',
+    'test-clean': 'http://www.openslr.org/resources/12/test-clean.tar.gz',
+    'test-other': 'http://www.openslr.org/resources/12/test-other.tar.gz',
+}
 
-def load_librispeech(data_dir):
+def load_librispeech(data_dir, parts=['dev-clean', 'dev-other', 'test-clean',
+                                      'test-other', 'train-clean-100', 'train-clean-360', 'train-other-500']):
     '''
         Loads and converts an voice dataset called "librispeech" to the DatasetType `AUDIO_FILES`.
         Refer to http://www.openslr.org/resources/12 for more details on the dataset.
@@ -41,17 +51,12 @@ def load_librispeech(data_dir):
         and run `pip install sox==1.3.7`.
 
         :param str data_dir: Directory to save the output zip files
+        :param str[] parts: Parts of the "librispeech" to load, default to the whole dataset
     '''
 
     print("Downloading LibriSppech dataset (55GB) into a tmp file...")
 
-    tar_gz_urls = ['http://www.openslr.org/resources/12/train-clean-100.tar.gz',
-                    'http://www.openslr.org/resources/12/dev-clean.tar.gz',
-                    'http://www.openslr.org/resources/12/test-clean.tar.gz',
-                    'http://www.openslr.org/resources/12/train-clean-360.tar.gz',
-                    'http://www.openslr.org/resources/12/train-other-500.tar.gz',
-                    'http://www.openslr.org/resources/12/dev-other.tar.gz',
-                    'http://www.openslr.org/resources/12/test-other.tar.gz']
+    tar_gz_urls = [part_to_url.get(part) for part in parts]
 
     for tar_gz_url in tar_gz_urls:
         _maybe_load_chunk(data_dir, tar_gz_url)
