@@ -1,46 +1,81 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import requests
 import json
-import pprint
 import pickle
 import os
+from functools import wraps
+from typing import Type, Dict, List, Any
 
-from rafiki.constants import BudgetType, ModelAccessRight
+from rafiki.constants import ModelAccessRight, ModelDependencies, Budget, BudgetOption, \
+                            InferenceBudget, InferenceBudgetOption, UserType
+from rafiki.model import Params, BaseModel
 
-class RafikiConnectionError(ConnectionError):
-    pass
+class RafikiConnectionError(ConnectionError): pass
 
-class Client(object):
+DOCS_URL = 'https://nginyc.github.io/rafiki/docs/latest/docs/src/python/rafiki.client.Client.html'
+
+# Returns a decorator that warns user about the method being deprecated
+def _deprecated(msg=None):
+    def deco(func):
+        nonlocal msg
+        msg = msg or f'`{func.__name__}` has been deprecated.'
+
+        @wraps(func)
+        def deprecated_func(*args, **kwargs):
+            _warn(f'{msg}\n' \
+                f'Refer to the updated documentation at {DOCS_URL}')
+            return func(*args, **kwargs)
+        
+        return deprecated_func
+    return deco
+
+class Client():
 
     '''
     Initializes the Client to connect to a running 
     Rafiki Admin instance that the Client connects to.
 
-    :param str admin_host: Host of Rafiki Admin
-    :param int admin_port: Port of Rafiki Admin
-    :param str advisor_host: Host of Rafiki Advisor
-    :param int advisor_port: Port of Rafiki Advisor
+    :param admin_host: Host of Rafiki Admin
+    :param admin_port: Port of Rafiki Admin
     '''
-    def __init__(self, admin_host='localhost', admin_port=3000,
-                advisor_host='localhost', advisor_port=3002):
+    def __init__(self, admin_host: str = os.environ.get('RAFIKI_ADDR', 'localhost'),
+                    admin_port: int = os.environ.get('ADMIN_EXT_PORT', 3000)):
         self._admin_host = admin_host
         self._admin_port = admin_port
-        self._advisor_host = advisor_host
-        self._advisor_port = advisor_port
         self._token = None
         self._user = None
 
-    def login(self, email, password):
+    def login(self, email: str, password: str) -> Dict[str, Any]:
         '''
         Creates a login session as a Rafiki user. You will have to be logged in to perform any actions.
 
         App developers can create, list and stop train and inference jobs, as well as list models.
         Model developers can create and list models.
 
-        :param str email: User's email
-        :param str password: User's password
+        The login session (the session token) expires in 1 hour.
+
+        :param email: User's email
+        :param password: User's password
 
         :returns: Logged-in user as dictionary
-        :rtype: dict[str, any]
         '''
         data = self._post('/tokens', json={
             'email': email,
@@ -56,12 +91,11 @@ class Client(object):
 
         return self._user
 
-    def get_current_user(self):
+    def get_current_user(self) -> Dict[str, Any]:
         '''
         Gets currently logged in user's data.
 
-        :returns: Current user as dictionary, or `None` if client is not logged in
-        :rtype: dict[str, any]
+        :returns: Current user as dictionary, or ``None`` if client is not logged in
         '''
         return self._user
 
@@ -76,103 +110,143 @@ class Client(object):
     # User
     ####################################
 
-    def create_user(self, email, password, user_type):
+    def create_user(self, email: str, password: str, user_type: UserType) -> Dict[str, Any]:
         '''
         Creates a Rafiki user. 
         
-        Only admins can manage users.
+        Only admins can create users (except for admins).
+        Only superadmins can create admins.
 
-        :param str email: The new user's email
-        :param str password: The new user's password
+        :param email: The new user's email
+        :param password: The new user's password
         :param user_type: The new user's type
-        :type user_type: :class:`rafiki.constants.UserType` 
 
         :returns: Created user as dictionary
-        :rtype: dict[str, any]
         '''
-        data = self._post('/user', json={
+        data = self._post('/users', json={
             'email': email,
             'password': password,
             'user_type': user_type
         })
         return data
 
-    def create_users(self, csv_file_path):
+    @_deprecated('`create_users` has been removed')
+    def create_users(self, *args, **kwargs):
+        pass
+
+    def get_users(self) -> List[Dict[str, Any]]:
         '''
-        Creates multiple Rafiki users.
+        Lists all Rafiki users.
+        
+        Only admins can list all users.
 
-        :param str csv_file_path: Path to a single csv file containing users to seed
-
-        :returns: Created users as list of dictionaries
-        :rtype: dict[str, any][]
+        :returns: List of users as list of dictionaries
         '''
+        data = self._get('/users')
+        return data
 
-        f = open(csv_file_path, 'rb')
-        csv_file_bytes = f.read()
-        f.close()
+    def ban_user(self, email: str) -> Dict[str, Any]:
+        '''
+        Bans a Rafiki user, disallowing logins.
+        
+        This action is irrevisible.
+        Only admins can ban users (except for admins).
+        Only superadmins can ban admins.
+
+        :param email: The user's email
+
+        :returns: Banned user as dictionary
+        '''
+        data = self._delete('/users', json={
+            'email': email
+        })
+        return data
+
+    ####################################
+    # Datasets
+    ####################################
+
+    def create_dataset(self, name: str, task: str, dataset_path: str = None, dataset_url: str = None) -> Dict[str, Any]:
+        '''
+        Creates a dataset on Rafiki, either by uploading the dataset file from your filesystem or specifying a URL where the dataset file can be downloaded.
+        The dataset should be in a format specified by the task
+        Either `dataset_url` or `dataset_path` should be specified.
+
+        Only admins, model developers and app developers can manage their own datasets.
+
+        :param name: Name for the dataset, does not need to be unique
+        :param task: Task associated to the dataset
+        :param dataset_path: Path to the dataset file to upload from the local filesystem
+        :param dataset_url: Publicly accessible URL where the dataset file can be downloaded
+        :returns: Created dataset as dictionary
+        '''
+        files = {}
+
+        if dataset_path is not None:
+            f = open(dataset_path, 'rb')
+            dataset = f.read()
+            f.close()
+            files['dataset'] = dataset
+            print('Uploading dataset..')
+        else:
+            print('Waiting for server finish downloading the dataset from URL...')
 
         data = self._post(
-            '/users', 
-            files={
-                'csv_file_bytes': csv_file_bytes
+            '/datasets', 
+            files=files,
+            form_data={
+                'name': name,
+                'task': task,
+                'dataset_url': dataset_url
             }
         )
+        return data
+
+    def get_datasets(self, task: str = None) -> List[Dict[str, Any]]:
+        '''
+        Lists all datasets owned by the current user, optionally filtering by task.
+
+        :param task: Task name
+        :returns: List of datasets as list of dictionaries
+        '''
+        data = self._get('/datasets', params={
+            'task': task
+        })
         return data
 
     ####################################
     # Models
     ####################################
 
-    def create_model(self, name, task, model_file_path, model_class, docker_image=None, \
-                    dependencies={}, access_right=ModelAccessRight.PRIVATE):
+    def create_model(self, name: str, task: str, model_file_path: str, model_class: str, dependencies: ModelDependencies = None, 
+                    access_right: ModelAccessRight = ModelAccessRight.PRIVATE, docker_image: str = None) -> Dict[str, Any]:
         '''
         Creates a model on Rafiki.
 
         Only admins & model developers can manage models.
 
-        :param str name: Name of the model, must be unique on Rafiki
-        :param str task: Task associated with the model, where the model must adhere to the specification of the task
-        :param str model_file_path: Path to a single Python file that contains the definition for the model class
-        :param obj model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
-        :param dependencies: List of dependencies & their versions
-        :type dependencies: dict[str, str]
-        :param str docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
+        :param name: Name of the model, which must be unique across all models added by the current user 
+        :param task: Task associated with the model, where the model must adhere to the specification of the task
+        :param model_file_path: Path to a single Python file that contains the definition for the model class
+        :param model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
+        :param dependencies: List of Python dependencies & their versions
         :param access_right: Model access right
-        :type access_right: :class:`rafiki.constants.ModelAccessRight`
+        :param docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
         :returns: Created model as dictionary
-        :rtype: dict[str, any]
 
-        ``model_file_path`` should point to a file that contains all necessary Python code for the model's implementation. 
+        Refer to :ref:`model-development` for more details on how to write & test models for Rafiki.
+
+        ``model_file_path`` should point to a *single* file that contains all necessary Python code for the model's implementation. 
         If the Python file imports any external Python modules, you should list it in ``dependencies`` or create a custom
         ``docker_image``. 
 
-        If a model's ``access_right`` is set to ``PUBLIC``, all other users have access to the model for training
+        If a model's ``access_right`` is set to ``PUBLIC``, this model will be publicly available to all other users on Rafiki for training
         and inference. By default, a model's access is ``PRIVATE``.
 
         ``dependencies`` should be a dictionary of ``{ <dependency_name>: <dependency_version> }``, where 
         ``<dependency_name>`` corresponds to the name of the Python Package Index (PyPI) package (e.g. ``tensorflow``)
-        and ``<dependency_version>`` corresponds to the version of the PyPI package (e.g. ``1.12.0``). These dependencies 
-        will be lazily installed on top of the worker's Docker image before the submitted model's code is executed.
-
-        If the model is to be run on GPU, Rafiki could map dependencies to their GPU-enabled versions, if required. 
-        For example, ``{ 'tensorflow': '1.12.0' }`` will be installed as ``{ 'tensorflow-gpu': '1.12.0' }``.
-
-        Rafiki could also parse specific dependency names to install certain non-PyPI packages. 
-        For example, ``{ 'singa': '1.1.1' }`` will be installed as ``singa-cpu=1.1.1`` or ``singa-gpu=1.1.1`` using ``conda``.
-
-        Refer to the list of officially supported dependencies below. For dependencies that are not listed,
-        they will be installed as PyPI packages of the specified name and version.
-
-        =====================       =====================
-        **Dependency**              **Installation Command**
-        ---------------------       ---------------------        
-        ``tensorflow``              ``pip install tensorflow==${ver}`` or ``pip install tensorflow-gpu==${ver}``
-        ``singa``                   ``conda install -c nusdbsystem singa-cpu=${ver}`` or ``conda install -c nusdbsystem singa-gpu=${ver}``
-        ``Keras``                   ``pip install Keras==${ver}``
-        ``scikit-learn``            ``pip install scikit-learn==${ver}``
-        ``torch``                   ``pip install torch==${ver}``
-        =====================       =====================
-
+        and ``<dependency_version>`` corresponds to the version of the PyPI package (e.g. ``1.12.0``). 
+        Refer to :ref:`configuring-model-environment` to understand more about this option.
         '''
         f = open(model_file_path, 'rb')
         model_file_bytes = f.read()
@@ -194,60 +268,42 @@ class Client(object):
         )
         return data
 
-    def get_model(self, name):
+    def get_model(self, model_id: str) -> Dict[str, Any]:
         '''
         Retrieves details of a single model.
 
-        :param str name: Name of model
-        :returns: Details of model as dictionary
-        :rtype: dict[str, any]
+        Model developers can only view their own models.
+
+        :param model_id: ID of model
+        :returns: Model as dictionary
         '''
-        data = self._get('/models/{}'.format(name))
+        _note('`get_model` now requires `model_id` instead of `name`')
+
+        data = self._get('/models/{}'.format(model_id))
         return data
 
-    def get_models(self):
+    def download_model_file(self, model_id: str, out_model_file_path: str) -> Dict[str, any]:
         '''
-        Lists all models on Rafiki.
+        Downloads the Python model class file for the Rafiki model.
 
-        :param str access_right: Model access right.
-        :returns: Details of models as list of dictionaries
-        :rtype: dict[str, any][]
+        Model developers can only download their own models.
+
+        :param model_id: ID of model
+        :param out_model_file_path: Absolute/relative path to save model class file to
+        :returns: Model as dictionary
         '''
-        data = self._get('/models')
-        return data
+        _note('`download_model_file` now requires `model_id` instead of `name`')
 
-    def get_models_of_task(self, task):
-        '''
-        Lists all models associated to a task on Rafiki.
+        model_file_bytes = self._get('/models/{}/model_file'.format(model_id))
 
-        :param str task: Task name
-        :returns: Details of models as list of dictionaries
-        :rtype: dict[str, any][]
-        '''
-        data = self._get('/models', params={
-            'task': task
-        })
-        return data
-
-    def download_model_file(self, name, model_file_path):
-        '''
-        Downloads the Python script containing the model's class to the local filesystem.
-
-        :param str name: Name of model
-        :param str model_file_path: Absolute/relative path to save the Python script to
-        :returns: Details of model as dictionary
-        :rtype: dict[str, any]
-        '''
-        model_file_bytes = self._get('/models/{}/model_file'.format(name))
-
-        with open(model_file_path, 'wb') as f:
+        with open(out_model_file_path, 'wb') as f:
             f.write(model_file_bytes)
 
-        data = self.get_model(name)
+        data = self.get_model(model_id)
         dependencies = data.get('dependencies')
         model_class = data.get('model_class')
 
-        print('Model file downloaded to "{}"!'.format(os.path.join(os.getcwd(), model_file_path)))
+        print('Model file downloaded to "{}"!'.format(os.path.join(os.getcwd(), out_model_file_path)))
         
         if dependencies:
             print('You\'ll need to install the following model dependencies locally: {}'.format(dependencies))
@@ -256,100 +312,175 @@ class Client(object):
 
         return data
 
+    @_deprecated('`get_models` & `get_models_of_task` have been combined into `get_available_models`')
+    def get_models(self, *args, **kwargs):
+        pass
+
+    @_deprecated('`get_models` & `get_models_of_task` have been combined into `get_available_models`')
+    def get_models_of_task(self, *args, **kwargs):
+        pass
+
+    def get_available_models(self, task: str = None) -> List[Dict[str, Any]]:
+        '''
+        Lists all Rafiki models available to the current user, optionally filtering by task.
+
+        :param task: Task name
+        :returns: Available models as list of dictionaries
+        '''
+        data = self._get('/models/available', params={
+            'task': task
+        })
+        return data
+
+    def delete_model(self, model_id: str) -> Dict[str, Any]:
+        '''
+        Deletes a single model. Models that have been used in train jobs cannot be deleted.
+
+        Model developers can only delete their own models.
+
+        :param str model_id: ID of model
+        :returns: Deleted model as dictionary
+        '''
+        data = self._delete('/models/{}'.format(model_id))
+        return data
+
     ####################################
     # Train Jobs
     ####################################
     
-    def create_train_job(self, app, task, train_dataset_uri, test_dataset_uri, budget, models=None):
+    def create_train_job(self, app: str, task: str, train_dataset_id: str, val_dataset_id: str, 
+                        budget: Budget, models: List[str] = None, train_args: Dict[str, any] = None) -> Dict[str, Any]:
         '''
         Creates and starts a train job on Rafiki. 
-        A train job is uniquely identified by its associated app and the app version (returned in output).
-        
-        Only admins, model developers and app developers can manage train jobs.
 
-        :param str app: Name of the app associated with the train job
-        :param str task: Task associated with the train job, 
+        A train job is uniquely identified by user, its associated app, and the app version (returned in output).
+        
+        Only admins, model developers & app developers can manage train jobs. Model developers & app developers can only manage their own train jobs.
+
+        :param app: Name of the app associated with the train job
+        :param task: Task associated with the train job, 
             the train job will train models associated with the task
-        :param str train_dataset_uri: URI of the train dataset in a format specified by the task
-        :param str test_dataset_uri: URI of the test (development) dataset in a format specified by the task
-        :param str budget: Budget for each model
-        :param str[] models: List of model names to use for train job
+        :param train_dataset_id: ID of the train dataset, previously created on Rafiki
+        :param val_dataset_id: ID of the validation dataset, previously created on Rafiki
+        :param budget: Budget for train job
+        :param models: List of IDs of model to use for train job. Defaults to all available models
+        :param train_args: Additional arguments to pass to models during training, if any. 
+            Refer to the task's specification for appropriate arguments  
         :returns: Created train job as dictionary
-        :rtype: dict[str, any]
 
         If ``models`` is unspecified, all models accessible to the user for the specified task will be used.
 
         ``budget`` should be a dictionary of ``{ <budget_type>: <budget_amount> }``, where 
-        ``<budget_type>`` is one of :class:`rafiki.constants.BudgetType` and 
-        ``<budget_amount>`` specifies the amount for the associated budget type.
+        ``<budget_type>`` is one of :class:`rafiki.constants.BudgetOption` and 
+        ``<budget_amount>`` specifies the amount for the associated budget option.
         
-        The following describes the budget types available:
+        The following describes the budget options available:
 
         =====================       =====================
-        **Budget Type**             **Description**
-        ---------------------       ---------------------        
-        ``MODEL_TRIAL_COUNT``       Target number of trials to run
-        ``ENABLE_GPU``              Whether model training should run on GPU (0 or 1), if supported
+        **Budget Option**             **Description**
+        ---------------------       ---------------------
+        ``TIME_HOURS``              Max no. of hours to train (soft target). Defaults to 0.1.
+        ``GPU_COUNT``               No. of GPUs to allocate for training, across all models. Defaults to 0.
+        ``MODEL_TRIAL_COUNT``       Max no. of trials to conduct for each model (soft target). -1 for unlimited. Defaults to -1.
         =====================       =====================
         '''
+        _note('`create_train_job` now requires `models` as a list of model IDs instead of a list of model names')
+        
+        if 'ENABLE_GPU' in budget:
+            _warn('The `ENABLE_GPU` option has been changed to `GPU_COUNT`')
+            
+        # Default to all available models
+        if models is None: 
+            avail_models = self.get_available_models(task)
+            models = [x['id'] for x in avail_models]
+
+        # Have defaults for budget
+        budget = {
+            BudgetOption.TIME_HOURS: 0.1,
+            BudgetOption.GPU_COUNT: 0,
+            **budget
+        }
 
         data = self._post('/train_jobs', json={
             'app': app,
             'task': task,
-            'train_dataset_uri': train_dataset_uri,
-            'test_dataset_uri': test_dataset_uri,
+            'train_dataset_id': train_dataset_id,
+            'val_dataset_id': val_dataset_id,
             'budget': budget,
-            'models': models
+            'model_ids': models,
+            'train_args': train_args
         })
         return data
 
-    def get_train_jobs_by_user(self, user_id):
+    def get_train_jobs_by_user(self, user_id: str) -> List[Dict[str, Any]]:
         '''
-        Lists all train jobs associated to an user on Rafiki.
+        Lists all of user's train jobs on Rafiki.
 
-        :param str user_id: ID of the user
-        :returns: Details of train jobs as list of dictionaries
-        :rtype: dict[str, any][]
+        :param user_id: ID of the user
+        :returns: Train jobs as list of dictionaries
         '''
         data = self._get('/train_jobs', params={ 
             'user_id': user_id
         })
         return data
     
-    def get_train_jobs_of_app(self, app):
+    def get_train_jobs_of_app(self, app: str) -> List[Dict[str, Any]]:
         '''
-        Lists all train jobs associated to an app on Rafiki.
+        Lists all of current user's train jobs associated to the app name on Rafiki.
 
-        :param str app: Name of the app
-        :returns: Details of train jobs as list of dictionaries
-        :rtype: dict[str, any][]
+        :param app: Name of the app
+        :returns: Train jobs as list of dictionaries
         '''
         data = self._get('/train_jobs/{}'.format(app))
         return data
 
-    def get_train_job(self, app, app_version=-1):
+    def get_train_job(self, app: str, app_version: int = -1) -> Dict[str, Any]:
         '''
-        Retrieves details of the train job identified by an app and an app version, 
+        Retrieves details of the current user's train job identified by an app and an app version, 
         including workers' details.
 
-        :param str app: Name of the app
-        :param int app_version: Version of the app (-1 for latest version)
-        :returns: Details of train job as dictionary
-        :rtype: dict[str, any]
+        :param app: Name of the app
+        :param app_version: Version of the app (-1 for latest version)
+        :returns: Train job as dictionary
         '''
         data = self._get('/train_jobs/{}/{}'.format(app, app_version))
         return data
 
-    def get_best_trials_of_train_job(self, app, app_version=-1, max_count=2):
+    def stop_train_job(self, app: str, app_version: int = -1) -> Dict[str, Any]:
         '''
-        Lists the best scoring trials of the train job identified by an app and an app version,
+        Prematurely stops the current user's train job identified by an app and an app version.
+        Otherwise, the train job should stop by itself when its budget is reached.
+
+        :param app: Name of the app
+        :param app_version: Version of the app (-1 for latest version)
+        :returns: Stopped train job as dictionary
+        '''
+        data = self._post('/train_jobs/{}/{}/stop'.format(app, app_version))
+        return data
+
+    ####################################
+    # Trials
+    ####################################
+
+    def get_trial(self, trial_id: str) -> Dict[str, Any]:
+        '''
+        Gets a specific trial.
+
+        :param trial_id: ID of trial
+        :returns: Trial as dictionary
+        '''
+        data = self._get('/trials/{}'.format(trial_id))
+        return data
+
+    def get_best_trials_of_train_job(self, app: str, app_version: int = -1, max_count: int = 2) -> List[Dict[str, Any]]:
+        '''
+        Lists the best scoring trials of the current user's train job identified by an app and an app version,
         ordered by descending score.
 
-        :param str app: Name of the app
-        :param int app_version: Version of the app (-1 for latest version)
-        :param int max_count: Maximum number of trials to return
-        :returns: Details of trials as list of dictionaries
-        :rtype: dict[str, any][]
+        :param app: Name of the app
+        :param app_version: Version of the app (-1 for latest version)
+        :param max_count: Maximum number of trials to return
+        :returns: Trials as list of dictionaries
         '''
         data = self._get('/train_jobs/{}/{}/trials'.format(app, app_version), params={
             'type': 'best',
@@ -357,76 +488,40 @@ class Client(object):
         })
         return data
 
-    def get_trials_of_train_job(self, app, app_version=-1):
+    def get_trials_of_train_job(self, app: str, app_version: int = -1) -> List[Dict[str, Any]]:
         '''
-        Lists all trials of the train job identified by an app and an app version,
+        Lists all trials of the current user's train job identified by an app and an app version,
         ordered by when the trial started.
 
-        :param str app: Name of the app
-        :param int app_version: Version of the app (-1 for latest version)
-        :returns: Details of trials as list of dictionaries
-        :rtype: dict[str, any][]
+        :param app: Name of the app
+        :param app_version: Version of the app (-1 for latest version)
+        :returns: Trials as list of dictionaries
         '''
         data = self._get('/train_jobs/{}/{}/trials'.format(app, app_version))
         return data
 
-    def stop_train_job(self, app, app_version=-1):
-        '''
-        Prematurely stops the train job identified by an app and an app version.
-        Otherwise, the train job should stop by itself when its budget is reached.
-
-        :param str app: Name of the app
-        :param int app_version: Version of the app (-1 for latest version)
-        :returns: Stopped train job as dictionary
-        :rtype: dict[str, any]
-        '''
-        data = self._post('/train_jobs/{}/{}/stop'.format(app, app_version))
-        return data
-
-    # Rafiki-internal method
-    def stop_train_job_worker(self, service_id):
-        data = self._post('/train_job_workers/{}/stop'.format(service_id))
-        return data
-
-    ####################################
-    # Trials
-    ####################################
-
-    def get_trial(self, trial_id):
-        '''
-        Gets a specific trial.
-
-        :param str trial_id: ID of trial
-        :returns: Details of trial as dictionary
-        :rtype: dict[str, any]
-        '''
-        data = self._get('/trials/{}'.format(trial_id))
-        return data
-
-    def get_trial_logs(self, trial_id):
+    def get_trial_logs(self, trial_id: str) -> Dict[str, Any]:
         '''
         Gets the logs for a specific trial.
 
-        :param str trial_id: ID of trial
+        :param trial_id: ID of trial
         :returns: Logs of trial as dictionary
-        :rtype: dict[str, any]
         '''
         data = self._get('/trials/{}/logs'.format(trial_id))
         return data
 
-    def get_trial_parameters(self, trial_id):
+    def get_trial_parameters(self, trial_id: str) -> Params:
         '''
-        Gets parameters of the model associated with the trial.
+        Gets parameters of the model associated with the trial. The trial's model parameters must have been saved.
 
-        :param str trial_id: ID of trial
+        :param trial_id: ID of trial
         :returns: Parameters of the *trained* model associated with the trial
-        :rtype: dict[str, any]
         '''
         data = self._get('/trials/{}/parameters'.format(trial_id))
         parameters = pickle.loads(data)
         return parameters
 
-    def load_trial_model(self, trial_id, ModelClass):
+    def load_trial_model(self, trial_id: str, ModelClass: Type[BaseModel]) -> BaseModel:
         '''
         Loads an instance of a trial's model with the trial's knobs & parameters.
 
@@ -436,12 +531,13 @@ class Client(object):
 
         Wraps :meth:`get_trial_parameters` and :meth:`get_trial`.
 
-        :param str trial_id: ID of trial
-        :param class ModelClass: model class that conincides with the trial's model class
+        :param trial_id: ID of trial
+        :param ModelClass: model class that conincides with the trial's model class
         :returns: A *trained* model instance of ``ModelClass``, loaded with the trial's knobs and parameters
         '''
         data = self.get_trial(trial_id)
-        knobs = data.get('knobs')
+        assert 'proposal' in data
+        knobs = data['proposal']['knobs']
         parameters = self.get_trial_parameters(trial_id)
         model_inst = ModelClass(**knobs)
         model_inst.load_parameters(parameters)
@@ -451,198 +547,157 @@ class Client(object):
     # Inference Jobs
     ####################################
 
-    def create_inference_job(self, app, app_version=-1):
+    def create_inference_job(self, app: str, app_version: int = -1, budget: InferenceBudget = None) -> Dict[str, Any]:
         '''
-        Creates and starts a inference job on Rafiki with the 2 best trials of an associated train job of the app. 
+        Creates and starts a inference job on Rafiki with the best-scoring trials of the associated train job. 
         The train job must have the status of ``STOPPED``.The inference job would be tagged with the train job's app and app version. 
         Throws an error if an inference job of the same train job is already running.
 
         In this method's response, `predictor_host` is this inference job's predictor's host. 
 
-        Only admins & app developers can manage inference jobs.
+        Only admins, model developers & app developers can manage inference jobs. Model developers & app developers can only manage their own inference jobs.
 
-        :param str app: Name of the app identifying the train job to use
-        :param str app_version: Version of the app identifying the train job to use
+        :param app: Name of the app identifying the train job to use
+        :param app_version: Version of the app identifying the train job to use
+        :param budget: Budget for inference job
         :returns: Created inference job as dictionary
-        :rtype: dict[str, any]
+
+        ``budget`` should be a dictionary of ``{ <budget_type>: <budget_amount> }``, where 
+        ``<budget_type>`` is one of :class:`rafiki.constants.InferenceBudgetOption` and 
+        ``<budget_amount>`` specifies the amount for the associated budget option.
+        
+        The following describes the budget options available:
+
+        =====================       =====================
+        **Budget Option**             **Description**
+        ---------------------       ---------------------
+        ``GPU_COUNT``               No. of GPUs to allocate for inference, across all trials. Defaults to 0.
+        =====================       =====================
         '''
+
+        # Have defaults for budget
+        budget = {
+            InferenceBudgetOption.GPU_COUNT: 0,
+            **(budget or {})
+        }
+
         data = self._post('/inference_jobs', json={
             'app': app,
-            'app_version': app_version
+            'app_version': app_version,
+            'budget': budget
         })
         return data
 
-    def get_inference_jobs_by_user(self, user_id):
+    def get_inference_jobs_by_user(self, user_id: str) -> List[Dict[str, Any]]:
         '''
-        Lists all inference jobs associated to an user on Rafiki.
+        Lists all of user's inference jobs on Rafiki.
 
-        :param str user_id: ID of the user
-        :returns: Details of inference jobs as list of dictionaries
-        :rtype: dict[str, any][]
+        :param user_id: ID of the user
+        :returns: Inference jobs as list of dictionaries
         '''
         data = self._get('/inference_jobs', params={ 
             'user_id': user_id
         })
         return data
 
-    def get_inference_jobs_of_app(self, app):
+    def get_inference_jobs_of_app(self, app: str) -> List[Dict[str, Any]]:
         '''
         Lists all inference jobs associated to an app on Rafiki.
 
-        :param str app: Name of the app
-        :returns: Details of inference jobs as list of dictionaries
-        :rtype: dict[str, any][]
+        :param app: Name of the app
+        :returns: Inference jobs as list of dictionaries
         '''
         data = self._get('/inference_jobs/{}'.format(app))
         return data
 
-    def get_running_inference_job(self, app, app_version=-1):
+    def get_running_inference_job(self, app: str, app_version: int = -1) -> Dict[str, Any]:
         '''
         Retrieves details of the *running* inference job identified by an app and an app version,
         including workers' details.
 
-        :param str app: Name of the app 
-        :param int app_version: Version of the app (-1 for latest version)
-        :returns: Details of inference job as dictionary
-        :rtype: dict[str, any]
+        :param app: Name of the app 
+        :param app_version: Version of the app (-1 for latest version)
+        :returns: Inference job as dictionary
         '''
         data = self._get('/inference_jobs/{}/{}'.format(app, app_version))
         return data
 
-    def stop_inference_job(self, app, app_version=-1):
+    def stop_inference_job(self, app: str, app_version: int = -1) -> Dict[str, Any]:
         '''
         Stops the inference job identified by an app and an app version.
 
-        :param str app: Name of the app
-        :param int app_version: Version of the app (-1 for latest version)
+        :param app: Name of the app
+        :param app_version: Version of the app (-1 for latest version)
         :returns: Stopped inference job as dictionary
-        :rtype: dict[str, any]
         '''
         data = self._post('/inference_jobs/{}/{}/stop'.format(app, app_version))
         return data
 
-    ####################################
-    # Advisors
-    ####################################
-
-    def create_advisor(self, knob_config_str, advisor_id=None):
-        '''
-        Creates a Rafiki advisor. If `advisor_id` is passed, it will create an advisor
-        of that ID, or do nothing if an advisor of that ID has already been created.
-
-        :param str knob_config_str: Serialized knob configuration for advisor session
-        :param str advisor_id: ID of advisor to create
-        :returns: Created advisor as dictionary
-        :rtype: dict[str, any]
-        '''
-        data = self._post('/advisors', target='advisor',
-                            json={
-                                'advisor_id': advisor_id,
-                                'knob_config_str': knob_config_str
-                            })
-        return data
-
-    def generate_proposal(self, advisor_id):
-        '''
-        Generate a proposal of knobs from an advisor.
-
-        :param str advisor_id: ID of target advisor
-        :returns: Knobs as `dict[<knob_name>, <knob_value>]`
-        :rtype: dict[str, any]
-        '''
-        data = self._post('/advisors/{}/propose'.format(advisor_id), target='advisor')
-        return data
-
-    def feedback_to_advisor(self, advisor_id, knobs, score):
-        '''
-        Feedbacks to the advisor on the score of a set of knobs.
-        Additionally returns another proposal of knobs after ingesting feedback.
-
-        :param str advisor_id: ID of target advisor
-        :param str knobs: Knobs to give feedback on
-        :param float score: Score of the knobs, the higher the number, the better the set of knobs
-        :returns: Knobs as `dict[<knob_name>, <knob_value>]`
-        :rtype: dict[str, any]
-        '''
-        data = self._post('/advisors/{}/feedback'.format(advisor_id), 
-                        target='advisor', json={
-                            'score': score,
-                            'knobs': knobs
-                        })
-        return data
-
-    def delete_advisor(self, advisor_id):
-        '''
-        Deletes a Rafiki advisor.
-
-        :param str advisor_id: ID of target advisor
-        :returns: Deleted advisor as dictionary
-        :rtype: dict[str, any]
-        '''
-        data = self._delete('/advisors/{}'.format(advisor_id), target='advisor')
-        return data
+    # TODO: Add predict method?
 
     ####################################
-    # Administrative Actions
+    # Administrative
     ####################################
 
     def stop_all_jobs(self):
         '''
         Stops all train and inference jobs on Rafiki. 
 
-        Only admins can call this.
+        Only the superadmin can call this.
         '''
         data = self._post('/actions/stop_all_jobs')
+        return data
+
+    ####################################
+    # Rafiki Internal
+    ####################################
+
+    def send_event(self, name, **params):
+        data = self._post('/event/{}'.format(name), json=params)
         return data
 
     ####################################
     # Private
     ####################################
 
-    def _get(self, path, params={}, target='admin'):
-        url = self._make_url(path, target=target)
+    def _get(self, path, params=None):
+        url = self._make_url(path)
         headers = self._get_headers()
         res = requests.get(
             url,
             headers=headers,
-            params=params
+            params=params or {}
         )
         return self._parse_response(res)
 
-    def _post(self, path, params={}, files={}, form_data=None, json=None, target='admin'):
-        url = self._make_url(path, target=target)
+    def _post(self, path, params=None, files=None, form_data=None, json=None):
+        url = self._make_url(path)
         headers = self._get_headers()
         res = requests.post(
             url, 
             headers=headers,
-            params=params, 
+            params=params or {}, 
             data=form_data,
             json=json,
-            files=files
+            files=files or {}
         )
         return self._parse_response(res)
 
-    def _delete(self, path, params={}, files={}, form_data=None, json=None, target='admin'):
-        url = self._make_url(path, target=target)
+    def _delete(self, path, params=None, files=None, form_data=None, json=None):
+        url = self._make_url(path)
         headers = self._get_headers()
         res = requests.delete(
             url, 
             headers=headers,
-            params=params, 
-            data=form_data,
+            params=params or {}, 
+            data=form_data or {},
             json=json,
             files=files
         )
         return self._parse_response(res)
 
-    def _make_url(self, path, target='admin'):
-        if target == 'admin':
-            url = 'http://{}:{}{}'.format(self._admin_host, self._admin_port, path)
-        elif target == 'advisor':
-            url = 'http://{}:{}{}'.format(self._advisor_host, self._advisor_port, path)
-        else:
-            raise RafikiConnectionError('Invalid URL target: {}'.format(target))
-
+    def _make_url(self, path):
+        url = 'http://{}:{}{}'.format(self._admin_host, self._admin_port, path)
         return url
 
     def _parse_response(self, res):
@@ -664,3 +719,9 @@ class Client(object):
             }
         else:
             return {}
+
+def _warn(msg):
+    print(f'\033[93mWARNING: {msg}\033[0m')
+
+def _note(msg):
+    print(f'\033[94m{msg}\033[0m')

@@ -1,3 +1,2 @@
-baytune==0.2.1
-numpy==1.14.5
-Flask==1.0.2
+scikit-optimize==0.5.2
+tensorflow==1.12.0

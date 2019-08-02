@@ -3,8 +3,6 @@
 Development
 ====================================================================
 
-.. contents:: Table of Contents
-
 Before running any individual scripts, make sure to run the shell configuration script:
 
     .. code-block:: shell
@@ -13,14 +11,25 @@ Before running any individual scripts, make sure to run the shell configuration 
 
 Refer to :ref:`architecture` and :ref:`folder-structure` for a developer's overview of Rafiki.
 
-
-Starting Parts of the Stack
+Testing Latest Code Changes
 --------------------------------------------------------------------
 
-The quickstart instructions set up a single node Docker Swarm on your machine. Separate shell scripts in the `./scripts/` folder configure and start parts of Rafiki's stack. Refer to the commands in
-`./scripts/start.sh`.
+To test the lastet code changes e.g. in the ``dev`` branch, you'll need to do the following:
 
-Connecting to Rafiki's DB
+    1. Build Rafiki's images on each participating node (the quickstart instructions pull pre-built `Rafiki's images <https://hub.docker.com/r/rafikiai/>`_ from Docker Hub):
+
+    .. code-block:: shell
+
+        bash scripts/build_images.sh
+
+    2. Purge all of Rafiki's data (since there might be database schema changes):
+
+    .. code-block:: shell
+
+        bash scripts/clean.sh
+
+
+Managing Rafiki's DB
 --------------------------------------------------------------------
 
 By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g `Postico <https://eggerapps.at/postico/>`_) with these credentials:
@@ -32,6 +41,15 @@ By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g 
         POSTGRES_USER=rafiki
         POSTGRES_DB=rafiki
         POSTGRES_PASSWORD=rafiki
+
+
+You can start & stop Rafiki's DB independently of the rest of Rafiki's stack with:
+
+    .. code-block:: shell
+
+        bash scripts/start_db.sh
+        bash scripts/stop_db.sh
+    
 
 Connecting to Rafiki's Cache
 --------------------------------------------------------------------
@@ -48,19 +66,6 @@ You can connect to Redis DB with `rebrow <https://github.com/marians/rebrow>`_:
 
         RAFIKI_ADDR=127.0.0.1
         REDIS_EXT_PORT=6380
-
-Building Images Locally
---------------------------------------------------------------------
-
-The quickstart instructions pull pre-built `Rafiki's images <https://hub.docker.com/r/rafikiai/>`_ from Docker Hub. To build Rafiki's images locally (e.g. to reflect latest code changes):
-
-    .. code-block:: shell
-
-        bash scripts/build_images.sh
-
-.. note::
-
-    If you're testing latest code changes on multiple nodes, you'll need to build Rafiki's images on those nodes as well.
 
 Pushing Images to Docker Hub
 --------------------------------------------------------------------
@@ -82,6 +87,21 @@ Build & view Rafiki's Sphinx documentation on your machine with the following co
         bash scripts/build_docs.sh latest
         open docs/index.html
 
+Testing
+--------------------------------------------------------------------
+
+Rafiki uses `pytest <https://docs.pytest.org>`_.  
+
+Running all tests:
+
+    ::
+
+        pip install -r rafiki/requirements.txt
+        pip install -r rafiki/advisor/requirements.txt
+        pip install -r test/requirements.txt
+        bash scripts/test.sh
+
+
 Troubleshooting
 --------------------------------------------------------------------
 
@@ -91,7 +111,7 @@ you might be running out of space allocated for Docker. Try one of the following
     ::
 
         # Prunes dangling images
-        docker system prune
+        docker system prune --all
 
     ::
 

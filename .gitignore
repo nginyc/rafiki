@@ -1,6 +1,10 @@
+# PIP
+.cache/pip/
+
 # Python virtualenv environments
 env/
 envs/
+venv/
 
 # Visual Studio Code config
 .vscode/
@@ -9,6 +13,9 @@ envs/
 __pycache__/
 *.py[cod]
 *$py.class
+
+# PIP cache
+.cache/
 
 # MacOS
 .DS_Store
@@ -27,6 +34,17 @@ data/*
 logs/*
 !logs/.gitkeep
 
+# Params
+params/*
+!params/.gitkeep
+
 # IPython notebooks
 .ipynb_checkpoints/*
 *.ipynb
+
+# Pytest
+.coverage*
+.pytest_cache/
+
+# SQL dump files
+*.sql

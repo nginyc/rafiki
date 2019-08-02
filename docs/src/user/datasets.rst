@@ -1,21 +1,10 @@
-Supported Dataset Types
+Dataset Types
 ====================================================================
-
-.. contents:: Table of Contents
-
-Dataset URIs must have the protocols of either ``http`` or ``https``.
-
-.. note::
-    
-    You can alternatively use relative (e.g. ``data/dataset.zip``) filepaths as dataset URIs, 
-    only if you have deployed the full Rafiki stack on your own machine. This filepath is relative to
-    the root of the project directory.
 
 .. note::
 
     Refer to `./examples/datasets/ <https://github.com/nginyc/rafiki/tree/master/examples/datasets/>`_ for examples on pre-processing 
     common dataset formats to conform to the Rafiki's own dataset formats.
-
 
 .. _`dataset-type:IMAGE_FILES`:
 
@@ -25,26 +14,15 @@ IMAGE_FILES
 The dataset file must be of the ``.zip`` archive format with a ``images.csv`` at the root of the directory.
 
 The ``images.csv`` should be of a `.CSV <https://en.wikipedia.org/wiki/Comma-separated_values>`_
-format with 2 columns of ``path`` and ``class``.
+format with columns of ``path`` and ``N`` other variable column names (*tag columns*).
 
 For each row,
 
-    ``path`` should be a file path to a ``.png``, ``.jpg`` or ``.jpeg`` image file within the archive, relative to the root of the directory.
+    ``path`` should be a file path to a ``.png``, ``.jpg`` or ``.jpeg`` image file within the archive, 
+    relative to the root of the directory.
 
-    ``class`` should be an integer from ``0`` to ``k - 1``, where ``k`` is the number of classes in the classification of images.
+    The other ``N`` columns describe the corresponding image, *depending on the task*.
 
-An example of ``images.csv`` follows:
-
-.. code-block:: text
-
-    path,class
-    image-0-of-class-0.png,0
-    image-1-of-class-0.png,0
-    ...
-    image-0-of-class-1.png,1
-    ...
-    image-99-of-class-9.png,9
-    
 
 .. _`dataset-type:CORPUS`:
 
@@ -62,26 +40,21 @@ For each row,
     These tokens should appear in the order as it is in the text of the corpus.
     To delimit sentences, ``token`` can be take the value of ``\n``.
 
-    The other ``N`` columns should be integers from ``0`` to ``k_i - 1``, where ``k_i`` is the number of classes for each column.
-    These tag columns describe the corresponding token as part of the text of the corpus, and depends on the task.
+    The other ``N`` columns describe the corresponding token as part of the text of the corpus, *depending on the task*.
 
+.. _`dataset-type:TABULAR`:
 
-An example of ``corpus.tsv`` for POS tagging follows:
+TABULAR
+--------------------------------------------------------------------
+
+The dataset file must be a tabular dataset of the ``.csv`` format with ``N`` columns.
+
+An example of the dataset for the task ``TABULAR_REGRESSION`` follows:
 
 .. code-block:: text
 
-    token       tag
-    Two         3
-    leading     2
+    density,bodyfat,age,weight,height,neck,chest,abdomen,hip,thigh,knee,ankle,biceps,forearm,wrist
+    1.0708,12.3,23,154.25,67.75,36.2,93.1,85.2,94.5,59,37.3,21.9,32,27.4,17.1
+    1.0853,6.1,22,173.25,72.25,38.5,93.6,83,98.7,58.7,37.3,23.4,30.5,28.9,18.2
+    1.0414,25.3,22,154,66.25,34,95.8,87.9,99.2,59.6,38.9,24,28.8,25.2,16.6
     ...
-    line-item   1
-    veto        5
-    .           4
-    \n          0
-    Professors  6
-    Philip      6
-    ...
-    previous    1
-    presidents  8   
-    .           4
-    \n          0

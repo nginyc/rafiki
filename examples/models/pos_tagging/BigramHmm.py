@@ -1,18 +1,27 @@
-import os
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import math
-import sys
-import datetime
-import re
-import numpy as np
-import traceback
-import pprint
 import json
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, logger, dataset_utils
-from rafiki.constants import TaskType
-
-# Min numeric value
-MIN_VALUE = -9999999999
+from rafiki.model import BaseModel, utils, FixedKnob
+from rafiki.model.dev import test_model_class
 
 class BigramHmm(BaseModel):
     '''
@@ -20,20 +29,23 @@ class BigramHmm(BaseModel):
     '''
     @staticmethod
     def get_knob_config():
-        return {}
+        return {
+            'min_value': FixedKnob(-9999999999) # Min numeric value
+        }
 
     def __init__(self, **knobs):
         super().__init__(**knobs)
+        self._min_value = knobs['min_value']
 
-    def train(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_corpus(dataset_uri)
+    def train(self, dataset_path, **kwargs):
+        dataset = utils.dataset.load_dataset_of_corpus(dataset_path)
         (sents_tokens, sents_tags) = zip(*[zip(*sent) for sent in dataset])
         self._num_tags = dataset.tag_num_classes[0]
         (self._trans_probs, self._emiss_probs) = self._compute_probs(self._num_tags, sents_tokens, sents_tags)
-        logger.log('No. of tags: {}'.format(self._num_tags))
+        utils.logger.log('No. of tags: {}'.format(self._num_tags))
 
-    def evaluate(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_corpus(dataset_uri)
+    def evaluate(self, dataset_path):
+        dataset = utils.dataset.load_dataset_of_corpus(dataset_path)
         (sents_tokens, sents_tags) = zip(*[zip(*sent) for sent in dataset])
         (sents_pred_tags) = self._tag_sents(self._num_tags, sents_tokens, self._trans_probs, self._emiss_probs)
         acc = self._compute_accuracy(sents_tags, sents_pred_tags)
@@ -44,19 +56,16 @@ class BigramHmm(BaseModel):
         (sents_tags) = self._tag_sents(self._num_tags, sents_tokens, self._trans_probs, self._emiss_probs)
         return sents_tags
 
-    def destroy(self):
-        pass
-
     def dump_parameters(self):
         params = {}
-        params['emiss_probs'] = self._emiss_probs
-        params['trans_probs'] = self._trans_probs
+        params['emiss_probs'] = json.dumps(self._emiss_probs)
+        params['trans_probs'] = json.dumps(self._trans_probs)
         params['num_tags'] = self._num_tags
         return params
 
     def load_parameters(self, params):
-        self._emiss_probs = params['emiss_probs']
-        self._trans_probs = params['trans_probs']
+        self._emiss_probs = json.loads(params['emiss_probs'])
+        self._trans_probs = json.loads(params['trans_probs'])
         self._num_tags = params['num_tags']
 
     def _compute_accuracy(self, sents_tags, sents_pred_tags):
@@ -71,6 +80,7 @@ class BigramHmm(BaseModel):
         return correct / total
 
     def _compute_probs(self, num_tags, sents_tokens, sents_tags):
+
         # Total number of states in HMM as tags
         T = num_tags + 2 # Last 2 for START & END tags
         START = num_tags # <s>
@@ -113,7 +123,7 @@ class BigramHmm(BaseModel):
         for i in range(T):
             for j in range(T):
                 if bi_counts[i][j] == 0:
-                    trans_probs[i][j] = MIN_VALUE
+                    trans_probs[i][j] = self._min_value
                 else:
                     trans_probs[i][j] = math.log(bi_counts[i][j] / uni_counts[i])
 
@@ -145,7 +155,7 @@ class BigramHmm(BaseModel):
             # Process 1st word that is conditioned on <s>
             for i in range(T):
                 trans = trans_probs[START][i]
-                emiss = emiss_probs[i].get(tokens[0], MIN_VALUE)
+                emiss = emiss_probs[i].get(tokens[0], self._min_value)
                 log_probs[0][i] = trans + emiss
 
             # For each word w after the 1st word
@@ -156,7 +166,7 @@ class BigramHmm(BaseModel):
                     for j in range(T):
                         # Compute probability for (tag j, tag i) for sentence up to word w
                         trans = trans_probs[j][i]
-                        emiss = emiss_probs[i].get(tokens[w], MIN_VALUE)
+                        emiss = emiss_probs[i].get(tokens[w], self._min_value)
                         prob = log_probs[w - 1][j] + trans + emiss
                         if log_probs[w][i] is None or prob > log_probs[w][i]:
                             log_probs[w][i] = prob
@@ -190,10 +200,10 @@ if __name__ == '__main__':
     test_model_class(
         model_file_path=__file__,
         model_class='BigramHmm',
-        task=TaskType.POS_TAGGING,
+        task='POS_TAGGING',
         dependencies={},
-        train_dataset_uri='data/ptb_for_pos_tagging_train.zip',
-        test_dataset_uri='data/ptb_for_pos_tagging_test.zip',
+        train_dataset_path='data/ptb_train.zip',
+        val_dataset_path='data/ptb_val.zip',
         queries=[
             ['Ms.', 'Haag', 'plays', 'Elianti', '18', '.'],
             ['The', 'luxury', 'auto', 'maker', 'last', 'year', 'sold', '1,214', 'cars', 'in', 'the', 'U.S.']
