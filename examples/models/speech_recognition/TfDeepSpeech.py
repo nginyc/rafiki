@@ -89,6 +89,7 @@ f.DEFINE_float('es_mean_th', 0.5, 'mean threshold for loss to determine the cond
 f.DEFINE_float('es_std_th', 0.5, 'standard deviation threshold for loss to determine the condition if early stopping is required')
 
 # Decoder
+
 f.DEFINE_string('alphabet_txt_path', 'tfdeepspeech/alphabet.txt',
                 'path to the the alphabets text file')
 f.DEFINE_string('lm_binary_path', 'tfdeepspeech/lm.binary',
@@ -99,6 +100,13 @@ f.DEFINE_integer('beam_width', 1024,
                     'beam width used in the CTC decoder when building candidate transcriptions')
 f.DEFINE_float('lm_alpha', 0.75, 'the alpha hyperparameter of the CTC decoder. Language Model weight.')
 f.DEFINE_float('lm_beta', 1.85, 'the beta hyperparameter of the CTC decoder. Word insertion weight.')
+
+# System args placeholder for test_model_class(), the following flags are only used when running this file locally
+
+f.DEFINE_string('train_path', '', 'Path to train dataset')
+f.DEFINE_string('val_path', '', 'Path to validation dataset')
+f.DEFINE_string('query_path', '', 'Path(s) to query audio(s), delimited by commas')
+
 
 class TfDeepSpeech(BaseModel):
     '''
@@ -1257,7 +1265,7 @@ if __name__ == '__main__':
     parser.add_argument('--val_path', type=str, default='data/ldc93s1/ldc93s1.zip', help='Path to validation dataset')
     # Ensure the wav files have a sample rate of 16kHz
     parser.add_argument('--query_path', type=str, default='data/ldc93s1/ldc93s1/LDC93S1.wav', 
-                        help='Path(s) to query audios(s), delimited by commas')
+                        help='Path(s) to query audio(s), delimited by commas')
     (args, _) = parser.parse_known_args()
 
     # For each query audio file, encode it as base64 string as per task specification
