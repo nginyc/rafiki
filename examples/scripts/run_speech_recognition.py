@@ -58,8 +58,8 @@ def run_speech_recognition(client, train_dataset_path, val_dataset_path, gpus, h
                         docker_image=IMAGE_TFDEEPSPEECH,
                         dependencies={ 
                             ModelDependency.TENSORFLOW: '1.12.0',
-                            ModelDependency.DS_CTCDECODER: '0.6.0-alpha.1'
-                        }) 
+                            ModelDependency.DS_CTCDECODER: '0.6.0-alpha.4'
+                        })
     pprint(tf_model)
 
     print('Creating train job for app "{}" on Rafiki...'.format(app))

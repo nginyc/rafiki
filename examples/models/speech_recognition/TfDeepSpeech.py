@@ -1271,7 +1271,7 @@ if __name__ == '__main__':
     # For each query audio file, encode it as base64 string as per task specification
     queries = []
     for wav_path in args.query_path.split(','):
-        with open(wav_path, 'rb') as f:
+        with open(wav_path.strip(), 'rb') as f:
             wav_bytes = f.read()
             wav_b64 = base64.b64encode(wav_bytes).decode('utf-8')
             queries.append(wav_b64)
@@ -1283,7 +1283,7 @@ if __name__ == '__main__':
         dependencies={
             ModelDependency.TENSORFLOW: '1.12.0',
             # Use ds_ctcdecoder version compatible with the trie file you download or generate
-            ModelDependency.DS_CTCDECODER: '0.6.0-alpha.1'
+            ModelDependency.DS_CTCDECODER: '0.6.0-alpha.4',
         },
         train_dataset_path=args.train_path,
         val_dataset_path=args.val_path,
