@@ -17,6 +17,16 @@
 # under the License.
 #
 
-from .container_manager import ContainerManager, InvalidServiceRequestError, ContainerService
-from .docker_swarm import DockerSwarmContainerManager
-from .kubernetes_operation import KubernetesContainerManager
+rm -f ./scripts/kubernetes/start_admin_deployment.json
+rm -f ./scripts/kubernetes/start_redis_deployment.json
+rm -f ./scripts/kubernetes/start_web_admin_deployment.json
+rm -f ./scripts/kubernetes/start_db_deployment.json
+rm -f ./scripts/kubernetes/start_zookeeper_deployment.json
+rm -f ./scripts/kubernetes/start_kafka_deployment.json
+
+rm -f ./scripts/kubernetes/start_admin_service.json
+rm -f ./scripts/kubernetes/start_redis_service.json
+rm -f ./scripts/kubernetes/start_web_admin_service.json
+rm -f ./scripts/kubernetes/start_db_service.json
+rm -f ./scripts/kubernetes/start_zookeeper_service.json
+rm -f ./scripts/kubernetes/start_kafka_service.json

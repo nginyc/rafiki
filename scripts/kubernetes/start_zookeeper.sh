@@ -17,6 +17,16 @@
 # under the License.
 #
 
-from .container_manager import ContainerManager, InvalidServiceRequestError, ContainerService
-from .docker_swarm import DockerSwarmContainerManager
-from .kubernetes_operation import KubernetesContainerManager
+source ./scripts/kubernetes/utils.sh
+
+title "Starting Rafiki's Zookeeper..."
+
+LOG_FILE_PATH=$PWD/logs/start_zookeeper_service.log
+(kubectl create -f scripts/kubernetes/start_zookeeper_service.json \
+&> $LOG_FILE_PATH) &
+ensure_stable "Rafiki's Zookeeper Service" $LOG_FILE_PATH 20
+
+LOG_FILE_PATH=$PWD/logs/start_zookeeper_deployment.log
+(kubectl create -f scripts/kubernetes/start_zookeeper_deployment.json \
+&> $LOG_FILE_PATH) &
+ensure_stable "Rafiki's Zookeeper Deployment" $LOG_FILE_PATH 10

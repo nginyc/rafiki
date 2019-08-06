@@ -17,6 +17,16 @@
 # under the License.
 #
 
-from .container_manager import ContainerManager, InvalidServiceRequestError, ContainerService
-from .docker_swarm import DockerSwarmContainerManager
-from .kubernetes_operation import KubernetesContainerManager
+source ./scripts/kubernetes/utils.sh
+
+title "Starting Rafiki's Web Admin..."
+
+LOG_FILE_PATH=$PWD/logs/start_web_admin_service.log
+(kubectl create -f ./scripts/kubernetes/start_web_admin_service.json \
+  &> $LOG_FILE_PATH) &
+ensure_stable "Rafiki's Web Admin Service" $LOG_FILE_PATH 10
+
+LOG_FILE_PATH=$PWD/logs/start_web_admin_deployment.log
+(kubectl create -f scripts/kubernetes/start_web_admin_deployment.json \
+&> $LOG_FILE_PATH) &
+ensure_stable "Rafiki's Web Admin Deployment" $LOG_FILE_PATH 10

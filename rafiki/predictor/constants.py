@@ -24,6 +24,11 @@ class Query():
     def __init__(self, query: Any):
         self.id = str(uuid.uuid4())
         self.query = query
+    
+    def __eq__(self, other):
+        return (self.__class__ == other.__class__
+                and self.id == other.id 
+                and self.query == other.query)
 
 class Prediction():
     def __init__(self, 
@@ -36,3 +41,9 @@ class Prediction():
         self.prediction = prediction
         self.query_id = query_id
         self.worker_id = worker_id
+
+    def __eq__(self, other):
+        return (self.__class__ == other.__class__
+                and self.prediction == other.prediction 
+                and self.query_id == other.query_id
+                and self.worker_id == other.worker_id)

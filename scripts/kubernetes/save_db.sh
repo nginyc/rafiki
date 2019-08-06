@@ -17,6 +17,24 @@
 # under the License.
 #
 
-from .container_manager import ContainerManager, InvalidServiceRequestError, ContainerService
-from .docker_swarm import DockerSwarmContainerManager
-from .kubernetes_operation import KubernetesContainerManager
+source ./scripts/kubernetes/.env.sh
+
+source ./scripts/kubernetes/utils.sh
+
+DUMP_FILE=$POSTGRES_DUMP_FILE_PATH
+
+# Check if dump file exists
+if [ -f $DUMP_FILE ]
+then 
+    if ! prompt "Database dump file exists at $DUMP_FILE. Override it?"
+    then 
+        echo "Not dumping database!" 
+        exit 0
+    fi
+fi
+
+echo "Dumping database to $DUMP_FILE..." 
+DB_PODNAME=$(kubectl get pod | grep $POSTGRES_HOST)
+DB_PODNAME=${DB_PODNAME:0:26}
+kubectl exec $DB_PODNAME -c $POSTGRES_HOST -- pg_dump -U postgres --if-exists --clean $POSTGRES_DB > $DUMP_FILE
+

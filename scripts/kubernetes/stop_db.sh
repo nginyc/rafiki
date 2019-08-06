@@ -17,6 +17,22 @@
 # under the License.
 #
 
-from .container_manager import ContainerManager, InvalidServiceRequestError, ContainerService
-from .docker_swarm import DockerSwarmContainerManager
-from .kubernetes_operation import KubernetesContainerManager
+LOG_FILEPATH=$PWD/logs/stop.log
+
+source ./scripts/kubernetes/utils.sh
+
+title "Dumping database..." 
+bash ./scripts/kubernetes/save_db.sh
+
+# If database dump previously failed, prompt whether to continue script
+if [ $? -ne 0 ]
+then
+    if ! prompt "Failed to dump database. Continue?"
+    then
+        exit 1
+    fi
+fi
+
+title "Stopping Rafiki's DB..."
+kubectl delete deployment $POSTGRES_HOST
+kubectl delete service $POSTGRES_HOST
