@@ -29,8 +29,7 @@ import traceback
 
 from rafiki.model import Params
 from rafiki.advisor import ParamsType
-
-from .local_cache import LocalCache
+from rafiki.utils.local_cache import LocalCache
 from .redis import RedisSession
 
 logger = logging.getLogger(__name__)

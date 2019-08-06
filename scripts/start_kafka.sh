@@ -17,15 +17,17 @@
 # under the License.
 #
 
-LOG_FILE_PATH=$PWD/logs/start_cache.log
+LOG_FILE_PATH=$PWD/logs/start_kafka.log
 
 source ./scripts/utils.sh
 
-title "Starting Rafiki's Cache..."
-(docker run --rm --name $REDIS_HOST \
+title "Starting Rafiki's Kafka..."
+(docker run --rm --name $KAFKA_HOST \
   --network $DOCKER_NETWORK \
-  -p $REDIS_EXT_PORT:$REDIS_PORT \
-  $IMAGE_REDIS \
+  -e KAFKA_ZOOKEEPER_CONNECT=$ZOOKEEPER_HOST:$ZOOKEEPER_PORT \
+  -e KAFKA_ADVERTISED_HOST_NAME=$KAFKA_HOST \
+  -e KAFKA_ADVERTISED_PORT=$KAFKA_PORT \
+  -p $KAFKA_EXT_PORT:$KAFKA_PORT \
+  -d $IMAGE_KAFKA \
   &> $LOG_FILE_PATH) &
-
-ensure_stable "Rafiki's Cache" $LOG_FILE_PATH 10
+ensure_stable "Rafiki's Kafka" $LOG_FILE_PATH 30

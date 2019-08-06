@@ -34,7 +34,7 @@ ensure_stable()
     sleep_time=$3
     echo "Waiting for ${sleep_time}s for $1 to stabilize..."
     sleep $sleep_time
-    if ps -p $! > /dev/null
+    if [ $? -eq 0 ]
     then
         echo "$1 is running"
     else

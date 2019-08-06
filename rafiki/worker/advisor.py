@@ -27,7 +27,7 @@ from rafiki.utils.auth import superadmin_client
 from rafiki.meta_store import MetaStore
 from rafiki.model import load_model_class
 from rafiki.advisor import make_advisor, BaseAdvisor
-from rafiki.cache import TrainCache, ParamCache
+from rafiki.redis import TrainCache, ParamCache
 
 LOOP_SLEEP_SECS = 0.1
 

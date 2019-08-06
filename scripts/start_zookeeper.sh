@@ -17,25 +17,14 @@
 # under the License.
 #
 
+LOG_FILE_PATH=$PWD/logs/start_zookeeper.log
+
 source ./scripts/utils.sh
 
-pull_image()
-{
-    if [[ ! -z $(docker images -q $1) ]]
-    then
-        echo "$1 already exists locally"
-    else 
-        docker pull $1 || exit 1 
-    fi
-}
-
-title "Pulling images..."
-echo "Pulling images required by Rafiki from Docker Hub..."
-pull_image $IMAGE_POSTGRES
-pull_image $IMAGE_REDIS
-pull_image $IMAGE_KAFKA
-pull_image $IMAGE_ZOOKEEPER
-pull_image $RAFIKI_IMAGE_ADMIN:$RAFIKI_VERSION
-pull_image $RAFIKI_IMAGE_WORKER:$RAFIKI_VERSION
-pull_image $RAFIKI_IMAGE_PREDICTOR:$RAFIKI_VERSION
-pull_image $RAFIKI_IMAGE_WEB_ADMIN:$RAFIKI_VERSION
+title "Starting Rafiki's Zookeeper..."
+(docker run --rm --name $ZOOKEEPER_HOST \
+  --network $DOCKER_NETWORK \
+  -p $ZOOKEEPER_EXT_PORT:$ZOOKEEPER_PORT \
+  -d $IMAGE_ZOOKEEPER \
+  &> $LOG_FILE_PATH) &
+ensure_stable "Rafiki's Zookeeper" $LOG_FILE_PATH 30
