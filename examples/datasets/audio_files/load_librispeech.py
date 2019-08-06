@@ -148,7 +148,6 @@ def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir):
     #  ...
     #
     # We also convert the corresponding FLACs to WAV in the same pass
-    counter = {'invalid': 0}
     files = []
     for root, dirnames, filenames in os.walk(source_dir):
         for filename in fnmatch.filter(filenames, '*.trans.txt'):
@@ -174,8 +173,8 @@ def _convert_audio_and_split_sentences(extracted_dir, data_set, dest_dir):
 
                     if not os.path.exists(wav_file) and os.path.exists(flac_file):
                         Transformer().build(flac_file, wav_file)
-                        wav_filesize = os.path.getsize(wav_file)
-                        files.append((seqid + ".wav", wav_filesize, transcript))
+                    wav_filesize = os.path.getsize(wav_file)
+                    files.append((seqid + ".wav", wav_filesize, transcript))
 
     return pandas.DataFrame(data=files, columns=["wav_filename", "wav_filesize", "transcript"])
 
