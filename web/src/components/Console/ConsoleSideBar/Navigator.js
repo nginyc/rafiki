@@ -16,9 +16,10 @@ import ListItemText from '@material-ui/core/ListItemText';
 import HomeIcon from '@material-ui/icons/Home';
 import DnsRoundedIcon from '@material-ui/icons/DnsRounded';
 // row-based table (dataset)
-import ListDSIcon from '@material-ui/icons/FormatListBulleted'
-import PutDataCSVIcon from '@material-ui/icons/CloudUploadOutlined'
+import ListIcon from '@material-ui/icons/FormatListBulleted'
+import CloudUpload from '@material-ui/icons/CloudUploadOutlined'
 import DeleteDsIcon from '@material-ui/icons/Delete'
+
 
 // for nested list
 import Collapse from '@material-ui/core/Collapse';
@@ -83,13 +84,9 @@ const styles = theme => ({
   itemPrimary: {
     color: 'inherit',
     fontSize: theme.typography.fontSize,
-    '&$textDense': {
-      fontSize: theme.typography.fontSize,
-    },
   },
-  textDense: {},
   divider: {
-    marginTop: theme.spacing.unit * 2,
+    marginTop: theme.spacing(1) * 2,
   }
 });
 
@@ -146,12 +143,12 @@ class Navigator extends React.Component {
         children: [
           {
             id: 'List Dataset',
-            icon: <ListDSIcon />,
+            icon: <ListIcon />,
             pathname: "/console/datasets/list-dataset"
           },
           {
             id: 'Upload Dataset',
-            icon: <PutDataCSVIcon />,
+            icon: <CloudUpload />,
             pathname: "/console/datasets/upload-datasets"
           },
           {
@@ -167,9 +164,14 @@ class Navigator extends React.Component {
         collapseIn: this.state.JobsTableOpen,
         children: [
           {
-            id: 'Work in progress',
-            icon: <DnsRoundedIcon />,
-            pathname: "#"
+            id: 'List Train Jobs',
+            icon: <ListIcon />,
+            pathname: "/console/jobs/list-train-jobs"
+          },
+          {
+            id: 'Create NEW Train',
+            icon: <CloudUpload />,
+            pathname: "/console/jobs/create-train-job"
           },
           /*
           {
@@ -254,36 +256,7 @@ class Navigator extends React.Component {
               <img alt="logo" src={Logo} className={classes.logo} />
               <span className={classes.logoText}>Rafiki</span>
             </ListItem>
-            <ListItem 
-              component={Link}
-              to="/console"
-              onClick={onClose}
-              className={classNames(
-                classes.item,
-                classes.overviewHover,
-                classes.itemCategory,
-                location.pathname === "/console" &&
-                classes.itemActiveItem,
-                classes.categoryHeader
-              )}
-            >
-              <ListItemIcon>
-                <HomeIcon />
-              </ListItemIcon>
-              <ListItemText
-                classes={
-                  location.pathname === "/console"
-                    ? {
-                      primary: classes.categoryHeaderPrimaryActive
-                    }
-                    : {
-                      primary: classes.categoryHeaderPrimary
-                    }
-                  }
-              >
-                Storage Overview
-              </ListItemText>
-            </ListItem>
+         
             {categories.map(({id, collapseID, collapseIn, children }) => (
               <React.Fragment key={id}>
                 <ListItem
@@ -330,7 +303,6 @@ class Navigator extends React.Component {
                       <ListItemText
                         classes={{
                           primary: classes.itemPrimary,
-                          textDense: classes.textDense,
                         }}
                       >
                         {childId}

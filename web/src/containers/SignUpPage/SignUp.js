@@ -15,14 +15,14 @@ import FormFeedback from '../../components/LandingAppForm/FormFeedback';
 
 const styles = theme => ({
   form: {
-    marginTop: theme.spacing.unit * 6,
+    marginTop: theme.spacing(1) * 6,
   },
   button: {
-    marginTop: theme.spacing.unit * 3,
-    marginBottom: theme.spacing.unit * 2,
+    marginTop: theme.spacing(1) * 3,
+    marginBottom: theme.spacing(1) * 2,
   },
   feedback: {
-    marginTop: theme.spacing.unit * 2,
+    marginTop: theme.spacing(1) * 2,
   },
 });
 

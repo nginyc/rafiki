@@ -26,7 +26,7 @@ const styles = theme => ({
     display: 'block',
   },
   addDS: {
-    marginRight: theme.spacing.unit,
+    marginRight: theme.spacing(1),
   },
   contentWrapper: {
     margin: '40px 16px',
@@ -85,7 +85,7 @@ class ListDataSet extends React.Component {
         <MainContent>
           <ContentBar>
             <Toolbar>
-              <Grid container spacing={16} justify="space-between" alignItems="center">
+              <Grid container spacing={10} justify="space-between" alignItems="center">
                 <Grid item>
                   <Typography variant="h5" gutterBottom>
                     List Dataset

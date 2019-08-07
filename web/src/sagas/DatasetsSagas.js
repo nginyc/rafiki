@@ -8,11 +8,8 @@ import {
 import { showLoading, hideLoading } from 'react-redux-loading-bar'
 import * as actions from "../containers/Datasets/actions"
 import { notificationShow } from "../containers/Root/actions.js"
-import * as api from "../services/DatasetsAPI"
-
-function getToken(state) {
-    return state.Root.token
-}
+import * as api from "../services/ClientAPI"
+import { getToken } from "./utils";
 
 // List Datasets
 function* watchGetDSListRequest() {

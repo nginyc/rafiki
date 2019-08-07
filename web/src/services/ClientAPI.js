@@ -2,6 +2,10 @@
 import axios from 'axios'
 import HTTPconfig from "../HTTPconfig"
 
+export const requestTrainJobsList = (params, token) => {
+  return _getWithToken("/jobs", params, token)
+}
+
 export const requestListDataset = (params, token) => {
   // Currify this function
   console.log(`Authorization: Bearer ${token}`)
@@ -55,7 +59,7 @@ export const _getWithToken = (url, params, token) => {
   });
 }
 
-export const _postFormWithToken = (url, formData, token, params={}) => {
+export const _postFormWithToken = (url, formData, token, params = {}) => {
   return axios({ // Axios(config) is a promise
     method: 'post',
     url: _makeUrl(url, params), // Use _makeUrl function to make the url

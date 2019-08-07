@@ -11,7 +11,6 @@ const initialState = {
 };
 
 export const DatasetsReducer = (state = initialState, action) => {
-  console.log("action", action)
   switch (action.type) {
     case Types.POPULATE_DS_LIST:
       return {

@@ -11,8 +11,14 @@ import Header from 'components/Console/ConsoleHeader/Header';
 import Navigator from 'components/Console/ConsoleSideBar/Navigator';
 import ConsoleTheme from "./ConsoleTheme"
 
+// Datasets Component
 import ListDataSet from "../Datasets/ListDataSet"
 import UploadDataset from "../Datasets/UploadDataset"
+
+// Trainjobs Component
+import ListTrainJobs from "../Jobs/ListTrainJobs"
+import CreateTrainJob from "../Jobs/CreateTrainJob"
+import InProgress from "../WorkInProgress/InProgress"
 
 import * as actions from "./actions"
 
@@ -106,6 +112,21 @@ class ConsoleAppFrame extends React.Component {
               exact
               path='/console/datasets/upload-datasets'
               component={UploadDataset}
+            />
+            <Route
+              exact
+              path='/console/datasets/delete-dataset'
+              component={InProgress}
+            />
+            <Route
+              exact
+              path='/console/jobs/list-train-jobs'
+              component={ListTrainJobs}
+            />
+            <Route
+              exact
+              path='/console/jobs/create-train-job'
+              component={ListTrainJobs}
             />
           </div>
         </div>

@@ -5,6 +5,7 @@ import { loadingBarReducer } from 'react-redux-loading-bar'
 import { Root } from "../containers/Root/reducer"
 import { ConsoleAppFrame } from "../containers/ConsoleAppFrame/reducer"
 import { DatasetsReducer } from "../containers/Datasets/reducer"
+import { JobsReducer } from "containers/Jobs/reducer"
 
 
 const rootReducer = combineReducers({
@@ -12,7 +13,8 @@ const rootReducer = combineReducers({
   // app reducers:
   Root,
   ConsoleAppFrame,
-  DatasetsReducer
+  DatasetsReducer,
+  JobsReducer
 })
 
 export default rootReducer;

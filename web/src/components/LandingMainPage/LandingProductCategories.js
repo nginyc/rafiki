@@ -11,8 +11,8 @@ import rafikiArch from "../../assets/rafikiArch.png"
 
 const styles = theme => ({
   root: {
-    marginTop: theme.spacing.unit * 8,
-    marginBottom: theme.spacing.unit * 4,
+    marginTop: theme.spacing(1) * 8,
+    marginBottom: theme.spacing(1) * 4,
   },
 });
 

@@ -3,6 +3,8 @@ import PropTypes from "prop-types";
 
 import withStyles from "@material-ui/core/styles/withStyles";
 
+import { Link } from 'react-router-dom'
+
 // table
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -15,13 +17,13 @@ import * as moment from 'moment';
 
 const styles = theme => ({
   button: {
-    margin: theme.spacing.unit
+    margin: theme.spacing(1)
   },
   tableButtons : {
     margin: 3,
   },
   chip: {
-    margin: theme.spacing.unit,
+    margin: theme.spacing(1),
   },
   DsName: {
     fontSize: theme.typography.fontSize,
@@ -103,6 +105,7 @@ class ListDataSetTable extends React.Component {
           })}
         </TableBody>
         </Table>
+       
       </Fragment>
     )
   }

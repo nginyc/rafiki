@@ -61,7 +61,7 @@ const styles = theme => ({
   rightLink: {
     font: '300 18px Roboto,sans-serif',
     color: theme.palette.common.white,
-    marginLeft: theme.spacing.unit * 5,
+    marginLeft: theme.spacing(1) * 5,
     textDecoration: "none",
     '&:hover': {
       color: theme.palette.secondary.main,
@@ -70,7 +70,7 @@ const styles = theme => ({
   rightLinkActive: {
     font: '300 18px Roboto,sans-serif',
     color: theme.palette.secondary.main,
-    marginLeft: theme.spacing.unit * 5,
+    marginLeft: theme.spacing(1) * 5,
     textDecoration: "none",
   },
   linkSecondary: {
@@ -83,12 +83,12 @@ const styles = theme => ({
   },
   iconButtonAvatar: {
     padding: 4,
-    marginLeft: theme.spacing.unit * 3,
+    marginLeft: theme.spacing(1) * 3,
     textDecoration: "none"
   },
   menuButton: {
-    marginLeft: -theme.spacing.unit,
-    marginRight: theme.spacing.unit * 2,
+    marginLeft: -theme.spacing(1),
+    marginRight: theme.spacing(1) * 2,
   },
 });
 

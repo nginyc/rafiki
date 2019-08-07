@@ -11,7 +11,7 @@ import DataDedup from "../../assets/DataDedup.png"
 
 const styles = theme => ({
   root: {
-    marginTop: theme.spacing.unit * 8,
+    marginTop: theme.spacing(1) * 8,
   },
 })
 

@@ -35,7 +35,7 @@ const styles = theme => ({
     backgroundColor: theme.palette.secondary.main,
   },
   menuButton: {
-    marginLeft: -theme.spacing.unit,
+    marginLeft: -theme.spacing(1),
   },
   iconButtonAvatar: {
     padding: 4,
@@ -139,7 +139,6 @@ class Header extends React.Component {
     )
   }
 }
-
 
 const mapStateToProps = state => ({
   anchorElId: state.Root.dropdownAnchorElId,

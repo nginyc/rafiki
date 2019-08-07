@@ -1,16 +1,10 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { compose } from "redux";
-import { Link, withRouter } from "react-router-dom";
+import { withRouter } from "react-router-dom";
 
 import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core/styles';
-
-// zoom addicon
-import Fab from "@material-ui/core/Fab";
-import Zoom from "@material-ui/core/Zoom";
-import ListDSIcon from '@material-ui/icons/FormatListBulleted'
-import AddIcon from "@material-ui/icons/Add";
 
 
 const styles = theme => ({
@@ -29,12 +23,12 @@ const styles = theme => ({
   },
   fab: {
     position: 'absolute',
-    bottom: theme.spacing.unit * 3,
-    right: theme.spacing.unit * 3,
+    bottom: theme.spacing(1) * 3,
+    right: theme.spacing(1) * 3,
     zIndex: 10
   },
   extendedIcon: {
-    marginRight: theme.spacing.unit,
+    marginRight: theme.spacing(1),
   },
 })
 
@@ -51,7 +45,7 @@ class MainContent extends React.Component {
       <main className={classes.mainContent}>
         <Paper className={classes.paper}>
           {children}
-          {location.pathname === "/console/datasets/list-dataset"
+          {/* {location.pathname === "/console/datasets/list-dataset"
             ? (
               <Zoom in={true} unmountOnExit>
                 <Fab
@@ -78,7 +72,7 @@ class MainContent extends React.Component {
                 </Fab>
               </Zoom>
             )
-          }
+          } */}
         </Paper>
       </main>
     )

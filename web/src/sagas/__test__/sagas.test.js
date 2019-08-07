@@ -33,10 +33,14 @@ describe("authLogin Saga Unit Test", function() {
     })
 
     it("should be able to catch error on response and dispatch show error's actions", function(){
-        const error = {}
+        const error = new Error("custom error")
         const stepError = gen.throw(error)
         expect(stepError.value).toEqual(put(actions.authFail(error)))
         const stepError2 = gen.next()
         expect(stepError2.value).toEqual(put(actions.notificationShow("Failed to sign in")))
     });
+
+    it("should be able to call action redirect to dataset page", function() {
+        //TODO
+    })
 }) 

@@ -1,4 +1,4 @@
-import { _makeUrl, requestListDataset } from "./DatasetsAPI"
+import { _makeUrl, requestListDataset } from "./ClientAPI"
 import HTTPconfig from "HTTPconfig"
 
 describe("request ListDataset should return an axios promise", function() {

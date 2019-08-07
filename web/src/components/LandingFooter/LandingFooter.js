@@ -14,8 +14,8 @@ const styles = theme => ({
     // borderTop: `1px solid ${theme.palette.border}`,
   },
   layoutBody: {
-    marginTop: theme.spacing.unit * 8,
-    marginBottom: theme.spacing.unit * 8,
+    marginTop: theme.spacing(1) * 8,
+    marginBottom: theme.spacing(1) * 8,
     display: 'flex',
   },
   iconsWrapper: {
@@ -31,7 +31,7 @@ const styles = theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: theme.palette.primary.light,
-    marginRight: theme.spacing.unit,
+    marginRight: theme.spacing(1),
     '&:hover': {
       backgroundColor: theme.palette.warning.dark,
     },
