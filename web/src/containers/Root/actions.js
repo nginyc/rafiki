@@ -44,9 +44,10 @@ export const authStart = () => ({
   type: Types.AUTH_START
 })
 
-export const authSuccess = token => ({
+export const authSuccess = (token, user_id) => ({
   type: Types.AUTH_SUCCESS,
-  token
+  token,
+  user_id
 })
 
 export const authFail = error => ({

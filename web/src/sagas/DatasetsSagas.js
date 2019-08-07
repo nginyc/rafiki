@@ -13,7 +13,6 @@ import { getToken } from "./utils";
 
 // List Datasets
 function* watchGetDSListRequest() {
-    console.log("watchGetDSListRequest Saga is now running")
     yield takeLatest(actions.Types.REQUEST_LS_DS, getDatasetList)
 }
  

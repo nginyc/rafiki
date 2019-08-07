@@ -10,7 +10,7 @@ export function requestJobsList() {
    }
 }
 
-export function populateTrainJobslist(jobsList) {
+export function populateJobsList(jobsList) {
    return {
       type: Types.POPULATE_TRAINJOBSLIST,
       jobsList

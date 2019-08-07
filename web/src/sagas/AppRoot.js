@@ -14,13 +14,15 @@ export function* authLogin(action) {
   try{
     yield put(actions.authStart())
     const res = yield call(api.requestSignIn, action.authData)
+    const user_id = res.data.user_id
     const token = res.data.token
     // 1 hour expirationTime?
     const expirationTime = 3600 * 1000
     const expirationDate = new Date(new Date().getTime() + expirationTime);
+    localStorage.setItem('user_id', user_id);
     localStorage.setItem('token', token);
     localStorage.setItem('expirationDate', expirationDate);
-    yield all([put(actions.notificationShow("Successfully signed in")),put(actions.authSuccess(token))])
+    yield all([put(actions.notificationShow("Successfully signed in")),put(actions.authSuccess(token,user_id))])
   } catch(e) {
     console.error(e)
     yield put(actions.authFail(e))
@@ -35,6 +37,7 @@ export function* watchSignInRequest() {
 function* checkAuthState(action) {
   try{
     const token = localStorage.getItem('token');
+    const user_id = localStorage.getItem('user_id');
     if (!token) {
       console.log("token not found")
       yield put(actions.logout())
@@ -45,11 +48,12 @@ function* checkAuthState(action) {
         yield put(actions.logout())
       } else {
         console.log("token found")
-        yield put(actions.authSuccess(token))
+        yield put(actions.authSuccess(token,user_id))
         // after expiration auto logout
         yield delay(expirationDate.getTime() - new Date().getTime())
         localStorage.removeItem('token');
         localStorage.removeItem('expirationDate');
+        localStorage.removeItem('user_id');
         yield put(actions.logout())
       }
     }

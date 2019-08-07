@@ -13,7 +13,6 @@ import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
 
 // for icons
-import HomeIcon from '@material-ui/icons/Home';
 import DnsRoundedIcon from '@material-ui/icons/DnsRounded';
 // row-based table (dataset)
 import ListIcon from '@material-ui/icons/FormatListBulleted'

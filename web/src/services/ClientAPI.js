@@ -3,7 +3,7 @@ import axios from 'axios'
 import HTTPconfig from "../HTTPconfig"
 
 export const requestTrainJobsList = (params, token) => {
-  return _getWithToken("/jobs", params, token)
+  return _getWithToken("/train_jobs", params, token)
 }
 
 export const requestListDataset = (params, token) => {

@@ -1,8 +1,10 @@
 import { Types } from "./actions"
+import { CardActions } from "@material-ui/core";
 
 
 const initialState = {
     token: null,
+    user_id: null, 
     error: null, 
     loading: false,
     notification: {
@@ -38,6 +40,7 @@ export const Root = (state = initialState, action) => {
       return {
         ...state,
         token: action.token,
+        user_id: action.user_id,
         error: null,
         loading: false
       }
