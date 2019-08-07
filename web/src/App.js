@@ -5,6 +5,7 @@ import {
   Route 
  } from 'react-router-dom'
 
+
  import Loadable from 'react-loadable';
  import LinearProgress from "@material-ui/core/LinearProgress";
 
@@ -44,7 +45,6 @@ class App extends Component {
   debbuger;
   render() {
     return (
-      <BrowserRouter>
         <Switch>
           <Route
             exact
@@ -77,7 +77,6 @@ class App extends Component {
           />
           <Route component={NoMatch} />
         </Switch>
-      </BrowserRouter>
     );
   }
 }

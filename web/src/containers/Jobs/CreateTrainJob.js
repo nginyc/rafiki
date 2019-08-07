@@ -39,7 +39,7 @@ class CreateTrainJob extends React.Component {
                 <MainContent>
                     <ContentBar>
                         <Toolbar>
-                            <Grid container spacing={16} justify="space-between" alignItems="center">
+                            <Grid container spacing={10} justify="space-between" alignItems="center">
                                 <Grid item>
                                     <Typography variant="h5" gutterBottom>
                                         Create Train Jobs

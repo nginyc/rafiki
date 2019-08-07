@@ -4,6 +4,7 @@ import * as actions from "containers/Jobs/actions"
 import { showLoading, hideLoading } from "react-redux-loading-bar";
 import { notificationShow } from "containers/Root/actions";
 import * as api from "services/ClientAPI"
+import { push } from 'connected-react-router'
 
 
 export function* watchRequestJobsList() {

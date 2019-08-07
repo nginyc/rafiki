@@ -52,7 +52,7 @@ function AppFooter(props) {
               direction="column"
               justify="flex-end"
               className={classes.iconsWrapper}
-              spacing={16}
+              spacing={10}
             >
               <Grid item className={classes.icons}>
                 <a href="https://www.comp.nus.edu.sg/~dbsystem/" target="_blank" rel="noopener noreferrer" className={classes.icon}>

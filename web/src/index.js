@@ -6,6 +6,10 @@ import ReactDOM from 'react-dom';
 import { createStore, applyMiddleware, compose } from "redux";
 import { Provider } from "react-redux";
 import createSagaMiddleware from 'redux-saga'
+import { createBrowserHistory } from 'history'
+import { routerMiddleware } from 'connected-react-router'
+
+import { ConnectedRouter } from "connected-react-router";
 
 // Material-UI
 import { MuiThemeProvider } from "@material-ui/core/styles";
@@ -14,11 +18,10 @@ import theme from "./theme"
 import 'typeface-roboto';
 
 import App from './App';
-import rootReducer from "./store/rootReducer"
+import createRootReducer from "./store/rootReducer"
 import rootSaga from "./sagas"
 import ErrorBoundary from "./containers/ErrorBoundary/ErrorBoundary"
 import Root from "./containers/Root/Root"
-
 
 // Load Roboto typeface
 require('typeface-roboto')
@@ -26,12 +29,15 @@ require('typeface-roboto')
 // create the saga middleware
 const sagaMiddleware = createSagaMiddleware()
 
+export const history = createBrowserHistory()
+
 // compose to combine store enhancers
 const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
 const store = createStore(
-  rootReducer,
+  createRootReducer(history),
   composeEnhancers(
     applyMiddleware(
+      routerMiddleware(history),
       // mount Saga on the Store
       sagaMiddleware,
     )
@@ -50,9 +56,11 @@ ReactDOM.render(
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
       <Provider store={store}>
-        <Root>
-          <App />
-        </Root>
+        <ConnectedRouter history={history}>
+          <Root>
+            <App />
+          </Root>
+        </ConnectedRouter>
       </Provider>
     </MuiThemeProvider>
   </ErrorBoundary>,

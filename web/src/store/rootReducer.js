@@ -7,14 +7,20 @@ import { ConsoleAppFrame } from "../containers/ConsoleAppFrame/reducer"
 import { DatasetsReducer } from "../containers/Datasets/reducer"
 import { JobsReducer } from "containers/Jobs/reducer"
 
+import { connectRouter } from 'connected-react-router'
 
-const rootReducer = combineReducers({
-  loadingBar: loadingBarReducer,
-  // app reducers:
-  Root,
-  ConsoleAppFrame,
-  DatasetsReducer,
-  JobsReducer
-})
+
+
+const rootReducer = (history) => {
+  return combineReducers({
+    loadingBar: loadingBarReducer,
+    router: connectRouter(history),
+    // app reducers:
+    Root,
+    ConsoleAppFrame,
+    DatasetsReducer,
+    JobsReducer,
+  })
+}
 
 export default rootReducer;
