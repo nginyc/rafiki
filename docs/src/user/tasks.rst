@@ -159,3 +159,42 @@ Prediction Format
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A float, representing the value of the target column.
+
+IMAGE_GENERATION
+--------------------------------------------------------------------
+
+Dataset Format
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Scripts for generating train & validation datasets are provided in the folder ``examples/datasets/image_generation_files``
+- Train dataset:
+    - Provided scripts will export train datasets as ``.TFRecords`` files
+    - Zip all generated ``.TFRecords`` files manually as final train dataset
+- Validation dataset:
+    - Must run ``examples/datasets/image_generation_files/load_is_val_dataset`` and zip all output files manually as validation dataset
+
+Query Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An 1D list ``[grid_width, grid_height, total_images]`` is expected.
+
+Total number of ``total_images`` images will be generated.
+
+Each images will contain ``grid_width`` images along horizontal axis, and ``grid_height`` images along vertical axis.
+
+Following example contains total ``3`` images, each image is ``2 * 4``, thus the query would be ``[2, 4, 3]``
+
+.. figure:: ../images/image_generation_query_example.jpg
+    :align: center
+
+    Example of Image Generation predition
+
+Thus, each prediction will contain ``grid_width * grid_height * total_images`` generated results
+
+
+Prediction Format 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A list of `Base64-encoded <https://en.wikipedia.org/wiki/Base64>`_ string of bytes of generated images.
+
+Length of the prediction list: ``total_images`` in input query

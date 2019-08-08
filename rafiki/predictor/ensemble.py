@@ -50,7 +50,9 @@ def ensemble(predictions: List[Any]) -> Any:
 
     # Return some worker's predictions
     index = 0
+    logger.info(predictions)
     prediction = predictions[index]
+    logger.info(prediction)
     prediction = _simplify_prediction(prediction)
     return prediction
 
@@ -61,7 +63,7 @@ def _simplify_prediction(prediction):
         prediction = prediction.tolist()
 
     # Recurvely apply to elements of iterables
-    if isinstance(prediction, Iterable):
+    if isinstance(prediction, list):
         for (i, x) in enumerate(prediction):
             prediction[i] = _simplify_prediction(x)
 

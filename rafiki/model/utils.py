@@ -32,7 +32,12 @@ from .log import LoggerUtils
 class InvalidModelClassError(Exception): pass
 
 def load_model_class(model_file_bytes, model_class, temp_mod_name=None) -> Type[BaseModel]:
-    temp_mod_name = temp_mod_name or '{}-{}'.format(model_class, str(uuid.uuid4()))
+    if temp_mod_name is None:
+        if model_class == 'PG_GANs':
+            temp_mod_name = 'PG_GANs-temp'
+        else:
+            temp_mod_name = '{}-{}'.format(model_class, str(uuid.uuid4()))
+    
     temp_model_file_name ='{}.py'.format(temp_mod_name)
 
     # Temporarily save the model file to disk
@@ -68,7 +73,7 @@ def parse_model_install_command(dependencies, enable_gpu=False):
             commands.append('pip install scikit-learn=={}'.format(ver))
         elif dep == ModelDependency.TENSORFLOW:
             if enable_gpu:
-                commands.append('pip install tensorflow-gpu=={}'.format(ver))
+                commands.append('pip install tensorflow-gpu=={} -i https://pypi.tuna.tsinghua.edu.cn/simple'.format(ver))
             else:
                 commands.append('pip install tensorflow=={}'.format(ver))
         elif dep == ModelDependency.SINGA:
