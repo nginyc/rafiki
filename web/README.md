@@ -284,7 +284,7 @@ https://stackoverflow.com/questions/47508564/migrating-create-react-app-from-jav
 - Redesign the Datasets Page with Gridsystem [Done]
 - Redirect to mainpage
 - Pagination
-
+- Refractor ClientAPI, AuthAPI to Client object (Class) with user_id and token
 
 ## Dependencies
 

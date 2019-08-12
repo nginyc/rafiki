@@ -2,9 +2,32 @@
 import axios from 'axios'
 import HTTPconfig from "../HTTPconfig"
 
+/* ========== Trials of Job ============*/
+
+export const requestTrialsOfJob = (params, token, app, appVersion) => {
+  const url = `/train_jobs/${app}/${appVersion}/trials`
+  return _getWithToken(url, params, token)
+}
+
+/* ========== JobsList ============= */
+
+/* Get a train job associated with an app & version */
+export const getTrainJob = (params,token, app, appVersion) => {
+  const url = `/train_jobs/${app}/${appVersion}`
+  return _getWithToken(url, params, token)
+}
+
 export const requestTrainJobsList = (params, token) => {
   return _getWithToken("/train_jobs", params, token)
 }
+
+/* Create a training job*/
+export const postCreateTrainJob = (json, token) => {
+  const url = `/train_jobs`
+  return _postJsonWithToken(url, json, token) 
+}
+
+/* ========== Dataset ============= */
 
 export const requestListDataset = (params, token) => {
   // Currify this function
@@ -68,4 +91,15 @@ export const _postFormWithToken = (url, formData, token, params = {}) => {
     },
     data: formData
   });
+}
+
+export const _postJsonWithToken = (url, json, token, params = {}) => {
+  return axios({
+    method: 'post',
+    url: _makeUrl(url, params),
+    headers: {
+      "Authorization": `Bearer ${token}`
+    },
+    data: json
+  })
 }

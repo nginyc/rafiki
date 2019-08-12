@@ -1,12 +1,16 @@
 import React from 'react'
 
-import { Link } from 'react-router-dom'
-
 import { withStyles } from '@material-ui/core/styles'
+import { compose } from 'redux'
+import { connect } from 'react-redux'
 
 // Material UI
 import { Toolbar, Typography, Grid } from '@material-ui/core'
-import RefreshIcon from '@material-ui/icons/Refresh'
+
+import * as DatasetActions from "../Datasets/actions"
+import * as ConsoleActions from "../ConsoleAppFrame/actions"
+import * as actions from "./actions"
+
 
 // Import Layout
 import MainContent from 'components/Console/ConsoleContents/MainContent'
@@ -29,9 +33,14 @@ const styles = theme => ({
 })
 
 class CreateTrainJob extends React.Component {
+    componentDidMount() {
+        this.props.requestDatasetsList()
+    }
+
     render() {
         const {
-            classes
+            classes,
+            DatasetsList
         } = this.props
 
         return (
@@ -49,7 +58,7 @@ class CreateTrainJob extends React.Component {
                         </Toolbar>
                     </ContentBar>
                     <div className={classes.contentWrapper}>
-                        <CreateTrainJobForm />
+                        <CreateTrainJobForm datasets={DatasetsList} />
                     </div>
                 </MainContent>
             </React.Fragment>
@@ -57,4 +66,19 @@ class CreateTrainJob extends React.Component {
     }
 }
 
-export default withStyles(styles)(CreateTrainJob)
+
+const mapStateToProps = state => ({
+    DatasetsList: state.DatasetsReducer.DatasetList,
+})
+
+const mapDispatchToProps = {
+    handleHeaderTitleChange: ConsoleActions.handleHeaderTitleChange,
+    postCreateTrainJobs: actions.createTrainJob,
+    requestDatasetsList: DatasetActions.requestListDS,
+    resetLoadingBar: ConsoleActions.resetLoadingBar,
+}
+
+export default compose(
+    connect(mapStateToProps, mapDispatchToProps),
+    withStyles(styles)
+)(CreateTrainJob)

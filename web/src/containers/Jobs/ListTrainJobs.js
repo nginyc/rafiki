@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 
 import { connect } from 'react-redux'
 import { compose } from "redux"
+import { push } from 'connected-react-router'
 
 import { withStyles } from '@material-ui/core/styles'
 import { Pageview } from '@material-ui/icons'
@@ -133,10 +134,11 @@ class ListJobs extends React.Component {
                                         <TableRow key={x.id} hover>
                                             <TableCell padding="none">
                                                 <IconButton onClick={() => {
-                                                    // const link = AppRoute.TRAIN_JOB_DETAIL
-                                                    //     .replace(':app', x.app)
-                                                    //     .replace(':appVersion', x.app_version);
-                                                    // appNavigator.goTo(link);
+                                                    const link = "/console/jobs/trials/:appId/:app/:appVersion"
+                                                        .replace(':appId', x.id)
+                                                        .replace(':app', x.app)
+                                                        .replace(':appVersion', x.app_version);
+                                                    this.props.push(link)
                                                 }} >
                                                     <Pageview />
                                                 </IconButton>
@@ -168,6 +170,7 @@ const mapDispatchToProps = {
     handleHeaderTitleChange: ConsoleActions.handleHeaderTitleChange,
     requestJobsList: jobsActions.requestJobsList,
     resetLoadingBar: ConsoleActions.resetLoadingBar,
+    push: push
 }
 
 export default compose(

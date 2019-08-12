@@ -40,7 +40,7 @@ class MainContent extends React.Component {
   }
 
   render() {
-    const { classes, children, location } = this.props;
+    const { classes, children } = this.props;
     return (
       <main className={classes.mainContent}>
         <Paper className={classes.paper}>

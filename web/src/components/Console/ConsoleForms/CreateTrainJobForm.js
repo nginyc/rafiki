@@ -2,7 +2,7 @@ import React from "react"
 import { Form, Field } from 'react-final-form'
 import { FormTextField, FormIntegerField, FormNumberField } from "mui-form-fields"
 
-import { Button, Grid, ListItem, ListItemIcon, Icon, FormControl, InputLabel, Input, Select, MenuItem, FormHelperText } from '@material-ui/core'
+import { Button, Grid, ListItem, ListItemIcon, Icon, FormControl, InputLabel, Input, Select, MenuItem } from '@material-ui/core'
 
 
 function MyField(props) {
@@ -35,7 +35,7 @@ function MySelectField(props) {
                     <Select
                         value={input.value || ''}
                         onChange={input.onChange}
-                        input={<Input name="train_dataset_it" />}
+                        input={<Input name="train_dataset_id" />}
                     >
                         {options.map((o) => {
                             return (
@@ -58,7 +58,15 @@ class CreateTrainJobForm extends React.Component {
     }
 
     render() {
-        const options = [{ value: "A", label: "Some A" }, { value: "B", label: "Some B" }]
+        const options = this.props.datasets.map((dataset) => {return {
+            value:dataset.id,
+            label:dataset.name + "(" + dataset.id + ")"
+        }})
+
+        const models = [
+            { value: "A", label: "Some A" },
+            { value: "B", label: "Some B" }
+        ]
 
         return (
             <Form onSubmit={this.onSubmit}>
@@ -70,14 +78,8 @@ class CreateTrainJobForm extends React.Component {
                                     <div style={{ textAlign: "center" }}>
                                         <FormTextField icon="chrome_reader_mode" name="name" label="Application Name" />
                                         <FormTextField icon="chrome_reader_mode" name="task" label="Task" placeholder="IMAGE_CLASSIFICATION" disabled />
-                                        <MySelectField icon="perm_data_setting" name="train_dataset_id" label="Dataset for Traning" options={[
-                                            { value: "A", label: "Some A" },
-                                            { value: "B", label: "Some B" }
-                                        ]} />
-                                        <MySelectField icon="perm_data_setting" name="val_dataset_id" label="Dataset for Validation" options={[
-                                            { value: "A", label: "Some A" },
-                                            { value: "B", label: "Some B" }
-                                        ]} />
+                                        <MySelectField icon="perm_data_setting" name="train_dataset_id" label="Dataset for Traning" options={options} />
+                                        <MySelectField icon="perm_data_setting" name="val_dataset_id" label="Dataset for Validation" options={options} />
                                         <FormIntegerField
                                             icon="extension"
                                             name="budget_gpus"
@@ -88,10 +90,7 @@ class CreateTrainJobForm extends React.Component {
                                             name="budget_hours"
                                             label="Buget(Hours)"
                                         />
-                                        <MySelectField icon="perm_data_setting" name="models" label="models" options={[
-                                            { value: "A", label: "Some A" },
-                                            { value: "B", label: "Some B" }
-                                        ]} />
+                                        <MySelectField icon="perm_data_setting" name="models" label="models" options={models} />
                                         <Button
                                             style={{ width: "200px" }}
                                             variant="contained" color="primary" disabled={invalid} onClick={(event) => {

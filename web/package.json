@@ -47,6 +47,8 @@
     "start": "react-scripts start --watch --watch-poll",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom --verbose=false",
+    "test:debug": "react-scripts inspect --inspect-brk test --runInBand --no-cache --no-watch",
+    "test:inspect": "react-scripts --inspect-brk test --runInBand --no-cache --no-watch",
     "coverage": "CI=true react-scripts test --env=jsdom --coverage",
     "eject": "react-scripts eject"
   },

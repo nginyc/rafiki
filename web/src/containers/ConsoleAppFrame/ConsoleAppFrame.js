@@ -18,6 +18,7 @@ import UploadDataset from "../Datasets/UploadDataset"
 // Trainjobs Component
 import ListTrainJobs from "../Jobs/ListTrainJobs"
 import CreateTrainJob from "../Jobs/CreateTrainJob"
+import ListTrials from "../Jobs/ListTrials"
 import InProgress from "../WorkInProgress/InProgress"
 
 import * as actions from "./actions"
@@ -126,7 +127,12 @@ class ConsoleAppFrame extends React.Component {
             <Route
               exact
               path='/console/jobs/create-train-job'
-              component={ListTrainJobs}
+              component={CreateTrainJob}
+            />
+            <Route
+              exact
+              path='/console/jobs/trials/:appId/:app/:appVersion'
+              component={ListTrials}
             />
           </div>
         </div>

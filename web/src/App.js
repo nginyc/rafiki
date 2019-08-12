@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import {
-  BrowserRouter,
   Switch,
   Route 
  } from 'react-router-dom'
@@ -42,7 +41,6 @@ const ConsoleAppFrameLoadable = Loadable({
 
 
 class App extends Component {
-  debbuger;
   render() {
     return (
         <Switch>
