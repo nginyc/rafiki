@@ -41,6 +41,7 @@ export function* postTrainJob(action) {
         yield put(notificationShow("Create TrainJob success"))
         yield put(hideLoading())
     } catch (e) {
+        yield call(alert, e.response.data)
         console.error(e.response)
         console.error(e)
         yield put(notificationShow("fail to Create TrainJob"))
@@ -79,5 +80,6 @@ export function* getTrialsListOfJob(action) {
 
 export default [
     fork(watchRequestJobsList),
-    fork(watchRequestTrialsListOfJob)
+    fork(watchRequestTrialsListOfJob),
+    fork(watchPostTrainJob)
 ]

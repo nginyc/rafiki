@@ -1,13 +1,15 @@
 import { all } from 'redux-saga/effects';
-import AppRootSagas from "./AppRoot"
-import DatasetsSagas from "./DatasetsSagas"
-import JobsSagas from "./JobsSagas"
+import AppRootSagas from "./AppRoot";
+import DatasetsSagas from "./DatasetsSagas";
+import JobsSagas from "./JobsSagas";
+import ModelsSagas from './ModelsSagas';
 
 export default function* rootSaga() {
-  // similar to promise resolve all
-  yield all([
+  // similar to promise resolve all 
+  yield all([ // remember to add "..." in front of the lists.
     ...AppRootSagas,
     ...DatasetsSagas,
-    ...JobsSagas
+    ...JobsSagas,
+    ...ModelsSagas,
   ]);
 }

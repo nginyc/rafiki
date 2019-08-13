@@ -29,9 +29,7 @@ export const postCreateTrainJob = (json, token) => {
 
 /* ========== Dataset ============= */
 
-export const requestListDataset = (params, token) => {
-  // Currify this function
-  console.log(`Authorization: Bearer ${token}`)
+export const requestDatasetList = (params, token) => {
   // require bearer token to do the authentication
   return _getWithToken("/datasets", params, token)
 }
@@ -51,6 +49,12 @@ export const postCreateDataset = (name, task, file, dataset_url, token) => {
   formData.append("task", task)
   console.log("dataset_url", formData.get("dataset_url"))
   return _postFormWithToken('/datasets', formData, token)
+}
+
+/* ========== Models ============= */
+export const requestModelList = (params, token) => {
+   // http://rafiki.nus:3000/models/available
+   return _getWithToken("/models/available", params, token)
 }
 
 // Private

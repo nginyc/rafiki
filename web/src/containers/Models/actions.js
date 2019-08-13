@@ -1,6 +1,10 @@
 export const Types = {
-   // ==== MODELS ===== 
-   REQUEST_MODEL_LIST:"Jobs/request_train_jobslist", // async action is often named with three _ in between
+    // ==== MODELS ===== 
+    // ASYNC
+    REQUEST_MODEL_LIST: "Models/request_model_list",
+    POST_CREATE_MODEL: "Models/post_create_model",
+    // SYNC
+    POPULATE_MODELLIST: "Models/populate_modellist",
 }
 
 export function requestModelList() {
@@ -9,3 +13,9 @@ export function requestModelList() {
     }
 }
 
+export function populateModelList(models) {
+    return {
+        type: Types.POPULATE_MODELLIST,
+        models
+    }
+}

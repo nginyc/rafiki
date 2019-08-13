@@ -2,7 +2,7 @@ import React from "react"
 import { Form, Field } from 'react-final-form'
 import { FormTextField, FormIntegerField, FormNumberField } from "mui-form-fields"
 
-import { Button, Grid, ListItem, ListItemIcon, Icon, FormControl, InputLabel, Input, Select, MenuItem } from '@material-ui/core'
+import { Button, Grid, ListItem, ListItemIcon, Icon, FormControl, InputLabel, Input, Select, MenuItem, Typography } from '@material-ui/core'
 
 
 function MyField(props) {
@@ -25,7 +25,7 @@ function MyField(props) {
 }
 
 function MySelectField(props) {
-    const { label, options, icon, name } = props
+    const { label, options, icon, name, multi } = props
 
     return (
         <MyField icon={icon} name={name} render={({ input, meta }) => {
@@ -35,7 +35,9 @@ function MySelectField(props) {
                     <Select
                         value={input.value || ''}
                         onChange={input.onChange}
-                        input={<Input name="train_dataset_id" />}
+                        value={input.value || (multi ? [] : '')}
+                        input={<Input name={name} />}
+                        multiple={multi}
                     >
                         {options.map((o) => {
                             return (
@@ -53,20 +55,44 @@ function MySelectField(props) {
 }
 
 class CreateTrainJobForm extends React.Component {
+
+
     onSubmit = (values) => {
-        alert("submitting", JSON.stringify(values, 0, 2))
+        const json = this._generateJSON(values)
+        this.props.postCreateTrainJob(json)
+    }
+
+    _generateJSON(value) {
+        return {
+            "app": value.name,
+            "task": "IMAGE_CLASSIFICATION",
+            "train_dataset_id": value.train_dataset_id,
+            "val_dataset_id": value.val_dataset_id,
+            "budget": {
+                "GPU_COUNT": parseInt(value.budgetGpus),
+                "TIME_HOURS": parseFloat(value.budgetHours)
+            },
+            "model_ids":  value.models !== undefined ? value.models : [],
+            "train_args": {}
+        }
     }
 
     render() {
-        const options = this.props.datasets.map((dataset) => {return {
-            value:dataset.id,
-            label:dataset.name + "(" + dataset.id + ")"
-        }})
+        // Options for datasets
+        const options = this.props.datasets.map((dataset) => {
+            return {
+                value: dataset.id,
+                label: dataset.name + "(" + dataset.id + ")"
+            }
+        })
 
-        const models = [
-            { value: "A", label: "Some A" },
-            { value: "B", label: "Some B" }
-        ]
+        // Options for models
+        const models = this.props.models.map((model) => {
+            return {
+                value: model.id,
+                label: model.name + "(" + model.id + ")"
+            }
+        })
 
         return (
             <Form onSubmit={this.onSubmit}>
@@ -82,15 +108,15 @@ class CreateTrainJobForm extends React.Component {
                                         <MySelectField icon="perm_data_setting" name="val_dataset_id" label="Dataset for Validation" options={options} />
                                         <FormIntegerField
                                             icon="extension"
-                                            name="budget_gpus"
+                                            name="budgetGpus"
                                             label="Buget(GPUs)"
                                         />
                                         <FormNumberField
                                             icon="extension"
-                                            name="budget_hours"
+                                            name="budgetHours"
                                             label="Buget(Hours)"
                                         />
-                                        <MySelectField icon="perm_data_setting" name="models" label="models" options={models} />
+                                        <MySelectField icon="perm_data_setting" name="models" label="models" multi={true} options={models} />
                                         <Button
                                             style={{ width: "200px" }}
                                             variant="contained" color="primary" disabled={invalid} onClick={(event) => {
@@ -102,7 +128,7 @@ class CreateTrainJobForm extends React.Component {
                                 </Grid>
                                 <Grid item xs={12} lg={4}>
                                     <div style={{ background: "#ddd" }}>
-                                        <p>{JSON.stringify(values, null, 2)}</p>
+                                        <Typography>{JSON.stringify(this._generateJSON(values), null, 2) }</Typography>
                                     </div>
                                 </Grid>
                             </Grid>

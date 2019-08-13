@@ -7,7 +7,6 @@ export const Types = {
    // === TRIALS ====
    REQUEST_TRIALSLIST_OFJOB: "Trials/request_trialslist_ofjob",
    POPULATE_TRIALSTOJOBS: "Trials/populate_trialstojobs"
-
 }
 
 /* ====== JOBS ======= */

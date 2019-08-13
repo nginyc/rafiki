@@ -21,7 +21,7 @@ function* getDatasetList() {
     try {
         yield put(showLoading())
         const token = yield select(getToken)
-        const DSList = yield call(api.requestListDataset, {}, token)
+        const DSList = yield call(api.requestDatasetList, {}, token)
         console.log(DSList)
         yield put(actions.populateDSList(DSList.data))
         yield put(hideLoading())

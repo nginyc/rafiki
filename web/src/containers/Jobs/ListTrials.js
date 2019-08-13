@@ -57,7 +57,7 @@ class ListTrials extends React.Component {
 
     reloadListOfTrials = () => {
         const { app, appVersion } = this.props.match.params
-        this.props.requestTrialsListOfTrials(app, appVersion)
+        this.props.requestTrialsListOfJob(app, appVersion)
     }
 
     componentDidMount() {

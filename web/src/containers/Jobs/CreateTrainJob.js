@@ -7,6 +7,7 @@ import { connect } from 'react-redux'
 // Material UI
 import { Toolbar, Typography, Grid } from '@material-ui/core'
 
+import * as ModelActions from "../Models/actions"
 import * as DatasetActions from "../Datasets/actions"
 import * as ConsoleActions from "../ConsoleAppFrame/actions"
 import * as actions from "./actions"
@@ -35,12 +36,14 @@ const styles = theme => ({
 class CreateTrainJob extends React.Component {
     componentDidMount() {
         this.props.requestDatasetsList()
+        this.props.requestModelList()
     }
 
     render() {
         const {
             classes,
-            DatasetsList
+            DatasetsList,
+            ModelsList
         } = this.props
 
         return (
@@ -58,7 +61,7 @@ class CreateTrainJob extends React.Component {
                         </Toolbar>
                     </ContentBar>
                     <div className={classes.contentWrapper}>
-                        <CreateTrainJobForm datasets={DatasetsList} />
+                        <CreateTrainJobForm datasets={DatasetsList} models={ModelsList} postCreateTrainJob={this.props.postCreateTrainJob} />
                     </div>
                 </MainContent>
             </React.Fragment>
@@ -69,13 +72,15 @@ class CreateTrainJob extends React.Component {
 
 const mapStateToProps = state => ({
     DatasetsList: state.DatasetsReducer.DatasetList,
+    ModelsList: state.ModelsReducer.ModelList,
 })
 
 const mapDispatchToProps = {
     handleHeaderTitleChange: ConsoleActions.handleHeaderTitleChange,
-    postCreateTrainJobs: actions.createTrainJob,
+    postCreateTrainJob: actions.createTrainJob,
     requestDatasetsList: DatasetActions.requestListDS,
     resetLoadingBar: ConsoleActions.resetLoadingBar,
+    requestModelList: ModelActions.requestModelList,
 }
 
 export default compose(
