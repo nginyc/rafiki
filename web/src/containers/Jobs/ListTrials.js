@@ -4,6 +4,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { compose } from "redux"
 import { push } from 'connected-react-router'
+import { Link } from 'react-router-dom'
 
 import { withStyles } from '@material-ui/core/styles'
 
@@ -11,7 +12,7 @@ import * as ConsoleActions from "../ConsoleAppFrame/actions"
 import * as jobsActions from "./actions"
 
 // Material UI
-import { Table, Toolbar, Typography, Grid, Tooltip, IconButton, TableHead, TableBody, TableRow, TableCell } from '@material-ui/core'
+import { Button, Table, Toolbar, Typography, Grid, Tooltip, IconButton, TableHead, TableBody, TableRow, TableCell } from '@material-ui/core'
 import RefreshIcon from '@material-ui/icons/Refresh'
 
 // Import Layout
@@ -88,101 +89,112 @@ class ListTrials extends React.Component {
             trialsList = job.trials || [] // appId & appId might not be same type
         }
         return (
-        <React.Fragment>
-            <MainContent>
-                <ContentBar>
-                    <Toolbar>
-                        <Grid container spacing={10} justify="space-between" alignItems="center">
-                            <Grid item>
-                                <Typography variant="h5" gutterBottom>
-                                    Selected Job
+            <React.Fragment>
+                <MainContent>
+                    <ContentBar>
+                        <Toolbar>
+                            <Grid container spacing={10} justify="space-between" alignItems="center">
+                                <Grid item>
+                                    <Typography variant="h5" gutterBottom>
+                                        Selected Job
                                     </Typography>
-                            </Grid>
-                        </Grid>
-                    </Toolbar>
-                </ContentBar>
-                <div className={classes.contentTrasparent}>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell> ID </TableCell>
-                                <TableCell> App </TableCell>
-                                <TableCell> App Version</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            <TableRow>
-                                <TableCell> {appId}</TableCell>
-                                <TableCell> {app} </TableCell>
-                                <TableCell> {appVersion}</TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </div>
-            </MainContent>
-            <MainContent>
-                <ContentBar>
-                    <Toolbar>
-                        <Grid container spacing={10} justify="space-between" alignItems="center">
-                            <Grid item>
-                                <Typography variant="h5" gutterBottom>
-                                    Trials
-                                    </Typography>
-                            </Grid>
-                            <Grid item>
-                                <Tooltip title="Reload">
-                                    <IconButton
-                                        onClick={()=>{
-                                            this.reloadListOfTrials()
-                                        }}
+                                </Grid>
+                                <Grid item>
+                                    <Button
+                                        variant="contained"
+                                        color="primary"
+                                        className={classes.add}
+                                        component={Link}
+                                        to="/console/application/create_inference_job"
                                     >
-                                        <RefreshIcon className={classes.block} color="inherit" />
-                                    </IconButton>
-                                </Tooltip>
+                                        Create Inference Job
+                                    </Button>
+                                </Grid>
                             </Grid>
-                        </Grid>
-                    </Toolbar>
-                </ContentBar>
-                <div className={classes.contentWrapper}>
-                    <Typography color="textSecondary" align="center">
-                        {trialsList.length === 0
-                            ? "You do not have any trials for this job"
-                            : "Jobs"
-                        }
-                    </Typography>
-                    <Table>
-                        <TableHead>
-                            <TableRow>{
-                                ["Model", "Trial No", "Score", "Status", "Started", "Stopped", "Duration"].map((label) => (<TableCell>{label}</TableCell>))
+                        </Toolbar>
+                    </ContentBar>
+                    <div className={classes.contentTrasparent}>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell> ID </TableCell>
+                                    <TableCell> App </TableCell>
+                                    <TableCell> App Version</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                <TableRow>
+                                    <TableCell> {appId}</TableCell>
+                                    <TableCell> {app} </TableCell>
+                                    <TableCell> {appVersion}</TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
+                    </div>
+                </MainContent>
+                <MainContent>
+                    <ContentBar>
+                        <Toolbar>
+                            <Grid container spacing={10} justify="space-between" alignItems="center">
+                                <Grid item>
+                                    <Typography variant="h5" gutterBottom>
+                                        Trials
+                                    </Typography>
+                                </Grid>
+                                <Grid item>
+                                    <Tooltip title="Reload">
+                                        <IconButton
+                                            onClick={() => {
+                                                this.reloadListOfTrials()
+                                            }}
+                                        >
+                                            <RefreshIcon className={classes.block} color="inherit" />
+                                        </IconButton>
+                                    </Tooltip>
+                                </Grid>
+                            </Grid>
+                        </Toolbar>
+                    </ContentBar>
+                    <div className={classes.contentWrapper}>
+                        <Typography color="textSecondary" align="center">
+                            {trialsList.length === 0
+                                ? "You do not have any trials for this job"
+                                : "Jobs"
                             }
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {trialsList.map((x) => {
-                                return (
-                                    <TableRow key={x.id} hover>
-                                        <TableCell>{x.model_name}</TableCell>
-                                        <TableCell>{x.no}</TableCell>
-                                        <TableCell>{x.score !== null ? x.score : '-'}</TableCell>
-                                        <TableCell>{x.status}</TableCell>
-                                        <TableCell>{moment(x.datetime_started).fromNow()}</TableCell>
-                                        <TableCell>{x.datetime_stopped ? moment(x.datetime_stopped).fromNow() : '-'}</TableCell>
-                                        <TableCell>{
-                                            x.datetime_stopped ?
-                                                // @ts-ignore
-                                                moment.duration(x.datetime_stopped - x.datetime_started).humanize()
-                                                : '-'
-                                        }</TableCell>
-                                    </TableRow>
+                        </Typography>
+                        <Table>
+                            <TableHead>
+                                <TableRow>{
+                                    ["Model", "Trial No", "Score", "Status", "Started", "Stopped", "Duration"].map((label) => (<TableCell>{label}</TableCell>))
+                                }
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {trialsList.map((x) => {
+                                    return (
+                                        <TableRow key={x.id} hover>
+                                            <TableCell>{x.model_name}</TableCell>
+                                            <TableCell>{x.no}</TableCell>
+                                            <TableCell>{x.score !== null ? x.score : '-'}</TableCell>
+                                            <TableCell>{x.status}</TableCell>
+                                            <TableCell>{moment(x.datetime_started).fromNow()}</TableCell>
+                                            <TableCell>{x.datetime_stopped ? moment(x.datetime_stopped).fromNow() : '-'}</TableCell>
+                                            <TableCell>{
+                                                x.datetime_stopped ?
+                                                    // @ts-ignore
+                                                    moment.duration(x.datetime_stopped - x.datetime_started).humanize()
+                                                    : '-'
+                                            }</TableCell>
+                                        </TableRow>
 
-                                )
-                            }
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </MainContent>
-        </React.Fragment >
+                                    )
+                                }
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </MainContent>
+            </React.Fragment >
         )
     }
 }

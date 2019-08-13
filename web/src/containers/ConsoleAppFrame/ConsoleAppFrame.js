@@ -20,6 +20,7 @@ import ListTrainJobs from "../Jobs/ListTrainJobs"
 import CreateTrainJob from "../Jobs/CreateTrainJob"
 import ListTrials from "../Jobs/ListTrials"
 import InProgress from "../WorkInProgress/InProgress"
+import Application from "../Application"
 
 import * as actions from "./actions"
 
@@ -133,6 +134,11 @@ class ConsoleAppFrame extends React.Component {
               exact
               path='/console/jobs/trials/:appId/:app/:appVersion'
               component={ListTrials}
+            />
+            <Route
+              exact
+              path='/console/application/:applicationName'
+              component={Application}
             />
           </div>
         </div>

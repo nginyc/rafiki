@@ -5,7 +5,6 @@ import { connect } from "react-redux";
 
 import NotificationArea from "../../components/RootComponents/NotificationArea";
 
-
 class Root extends React.PureComponent {
   static propTypes = {
     children: PropTypes.oneOfType([

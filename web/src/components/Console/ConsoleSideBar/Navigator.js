@@ -99,7 +99,7 @@ class Navigator extends React.Component {
   state = {
     DatasetsTableOpen: true,
     JobsTableOpen: false,
-    DataStorageOpen: false,
+    DataApplicationOpen: false,
     KeyValueDBOpen: false
   };
 
@@ -115,9 +115,9 @@ class Navigator extends React.Component {
           { JobsTableOpen: !state.JobsTableOpen }
         ));
         break
-      case "Storage":
+      case "Application":
         this.setState(state => (
-          { DataStorageOpen: !state.DataStorageOpen }
+          { DataApplicationOpen: !state.DataApplicationOpen }
         ));
         break
       case "KeyValue":
@@ -213,14 +213,14 @@ class Navigator extends React.Component {
         ],
       },
       {
-        id: 'Application',
-        collapseID: "Storage",
-        collapseIn: this.state.DataStorageOpen,
+        id: 'Applications',
+        collapseID: "Application",
+        collapseIn: this.state.DataApplicationOpen,
         children: [
           {
-            id: 'Work in progress',
+            id: 'SomeApplicationName',
             icon: <DnsRoundedIcon />,
-            pathname: "#"
+            pathname: "/console/application/SomeApplicationName"
           }
         ],
       },

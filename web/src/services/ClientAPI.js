@@ -57,6 +57,20 @@ export const requestModelList = (params, token) => {
    return _getWithToken("/models/available", params, token)
 }
 
+/* ========== Application(Inference Jobs) ============= */
+
+// data = self._get('/inference_jobs', params={ 
+  // 'user_id': user_id
+// })
+
+export const getInferenceJob = (params, token) => {
+  return _getWithToken("/inference_jobs")
+}
+
+export const createInferenceJob = (app, appVersion, token) => {
+  return _postJsonWithToken("/inference_jobs", JSON.stringify({app, appVersion}), token)
+}
+
 // Private
 export function _makeUrl(urlPath, params = {}) {
   const query = Object.keys(params)

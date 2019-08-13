@@ -3,6 +3,7 @@ import AppRootSagas from "./AppRoot";
 import DatasetsSagas from "./DatasetsSagas";
 import JobsSagas from "./JobsSagas";
 import ModelsSagas from './ModelsSagas';
+import ApplicationSagas from "./ApplicationSagas";
 
 export default function* rootSaga() {
   // similar to promise resolve all 
@@ -11,5 +12,6 @@ export default function* rootSaga() {
     ...DatasetsSagas,
     ...JobsSagas,
     ...ModelsSagas,
+    ...ApplicationSagas
   ]);
 }
