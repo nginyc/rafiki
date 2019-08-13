@@ -17,17 +17,21 @@
 # under the License.
 #
 
-class BudgetType():
+from typing import Dict, Any
+
+class BudgetOption():
+    GPU_COUNT = 'GPU_COUNT'
+    TIME_HOURS = 'TIME_HOURS'
     MODEL_TRIAL_COUNT = 'MODEL_TRIAL_COUNT'
+
+Budget = Dict[BudgetOption, Any]
+
+class InferenceBudgetOption():
     GPU_COUNT = 'GPU_COUNT'
 
-class ModelDependency():
-    TENSORFLOW = 'tensorflow'
-    KERAS = 'Keras'
-    SCIKIT_LEARN = 'scikit-learn'
-    PYTORCH = 'torch'
-    SINGA = 'singa'
-    XGBOOST = 'xgboost'
+InferenceBudget = Dict[InferenceBudgetOption, Any]
+
+ModelDependencies = Dict[str, str]
 
 class ModelAccessRight():
     PUBLIC = 'PUBLIC'
@@ -46,23 +50,10 @@ class TrainJobStatus():
     ERRORED = 'ERRORED'
 
 class TrialStatus():
-    STARTED = 'STARTED'
+    PENDING = 'PENDING'
     RUNNING = 'RUNNING'
     ERRORED = 'ERRORED'
-    TERMINATED = 'TERMINATED'
     COMPLETED = 'COMPLETED'
-
-class ServiceStatus():
-    STARTED = 'STARTED'
-    DEPLOYING = 'DEPLOYING'
-    RUNNING = 'RUNNING'
-    ERRORED = 'ERRORED'
-    STOPPED = 'STOPPED'
-
-class ServiceType():
-    TRAIN = 'TRAIN'
-    PREDICT = 'PREDICT'
-    INFERENCE = 'INFERENCE'
 
 class UserType():
     SUPERADMIN = 'SUPERADMIN'
@@ -70,14 +61,24 @@ class UserType():
     MODEL_DEVELOPER = 'MODEL_DEVELOPER'
     APP_DEVELOPER = 'APP_DEVELOPER'
 
-class AdvisorType():
-    BTB_GP = 'BTB_GP'
+class ServiceType():
+    TRAIN = 'TRAIN'
+    ADVISOR = 'ADVISOR'
+    PREDICT = 'PREDICT'
+    INFERENCE = 'INFERENCE'
 
-class DatasetType():
-    IMAGE_FILES = 'IMAGE_FILES'
-
-class TaskType():
-    IMAGE_CLASSIFICATION = 'IMAGE_CLASSIFICATION'
-    POS_TAGGING = 'POS_TAGGING'
-    TABULAR_REGRESSION = 'TABULAR_REGRESSION'
-    TABULAR_CLASSIFICATION = 'TABULAR_CLASSIFICATION'
+class ServiceStatus():
+    STARTED = 'STARTED'
+    DEPLOYING = 'DEPLOYING'
+    RUNNING = 'RUNNING'
+    ERRORED = 'ERRORED'
+    STOPPED = 'STOPPED'
+    
+class ModelDependency():
+    TENSORFLOW = 'tensorflow'
+    KERAS = 'Keras'
+    SCIKIT_LEARN = 'scikit-learn'
+    TORCH = 'torch'
+    TORCHVISION = 'torchvision'
+    SINGA = 'singa'
+    XGBOOST = 'xgboost'

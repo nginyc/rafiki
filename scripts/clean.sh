@@ -19,6 +19,9 @@
 
 source ./scripts/utils.sh
 
+# Read from shell configuration file
+source ./.env.sh
+
 # Delete database dump
 delete_path "$POSTGRES_DUMP_FILE_PATH"
 

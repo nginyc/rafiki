@@ -17,7 +17,6 @@
 # under the License.
 #
 
-import os
 import requests
 import math
 import tempfile

@@ -51,7 +51,7 @@ You can start & stop Rafiki's DB independently of the rest of Rafiki's stack wit
         bash scripts/stop_db.sh
     
 
-Connecting to Rafiki's Cache
+Connecting to Rafiki's Redis
 --------------------------------------------------------------------
 
 You can connect to Redis DB with `rebrow <https://github.com/marians/rebrow>`_:
@@ -87,6 +87,21 @@ Build & view Rafiki's Sphinx documentation on your machine with the following co
         bash scripts/build_docs.sh latest
         open docs/index.html
 
+Testing
+--------------------------------------------------------------------
+
+Rafiki uses `pytest <https://docs.pytest.org>`_.  
+
+Running all tests:
+
+    ::
+
+        pip install -r rafiki/requirements.txt
+        pip install -r rafiki/advisor/requirements.txt
+        pip install -r test/requirements.txt
+        bash scripts/test.sh
+
+
 Troubleshooting
 --------------------------------------------------------------------
 
@@ -96,7 +111,7 @@ you might be running out of space allocated for Docker. Try one of the following
     ::
 
         # Prunes dangling images
-        docker system prune
+        docker system prune --all
 
     ::
 

@@ -17,12 +17,16 @@
 # under the License.
 #
 
+import argparse
 from examples.datasets.image_files.mnist import load
 
 # Loads the official Fashion MNIST dataset for the `IMAGE_CLASSIFICATION` task
-def load_fashion_mnist(out_train_dataset_path='data/fashion_mnist_for_image_classification_train.zip',
-                        out_val_dataset_path='data/fashion_mnist_for_image_classification_val.zip',
-                        out_meta_csv_path='data/fashion_mnist_for_image_classification_meta.csv'):
+def load_fashion_mnist(out_train_dataset_path='data/fashion_mnist_train.zip',
+                        out_val_dataset_path='data/fashion_mnist_val.zip',
+                        out_meta_csv_path='data/fashion_mnist_meta.csv',
+                        out_test_dataset_path='data/fashion_mnist_test.zip',
+                        limit=None,
+                        validation_split=0.1):
     
     load(
         train_images_url='http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz',
@@ -43,9 +47,17 @@ def load_fashion_mnist(out_train_dataset_path='data/fashion_mnist_for_image_clas
         },
         out_train_dataset_path=out_train_dataset_path,
         out_val_dataset_path=out_val_dataset_path,
-        out_meta_csv_path=out_meta_csv_path
+        out_test_dataset_path=out_test_dataset_path,
+        out_meta_csv_path=out_meta_csv_path,
+        limit=limit,
+        validation_split=validation_split
     )
 
-if __name__ == '__main__':
-    load_fashion_mnist()    
-    
+if __name__ == '__main__':   
+    # Read CLI args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--limit', type=int, default=None)
+    parser.add_argument('--validation_split', type=float, default=0.1)
+    args = parser.parse_args()
+
+    load_fashion_mnist(limit=args.limit, validation_split=args.validation_split)    

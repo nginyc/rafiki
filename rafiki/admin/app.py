@@ -19,15 +19,15 @@
 
 from flask import Flask, request, jsonify, g, make_response
 from flask_cors import CORS
-import os
 import traceback
 import json
 import tempfile
 import requests
 from datetime import datetime
+import pickle
 
 from rafiki.constants import UserType
-from rafiki.utils.auth import generate_token, decode_token, auth, UnauthorizedError
+from rafiki.utils.auth import generate_token, auth, UnauthorizedError
 
 from .admin import Admin
 
@@ -209,27 +209,6 @@ def stop_train_job(auth, app, app_version):
     with admin:
         return jsonify(admin.stop_train_job(auth['user_id'], app, app_version=int(app_version), **params))
 
-@app.route('/train_jobs/<app>/<app_version>/trials', methods=['GET'])
-@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
-def get_trials_of_train_job(auth, app, app_version):
-    admin = get_admin()
-    params = get_request_params()
-
-    # Return best trials by train job
-    if params.get('type') == 'best':
-        del params['type']
-
-        if 'max_count' in params:
-            params['max_count'] = int(params['max_count'])
-
-        with admin:
-            return jsonify(admin.get_best_trials_of_train_job(auth['user_id'], app, app_version=int(app_version), **params ))
-    
-    # Return all trials by train job
-    else:
-        with admin:
-            return jsonify(admin.get_trials_of_train_job(auth['user_id'], app, app_version=int(app_version), **params ))
-
 ####################################
 # Trials
 ####################################
@@ -250,9 +229,10 @@ def get_trial_parameters(auth, trial_id):
     params = get_request_params()
 
     with admin:
-        parameters = admin.get_trial_parameters(trial_id, **params)
-
-    res = make_response(parameters)
+        trial_params = admin.get_trial_parameters(trial_id, **params)
+ 
+    trial_params = pickle.dumps(trial_params) # Pickle to convert to bytes
+    res = make_response(trial_params)
     res.headers.set('Content-Type', 'application/octet-stream')
     return res
 
@@ -264,6 +244,27 @@ def get_trial(auth, trial_id):
 
     with admin:
         return jsonify(admin.get_trial(trial_id, **params))
+
+@app.route('/train_jobs/<app>/<app_version>/trials', methods=['GET'])
+@auth([UserType.ADMIN, UserType.MODEL_DEVELOPER, UserType.APP_DEVELOPER])
+def get_trials_of_train_job(auth, app, app_version):
+    admin = get_admin()
+    params = get_request_params()
+
+    # Return best trials by train job
+    if params.get('type') == 'best':
+        del params['type']
+
+        if 'max_count' in params:
+            params['max_count'] = int(params['max_count'])
+
+        with admin:
+            return jsonify(admin.get_best_trials_of_train_job(auth['user_id'], app, app_version=int(app_version), **params))
+    
+    # Return all trials by train job
+    else:
+        with admin:
+            return jsonify(admin.get_trials_of_train_job(auth['user_id'], app, app_version=int(app_version), **params))
 
 ####################################
 # Inference Jobs
@@ -431,7 +432,8 @@ def handle_event(auth, name):
     params = get_request_params()
     with admin:
         return jsonify(admin.handle_event(name, **params))
-    
+
+
 # Handle uncaught exceptions with a server error & the error's stack trace (for development)
 @app.errorhandler(Exception)
 def handle_error(error):
