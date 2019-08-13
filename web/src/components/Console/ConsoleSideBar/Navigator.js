@@ -172,44 +172,6 @@ class Navigator extends React.Component {
             icon: <CloudUpload />,
             pathname: "/console/jobs/create-train-job"
           },
-          /*
-          {
-            id: 'Create Table',
-            icon: <DnsRoundedIcon />,
-            pathname: ""
-          },
-          {
-            id: 'Load CSV',
-            icon: <DnsRoundedIcon />,
-            pathname: ""
-          },
-          {
-            id: 'Get Table',
-            icon: <DnsRoundedIcon />,
-            pathname: ""
-          },
-          {
-            id: 'Get Column',
-            icon: <DnsRoundedIcon />,
-            pathname: ""
-          },
-          {
-            id: 'List Column Branch',
-            icon: <DnsRoundedIcon />,
-            pathname: ""
-          },
-          {
-            id: 'Get Row',
-            icon: <DnsRoundedIcon />,
-            pathname: ""
-          },
-          {
-            id: 'Update Row',
-            icon: <DnsRoundedIcon />,
-            pathname: ""
-          },
-          // and some more...
-          */
         ],
       },
       {
@@ -218,9 +180,9 @@ class Navigator extends React.Component {
         collapseIn: this.state.DataApplicationOpen,
         children: [
           {
-            id: 'SomeApplicationName',
+            id: 'Applications',
             icon: <DnsRoundedIcon />,
-            pathname: "/console/application/SomeApplicationName"
+            pathname: "/console/application/list-applications"
           }
         ],
       },

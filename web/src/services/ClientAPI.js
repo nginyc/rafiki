@@ -64,11 +64,11 @@ export const requestModelList = (params, token) => {
 // })
 
 export const getInferenceJob = (params, token) => {
-  return _getWithToken("/inference_jobs")
+  return _getWithToken("/inference_jobs", params, token)
 }
 
 export const createInferenceJob = (app, appVersion, token) => {
-  return _postJsonWithToken("/inference_jobs", JSON.stringify({app, appVersion}), token)
+  return _postJsonWithToken("/inference_jobs", {app, "app_version": appVersion}, token)
 }
 
 // Private

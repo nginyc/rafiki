@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from "react-redux"
 import { compose } from "redux"
 import PropTypes from 'prop-types';
-import { Route, Redirect } from "react-router-dom"
+import { Switch, Route, Redirect } from "react-router-dom"
 
 import { MuiThemeProvider, withStyles } from '@material-ui/core/styles';
 import Hidden from '@material-ui/core/Hidden';
@@ -19,10 +19,16 @@ import UploadDataset from "../Datasets/UploadDataset"
 import ListTrainJobs from "../Jobs/ListTrainJobs"
 import CreateTrainJob from "../Jobs/CreateTrainJob"
 import ListTrials from "../Jobs/ListTrials"
-import InProgress from "../WorkInProgress/InProgress"
+
+// Inference Jobs Component
 import Application from "../Application"
+import ListApplication from "../Application/ListApplication"
+import CreateInferenceJob from '../Application/CreateInferenceJob';
+
+import InProgress from "../WorkInProgress/InProgress"
 
 import * as actions from "./actions"
+
 
 import LoadingBar from 'react-redux-loading-bar'
 
@@ -105,41 +111,53 @@ class ConsoleAppFrame extends React.Component {
               onDrawerToggle={handleDrawerToggle}
               title={headerTitle}
             />
-            <Route
-              exact
-              path='/console/datasets/list-dataset'
-              component={ListDataSet}
-            />
-            <Route
-              exact
-              path='/console/datasets/upload-datasets'
-              component={UploadDataset}
-            />
-            <Route
-              exact
-              path='/console/datasets/delete-dataset'
-              component={InProgress}
-            />
-            <Route
-              exact
-              path='/console/jobs/list-train-jobs'
-              component={ListTrainJobs}
-            />
-            <Route
-              exact
-              path='/console/jobs/create-train-job'
-              component={CreateTrainJob}
-            />
-            <Route
-              exact
-              path='/console/jobs/trials/:appId/:app/:appVersion'
-              component={ListTrials}
-            />
-            <Route
-              exact
-              path='/console/application/:applicationName'
-              component={Application}
-            />
+            <Switch>
+              <Route
+                exact
+                path='/console/datasets/list-dataset'
+                component={ListDataSet}
+              />
+              <Route
+                exact
+                path='/console/datasets/upload-datasets'
+                component={UploadDataset}
+              />
+              <Route
+                exact
+                path='/console/datasets/delete-dataset'
+                component={InProgress}
+              />
+              <Route
+                exact
+                path='/console/jobs/list-train-jobs'
+                component={ListTrainJobs}
+              />
+              <Route
+                exact
+                path='/console/jobs/create-train-job'
+                component={CreateTrainJob}
+              />
+              <Route
+                exact
+                path='/console/jobs/trials/:appId/:app/:appVersion'
+                component={ListTrials}
+              />
+              <Route
+                exact
+                path='/console/application/create_inference_job/:app/:appVersion'
+                component={CreateInferenceJob}
+              />
+              <Route
+                exact
+                path="/console/application/list-applications"
+                component={ListApplication}
+              />
+              <Route
+                exact
+                path='/console/application/inference_job/:applicationName'
+                component={Application}
+              />
+            </Switch>
           </div>
         </div>
       </MuiThemeProvider>

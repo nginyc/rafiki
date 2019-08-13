@@ -19,7 +19,7 @@ const styles = theme => ({
     overflow: 'hidden',
     marginBottom: 20,
     position: "relative",
-    paddingBottom: 80
+    paddingBottom: 20
   },
   fab: {
     position: 'absolute',

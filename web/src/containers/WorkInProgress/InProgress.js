@@ -2,7 +2,7 @@ import React from 'react'
 
 import * as ConsoleActions from "../ConsoleAppFrame/actions"
 
-import { Paper, Typography } from "@material-ui/core"
+import { Paper } from "@material-ui/core"
 import { connect } from "react-redux"
 
 class InProgress extends React.Component {

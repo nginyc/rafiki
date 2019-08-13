@@ -10,6 +10,7 @@ import { ConsoleAppFrame } from "../containers/ConsoleAppFrame/reducer"
 import { DatasetsReducer } from "../containers/Datasets/reducer"
 import { JobsReducer } from "containers/Jobs/reducer"
 import { ModelsReducer } from "containers/Models/reducer";
+import { ApplicationsReducer } from "containers/Application/reducer"
 
 // Router
 import { connectRouter } from 'connected-react-router'
@@ -25,7 +26,8 @@ const rootReducer = (history) => {
     ConsoleAppFrame,
     DatasetsReducer,
     JobsReducer,
-    ModelsReducer
+    ModelsReducer,
+    ApplicationsReducer
   })
 }
 

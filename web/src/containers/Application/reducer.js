@@ -14,9 +14,9 @@ export const ApplicationsReducer = (state = initialState, action) => {
     case Types.POPULATE_INFERENCEJOB:
       return {
         ...state,
-        ApplicationList: action.applications.length === 0
+        ApplicationList: action.jobs.length === 0
           ? []
-          : action.applications
+          : action.jobs
       }
     default:
       return state

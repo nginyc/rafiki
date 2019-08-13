@@ -266,6 +266,37 @@ should use muitlform but does not need to set it because the browser would set i
 }
 ```
 
+### get `/inference_jobs` 
+
+```
+{ 
+  'user_id': user_id
+}
+```
+
+####  response 
+
+```
+{
+app:
+"fashion_minist_app"
+app_version:
+2
+datetime_started:
+"Tue, 13 Aug 2019 12:37:10 GMT"
+datetime_stopped:
+"Tue, 13 Aug 2019 12:52:08 GMT"
+id:
+"85075d4a-eeda-42de-bb9a-5bc007637838"
+predictor_host:
+"ncrs.d2.comp.nus.edu.sg:53589"
+status:
+"STOPPED"
+train_job_id:
+"123b32aa-9c3e-449c-b2da-031d3123b631"
+}
+```
+
 #### NOTES:
 
 Not considering moving this project to Typescript, because compile time is quite long.

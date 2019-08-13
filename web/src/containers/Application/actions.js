@@ -7,20 +7,22 @@ export const Types = {
 
 export const fetchGetInferencejob = () => {
     return {
-        types: Types.FETCH_GET_INFERENCEJOB
+        type: Types.FETCH_GET_INFERENCEJOB
     }
 }
 
-export const postCreateInferenceJob = () => {
+export const postCreateInferenceJob = (app, appVersion) => {
     return {
-        types: Types.POST_CREATE_INFERENCEJOB
+        type: Types.POST_CREATE_INFERENCEJOB,
+        app,
+        appVersion
     }
 }
 
 // sync
 export const populateInferenceJob = (jobs) => {
     return {
-        types: Types.POPULATE_INFERENCEJOB,
-            jobs
+        type: Types.POPULATE_INFERENCEJOB,
+        jobs
     }
 }

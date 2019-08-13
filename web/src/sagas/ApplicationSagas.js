@@ -31,6 +31,7 @@ function* getApplicationList() {
     } catch (e) {
         console.error(e.response)
         console.error(e)
+        alert(e.response.data)
         yield put(notificationShow("Failed to Fetch Application List"));
         // TODO: implement notification for success and error of api actions
         // yield put(actions.getErrorStatus("failed to deleteUser"))
@@ -52,10 +53,9 @@ function* createInferenceJob(action) {
         console.error(e.response)
         console.error(e)
         alert(e.response.data)
-        yield put(notificationShow("Failed to Create Dataset"));
+        yield put(notificationShow("Failed to Create Inference Job"));
     }
 }
-
 
 // fork is for process creation, run in separate processes
 export default [

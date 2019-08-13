@@ -42,6 +42,7 @@ class ApplicationPage extends React.Component {
         applicationID: "",
     }
 
+
     componentDidMount() {
         this.props.handleHeaderTitleChange("Application > SomeApplicatioName")
     }

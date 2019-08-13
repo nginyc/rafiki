@@ -10,6 +10,7 @@ import { withStyles } from '@material-ui/core/styles'
 
 import * as ConsoleActions from "../ConsoleAppFrame/actions"
 import * as jobsActions from "./actions"
+import * as applicationActions from "../Application/actions"
 
 // Material UI
 import { Button, Table, Toolbar, Typography, Grid, Tooltip, IconButton, TableHead, TableBody, TableRow, TableCell } from '@material-ui/core'
@@ -21,7 +22,6 @@ import ContentBar from 'components/Console/ConsoleContents/ContentBar'
 
 // Third parts
 import * as moment from 'moment';
-
 
 /* ListJobs are able to view trials and Trial details*/
 
@@ -83,10 +83,12 @@ class ListTrials extends React.Component {
         } = this.props
 
         const { appId, app, appVersion } = match.params
-        const job = jobsList.find(job => job.id == appId)
+        // eslint-disable-next-line
+        const job = jobsList.find(job => job.id == appId) // id & appId might not be same type
         let trialsList = []
+        // eslint-disable-next-line
         if (job != undefined) {
-            trialsList = job.trials || [] // appId & appId might not be same type
+            trialsList = job.trials || [] 
         }
         return (
             <React.Fragment>
@@ -105,7 +107,7 @@ class ListTrials extends React.Component {
                                         color="primary"
                                         className={classes.add}
                                         component={Link}
-                                        to="/console/application/create_inference_job"
+                                        to={`/console/application/create_inference_job/${app}/${appVersion}`}
                                     >
                                         Create Inference Job
                                     </Button>
@@ -186,7 +188,6 @@ class ListTrials extends React.Component {
                                                     : '-'
                                             }</TableCell>
                                         </TableRow>
-
                                     )
                                 }
                                 )}
@@ -204,6 +205,7 @@ const mapStateToProps = state => ({
 })
 
 const mapDispatchToProps = {
+    createInferenceJob: applicationActions.postCreateInferenceJob,
     handleHeaderTitleChange: ConsoleActions.handleHeaderTitleChange,
     requestTrialsListOfJob: jobsActions.requestTrialsListOfJob,
     resetLoadingBar: ConsoleActions.resetLoadingBar,

@@ -33,7 +33,6 @@ function MySelectField(props) {
                 < FormControl style={{ width: '100%' }}>
                     <InputLabel shrink>{label}</InputLabel>
                     <Select
-                        value={input.value || ''}
                         onChange={input.onChange}
                         value={input.value || (multi ? [] : '')}
                         input={<Input name={name} />}

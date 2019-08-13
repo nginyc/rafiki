@@ -37,7 +37,7 @@ export function* postTrainJob(action) {
     try {
         yield put(showLoading())
         const token = yield select(getToken)
-        yield call(api.postCreateTrainJob, action.json, token)
+        yield call(api.postCreateTrainJob, action.app, action.appVersion, token)
         yield put(notificationShow("Create TrainJob success"))
         yield put(hideLoading())
     } catch (e) {
@@ -59,7 +59,6 @@ export function* getTrialsListOfJob(action) {
         // Get Trials list and display notification 
         yield put(showLoading()) 
         const token = yield select(getToken)
-        const user_id = yield select(getUserId)
         yield call(getJobsList, action)
         console.log("Getting Trials List of Job")
         const trialsList = yield call(api.requestTrialsOfJob, {}, token, action.app, action.appVersion) 
