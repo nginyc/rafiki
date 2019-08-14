@@ -1,8 +1,9 @@
 export const Types = {
    // ==== TRAINJOBS ===== 
-   REQUEST_TRAIN_JOBSLIST:"Jobs/request_train_jobslist", // async action is often named with three _ in between
-   POST_CREAT_TRAINJOB: "Jobs/post_create_trainjob",
-   POPULATE_TRAINJOBSLIST: "Jobs/populate_trainjobslist", // sync action is often named with two _ in between
+   REQUEST_TRAIN_JOBSLIST:"Jobs/request_train_jobslist", // async 
+   POST_CREAT_TRAINJOB: "Jobs/post_create_trainjob", // async
+   POPULATE_TRAINJOBSLIST: "Jobs/populate_trainjobslist", // sync
+   REQUEST_STOP_TRAINJOB:"Jobs/request_stop_trainjob", // async
 
    // === TRIALS ====
    REQUEST_TRIALSLIST_OFJOB: "Trials/request_trialslist_ofjob",
@@ -19,16 +20,30 @@ export function createTrainJob(json) {
    }
 }
 
+/*=== request jobs list ===*/ 
+/* This action is to request job list from remote server, would call
+   dispatch action Types.POPULATE_TRAINJOBSLIST on success. */
 export function requestJobsList() {
    return {
       type: Types.REQUEST_TRAIN_JOBSLIST
    }
 }
 
+/* This action is to update jobs list with the server, called when 
+   receive respond from the server
+*/
 export function populateJobsList(jobsList) {
    return {
       type: Types.POPULATE_TRAINJOBSLIST,
       jobsList
+   }
+}
+
+/* === stop train job === */
+export function requestStopTrainJob(app, appVersion) {
+   return {
+      type: Types.REQUEST_STOP_TRAINJOB,
+      app, appVersion
    }
 }
 

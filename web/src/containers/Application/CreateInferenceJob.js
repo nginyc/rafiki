@@ -4,6 +4,8 @@ import { withStyles } from '@material-ui/core/styles'
 import { compose } from 'redux'
 import { connect } from 'react-redux'
 
+import { Link } from "react-router-dom";
+
 import { goBack } from "connected-react-router";
 
 // Material UI
@@ -43,7 +45,7 @@ class CreateInferenceJob extends React.Component {
             classes,
         } = this.props
 
-        const { app, appVersion } = this.props.match.params
+        const { appId, app, appVersion } = this.props.match.params
 
         return (
             <React.Fragment>
@@ -75,11 +77,14 @@ class CreateInferenceJob extends React.Component {
                             </Button>
                         </Grid>
                         <Grid item>
+                            <Link to={`/console/jobs/trials/${appId}/${app}/${appVersion}`}>
                             <Button color="default" variant="contained" onClick={this.props.goBack}>
                                 Go Back
-                            </Button>
+                                </Button>
+                            </Link>
                         </Grid>
                     </Grid>
+                    {JSON.stringify(this.props.location)}
                 </MainContent>
             </React.Fragment >
         )
@@ -89,6 +94,7 @@ class CreateInferenceJob extends React.Component {
 
 const mapStateToProps = state => ({
     // ApplicationList: state.ApplicationReducer.JobsList,
+    location: state.router.location,
 })
 
 const mapDispatchToProps = {

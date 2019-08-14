@@ -1,6 +1,6 @@
 {
   "name": "rafiki_web_admin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Web Admin Portal for Rafiki",
   "private": false,
   "dependencies": {
@@ -11,7 +11,7 @@
     "@redux-saga/testing-utils": "^1.0.5",
     "axios": "^0.18.0",
     "classnames": "^2.2.6",
-    "connected-react-router": "^6.5.2",
+    "connected-react-router": "6.0.0",
     "core-js": "^3.1.4",
     "css-vendor": "^2.0.5",
     "express": "^4.17.1",

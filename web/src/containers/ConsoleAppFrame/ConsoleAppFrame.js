@@ -29,7 +29,6 @@ import InProgress from "../WorkInProgress/InProgress"
 
 import * as actions from "./actions"
 
-
 import LoadingBar from 'react-redux-loading-bar'
 
 
@@ -144,7 +143,7 @@ class ConsoleAppFrame extends React.Component {
               />
               <Route
                 exact
-                path='/console/application/create_inference_job/:app/:appVersion'
+                path='/console/application/:appId/:app/:appVersion/create_inference_job'
                 component={CreateInferenceJob}
               />
               <Route

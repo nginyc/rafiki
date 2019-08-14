@@ -3,7 +3,6 @@ import { bindActionCreators, compose } from 'redux'
 import PropTypes from 'prop-types';
 import { connect } from "react-redux"
 import * as actions from "containers/Datasets/actions"
-import { withRouter } from "react-router-dom"
 
 import { Button, Grid } from "@material-ui/core"
 import { makeStyles } from "@material-ui/styles"
@@ -73,7 +72,6 @@ class UploadDatasetsForm extends React.Component {
         } else {
             this.props.postCreateDataset(values.name, "IMAGE_CLASSIFICATION", undefined, values.dataset_url)
         }
-        this.props.history.push("/console/datasets/list-dataset") // redirect to list dataset
     }
 
     render() {
@@ -127,6 +125,5 @@ function mapDispatchToProps(dispatch) {
 }
 
 export default compose(
-    withRouter,
     connect(null, mapDispatchToProps)
 )(UploadDatasetsForm);

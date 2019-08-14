@@ -1,7 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { compose } from "redux";
-import { withRouter } from "react-router-dom";
 
 import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core/styles';
@@ -80,6 +79,5 @@ class MainContent extends React.Component {
 }
 
 export default compose(
-  withRouter,
   withStyles(styles)
 )(MainContent)

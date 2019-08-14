@@ -25,10 +25,12 @@ const styles = theme => ({
     },
     contentWrapper: {
         // position: "relative",
-        minHeight: 200,
         // display: "flex",
         // alignItems: "center",
         // justifyContent: "center"
+        margin: '40px 16px',
+        //position: "relative",
+        minHeight: 200,
     },
     formWrapper: {
         width: "100%"
@@ -69,9 +71,7 @@ class UploadDataSet extends React.Component {
                         </Toolbar>
                     </ContentBar>
                     <div className={classes.contentWrapper}>
-                        <div className={classes.formWrapper}>
                             <UploadDatasetsForm />
-                        </div>
                     </div>
                 </MainContent>
             </React.Fragment>

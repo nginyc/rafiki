@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
 import { compose } from "redux"
-import { push } from 'connected-react-router'
 import { Link } from 'react-router-dom'
 
 import { withStyles } from '@material-ui/core/styles'
@@ -107,7 +106,7 @@ class ListTrials extends React.Component {
                                         color="primary"
                                         className={classes.add}
                                         component={Link}
-                                        to={`/console/application/create_inference_job/${app}/${appVersion}`}
+                                        to={`/console/application/${appId}/${app}/${appVersion}/create_inference_job`}
                                     >
                                         Create Inference Job
                                     </Button>
@@ -209,7 +208,6 @@ const mapDispatchToProps = {
     handleHeaderTitleChange: ConsoleActions.handleHeaderTitleChange,
     requestTrialsListOfJob: jobsActions.requestTrialsListOfJob,
     resetLoadingBar: ConsoleActions.resetLoadingBar,
-    push: push
 }
 
 export default compose(

@@ -48,6 +48,14 @@ export function* postTrainJob(action) {
     }
 }
 
+/* ===== STOP TRAIN JOBS ====== */
+
+// export function* watchRequestStopTrainjob() {
+//     try {
+//         yield put(showLoading())
+//     }
+// }
+
 /*===== TRIALS =====*/
 
 export function* watchRequestTrialsListOfJob() {
@@ -71,11 +79,6 @@ export function* getTrialsListOfJob(action) {
     }
 }
 
-/* ===== TRAILS DETAILS ====== */
-
-// TODO
-
-/* ====== CREATE INFERENCE JOB ====== */
 
 export default [
     fork(watchRequestJobsList),

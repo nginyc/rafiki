@@ -17,8 +17,6 @@ import DnsRoundedIcon from '@material-ui/icons/DnsRounded';
 // row-based table (dataset)
 import ListIcon from '@material-ui/icons/FormatListBulleted'
 import CloudUpload from '@material-ui/icons/CloudUploadOutlined'
-import DeleteDsIcon from '@material-ui/icons/Delete'
-
 
 // for nested list
 import Collapse from '@material-ui/core/Collapse';
@@ -150,11 +148,11 @@ class Navigator extends React.Component {
             icon: <CloudUpload />,
             pathname: "/console/datasets/upload-datasets"
           },
-          {
-            id: 'Delete Dataset',
-            icon: <DeleteDsIcon />,
-            pathname: "/console/datasets/delete-dataset"
-          },
+          // {
+          //   id: 'Delete Dataset',
+          //   icon: <DeleteDsIcon />,
+          //   pathname: "/console/datasets/delete-dataset"
+          // },
         ],
       },
       {
