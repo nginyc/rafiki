@@ -231,7 +231,7 @@ class Client():
         :param model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
         :param dependencies: List of Python dependencies & their versions
         :param access_right: Model access right
-        :param docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
+        :param docker_image: A custom Docker image that extends ``rafikiai/rafiki_worker``, publicly available on Docker Hub.
         :returns: Created model as dictionary
 
         Refer to :ref:`model-development` for more details on how to write & test models for Rafiki.

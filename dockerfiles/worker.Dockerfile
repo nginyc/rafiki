@@ -81,5 +81,6 @@ RUN pip install -r rafiki/advisor/requirements.txt
 
 COPY rafiki/ rafiki/
 COPY scripts/ scripts/
+RUN mkdir data/
 
 CMD ["python", "scripts/start_worker.py"]

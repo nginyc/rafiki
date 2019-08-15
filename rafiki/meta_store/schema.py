@@ -19,7 +19,7 @@
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy import Column, String, Float, ForeignKey, Integer, LargeBinary, DateTime, UniqueConstraint
+from sqlalchemy import Column, String, Float, ForeignKey, Integer, LargeBinary, DateTime, UniqueConstraint, BigInteger
 from sqlalchemy.dialects.postgresql import JSON, ARRAY
 import uuid
 from datetime import datetime
@@ -60,7 +60,7 @@ class Dataset(Base):
     name = Column(String, nullable=False)
     task = Column(String, nullable=False)
     store_dataset_id = Column(String, nullable=False)
-    size_bytes = Column(Integer, default=0)
+    size_bytes = Column(BigInteger, default=0)
     owner_id = Column(String, ForeignKey('user.id'), nullable=False)
     datetime_created = Column(DateTime, nullable=False, default=generate_datetime)
 

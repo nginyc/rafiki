@@ -18,9 +18,12 @@
 #
 
 import os
+import sys
 import uuid
+import platform
 from typing import Type
 from importlib import import_module
+from pkg_resources import parse_version
 import pickle
 
 from rafiki.constants import ModelDependency
@@ -79,11 +82,53 @@ def parse_model_install_command(dependencies, enable_gpu=False):
                 commands.append('conda install {} singa-gpu={}'.format(options, ver))
             else:
                 commands.append('conda install {} singa-cpu={}'.format(options, ver))
+        elif dep == ModelDependency.DS_CTCDECODER:
+            commands.append('pip install {}'.format(parse_ctc_decoder_url(ver)))
         else:
             # Assume that dependency is the exact PIP package name
             commands.append('pip install {}=={}'.format(dep, ver))
 
     return '; '.join(commands)
+
+def parse_ctc_decoder_url(ver):
+    is_arm = 'arm' in platform.machine()
+    is_mac = 'darwin' in sys.platform
+    is_64bit = sys.maxsize > (2**31 - 1)
+    is_ucs2 = sys.maxunicode < 0x10ffff
+
+    if is_arm:
+        ctc_arch = 'arm64' if is_64bit else 'arm'
+    elif is_mac:
+        ctc_arch = 'osx'
+    else:
+        ctc_arch = 'cpu'
+    ctc_arch += '-ctc'
+
+    plat = platform.system().lower()
+    arch = platform.machine()
+
+    if plat == 'linux' and arch == 'x86_64':
+        plat = 'manylinux1'
+
+    if plat == 'darwin':
+        plat = 'macosx_10_10'
+
+    version_string = ver.strip()
+    ds_version = parse_version(version_string)
+    branch = "v{}".format(version_string)
+    m_or_mu = 'mu' if is_ucs2 else 'm'
+    pyver = ''.join(map(str, sys.version_info[0:2]))
+
+    artifact = "ds_ctcdecoder-{ds_version}-cp{pyver}-cp{pyver}{m_or_mu}-{platform}_{arch}.whl".format(
+        ds_version=ds_version,
+        pyver=pyver,
+        m_or_mu=m_or_mu,
+        platform=plat,
+        arch=arch
+    )
+
+    deepspeech_scheme = 'https://index.taskcluster.net/v1/task/project.deepspeech.deepspeech.native_client.%(branch_name)s.%(arch_string)s/artifacts/public/%(artifact_name)s'
+    return deepspeech_scheme % {'arch_string': ctc_arch, 'artifact_name': artifact, 'branch_name': branch}
 
 def deserialize_knob_config(knob_config_bytes):
     knob_config = pickle.loads(knob_config_bytes.encode())
@@ -103,4 +148,3 @@ class ModelUtils():
 utils = ModelUtils()
 logger = utils.logger
 dataset = utils.dataset
-    

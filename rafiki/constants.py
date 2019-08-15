@@ -73,7 +73,7 @@ class ServiceStatus():
     RUNNING = 'RUNNING'
     ERRORED = 'ERRORED'
     STOPPED = 'STOPPED'
-    
+
 class ModelDependency():
     TENSORFLOW = 'tensorflow'
     KERAS = 'Keras'
@@ -82,3 +82,4 @@ class ModelDependency():
     TORCHVISION = 'torchvision'
     SINGA = 'singa'
     XGBOOST = 'xgboost'
+    DS_CTCDECODER = 'ds-ctcdecoder'

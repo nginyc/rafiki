@@ -23,23 +23,23 @@ import random
 import logging
 from typing import List
 import os
-import tempfile
 import traceback
 import zipfile
 import io
 import abc
 import csv
+import pandas
 import json
 
 logger = logging.getLogger(__name__)
 
-class InvalidDatasetFormatException(Exception): pass 
+class InvalidDatasetFormatException(Exception): pass
 
 class DatasetUtils():
     '''
     Collection of utility methods to help with the loading of datasets.
 
-    Usage of these methods are optional. 
+    Usage of these methods are optional.
     In fact, you are encouraged to rely on your preferred ML libraries' dataset loading methods, or hand-roll your own.
 
     This should NOT be initiailized outside of the module. Instead,
@@ -56,30 +56,39 @@ class DatasetUtils():
             ...
             utils.dataset.load_dataset_of_image_files(dataset_path)
             ...
-    '''   
+    '''
     def load_dataset_of_corpus(self, dataset_path, tags=None, split_by='\\n'):
         '''
             Loads dataset for the task ``POS_TAGGING``
-            
+
             :param str dataset_path: File path of the dataset
             :returns: An instance of ``CorpusDataset``.
         '''
         return CorpusDataset(dataset_path, tags or ['tag'], split_by)
 
-    def load_dataset_of_image_files(self, dataset_path, min_image_size=None, 
+    def load_dataset_of_image_files(self, dataset_path, min_image_size=None,
                                     max_image_size=None, mode='RGB', if_shuffle=False):
         '''
             Loads dataset for the task ``IMAGE_CLASSIFICATION``.
 
             :param str dataset_path: File path of the dataset
-            :param int min_image_size: minimum width *and* height to resize all images to 
-            :param int max_image_size: maximum width *and* height to resize all images to 
+            :param int min_image_size: minimum width *and* height to resize all images to
+            :param int max_image_size: maximum width *and* height to resize all images to
             :param str mode: Pillow image mode. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes
             :param bool if_shuffle: Whether to shuffle the dataset
             :returns: An instance of ``ImageFilesDataset``
         '''
-        return ImageFilesDataset(dataset_path, min_image_size=min_image_size, max_image_size=max_image_size, 
+        return ImageFilesDataset(dataset_path, min_image_size=min_image_size, max_image_size=max_image_size,
                                 mode=mode, if_shuffle=if_shuffle)
+
+    def load_dataset_of_audio_files(self, dataset_path, dataset_dir):
+        '''
+            Loads dataset with type `AUDIO_FILES`.
+
+            :param str dataset_uri: URI of the dataset file
+            :returns: An instance of ``AudioFilesDataset``.
+        '''
+        return AudioFilesDataset(dataset_path, dataset_dir)
 
     def normalize_images(self, images, mean=None, std=None):
         '''
@@ -143,7 +152,7 @@ class DatasetUtils():
 class ModelDataset():
     '''
     Abstract that helps loading of dataset of a specific type
-    
+
     ``size`` should be the total number of samples of the dataset
     '''
     def __init__(self, dataset_path):
@@ -164,12 +173,12 @@ class CorpusDataset(ModelDataset):
 
     ``tags`` is the expected list of tags for each token in the corpus.
     Dataset samples are grouped as sentences by a delimiter token corresponding to ``split_by``.
-    
+
     ``tag_num_classes`` is a list of <number of classes for a tag>, in the same order as ``tags``.
-    Each dataset sample is [[token, <tag_1>, <tag_2>, ..., <tag_k>]] where each token is a string, 
-    each ``tag_i`` is an integer from 0 to (k_i - 1) as each token's corresponding class for that tag, 
-    with tags appearing in the same order as ``tags``. 
-    '''   
+    Each dataset sample is [[token, <tag_1>, <tag_2>, ..., <tag_k>]] where each token is a string,
+    each ``tag_i`` is an integer from 0 to (k_i - 1) as each token's corresponding class for that tag,
+    with tags appearing in the same order as ``tags``.
+    '''
 
     def __init__(self, dataset_path, tags, split_by):
         super().__init__(dataset_path)
@@ -185,14 +194,14 @@ class CorpusDataset(ModelDataset):
         tag_num_classes = [0 for _ in range(len(tags))]
         max_token_len = 0
         max_sent_len = 0
-        
+
         with tempfile.TemporaryDirectory() as d:
             dataset_zipfile = zipfile.ZipFile(dataset_path, 'r')
             dataset_zipfile.extractall(path=d)
             dataset_zipfile.close()
 
             # Read corpus.tsv, read token by token, and merge them into sentences
-            corpus_tsv_path = os.path.join(d, 'corpus.tsv') 
+            corpus_tsv_path = os.path.join(d, 'corpus.tsv')
             try:
                 with open(corpus_tsv_path, mode='r') as f:
                     reader = csv.DictReader(f, dialect='excel-tab')
@@ -208,7 +217,7 @@ class CorpusDataset(ModelDataset):
                             sents.append(sent)
                             sent = []
                             continue
-                        
+
                         token_tags = [int(row[x]) for x in tags]
                         sent.append([token, *token_tags])
 
@@ -232,14 +241,14 @@ class CorpusDataset(ModelDataset):
 class ImageFilesDataset(ModelDataset):
     '''
     Class that helps loading of dataset for task ``IMAGE_CLASSIFICATION``.
-    
+
     ``classes`` is the number of image classes.
 
     Each dataset example is (image, class) where:
-        
+
         - Each image is a 3D numpy array (width x height x channels)
         - Each class is an integer from 0 to (k - 1)
-    '''   
+    '''
 
     def __init__(self, dataset_path, min_image_size=None, max_image_size=None, mode='RGB', if_shuffle=False):
         super().__init__(dataset_path)
@@ -278,8 +287,8 @@ class ImageFilesDataset(ModelDataset):
 
             # Read images.csv, and read image paths & classes
             image_paths = []
-            image_classes = [] 
-            images_csv_path = os.path.join(d, 'images.csv') 
+            image_classes = []
+            images_csv_path = os.path.join(d, 'images.csv')
             try:
                 with open(images_csv_path, mode='r') as f:
                     reader = csv.DictReader(f)
@@ -303,6 +312,39 @@ class ImageFilesDataset(ModelDataset):
         (images, classes) = zip(*zipped)
         return (images, classes)
 
+class AudioFilesDataset(ModelDataset):
+    '''
+    Class that helps loading of dataset with type `AUDIO_FILES`
+
+    ``dataset_path`` is the URI to the dataset.
+    ``dataset_dir`` is the directory to store the extracted the Audio Files.
+    '''
+
+    def __init__(self, dataset_path, dataset_dir):
+        super().__init__(dataset_path)
+        self._dataset_dir = dataset_dir
+        self.df = self._load(self.path)
+
+    def _load(self, dataset_path):
+        '''
+            Loading the dataset into a pandas dataframe. Called in the class __init__ method.
+
+            :param str dataset_path: URI to the dataset
+            :returns: pandas dataframe with three columns: ``wav_filename``, ``wav_filesize`` and ``transcript``
+        '''
+        dataset_dir = self._dataset_dir
+
+        dataset_zipfile = zipfile.ZipFile(dataset_path, 'r')
+        dataset_zipfile.extractall(path=dataset_dir.name)
+        dataset_zipfile.close()
+
+        # Read images.csv, and read image paths & classes
+        audios_csv_path = os.path.join(dataset_dir.name, 'audios.csv')
+
+        df = pandas.read_csv(audios_csv_path, encoding='utf-8', na_filter=False)
+
+        return df
+        
 def _load_pil_images(image_paths, mode='RGB'):
     pil_images = []
     for image_path in image_paths:
