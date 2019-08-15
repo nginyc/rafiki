@@ -22,7 +22,7 @@ import ListTrials from "../Jobs/ListTrials"
 import TrialDetails from "../Jobs/TrialsDetails"
 
 // Inference Jobs Component
-import Application from "../Application"
+import ApplicationDetails from "../Application/ApplicationDetails"
 import ListApplication from "../Application/ListApplication"
 import CreateInferenceJob from '../Application/CreateInferenceJob';
 
@@ -159,8 +159,8 @@ class ConsoleAppFrame extends React.Component {
               />
               <Route
                 exact
-                path='/console/application/inference_job/:applicationName'
-                component={Application}
+                path='/console/application/running_job/:app/:appVersion'
+                component={ApplicationDetails}
               />
             </Switch>
           </div>

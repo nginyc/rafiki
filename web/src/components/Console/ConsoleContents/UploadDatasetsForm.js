@@ -65,7 +65,6 @@ class UploadDatasetsForm extends React.Component {
 
     onSubmit = (values) => {
         console.log("submit values", values)
-        alert(JSON.stringify(values))
         // Dispatch actions 
         if (this.state.fromLocal) {
             this.props.postCreateDataset(values.name, "IMAGE_CLASSIFICATION", values.dataset[0])
