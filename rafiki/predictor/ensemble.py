@@ -20,7 +20,6 @@
 import logging
 import numpy as np
 from typing import List, Callable, Any
-from collections import Iterable
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ def ensemble_probabilities(predictions: List[Any]) -> Any:
 
     # All probs must have same length
     probs_by_worker = predictions
-    assert all([len(x) == len(probs_by_worker[0]) for x in probs_by_worker]) 
+    assert all([len(x) == len(probs_by_worker[0]) for x in probs_by_worker])
 
     # Compute mean of probabilities across predictions
     probs = np.mean(probs_by_worker, axis=0)
@@ -54,14 +53,13 @@ def ensemble(predictions: List[Any]) -> Any:
     prediction = _simplify_prediction(prediction)
     return prediction
 
-
 def _simplify_prediction(prediction):
     # Convert numpy arrays to lists
     if isinstance(prediction, np.ndarray):
         prediction = prediction.tolist()
 
-    # Recurvely apply to elements of iterables
-    if isinstance(prediction, Iterable):
+    # Recurvely apply to elements of lists
+    if isinstance(prediction, list):
         for (i, x) in enumerate(prediction):
             prediction[i] = _simplify_prediction(x)
 

@@ -29,7 +29,7 @@ from rafiki.constants import ModelDependency, Budget
 from rafiki.advisor import ParamsType, Proposal, TrialResult, make_advisor
 from rafiki.predictor import get_ensemble_method, Query, Prediction
 from rafiki.param_store import FileParamStore, ParamStore
-from rafiki.cache import ParamCache, TrainCache, InferenceCache
+from rafiki.redis import ParamCache, TrainCache, InferenceCache
 
 from .model import BaseModel, BaseKnob, Params
 from .utils import serialize_knob_config, deserialize_knob_config, parse_model_install_command, load_model_class
@@ -67,7 +67,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
     train_cache: TrainCache = TrainCache()
     
     # Variables to track over trials
-    best_model_score = 0
+    best_model_score = -1
     best_trial_no = 0 
     best_model_test_score = None
     best_proposal = None
@@ -132,7 +132,7 @@ def tune_model(py_model_class: Type[BaseModel], train_dataset_path: str, val_dat
 
             # Test best model, if test dataset provided
             if test_dataset_path is not None:
-                print('Evaluting new best model on test dataset...')
+                print('Evaluating new best model on test dataset...')
                 best_model_test_score = model_inst.evaluate(test_dataset_path)
                 inform_user('Score on test dataset: {}'.format(best_model_test_score))
 
@@ -303,7 +303,7 @@ def _evaluate_model(model_inst: BaseModel, proposal: Proposal,
     if not proposal.to_eval: 
         return TrialResult(proposal)
         
-    print('Evaluting model...')
+    print('Evaluating model...')
     score = model_inst.evaluate(val_dataset_path)
 
     if not isinstance(score, float):

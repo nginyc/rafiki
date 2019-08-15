@@ -43,3 +43,6 @@ params/*
 
 # SQL dump files
 *.sql
+
+# Tensorflow
+.keras
