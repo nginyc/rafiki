@@ -93,7 +93,7 @@ class ListDataSetTable extends React.Component {
           {Datasets.map(x => {
             return (
               <TableRow key={x.id} hover>
-                <TableCell>{x.id}</TableCell>
+                <TableCell>{x.id.slice(0,8)}</TableCell>
                 <TableCell>{x.name}</TableCell>
                 <TableCell>{x.task}</TableCell>
                 <TableCell>{x.size_bytes} bytes</TableCell>

@@ -4,16 +4,17 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { compose } from "redux"
 import { Link } from 'react-router-dom'
+import { push } from 'connected-react-router'
 
+// Material UI
+import { Button, Table, Toolbar, Typography, Grid, Tooltip, IconButton, TableHead, TableBody, TableRow, TableCell } from '@material-ui/core'
 import { withStyles } from '@material-ui/core/styles'
+import { Pageview } from '@material-ui/icons'
+import RefreshIcon from '@material-ui/icons/Refresh'
 
 import * as ConsoleActions from "../ConsoleAppFrame/actions"
 import * as jobsActions from "./actions"
 import * as applicationActions from "../Application/actions"
-
-// Material UI
-import { Button, Table, Toolbar, Typography, Grid, Tooltip, IconButton, TableHead, TableBody, TableRow, TableCell } from '@material-ui/core'
-import RefreshIcon from '@material-ui/icons/Refresh'
 
 // Import Layout
 import MainContent from 'components/Console/ConsoleContents/MainContent'
@@ -166,7 +167,7 @@ class ListTrials extends React.Component {
                         <Table>
                             <TableHead>
                                 <TableRow>{
-                                    ["Model", "Trial No", "Score", "Status", "Started", "Stopped", "Duration"].map((label) => (<TableCell>{label}</TableCell>))
+                                    [" ", "Model", "Trial No", "Score", "Status", "Started", "Stopped"].map((label) => (<TableCell>{label}</TableCell>))
                                 }
                                 </TableRow>
                             </TableHead>
@@ -174,18 +175,21 @@ class ListTrials extends React.Component {
                                 {trialsList.map((x) => {
                                     return (
                                         <TableRow key={x.id} hover>
+                                             <TableCell padding="none">
+                                                <IconButton onClick={() => {
+                                                    const link = "/console/jobs/trials/:trialId"
+                                                        .replace(':trialId', x.id)
+                                                    this.props.push(link)
+                                                }} >
+                                                    <Pageview />
+                                                </IconButton>
+                                            </TableCell>
                                             <TableCell>{x.model_name}</TableCell>
                                             <TableCell>{x.no}</TableCell>
                                             <TableCell>{x.score !== null ? x.score : '-'}</TableCell>
                                             <TableCell>{x.status}</TableCell>
                                             <TableCell>{moment(x.datetime_started).fromNow()}</TableCell>
                                             <TableCell>{x.datetime_stopped ? moment(x.datetime_stopped).fromNow() : '-'}</TableCell>
-                                            <TableCell>{
-                                                x.datetime_stopped ?
-                                                    // @ts-ignore
-                                                    moment.duration(x.datetime_stopped - x.datetime_started).humanize()
-                                                    : '-'
-                                            }</TableCell>
                                         </TableRow>
                                     )
                                 }
@@ -208,6 +212,7 @@ const mapDispatchToProps = {
     handleHeaderTitleChange: ConsoleActions.handleHeaderTitleChange,
     requestTrialsListOfJob: jobsActions.requestTrialsListOfJob,
     resetLoadingBar: ConsoleActions.resetLoadingBar,
+    push: push,
 }
 
 export default compose(

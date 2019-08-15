@@ -9,7 +9,9 @@ import * as actions from "./actions"
 
 import { withStyles } from '@material-ui/core/styles';
 import { Button, Table, Toolbar, Typography, Grid, TableHead, TableBody, TableRow, TableCell } from '@material-ui/core'
-import moment from "moment"
+
+// Third parts
+import * as moment from 'moment';
 
 import MainContent from 'components/Console/ConsoleContents/MainContent'
 import ContentBar from "components/Console/ConsoleContents/ContentBar"
@@ -84,14 +86,14 @@ class ListApplication extends React.Component {
                     <div className={classes.contentWrapper}>
                         <Typography color="textSecondary" align="center">
                             {ApplicationList.length === 0
-                                ? "You do not have any trials for this job"
-                                : "Jobs"
+                                ? "You do not have any applications for this user"
+                                : "Applications"
                             }
                         </Typography>
                         <Table>
                             <TableHead>
                                 <TableRow>{
-                                    ["ID", "App", "App Version", "Predictor Host",  "Status", "Started", "Stopped", "Duration", "Train Job ID"].map((label) => (<TableCell>{label}</TableCell>))
+                                    ["ID", "App", "App Version", "Predictor Host",  "Status", "Started", "Stopped", "Train Job ID"].map((label) => (<TableCell>{label}</TableCell>))
                                 }
                                 </TableRow>
                             </TableHead>
@@ -99,19 +101,14 @@ class ListApplication extends React.Component {
                                 {ApplicationList.map((x) => {
                                     return (
                                         <TableRow key={x.id} hover>
-                                            <TableCell>{x.id}</TableCell>
+                                            <TableCell>{x.id.slice(0,8)}</TableCell>
                                             <TableCell>{x.app}</TableCell>
                                             <TableCell>{x.app_version}</TableCell>
                                             <TableCell>{x.predictor_host}</TableCell>
                                             <TableCell>{x.status}</TableCell>
                                             <TableCell>{moment(x.datetime_started).fromNow()}</TableCell>
                                             <TableCell>{x.datetime_stopped ? moment(x.datetime_stopped).fromNow() : '-'}</TableCell>
-                                            <TableCell>{
-                                                x.datetime_stopped ?
-                                                    moment.duration(x.datetime_stopped - x.datetime_started).humanize()
-                                                    : '-'
-                                            }</TableCell>
-                                            <TableCell>{x.train_job_id}</TableCell>
+                                            <TableCell>{x.train_job_id.slice(0,8)}</TableCell>
                                         </TableRow>
                                     )
                                 }

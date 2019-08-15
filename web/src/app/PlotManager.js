@@ -17,7 +17,7 @@
   under the License.
  */
 
- import echarts from 'echarts';
+import echarts from 'echarts';
 import _ from 'lodash';
 
 export default class PlotManager {
@@ -49,6 +49,7 @@ export default class PlotManager {
         trigger: 'axis'
       },
       xAxis: {
+        // eslint-disable-next-line
         type: (xAxisType == 'time') ? 'time': 'value',
         name: xAxisName,
         splitLine: {

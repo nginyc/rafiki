@@ -19,6 +19,7 @@ import UploadDataset from "../Datasets/UploadDataset"
 import ListTrainJobs from "../Jobs/ListTrainJobs"
 import CreateTrainJob from "../Jobs/CreateTrainJob"
 import ListTrials from "../Jobs/ListTrials"
+import TrialDetails from "../Jobs/TrialsDetails"
 
 // Inference Jobs Component
 import Application from "../Application"
@@ -140,6 +141,11 @@ class ConsoleAppFrame extends React.Component {
                 exact
                 path='/console/jobs/trials/:appId/:app/:appVersion'
                 component={ListTrials}
+              />
+              <Route
+                exact
+                path='/console/jobs/trials/:trialId'
+                component={TrialDetails}
               />
               <Route
                 exact

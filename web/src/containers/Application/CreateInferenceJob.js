@@ -37,7 +37,8 @@ class CreateInferenceJob extends React.Component {
 
     onClick = () => {
         const { app, appVersion } = this.props.match.params
-        this.props.postCreateInferenceJob(app, appVersion) // action.json
+        const budget = {"GPU_COUNT":0}
+        this.props.postCreateInferenceJob(app, appVersion, budget) // action.json
     }
 
     render() {
@@ -84,7 +85,6 @@ class CreateInferenceJob extends React.Component {
                             </Link>
                         </Grid>
                     </Grid>
-                    {JSON.stringify(this.props.location)}
                 </MainContent>
             </React.Fragment >
         )

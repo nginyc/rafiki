@@ -1,7 +1,7 @@
 {
   "short_name": "Rafiki",
   "name": "Rafiki by NUS Database System Research Group",
-  "description": "An Efficient Storage Engine for Blockchain and Forkable Applications",
+  "description": "",
   "icons": [
     {
       "src": "favicon.ico",

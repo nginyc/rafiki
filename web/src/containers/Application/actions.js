@@ -11,11 +11,12 @@ export const fetchGetInferencejob = () => {
     }
 }
 
-export const postCreateInferenceJob = (app, appVersion) => {
+export const postCreateInferenceJob = (app, appVersion, budget) => {
     return {
         type: Types.POST_CREATE_INFERENCEJOB,
         app,
-        appVersion
+        appVersion,
+        budget
     }
 }
 

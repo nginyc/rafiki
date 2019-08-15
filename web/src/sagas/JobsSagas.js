@@ -3,6 +3,7 @@ import { fork, takeLatest, put, call, select } from "redux-saga/effects";
 import * as actions from "containers/Jobs/actions"
 import { showLoading, hideLoading } from "react-redux-loading-bar";
 import { notificationShow } from "containers/Root/actions";
+import { push } from 'connected-react-router'
 import * as api from "services/ClientAPI"
 
 /* ======= RequestJobsList =========*/
@@ -37,9 +38,10 @@ export function* postTrainJob(action) {
     try {
         yield put(showLoading())
         const token = yield select(getToken)
-        yield call(api.postCreateTrainJob, action.app, action.appVersion, token)
+        yield call(api.postCreateTrainJob, action.json, token)
         yield put(notificationShow("Create TrainJob success"))
         yield put(hideLoading())
+        yield put(push('/console/application/list-applications'))
     } catch (e) {
         yield call(alert, e.response.data)
         console.error(e.response)

@@ -55,7 +55,6 @@ function MySelectField(props) {
 
 class CreateTrainJobForm extends React.Component {
 
-
     onSubmit = (values) => {
         const json = this._generateJSON(values)
         this.props.postCreateTrainJob(json)

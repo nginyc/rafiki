@@ -303,6 +303,10 @@ Not considering moving this project to Typescript, because compile time is quite
 
 https://stackoverflow.com/questions/47508564/migrating-create-react-app-from-javascript-to-typescript
 
+#### Not rendering the page when url is changed
+
+https://github.com/supasate/connected-react-router/issues/230
+
 #### TODO
 
 - V0.3.0

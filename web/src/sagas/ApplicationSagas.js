@@ -44,10 +44,10 @@ function* watchCreateInferenceJobRequest() {
 }
 
 function* createInferenceJob(action) {
-    const { app, appVersion } = action
+    const { app, appVersion, budget } = action
     try {
         const token = yield select(getToken)
-        yield call(api.createInferenceJob, app, appVersion, token)
+        yield call(api.createInferenceJob, app, appVersion, budget, token)
         yield put(notificationShow("Create Inference Job Successfully")); // no need to write test for this 
     } catch(e) {
         console.error(e.response)

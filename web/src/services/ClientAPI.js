@@ -67,8 +67,8 @@ export const getInferenceJob = (params, token) => {
   return _getWithToken("/inference_jobs", params, token)
 }
 
-export const createInferenceJob = (app, appVersion, token) => {
-  return _postJsonWithToken("/inference_jobs", {app, "app_version": appVersion}, token)
+export const createInferenceJob = (app, appVersion, budget, token) => {
+  return _postJsonWithToken("/inference_jobs", {app, "app_version": appVersion, budget}, token)
 }
 
 // Private
@@ -116,6 +116,7 @@ export const _postJsonWithToken = (url, json, token, params = {}) => {
     method: 'post',
     url: _makeUrl(url, params),
     headers: {
+      "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`
     },
     data: json

@@ -17,6 +17,8 @@ const HTTPconfig = {
   // need a working server for axios uploadprogress to work
   // gateway: "http://localhost:5000/",
   // gateway: "http://ncrs.d2.comp.nus.edu.sg:3000/"
+  adminHost: `${adminHost}`,
+  adminPort: `${adminPort}`,
   gateway: `http://${adminHost}:${adminPort}/`
 }
 
