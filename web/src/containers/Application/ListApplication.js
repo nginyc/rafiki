@@ -2,13 +2,14 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { connect } from "react-redux"
 import { compose } from "redux"
-import { Link } from 'react-router-dom'
+import { push } from 'connected-react-router'
+import { Pageview } from '@material-ui/icons'
 
 import * as ConsoleActions from "../ConsoleAppFrame/actions"
 import * as actions from "./actions"
 
 import { withStyles } from '@material-ui/core/styles';
-import { Button, Table, Toolbar, Typography, Grid, TableHead, TableBody, TableRow, TableCell } from '@material-ui/core'
+import { Table, Toolbar, Typography, Grid, IconButton, TableHead, TableBody, TableRow, TableCell } from '@material-ui/core'
 
 // Third parts
 import * as moment from 'moment';
@@ -69,17 +70,6 @@ class ListApplication extends React.Component {
                                         List Application
                                     </Typography>
                                 </Grid>
-                                <Grid item>
-                                    <Button
-                                        variant="contained"
-                                        color="primary"
-                                        className={classes.addDS}
-                                        component={Link}
-                                        to="/console/datasets/upload-datasets"
-                                    >
-                                        Open the page
-                                    </Button>
-                                </Grid>
                             </Grid>
                         </Toolbar>
                     </ContentBar>
@@ -93,7 +83,7 @@ class ListApplication extends React.Component {
                         <Table>
                             <TableHead>
                                 <TableRow>{
-                                    ["ID", "App", "App Version", "Predictor Host",  "Status", "Started", "Stopped", "Train Job ID"].map((label) => (<TableCell>{label}</TableCell>))
+                                ["#", "ID", "App", "App Version", "Status", "Started", "Stopped", "Train Job ID"].map((label) => (<TableCell>{label}</TableCell>))
                                 }
                                 </TableRow>
                             </TableHead>
@@ -101,10 +91,18 @@ class ListApplication extends React.Component {
                                 {ApplicationList.map((x) => {
                                     return (
                                         <TableRow key={x.id} hover>
+                                            <TableCell padding="none">
+                                                <IconButton onClick={() => {
+                                                    const link = "/console/application/running_job/:app/:appVersion"
+                                                        .replace(':app', x.app).replace(':appVersion', x.app_version)
+                                                    this.props.push(link)
+                                                }} >
+                                                    <Pageview />
+                                                </IconButton>
+                                            </TableCell>
                                             <TableCell>{x.id.slice(0,8)}</TableCell>
                                             <TableCell>{x.app}</TableCell>
                                             <TableCell>{x.app_version}</TableCell>
-                                            <TableCell>{x.predictor_host}</TableCell>
                                             <TableCell>{x.status}</TableCell>
                                             <TableCell>{moment(x.datetime_started).fromNow()}</TableCell>
                                             <TableCell>{x.datetime_stopped ? moment(x.datetime_stopped).fromNow() : '-'}</TableCell>
@@ -129,7 +127,8 @@ const mapStateToProps = state => ({
 const mapDispatchToProps = {
     handleHeaderTitleChange: ConsoleActions.handleHeaderTitleChange,
     resetLoadingBar: ConsoleActions.resetLoadingBar,
-    getApplicationList: actions.fetchGetInferencejob
+    getApplicationList: actions.fetchGetInferencejob,
+    push: push
 }
 
 export default compose(

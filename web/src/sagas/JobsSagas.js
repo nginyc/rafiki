@@ -14,7 +14,7 @@ export function* watchRequestJobsList() {
 
 export function* getJobsList(action) {
     try {
-        console.log("Getting jobs List")
+        // console.log("Getting jobs List")
         yield put(showLoading())
         const token = yield select(getToken)
         const user_id = yield select(getUserId)
@@ -41,7 +41,7 @@ export function* postTrainJob(action) {
         yield call(api.postCreateTrainJob, action.json, token)
         yield put(notificationShow("Create TrainJob success"))
         yield put(hideLoading())
-        yield put(push('/console/application/list-applications'))
+        yield put(push('/console/jobs/list-train-jobs'))
     } catch (e) {
         yield call(alert, e.response.data)
         console.error(e.response)

@@ -10,6 +10,7 @@ import * as actions from "../containers/Datasets/actions"
 import { notificationShow } from "../containers/Root/actions.js"
 import * as api from "../services/ClientAPI"
 import { getToken } from "./utils";
+import { push } from "connected-react-router"
 
 // List Datasets
 function* watchGetDSListRequest() {
@@ -41,10 +42,14 @@ function* watchPostDatasetsRequest() {
 function* createDataset(action) {
     const {name, task, file, dataset_url} = action
     try {
+        yield put(showLoading())
         const token = yield select(getToken)
         yield call(api.postCreateDataset, name, task, file, dataset_url, token)
         console.log("Create Dataset success")
-        yield put(notificationShow("Create DatasetList Successfully")); // no need to write test for this 
+        yield alert("Create Dataset success")
+        yield put(notificationShow("Create Dataset Success")); // no need to write test for this 
+        yield(push('console/datasets/list-dataset'))
+        yield put(hideLoading())
     } catch(e) {
         console.error(e.response)
         console.error(e)

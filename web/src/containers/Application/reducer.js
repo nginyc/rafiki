@@ -6,6 +6,7 @@ const StatesToReset = {
 const initialState = {
   // MODEL-List
   ApplicationList: [],
+  SelectedApplication: {},
   ...StatesToReset
 };
 

@@ -23,6 +23,12 @@ REACT_APP_API_POINT_HOST=$RAFIKI_ADDR
 REACT_APP_API_POINT_PORT=$ADMIN_EXT_PORT
 ```
 
+```
+export DOCKER_SWARM_ADVERTISE_ADDR=10.0.0.125
+export RAFIKI_VERSION=0.3.0
+export RAFIKI_ADDR=ncrs.d2.comp.nus.edu.sg
+```
+
 ## How to SET input path
 
 - https://facebook.github.io/create-react-app/docs/importing-a-component#absolute-imports
@@ -310,7 +316,8 @@ https://github.com/supasate/connected-react-router/issues/230
 #### TODO
 
 - V0.3.0
-    - Upload dataset Page 
+    - User able to stop inference job on web
+    - 
 
 - Add test to the whole app
     - Unit test
@@ -323,6 +330,8 @@ https://github.com/supasate/connected-react-router/issues/230
 - Redirect to mainpage
 - Pagination
 - Refractor ClientAPI, AuthAPI to Client object (Class) with user_id and token
+
+
 
 ## Dependencies
 
