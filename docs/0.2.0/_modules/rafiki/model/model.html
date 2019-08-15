@@ -185,12 +185,12 @@
 <span class="sd">    Rafiki models must implement all abstract methods below, according to the specification of its associated task (see :ref:`tasks`).</span>
 <span class="sd">    They configure how this model template will be trained, evaluated, tuned, serialized and served on Rafiki.</span>
 
-<span class="sd">    In the model&#39;s ``__init__`` method, call ``super().__init__(**knobs)`` as the first line, </span>
-<span class="sd">    followed by the model&#39;s initialization logic. The model should be initialize itself with ``knobs``, </span>
-<span class="sd">    a set of generated knob values for the created model instance. </span>
-<span class="sd">    </span>
+<span class="sd">    In the model&#39;s ``__init__`` method, call ``super().__init__(**knobs)`` as the first line,</span>
+<span class="sd">    followed by the model&#39;s initialization logic. The model should be initialize itself with ``knobs``,</span>
+<span class="sd">    a set of generated knob values for the created model instance.</span>
+
 <span class="sd">    These knob values are chosen by Rafiki based on the model&#39;s knob configuration (defined in :meth:`rafiki.model.BaseModel.get_knob_config`).</span>
-<span class="sd">    </span>
+
 <span class="sd">    For example:</span>
 
 <span class="sd">    ::</span>
@@ -203,15 +203,15 @@
 
 <span class="sd">    :param knobs: Dictionary mapping knob names to knob values</span>
 <span class="sd">    :type knobs: :obj:`rafiki.model.Knobs`</span>
-<span class="sd">    &#39;&#39;&#39;</span>   
+<span class="sd">    &#39;&#39;&#39;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">knobs</span><span class="p">:</span> <span class="n">Knobs</span><span class="p">):</span>
         <span class="k">pass</span>
 
 <div class="viewcode-block" id="BaseModel.get_knob_config"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.get_knob_config">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractstaticmethod</span>
     <span class="k">def</span> <span class="nf">get_knob_config</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">KnobConfig</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Return a dictionary that defines the search space for this model template&#39;s knobs </span>
-<span class="sd">        (i.e. knobs&#39; names, their types &amp; their ranges). </span>
+<span class="sd">        Return a dictionary that defines the search space for this model template&#39;s knobs</span>
+<span class="sd">        (i.e. knobs&#39; names, their types &amp; their ranges).</span>
 
 <span class="sd">        Over the course of training, your model will be initialized with different values of knobs within this search space</span>
 <span class="sd">        to maximize this model’s performance.</span>
@@ -228,13 +228,13 @@
 <span class="sd">        Train this model instance with the given traing dataset and initialized knob values.</span>
 <span class="sd">        Additional keyword arguments could be passed depending on the task&#39;s specification.</span>
 
-<span class="sd">        Additionally, trained parameters shared from previous trials could be passed, </span>
+<span class="sd">        Additionally, trained parameters shared from previous trials could be passed,</span>
 <span class="sd">        as part of the ``SHARE_PARAMS`` policy (see :ref:`model-policies`).</span>
 
 <span class="sd">        Subsequently, the model is considered *trained*.</span>
 
 <span class="sd">        :param dataset_path: File path of the train dataset file in the *local filesystem*, in a format specified by the task</span>
-<span class="sd">        :param shared_params: Dictionary mapping parameter names to values, as produced by your model&#39;s :meth:`rafiki.model.BaseModel.dump_parameters`. </span>
+<span class="sd">        :param shared_params: Dictionary mapping parameter names to values, as produced by your model&#39;s :meth:`rafiki.model.BaseModel.dump_parameters`.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
 
@@ -253,12 +253,12 @@
 <div class="viewcode-block" id="BaseModel.predict"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.predict">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
     <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queries</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Make predictions on a batch of queries after training. </span>
+<span class="sd">        Make predictions on a batch of queries after training.</span>
 
 <span class="sd">        This will be called only when model is *trained*.</span>
 
-<span class="sd">        :param queries: List of queries, where a query is in the format specified by the task </span>
-<span class="sd">        :returns: List of predictions, in an order corresponding to the queries, where a prediction is in the format specified by the task </span>
+<span class="sd">        :param queries: List of queries, where a query is in the format specified by the task</span>
+<span class="sd">        :returns: List of predictions, in an order corresponding to the queries, where a prediction is in the format specified by the task</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
 
@@ -271,7 +271,7 @@
 
 <span class="sd">        Additionally, trained parameters produced by this method could be shared with future trials, as</span>
 <span class="sd">        part of the ``SHARE_PARAMS`` policy (see :ref:`model-policies`).</span>
-<span class="sd">        </span>
+
 <span class="sd">        This will be called only when model is *trained*.</span>
 
 <span class="sd">        :returns: Dictionary mapping parameter names to values</span>
@@ -281,20 +281,20 @@
 <div class="viewcode-block" id="BaseModel.load_parameters"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.load_parameters">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
     <span class="k">def</span> <span class="nf">load_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Params</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Loads this model instance with previously trained model parameters produced by your model&#39;s :meth:`rafiki.model.BaseModel.dump_parameters`. </span>
+<span class="sd">        Loads this model instance with previously trained model parameters produced by your model&#39;s :meth:`rafiki.model.BaseModel.dump_parameters`.</span>
 <span class="sd">        *This model instance&#39;s initialized knob values will match those during training*.</span>
 
 <span class="sd">        Subsequently, the model is considered *trained*.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
-    
+
 <div class="viewcode-block" id="BaseModel.destroy"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.destroy">[docs]</a>    <span class="k">def</span> <span class="nf">destroy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Destroy this model instance, freeing any resources held by this model instance.</span>
 <span class="sd">        No other instance methods will be called subsequently.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">pass</span></div>
-        
+
 <div class="viewcode-block" id="BaseModel.teardown"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.teardown">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">teardown</span><span class="p">():</span>
         <span class="sd">&#39;&#39;&#39;</span>

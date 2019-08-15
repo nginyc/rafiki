@@ -174,8 +174,8 @@
 <dd><p>Rafiki’s base model class that Rafiki models must extend.</p>
 <p>Rafiki models must implement all abstract methods below, according to the specification of its associated task (see <a class="reference internal" href="../user/tasks.html#tasks"><span class="std std-ref">Supported Tasks</span></a>).
 They configure how this model template will be trained, evaluated, tuned, serialized and served on Rafiki.</p>
-<p>In the model’s <code class="docutils literal notranslate"><span class="pre">__init__</span></code> method, call <code class="docutils literal notranslate"><span class="pre">super().__init__(**knobs)</span></code> as the first line, 
-followed by the model’s initialization logic. The model should be initialize itself with <code class="docutils literal notranslate"><span class="pre">knobs</span></code>, 
+<p>In the model’s <code class="docutils literal notranslate"><span class="pre">__init__</span></code> method, call <code class="docutils literal notranslate"><span class="pre">super().__init__(**knobs)</span></code> as the first line,
+followed by the model’s initialization logic. The model should be initialize itself with <code class="docutils literal notranslate"><span class="pre">knobs</span></code>,
 a set of generated knob values for the created model instance.</p>
 <p>These knob values are chosen by Rafiki based on the model’s knob configuration (defined in <a class="reference internal" href="#rafiki.model.BaseModel.get_knob_config" title="rafiki.model.BaseModel.get_knob_config"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.BaseModel.get_knob_config()</span></code></a>).</p>
 <p>For example:</p>
@@ -194,7 +194,7 @@ a set of generated knob values for the created model instance.</p>
 <dl class="method">
 <dt id="rafiki.model.BaseModel.get_knob_config">
 <em class="property">abstract static </em><code class="sig-name descname">get_knob_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Dict[str, rafiki.model.knob.BaseKnob]<a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.get_knob_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.get_knob_config" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return a dictionary that defines the search space for this model template’s knobs 
+<dd><p>Return a dictionary that defines the search space for this model template’s knobs
 (i.e. knobs’ names, their types &amp; their ranges).</p>
 <p>Over the course of training, your model will be initialized with different values of knobs within this search space
 to maximize this model’s performance.</p>
@@ -211,7 +211,7 @@ to maximize this model’s performance.</p>
 <em class="property">abstract </em><code class="sig-name descname">train</code><span class="sig-paren">(</span><em class="sig-param">dataset_path: str</em>, <em class="sig-param">shared_params: Optional[Dict[str</em>, <em class="sig-param">Union[str</em>, <em class="sig-param">int</em>, <em class="sig-param">float</em>, <em class="sig-param">numpy.ndarray]]] = None</em>, <em class="sig-param">**train_args</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.train" title="Permalink to this definition">¶</a></dt>
 <dd><p>Train this model instance with the given traing dataset and initialized knob values.
 Additional keyword arguments could be passed depending on the task’s specification.</p>
-<p>Additionally, trained parameters shared from previous trials could be passed, 
+<p>Additionally, trained parameters shared from previous trials could be passed,
 as part of the <code class="docutils literal notranslate"><span class="pre">SHARE_PARAMS</span></code> policy (see <a class="reference internal" href="../user/model-tuning.html#model-policies"><span class="std std-ref">Model Policies</span></a>).</p>
 <p>Subsequently, the model is considered <em>trained</em>.</p>
 <dl class="field-list simple">
@@ -273,7 +273,7 @@ part of the <code class="docutils literal notranslate"><span class="pre">SHARE_P
 <dl class="method">
 <dt id="rafiki.model.BaseModel.load_parameters">
 <em class="property">abstract </em><code class="sig-name descname">load_parameters</code><span class="sig-paren">(</span><em class="sig-param">params: Dict[str, Union[str, int, float, numpy.ndarray]]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel.load_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel.load_parameters" title="Permalink to this definition">¶</a></dt>
-<dd><p>Loads this model instance with previously trained model parameters produced by your model’s <a class="reference internal" href="#rafiki.model.BaseModel.dump_parameters" title="rafiki.model.BaseModel.dump_parameters"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.BaseModel.dump_parameters()</span></code></a>. 
+<dd><p>Loads this model instance with previously trained model parameters produced by your model’s <a class="reference internal" href="#rafiki.model.BaseModel.dump_parameters" title="rafiki.model.BaseModel.dump_parameters"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rafiki.model.BaseModel.dump_parameters()</span></code></a>.
 <em>This model instance’s initialized knob values will match those during training</em>.</p>
 <p>Subsequently, the model is considered <em>trained</em>.</p>
 </dd></dl>
@@ -498,7 +498,7 @@ can be visualized in the plots generated by
 <dt id="rafiki.model.DatasetUtils">
 <em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">DatasetUtils</code><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#DatasetUtils"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.DatasetUtils" title="Permalink to this definition">¶</a></dt>
 <dd><p>Collection of utility methods to help with the loading of datasets.</p>
-<p>Usage of these methods are optional. 
+<p>Usage of these methods are optional.
 In fact, you are encouraged to rely on your preferred ML libraries’ dataset loading methods, or hand-roll your own.</p>
 <p>This should NOT be initiailized outside of the module. Instead,
 import the global <code class="docutils literal notranslate"><span class="pre">utils</span></code> instance from the module <code class="docutils literal notranslate"><span class="pre">rafiki.model</span></code>
@@ -542,6 +542,20 @@ and use <code class="docutils literal notranslate"><span class="pre">utils.datas
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>An instance of <code class="docutils literal notranslate"><span class="pre">ImageFilesDataset</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="rafiki.model.DatasetUtils.load_dataset_of_audio_files">
+<code class="sig-name descname">load_dataset_of_audio_files</code><span class="sig-paren">(</span><em class="sig-param">dataset_path</em>, <em class="sig-param">dataset_dir</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/dataset.html#DatasetUtils.load_dataset_of_audio_files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.DatasetUtils.load_dataset_of_audio_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads dataset with type <cite>AUDIO_FILES</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dataset_uri</strong> (<em>str</em>) – URI of the dataset file</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>An instance of <code class="docutils literal notranslate"><span class="pre">AudioFilesDataset</span></code>.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -624,8 +638,8 @@ Assumes that images are of the same dimensions.</p>
 <p><code class="docutils literal notranslate"><span class="pre">tags</span></code> is the expected list of tags for each token in the corpus.
 Dataset samples are grouped as sentences by a delimiter token corresponding to <code class="docutils literal notranslate"><span class="pre">split_by</span></code>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">tag_num_classes</span></code> is a list of &lt;number of classes for a tag&gt;, in the same order as <code class="docutils literal notranslate"><span class="pre">tags</span></code>.
-Each dataset sample is [[token, &lt;tag_1&gt;, &lt;tag_2&gt;, …, &lt;tag_k&gt;]] where each token is a string, 
-each <code class="docutils literal notranslate"><span class="pre">tag_i</span></code> is an integer from 0 to (k_i - 1) as each token’s corresponding class for that tag, 
+Each dataset sample is [[token, &lt;tag_1&gt;, &lt;tag_2&gt;, …, &lt;tag_k&gt;]] where each token is a string,
+each <code class="docutils literal notranslate"><span class="pre">tag_i</span></code> is an integer from 0 to (k_i - 1) as each token’s corresponding class for that tag,
 with tags appearing in the same order as <code class="docutils literal notranslate"><span class="pre">tags</span></code>.</p>
 </dd></dl>
 

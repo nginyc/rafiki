@@ -180,7 +180,7 @@
 <span class="kn">from</span> <span class="nn">rafiki.advisor</span> <span class="k">import</span> <span class="n">ParamsType</span><span class="p">,</span> <span class="n">Proposal</span><span class="p">,</span> <span class="n">TrialResult</span><span class="p">,</span> <span class="n">make_advisor</span>
 <span class="kn">from</span> <span class="nn">rafiki.predictor</span> <span class="k">import</span> <span class="n">get_ensemble_method</span><span class="p">,</span> <span class="n">Query</span><span class="p">,</span> <span class="n">Prediction</span>
 <span class="kn">from</span> <span class="nn">rafiki.param_store</span> <span class="k">import</span> <span class="n">FileParamStore</span><span class="p">,</span> <span class="n">ParamStore</span>
-<span class="kn">from</span> <span class="nn">rafiki.cache</span> <span class="k">import</span> <span class="n">ParamCache</span><span class="p">,</span> <span class="n">TrainCache</span><span class="p">,</span> <span class="n">InferenceCache</span>
+<span class="kn">from</span> <span class="nn">rafiki.redis</span> <span class="k">import</span> <span class="n">ParamCache</span><span class="p">,</span> <span class="n">TrainCache</span><span class="p">,</span> <span class="n">InferenceCache</span>
 
 <span class="kn">from</span> <span class="nn">.model</span> <span class="k">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">BaseKnob</span><span class="p">,</span> <span class="n">Params</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">serialize_knob_config</span><span class="p">,</span> <span class="n">deserialize_knob_config</span><span class="p">,</span> <span class="n">parse_model_install_command</span><span class="p">,</span> <span class="n">load_model_class</span>
@@ -218,7 +218,7 @@
     <span class="n">train_cache</span><span class="p">:</span> <span class="n">TrainCache</span> <span class="o">=</span> <span class="n">TrainCache</span><span class="p">()</span>
     
     <span class="c1"># Variables to track over trials</span>
-    <span class="n">best_model_score</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">best_model_score</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
     <span class="n">best_trial_no</span> <span class="o">=</span> <span class="mi">0</span> 
     <span class="n">best_model_test_score</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">best_proposal</span> <span class="o">=</span> <span class="kc">None</span>
@@ -283,7 +283,7 @@
 
             <span class="c1"># Test best model, if test dataset provided</span>
             <span class="k">if</span> <span class="n">test_dataset_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Evaluting new best model on test dataset...&#39;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Evaluating new best model on test dataset...&#39;</span><span class="p">)</span>
                 <span class="n">best_model_test_score</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">test_dataset_path</span><span class="p">)</span>
                 <span class="n">inform_user</span><span class="p">(</span><span class="s1">&#39;Score on test dataset: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">best_model_test_score</span><span class="p">))</span>
 
@@ -454,7 +454,7 @@
     <span class="k">if</span> <span class="ow">not</span> <span class="n">proposal</span><span class="o">.</span><span class="n">to_eval</span><span class="p">:</span> 
         <span class="k">return</span> <span class="n">TrialResult</span><span class="p">(</span><span class="n">proposal</span><span class="p">)</span>
         
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Evaluting model...&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Evaluating model...&#39;</span><span class="p">)</span>
     <span class="n">score</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">val_dataset_path</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>

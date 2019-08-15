@@ -90,11 +90,12 @@
 <li class="toctree-l2"><a class="reference internal" href="setup.html">Setup &amp; Configuration</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Development</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#testing-latest-code-changes">Testing Latest Code Changes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#making-a-release-to-master">Making a Release to <code class="docutils literal notranslate"><span class="pre">master</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#managing-rafiki-s-db">Managing Rafiki’s DB</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#connecting-to-rafiki-s-cache">Connecting to Rafiki’s Cache</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#connecting-to-rafiki-s-redis">Connecting to Rafiki’s Redis</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pushing-images-to-docker-hub">Pushing Images to Docker Hub</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#building-rafiki-s-documentation">Building Rafiki’s Documentation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#testing">Testing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#running-rafiki-s-tests">Running Rafiki’s Tests</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#using-rafiki-admin-s-http-interface">Using Rafiki Admin’s HTTP interface</a></li>
 </ul>
@@ -173,7 +174,7 @@
             
   <div class="section" id="development">
 <span id="id1"></span><h1>Development<a class="headerlink" href="#development" title="Permalink to this headline">¶</a></h1>
-<p>Before running any individual scripts, make sure to run the shell configuration script:</p>
+<p><strong>Before running any individual scripts, make sure to run the shell configuration script</strong>:</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nb">source</span> .env.sh
 </pre></div>
@@ -181,7 +182,7 @@
 </div></blockquote>
 <p>Refer to <a class="reference internal" href="architecture.html#architecture"><span class="std std-ref">Rafiki’s Architecture</span></a> and <a class="reference internal" href="folder-structure.html#folder-structure"><span class="std std-ref">Folder Structure</span></a> for a developer’s overview of Rafiki.</p>
 <div class="section" id="testing-latest-code-changes">
-<h2>Testing Latest Code Changes<a class="headerlink" href="#testing-latest-code-changes" title="Permalink to this headline">¶</a></h2>
+<span id="testing-latest-code"></span><h2>Testing Latest Code Changes<a class="headerlink" href="#testing-latest-code-changes" title="Permalink to this headline">¶</a></h2>
 <p>To test the lastet code changes e.g. in the <code class="docutils literal notranslate"><span class="pre">dev</span></code> branch, you’ll need to do the following:</p>
 <blockquote>
 <div><ol class="arabic simple">
@@ -197,6 +198,45 @@
 </pre></div>
 </div>
 </div></blockquote>
+</div>
+<div class="section" id="making-a-release-to-master">
+<h2>Making a Release to <code class="docutils literal notranslate"><span class="pre">master</span></code><a class="headerlink" href="#making-a-release-to-master" title="Permalink to this headline">¶</a></h2>
+<p>In general, before making a release to <code class="docutils literal notranslate"><span class="pre">master</span></code> from <code class="docutils literal notranslate"><span class="pre">dev</span></code>, ensure that the code at <code class="docutils literal notranslate"><span class="pre">dev</span></code> is stable &amp; well-tested:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Consider running all of Rafiki’s tests (see <a class="reference internal" href="#testing-rafiki"><span class="std std-ref">Running Rafiki’s Tests</span></a>). Remember to re-build the Docker images to ensure the latest code changes are reflected (see <a class="reference internal" href="#testing-latest-code"><span class="std std-ref">Testing Latest Code Changes</span></a>)</p></li>
+<li><p>Consider running all of Rafiki’s example models in <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/models/">./examples/models/</a></p></li>
+<li><p>Consider running all of Rafiki’s example usage scripts in <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/scripts/">./examples/scripts/</a></p></li>
+<li><p>Consider running all of Rafiki’s example dataset-preparation scripts in <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/datasets/">./examples/datasets/</a></p></li>
+<li><p>Consider visiting Rafiki Web Admin and manually testing it</p></li>
+<li><p>Consider building Rafiki’s documentation site and checking if the documentation matches the codebase (see <a class="reference internal" href="#building-docs"><span class="std std-ref">Building Rafiki’s Documentation</span></a>)</p></li>
+</ol>
+</div></blockquote>
+<p>After merging <code class="docutils literal notranslate"><span class="pre">dev</span></code> into <code class="docutils literal notranslate"><span class="pre">master</span></code>, do the following:</p>
+<blockquote>
+<div><ol class="arabic">
+<li><p>Build &amp; push Rafiki’s new Docker images to <a class="reference external" href="https://hub.docker.com/u/rafikiai">Rafiki’s own Docker Hub account</a>:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/build_images.sh
+bash scripts/push_images.sh
+</pre></div>
+</div>
+<p>Get Docker Hub credentials from &#64;nginyc.</p>
+</div></blockquote>
+</li>
+<li><p>Build &amp; deploy Rafiki’s new documentation to <code class="docutils literal notranslate"><span class="pre">Rafiki's</span> <span class="pre">microsite</span> <span class="pre">powered</span> <span class="pre">by</span> <span class="pre">Github</span> <span class="pre">Pages</span></code>. Checkout Rafiki’s <code class="docutils literal notranslate"><span class="pre">gh-pages</span></code> branch, then run the following:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/build_docs.sh latest
+</pre></div>
+</div>
+<p>Finally, commit all resultant generated documentation changes and push them to <cite>gh-pages</cite> branch. The latest documentation should be reflected at <a class="reference external" href="https://nginyc.github.io/rafiki/docs/latest/">https://nginyc.github.io/rafiki/docs/latest/</a>.</p>
+<p>Refer to <cite>documentation on Github Pages &lt;https://guides.github.com/features/pages/&gt;</cite> to understand more on how this works.</p>
+</div></blockquote>
+</li>
+<li><p><a class="reference external" href="https://github.com/nginyc/rafiki/releases/new">Draft a new release on Github</a>. Make sure to include the list of changes relative to the previous release.</p></li>
+</ol>
+</div></blockquote>
+<p>Subsequently, you’ll need to increase <code class="docutils literal notranslate"><span class="pre">RAFIKI_VERSION</span></code> in <code class="docutils literal notranslate"><span class="pre">.env.sh</span></code> to reflect a new release.</p>
 </div>
 <div class="section" id="managing-rafiki-s-db">
 <h2>Managing Rafiki’s DB<a class="headerlink" href="#managing-rafiki-s-db" title="Permalink to this headline">¶</a></h2>
@@ -218,8 +258,8 @@ bash scripts/stop_db.sh
 </div>
 </div></blockquote>
 </div>
-<div class="section" id="connecting-to-rafiki-s-cache">
-<h2>Connecting to Rafiki’s Cache<a class="headerlink" href="#connecting-to-rafiki-s-cache" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="connecting-to-rafiki-s-redis">
+<h2>Connecting to Rafiki’s Redis<a class="headerlink" href="#connecting-to-rafiki-s-redis" title="Permalink to this headline">¶</a></h2>
 <p>You can connect to Redis DB with <a class="reference external" href="https://github.com/marians/rebrow">rebrow</a>:</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/start_rebrow.sh
@@ -244,7 +284,7 @@ bash scripts/stop_db.sh
 </div></blockquote>
 </div>
 <div class="section" id="building-rafiki-s-documentation">
-<h2>Building Rafiki’s Documentation<a class="headerlink" href="#building-rafiki-s-documentation" title="Permalink to this headline">¶</a></h2>
+<span id="building-docs"></span><h2>Building Rafiki’s Documentation<a class="headerlink" href="#building-rafiki-s-documentation" title="Permalink to this headline">¶</a></h2>
 <p>Rafiki uses <a class="reference external" href="http://www.sphinx-doc.org">Sphinx documentation</a> and hosts the documentation with <a class="reference external" href="https://pages.github.com/">Github Pages</a> on the <a class="reference external" href="https://github.com/nginyc/rafiki/tree/gh-pages">gh-pages branch</a>.
 Build &amp; view Rafiki’s Sphinx documentation on your machine with the following commands:</p>
 <blockquote>
@@ -254,10 +294,11 @@ open docs/index.html
 </div>
 </div></blockquote>
 </div>
-<div class="section" id="testing">
-<h2>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="running-rafiki-s-tests">
+<span id="testing-rafiki"></span><h2>Running Rafiki’s Tests<a class="headerlink" href="#running-rafiki-s-tests" title="Permalink to this headline">¶</a></h2>
 <p>Rafiki uses <a class="reference external" href="https://docs.pytest.org">pytest</a>.</p>
-<p>Running all tests:</p>
+<p>First, start Rafiki.</p>
+<p>Then, run all integration tests with:</p>
 <blockquote>
 <div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">rafiki</span><span class="o">/</span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
 <span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">rafiki</span><span class="o">/</span><span class="n">advisor</span><span class="o">/</span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>

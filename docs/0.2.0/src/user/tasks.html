@@ -117,6 +117,12 @@
 <li class="toctree-l4"><a class="reference internal" href="#id8">Prediction Format</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#speech-recognition">SPEECH_RECOGNITION</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id9">Dataset Type</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id10">Query Format</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id11">Prediction Format</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="datasets.html">Dataset Types</a></li>
@@ -342,6 +348,14 @@ presidents  8
 </table>
 </div></blockquote>
 <p>The train &amp; validation datasets should have the same columns.</p>
+<p>An example of the dataset follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>density,bodyfat,age,weight,height,neck,chest,abdomen,hip,thigh,knee,ankle,biceps,forearm,wrist
+1.0708,12.3,23,154.25,67.75,36.2,93.1,85.2,94.5,59,37.3,21.9,32,27.4,17.1
+1.0853,6.1,22,173.25,72.25,38.5,93.6,83,98.7,58.7,37.3,23.4,30.5,28.9,18.2
+1.0414,25.3,22,154,66.25,34,95.8,87.9,99.2,59.6,38.9,24,28.8,25.2,16.6
+...
+</pre></div>
+</div>
 </div>
 <div class="section" id="id7">
 <h3>Query Format<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h3>
@@ -350,6 +364,76 @@ presidents  8
 <div class="section" id="id8">
 <h3>Prediction Format<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h3>
 <p>A float, representing the value of the target column.</p>
+</div>
+</div>
+<div class="section" id="speech-recognition">
+<h2>SPEECH_RECOGNITION<a class="headerlink" href="#speech-recognition" title="Permalink to this headline">¶</a></h2>
+<p>Speech recognition for the <em>English</em> language.</p>
+<div class="section" id="id9">
+<h3>Dataset Type<a class="headerlink" href="#id9" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference internal" href="datasets.html#dataset-type-audio-files"><span class="std std-ref">AUDIO_FILES</span></a></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">audios.csv</span></code> should be of a <a class="reference external" href="https://en.wikipedia.org/wiki/Comma-separated_values">.CSV</a>
+format with 3 columns of <code class="docutils literal notranslate"><span class="pre">wav_filename</span></code>, <code class="docutils literal notranslate"><span class="pre">wav_filesize</span></code> and <code class="docutils literal notranslate"><span class="pre">transcript</span></code>.</p>
+<p>For each row,</p>
+<blockquote>
+<div><blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">wav_filename</span></code> should be a file path to a <code class="docutils literal notranslate"><span class="pre">.wav</span></code> audio file within the archive, relative to the root of the directory.
+Each audio file’s sample rate must equal to 16kHz.</p>
+<p><code class="docutils literal notranslate"><span class="pre">wav_filesize</span></code> should be an integer representing the size of the <code class="docutils literal notranslate"><span class="pre">.wav</span></code> audio file, in number of bytes.</p>
+<p><code class="docutils literal notranslate"><span class="pre">transcript</span></code> should be a string of the true transcript for the audio file. Transcripts should only contain the following alphabets:</p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">a</span>
+<span class="n">b</span>
+<span class="n">c</span>
+<span class="n">d</span>
+<span class="n">e</span>
+<span class="n">f</span>
+<span class="n">g</span>
+<span class="n">h</span>
+<span class="n">i</span>
+<span class="n">j</span>
+<span class="n">k</span>
+<span class="n">l</span>
+<span class="n">m</span>
+<span class="n">n</span>
+<span class="n">o</span>
+<span class="n">p</span>
+<span class="n">q</span>
+<span class="n">r</span>
+<span class="n">s</span>
+<span class="n">t</span>
+<span class="n">u</span>
+<span class="n">v</span>
+<span class="n">w</span>
+<span class="n">x</span>
+<span class="n">y</span>
+<span class="n">z</span>
+
+
+<span class="s1">&#39;</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div></blockquote>
+<p>An example of <code class="docutils literal notranslate"><span class="pre">audios.csv</span></code> follows:</p>
+</div></blockquote>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>wav_filename,wav_filesize,transcript
+6930-81414-0000.wav,412684,audio transcript one
+6930-81414-0001.wav,559564,audio transcript two
+...
+672-122797-0005.wav,104364,audio transcript one thousand
+...
+1995-1837-0001.wav,279404,audio transcript three thousand
+</pre></div>
+</div>
+</div>
+<div class="section" id="id10">
+<h3>Query Format<a class="headerlink" href="#id10" title="Permalink to this headline">¶</a></h3>
+<p>A <a class="reference external" href="https://en.wikipedia.org/wiki/Base64">Base64-encoded</a> string of the bytes of the audio as a 16kHz <cite>.wav</cite> file</p>
+</div>
+<div class="section" id="id11">
+<h3>Prediction Format<a class="headerlink" href="#id11" title="Permalink to this headline">¶</a></h3>
+<p>A string, representing the predicted transcript for the audio.</p>
 </div>
 </div>
 </div>
