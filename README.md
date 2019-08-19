@@ -46,11 +46,11 @@ Prerequisites: MacOS or Linux environment
     ```sh
     bash scripts/kubernetes/start.sh
     ```
-    
-To completely destroy Rafiki's stack:
+
+  To completely destroy Rafiki's stack:
 
    if use docker swarm mode, use this script:
-
+   
     ```sh
     bash scripts/stop.sh
     ```
