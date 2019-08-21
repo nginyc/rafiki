@@ -1,0 +1,85 @@
+stages:
+  - analyze
+  - build
+  - unit-test
+  - integration-test
+
+variables:
+  ENV_K8S_CONF: "scripts/kubernetes/.env.sh"
+  
+default:
+  before_script:
+    # Get RAFIKI_VERSION
+    - source $ENV_K8S_CONF
+    - export CI_RAFIKI_VERSION=$RAFIKI_VERSION
+    - cat $CI_K8S_ENV_SH > $ENV_K8S_CONF
+    # Rewrite RAFIKI_VERSION
+    - echo RAFIKI_VERSION=$CI_RAFIKI_VERSION >> $ENV_K8S_CONF
+
+sonar-scanner-job:
+  #image: emeraldsquad/sonar-scanner
+  image: kiwicom/sonar-scanner
+  stage: analyze
+  only:
+    - dev
+  tags:
+    - sonar-scanner
+  script:
+    - pylint --version && python3 --version
+    - echo sonar.host.url=$CI_SONAR_HOST >> /opt/sonar-scanner/conf/sonar-scanner.properties
+    - cat /opt/sonar-scanner/conf/sonar-scanner.properties
+    - echo sonar.projectKey=$CI_SONAR_PROJ > ./sonar-project.properties
+    - echo sonar.sources=. >> ./sonar-project.properties
+    - echo sonar.login=$CI_SONAR_LOGIN >> ./sonar-project.properties
+    - echo sonar.language=py >> ./sonar-project.properties
+    - echo sonar.python.pylint=/usr/bin/pylint >> ./sonar-project.properties
+    - echo sonar.python.pylint_config=./.pylintrc >> ./sonar-project.properties
+    - cat ./sonar-project.properties
+    - sonar-scanner -X
+    #  -Dsonar.projectKey=$CI_SONAR_PROJ
+    #  -Dsonar.sources=.
+    #  -Dsonar.host.url=$CI_SONAR_HOST
+    #  -Dsonar.login=$CI_SONAR_LOGIN
+    #  -Dsonar.language=py
+    #  -Dsonar.python.pylint=/usr/bin/pylint
+    #  -Dsonar.python.pylint_config=./.pylintrc
+    - python3 -m pip install -i $CI_PIP_INDEX_URL --trusted-host $CI_PIP_TRUSTED_HOST requests
+    - cat $CI_SONAR_PYTHON_RESULT > ./ci_sonar_python_result.py
+    # Check the sonar scanner result according the QualityGates
+    - python3 ./ci_sonar_python_result.py  "analyze" "$CI_SONAR_HOST" "$CI_SONAR_PROJ" "$CI_SONAR_LOGIN"
+
+build-image-job:
+  stage: build
+  tags:
+    - rafiki-ssh-test
+  only:
+    - dev
+  script:
+    # Add Base URL of Python Package Index for accelerate download  python package
+    - sed -ri "s#pip install#pip install -i $CI_PIP_INDEX_URL --trusted-host $CI_PIP_TRUSTED_HOST#g" dockerfiles/*.Dockerfile
+    - source $ENV_K8S_CONF && bash scripts/build_images.sh
+
+unit-test-job:
+  stage: unit-test
+  tags:
+    - rafiki-ssh-test
+  only:
+    - dev
+  script:
+    - bash test/scripts/kubernetes/start_unit_test.sh
+
+integration-test-job:
+  stage: integration-test
+  only:
+    - dev
+    - master
+  tags:
+    - rafiki-ssh-test
+  script:
+    - pwd
+    - source $ENV_K8S_CONF && bash scripts/kubernetes/stop.sh
+    - sleep 60
+    # The performance of the integration test machine was poor, so delayed the stabilization time 
+    - sed -ri 's/60/180/g' scripts/kubernetes/start_stolon.sh
+    - source $ENV_K8S_CONF && bash scripts/kubernetes/start.sh
+    - bash test/scripts/kubernetes/start_integration_test.sh
