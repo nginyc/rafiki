@@ -73,6 +73,7 @@ export RAFIKI_IMAGE_WEB_ADMIN=rafikiai/rafiki_admin_web
 export RAFIKI_IMAGE_WORKER=rafikiai/rafiki_worker
 export RAFIKI_IMAGE_PREDICTOR=rafikiai/rafiki_predictor
 export RAFIKI_IMAGE_STOLON=sorintlab/stolon:master-pg10
+export RAFIKI_IMAGE_TEST=rafikiai/rafiki_test
 
 # Docker images for dependent services
 export IMAGE_POSTGRES=postgres:10.5-alpine
