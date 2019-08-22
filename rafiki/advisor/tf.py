@@ -48,7 +48,7 @@ class EnasAdvisor(BaseAdvisor):
         # Supports only FixedKnob, ArchKnob and PolicyKnob
         # And must have param sharing, quick train, quick eval, skip train & downscale
         # And time budget must be sufficient to cover final evals & final trains
-        time_hours = budget.get(BudgetOption.TIME_HOURS, 0)
+        time_hours = float(budget.get(BudgetOption.TIME_HOURS, 0))
         return BaseAdvisor.has_only_knob_types(knob_config, [FixedKnob, ArchKnob, PolicyKnob]) and \
             BaseAdvisor.has_policies(knob_config, ['SHARE_PARAMS', 'DOWNSCALE', 'EARLY_STOP', 'QUICK_EVAL', 'SKIP_TRAIN']) and \
             time_hours >= ENAS_FINAL_HOURS 

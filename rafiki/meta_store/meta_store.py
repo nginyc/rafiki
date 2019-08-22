@@ -179,6 +179,7 @@ class MetaStore(object):
 
     def mark_train_job_as_errored(self, train_job):
         train_job.status = TrainJobStatus.ERRORED
+        train_job.datetime_stopped = datetime.utcnow()
         self._session.add(train_job)
 
     def mark_train_job_as_stopped(self, train_job):
@@ -263,10 +264,11 @@ class MetaStore(object):
     # Inference Jobs
     ####################################
     
-    def create_inference_job(self, user_id, train_job_id):
+    def create_inference_job(self, user_id, train_job_id, budget):
         inference_job = InferenceJob(
             user_id=user_id,
-            train_job_id=train_job_id
+            train_job_id=train_job_id,
+            budget=budget
         )
         self._session.add(inference_job)
         return inference_job

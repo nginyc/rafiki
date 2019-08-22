@@ -69,6 +69,8 @@ class BayesOptAdvisor(BaseAdvisor):
         score = result.score
         proposal_type = proposal.meta.get('proposal_type') 
         knobs = proposal.knobs
+        if score is None:
+            return
 
         # Keep track of `SEARCH` trials' scores & proposals (for final train trials)
         if proposal_type == 'SEARCH':
@@ -182,6 +184,9 @@ class BayesOptWithParamSharingAdvisor(BaseAdvisor):
         proposal = result.proposal
         score = result.score
         knobs = proposal.knobs
+        if score is None:
+            return
+
         point = [ knobs[name] for name in self._dimensions.keys() ]
         self._optimizer.tell(point, -score)
 

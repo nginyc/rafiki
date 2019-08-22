@@ -26,7 +26,8 @@ import traceback
 
 from rafiki.utils.auth import superadmin_client
 from rafiki.meta_store import MetaStore
-from rafiki.cache import InferenceCache
+from rafiki.redis import InferenceCache as RedisInferenceCache
+from rafiki.kafka import InferenceCache as KafkaInferenceCache
 
 from .constants import Prediction, Query
 from .ensemble import get_ensemble_method
@@ -34,7 +35,6 @@ from .ensemble import get_ensemble_method
 PREDICT_LOOP_SLEEP_SECS = 0.1
 
 class InvalidInferenceJobError(Exception): pass
-class NoWorkersAvailableError(Exception): pass
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +48,10 @@ class Predictor():
         self._inference_job_id = None
 
         self._pull_job_info()
-        self._inference_cache = InferenceCache(self._inference_job_id, 
+        self._redis_cache = RedisInferenceCache(self._inference_job_id, 
                                                 self._redis_host, 
                                                 self._redis_port)
+        self._kakfa_cache = KafkaInferenceCache()
         logger.info(f'Initialized predictor for inference job "{self._inference_job_id}"')
 
     # Only a single thread should run this
@@ -68,7 +69,7 @@ class Predictor():
 
         # Clear caches for inference job
         try:
-            self._inference_cache.clear_all()
+            self._redis_cache.clear_all()
         except:
             logger.error('Error clearing inference cache:')
             logger.error(traceback.format_exc())
@@ -97,15 +98,16 @@ class Predictor():
     def _get_predictions_from_workers(self, queries: List[Any]) -> List[List[Prediction]]:
         queries = [Query(x) for x in queries]
 
-        # Get list of available workers
-        worker_ids = self._inference_cache.get_workers()
-        if len(worker_ids) == 0:
-            raise NoWorkersAvailableError()
+        # Wait for at least 1 free worker
+        worker_ids = []
+        while len(worker_ids) == 0:
+            worker_ids = self._redis_cache.get_workers()
 
         # For each worker, send queries to worker
         pending_queries = set() # {(query_id, worker_id)}
         for worker_id in worker_ids:
-            self._inference_cache.add_queries_for_worker(worker_id, queries)
+            self._kakfa_cache.add_queries_for_worker(worker_id, queries)
+            # self._redis_cache.add_queries_for_worker(worker_id, queries)
             pending_queries.update([(x.id, worker_id) for x in queries])
 
         # Wait for all predictions to be made
@@ -114,7 +116,8 @@ class Predictor():
             # For every pending query to worker
             for (query_id, worker_id) in list(pending_queries):
                 # Check cache
-                prediction = self._inference_cache.take_prediction_for_worker(worker_id, query_id)
+                prediction = self._kakfa_cache.take_prediction_for_worker(worker_id, query_id)
+                # prediction = self._redis_cache.take_prediction_for_worker(worker_id, query_id)
                 if prediction is None:
                     continue
                 

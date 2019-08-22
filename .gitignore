@@ -55,3 +55,6 @@ params/*
 # OBOE matrix generation dumb files
 /rafiki/advisor/oboe/error_matrix_generation/results
 .openmlconfig
+
+# Tensorflow
+.keras

@@ -24,7 +24,8 @@ import os
 from functools import wraps
 from typing import Type, Dict, List, Any
 
-from rafiki.constants import ModelAccessRight, ModelDependencies, Budget, BudgetOption, UserType
+from rafiki.constants import ModelAccessRight, ModelDependencies, Budget, BudgetOption, \
+                            InferenceBudget, InferenceBudgetOption, UserType
 from rafiki.model import Params, BaseModel, load_model_class
 
 class RafikiConnectionError(ConnectionError): pass
@@ -230,7 +231,7 @@ class Client():
         :param model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`
         :param dependencies: List of Python dependencies & their versions
         :param access_right: Model access right
-        :param docker_image: A custom Docker image name that extends ``rafikiai/rafiki_worker``
+        :param docker_image: A custom Docker image that extends ``rafikiai/rafiki_worker``, publicly available on Docker Hub.
         :returns: Created model as dictionary
 
         Refer to :ref:`model-development` for more details on how to write & test models for Rafiki.
@@ -383,7 +384,7 @@ class Client():
             the train job will train models associated with the task
         :param train_dataset_id: ID of the train dataset, previously created on Rafiki
         :param val_dataset_id: ID of the validation dataset, previously created on Rafiki
-        :param budget: Budget for model training
+        :param budget: Budget for train job
         :param models: List of IDs of model to use for train job. Defaults to all available models
         :param train_args: Additional arguments to pass to models during training, if any. 
             Refer to the task's specification for appropriate arguments  
@@ -418,7 +419,7 @@ class Client():
         # Have defaults for budget
         budget = {
             BudgetOption.TIME_HOURS: 0.1,
-            BudgetOption.GPU_COUNT: 1,
+            BudgetOption.GPU_COUNT: 0,
             **budget
         }
 
@@ -568,7 +569,7 @@ class Client():
     # Inference Jobs
     ####################################
 
-    def create_inference_job(self, app: str, app_version: int = -1) -> Dict[str, Any]:
+    def create_inference_job(self, app: str, app_version: int = -1, budget: InferenceBudget = None) -> Dict[str, Any]:
         '''
         Creates and starts a inference job on Rafiki with the best-scoring trials of the associated train job. 
         The train job must have the status of ``STOPPED``.The inference job would be tagged with the train job's app and app version. 
@@ -580,11 +581,32 @@ class Client():
 
         :param app: Name of the app identifying the train job to use
         :param app_version: Version of the app identifying the train job to use
+        :param budget: Budget for inference job
         :returns: Created inference job as dictionary
+
+        ``budget`` should be a dictionary of ``{ <budget_type>: <budget_amount> }``, where 
+        ``<budget_type>`` is one of :class:`rafiki.constants.InferenceBudgetOption` and 
+        ``<budget_amount>`` specifies the amount for the associated budget option.
+        
+        The following describes the budget options available:
+
+        =====================       =====================
+        **Budget Option**             **Description**
+        ---------------------       ---------------------
+        ``GPU_COUNT``               No. of GPUs to allocate for inference, across all trials. Defaults to 0.
+        =====================       =====================
         '''
+
+        # Have defaults for budget
+        budget = {
+            InferenceBudgetOption.GPU_COUNT: 0,
+            **(budget or {})
+        }
+
         data = self._post('/inference_jobs', json={
             'app': app,
-            'app_version': app_version
+            'app_version': app_version,
+            'budget': budget
         })
         return data
 

@@ -25,6 +25,12 @@ class BudgetOption():
     MODEL_TRIAL_COUNT = 'MODEL_TRIAL_COUNT'
 
 Budget = Dict[BudgetOption, Any]
+
+class InferenceBudgetOption():
+    GPU_COUNT = 'GPU_COUNT'
+
+InferenceBudget = Dict[InferenceBudgetOption, Any]
+
 ModelDependencies = Dict[str, str]
 
 class ModelAccessRight():
@@ -67,7 +73,7 @@ class ServiceStatus():
     RUNNING = 'RUNNING'
     ERRORED = 'ERRORED'
     STOPPED = 'STOPPED'
-    
+
 class ModelDependency():
     TENSORFLOW = 'tensorflow'
     KERAS = 'Keras'
@@ -76,3 +82,4 @@ class ModelDependency():
     TORCHVISION = 'torchvision'
     SINGA = 'singa'
     XGBOOST = 'xgboost'
+    DS_CTCDECODER = 'ds-ctcdecoder'

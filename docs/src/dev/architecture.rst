@@ -22,7 +22,7 @@ Rafiki’s static stack consists of the following:
 
     *Rafiki Metadata Store* (*PostgreSQL*) is Rafiki’s centralized, persistent database for user metadata, job metadata, worker metadata and model templates. 
 
-    *Rafiki Cache* (*Redis*) is Rafiki’s temporary in-memory store for the implementation of fast asynchronous cross-worker communication, in a way that decouples senders from receivers. It synchronizes the back-and-forth of queries & predictions between multiple Rafiki Inference Workers and a single Rafiki Predictor for an Inference Job.
+    *Rafiki Redis* (*Redis*) is Rafiki’s temporary in-memory store for the implementation of fast asynchronous cross-worker communication, in a way that decouples senders from receivers. It synchronizes the back-and-forth of queries & predictions between multiple Rafiki Inference Workers and a single Rafiki Predictor for an Inference Job.
 
     *Rafiki Web Admin* (*NodeJS/ExpressJS*) is a HTTP server that serves Rafiki’s web front-end to users, allowing Application Developers to survey their jobs on a friendly web GUI. 
 
