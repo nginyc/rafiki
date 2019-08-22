@@ -26,7 +26,7 @@ from typing import Type, Dict, List, Any
 
 from rafiki.constants import ModelAccessRight, ModelDependencies, Budget, BudgetOption, \
                             InferenceBudget, InferenceBudgetOption, UserType
-from rafiki.model import Params, BaseModel
+from rafiki.model import Params, BaseModel, load_model_class
 
 class RafikiConnectionError(ConnectionError): pass
 
@@ -311,6 +311,28 @@ class Client():
         print('From the file, import the model class `{}`.'.format(model_class))
 
         return data
+
+    def get_model_inst(self, model_id: str) -> BaseModel:
+        '''
+        Get the model instance of a single model.
+
+        Model developers can only get the instances of their own models.
+
+        :param model_id: ID of model
+        :returns: An instance of ``ModelClass``
+        '''
+        _note('`get_model_inst` now requires `model_id` instead of `name`')
+
+        model_file_bytes = self._get('/models/{}/model_file'.format(model_id))
+
+        data = self.get_model(model_id)
+        model_class = data.get('model_class')
+
+        print('Get the instance of {}.'.format(model_class))
+
+        model_inst = load_model_class(model_file_bytes, model_class)
+
+        return model_inst
 
     @_deprecated('`get_models` & `get_models_of_task` have been combined into `get_available_models`')
     def get_models(self, *args, **kwargs):

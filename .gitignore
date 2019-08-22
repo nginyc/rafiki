@@ -46,8 +46,15 @@ params/*
 .coverage*
 .pytest_cache/
 
+# TensorFlow
+.keras
+
 # SQL dump files
 *.sql
+
+# OBOE matrix generation dumb files
+/rafiki/advisor/oboe/error_matrix_generation/results
+.openmlconfig
 
 # Tensorflow
 .keras

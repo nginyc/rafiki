@@ -20,6 +20,8 @@
 import os
 import logging
 import bcrypt
+import sys
+import pandas as pd
 
 from rafiki.constants import ServiceStatus, UserType, TrainJobStatus, ModelAccessRight, InferenceJobStatus
 from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
@@ -30,6 +32,8 @@ from rafiki.data_store import FileDataStore, DataStore
 from rafiki.param_store import FileParamStore, ParamStore
 
 from .services_manager import ServicesManager
+
+from rafiki.advisor.oboe.automl import propose
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +48,7 @@ class InvalidTrialError(Exception): pass
 class RunningInferenceJobExistsError(Exception): pass
 class NoModelsForTrainJobError(Exception): pass
 class InvalidDatasetError(Exception): pass
+class InvalidModelSelectorError(Exception): pass
 
 class Admin(object):
     def __init__(self, meta_store=None, container_manager=None, data_store=None, param_store=None):
@@ -194,6 +199,11 @@ class Admin(object):
         if len(model_ids) == 0:
             raise NoModelsForTrainJobError()
 
+        # Check if OBOE can be applied
+        train_args['model_selector'] = train_args.get('model_selector', None)
+        if task != "TABULAR_CLASSIFICATION" and train_args['model_selector'] == 'oboe':
+            raise InvalidModelSelectorError('OBOE can only be applied for tabular dataset!')
+
         # Compute auto-incremented app version
         app_version = max([x.app_version for x in train_jobs], default=0) + 1
 
@@ -209,6 +219,9 @@ class Admin(object):
             if model_id not in avail_model_ids:
                 raise InvalidModelError(f'No model with ID "{model_id}" is available for task "{task}"')
 
+        if self.check_model_duplicates(model_ids):
+            raise InvalidModelError(f'Do not create multiple models of the same algorithm!')
+
         # Ensure that datasets are valid and of the correct task
         try:
             train_dataset = self._meta_store.get_dataset(train_dataset_id)
@@ -219,6 +232,18 @@ class Admin(object):
             assert val_dataset.task == task
         except AssertionError as e:
             raise InvalidDatasetError(e)
+
+        if train_args['model_selector'] == 'oboe':
+            best_models = self.oboe_propose(model_ids, train_dataset, train_args['features'], \
+                train_args['target'])
+
+            # Store the best_models info in train_args
+            train_args['best_models'] = best_models
+
+            # Update model_ids to the ids of the selected models
+            model_classes = list(train_args['best_models'].keys())
+            model_ids = list(filter(lambda x: self.get_model(x)['model_class'] in model_classes, model_ids))
+
 
         # Create train & sub train jobs in DB
         train_job = self._meta_store.create_train_job(
@@ -696,6 +721,22 @@ class Admin(object):
             }
             for model in models
         ]
+
+    def check_model_duplicates(self, model_ids):
+        model_classes = [self.get_model(model_id)['model_class'] for model_id in model_ids]
+        return sorted(model_classes) != sorted(list(set(model_classes)))
+
+    def oboe_propose(self, model_ids, train_dataset, features, target):
+        train_dataset_path = self._data_store.load(train_dataset.store_dataset_id)
+        data = pd.read_csv(train_dataset_path)
+
+        models = [self.get_model(model_id) for model_id in model_ids]
+        oboe_algos = list(set([model['model_class'] for model in models]))
+
+        best_algos = propose(oboe_algos, data, features, target)
+        return best_algos
+
+
     
     ####################################
     # Private / Users

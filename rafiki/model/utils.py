@@ -69,6 +69,8 @@ def parse_model_install_command(dependencies, enable_gpu=False):
             commands.append('pip install torchvision=={}'.format(ver))
         elif dep == ModelDependency.SCIKIT_LEARN:
             commands.append('pip install scikit-learn=={}'.format(ver))
+        elif dep == ModelDependency.XGBOOST:
+            commands.append('pip install xgboost=={}'.format(ver))
         elif dep == ModelDependency.TENSORFLOW:
             if enable_gpu:
                 commands.append('pip install tensorflow-gpu=={}'.format(ver))
