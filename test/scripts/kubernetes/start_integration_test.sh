@@ -30,20 +30,20 @@ sed -ri "s#RAFIKI_ADDR_V#$ADMIN_HOST#g" ./test/scripts/kubernetes/integration_te
 sed -ri "s#KAFKA_HOST_V#$KAFKA_HOST#g" ./test/scripts/kubernetes/integration_test.yaml
 sed -ri "s#KAFKA_PORT_V#$KAFKA_PORT#g" ./test/scripts/kubernetes/integration_test.yaml
 sed -ri "s#CMD#['bash', 'test/scripts/kubernetes/run_integration_test.sh']#g" ./test/scripts/kubernetes/integration_test.yaml
-#sed -ri "s#CMD#['sleep', '100000']#g" ./scripts/kubernetes/integration_test.yaml
+
 kubectl create -f ./test/scripts/kubernetes/integration_test.yaml
 rm -rf ./test/scripts/kubernetes/integration_test.yaml
 
 while (kubectl get job | grep rafiki-test-integration)
 do
-    echo "Waiting for test finished!"
+    echo "Waiting for Integration test finished!"
     sleep 30
 done
 
 if (cat $HOST_WORKDIR_PATH/$LOGS_DIR_PATH/test_integration.log | grep "failed");then
-    echo "Some tests are failed!"
+    echo "Integration test failed!"
     exit 1
 else
-    echo "All tests passed!"
+    echo "Integration test passed!"
     exit 0
 fi
