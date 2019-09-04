@@ -13,5 +13,6 @@ User Guide
    tasks
    datasets
    installing-python
+   installing-kubernetes
    model-development
    model-tuning

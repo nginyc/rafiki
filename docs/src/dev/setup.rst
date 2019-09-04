@@ -17,7 +17,7 @@ We assume development or deployment in a MacOS or Linux environment.
 
     If you're not a user in the ``docker`` group, you'll instead need ``sudo`` access and prefix every bash command with ``sudo -E``.
 
-2. Install Kubernetes 15 reference to the `Kubernetes Setup Documentation <https://kubernetes.io/docs/setup/>`__ if using Kubernetes.
+2. Install Kubernetes 1.15+ (see :ref:`installing-kubernetes`) if using Kubernetes.
 
 3. Install Python 3.6 such that the ``python`` and ``pip`` commands point to the correct installation of Python 3.6 (see :ref:`installing-python`).
 
