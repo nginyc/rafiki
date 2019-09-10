@@ -3,7 +3,7 @@
 Rafiki's Architecture
 ====================================================================
 
-Rafiki’s system architecture consists of 3 static components, 2 central databases, 3 types of dynamic components, and 1 client-side SDK, 
+Rafiki’s system architecture consists of 3 static components, 2 central databases, 4 types of dynamic components, and 1 client-side SDK, 
 which can be illustrated with a 3-layer architecture diagram.
 
 .. figure:: ../images/container-diagram.png
@@ -22,9 +22,7 @@ Rafiki’s static stack consists of the following:
 
     *Rafiki Metadata Store* (*PostgreSQL*) is Rafiki’s centralized, persistent database for user metadata, job metadata, worker metadata and model templates. 
 
-    *Rafiki Advisor* (*Python/Flask*) is Rafiki’s advisor as described in the earlier sections. It is a single-threaded HTTP server. It accepts new advisory sessions from multiple Rafiki Train Workers, generates proposals of Knobs for them, and receives feedback for completed Trials in a Train Job. 
-
-    *Rafiki Cache* (*Redis*) is Rafiki’s temporary in-memory store for the implementation of fast asynchronous cross-worker communication, in a way that decouples senders from receivers. It synchronizes the back-and-forth of queries & predictions between multiple Rafiki Inference Workers and a single Rafiki Predictor for an Inference Job.
+    *Rafiki Redis* (*Redis*) is Rafiki’s temporary in-memory store for the implementation of fast asynchronous cross-worker communication, in a way that decouples senders from receivers. It synchronizes the back-and-forth of queries & predictions between multiple Rafiki Inference Workers and a single Rafiki Predictor for an Inference Job.
 
     *Rafiki Web Admin* (*NodeJS/ExpressJS*) is a HTTP server that serves Rafiki’s web front-end to users, allowing Application Developers to survey their jobs on a friendly web GUI. 
 
@@ -40,8 +38,10 @@ When a worker is deployed, it is configured with the identifier for an associate
 
 The types of workers are as follows:
 
-    *Rafiki Train Workers* (*Python*) train models for Train Jobs by conducting Trials. In a single Train Job, there could be multiple Train Workers concurrently training models.
-    
+    *Rafiki Advisor Workers* (*Python*) proposes knobs & training configuration for Train Workers. For each model, there is a single Advisor Worker centrally orchestrating tuning of the model together with multiple Train Workers. 
+
+    *Rafiki Train Workers* (*Python*) train models for Train Jobs by conducting Trials. 
+
     *Rafiki Predictors* (*Python/Flask*) are multi-threaded HTTP servers that receive queries from Application Users and respond with predictions as part of an Inference Job. It does this through  producer-consumer relationships with multiple Rafiki Inference Workers. If necessary, it performs model ensembling on predictions received from different workers.
     
     *Rafiki Inference Workers* (*Python*) serve models for Inference Jobs. In a single Inference Job, there could be multiple Inference Workers concurrently making predictions for a single batch of queries.

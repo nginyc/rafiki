@@ -17,32 +17,34 @@
   
 
   
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" /> 
-
-  
-  <script src="../../../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -56,7 +58,7 @@
             
             
               <div class="version">
-                0.1.0
+                0.2.0
               </div>
             
           
@@ -147,36 +149,48 @@
            <div itemprop="articleBody">
             
   <h1>Source code for rafiki.model.model</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">json</span>
+<span></span><span class="c1">#</span>
+<span class="c1"># Licensed to the Apache Software Foundation (ASF) under one</span>
+<span class="c1"># or more contributor license agreements.  See the NOTICE file</span>
+<span class="c1"># distributed with this work for additional information</span>
+<span class="c1"># regarding copyright ownership.  The ASF licenses this file</span>
+<span class="c1"># to you under the Apache License, Version 2.0 (the</span>
+<span class="c1"># &quot;License&quot;); you may not use this file except in compliance</span>
+<span class="c1"># with the License.  You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing,</span>
+<span class="c1"># software distributed under the License is distributed on an</span>
+<span class="c1"># &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY</span>
+<span class="c1"># KIND, either express or implied.  See the License for the</span>
+<span class="c1"># specific language governing permissions and limitations</span>
+<span class="c1"># under the License.</span>
+<span class="c1">#</span>
+
 <span class="kn">import</span> <span class="nn">abc</span>
-<span class="kn">import</span> <span class="nn">traceback</span>
-<span class="kn">import</span> <span class="nn">pickle</span>
-<span class="kn">import</span> <span class="nn">uuid</span>
-<span class="kn">from</span> <span class="nn">importlib</span> <span class="k">import</span> <span class="n">import_module</span>
-<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span>
 
-<span class="kn">from</span> <span class="nn">rafiki.advisor</span> <span class="k">import</span> <span class="n">Advisor</span><span class="p">,</span> <span class="n">AdvisorType</span>
-<span class="kn">from</span> <span class="nn">rafiki.predictor</span> <span class="k">import</span> <span class="n">ensemble_predictions</span>
-<span class="kn">from</span> <span class="nn">rafiki.constants</span> <span class="k">import</span> <span class="n">TaskType</span><span class="p">,</span> <span class="n">ModelDependency</span>
+<span class="kn">from</span> <span class="nn">.knob</span> <span class="k">import</span> <span class="n">BaseKnob</span>
 
-<span class="kn">from</span> <span class="nn">.dataset</span> <span class="k">import</span> <span class="n">ModelDatasetUtils</span>
-<span class="kn">from</span> <span class="nn">.knob</span> <span class="k">import</span> <span class="n">BaseKnob</span><span class="p">,</span> <span class="n">serialize_knob_config</span><span class="p">,</span> <span class="n">deserialize_knob_config</span>
-
-<span class="k">class</span> <span class="nc">InvalidModelClassException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span>
-<span class="k">class</span> <span class="nc">InvalidModelParamsException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span>
+<span class="n">KnobConfig</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">BaseKnob</span><span class="p">]</span>
+<span class="n">Knobs</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+<span class="n">Params</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span>
 
 <div class="viewcode-block" id="BaseModel"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel">[docs]</a><span class="k">class</span> <span class="nc">BaseModel</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Rafiki&#39;s base model class that Rafiki models should extend. </span>
-<span class="sd">    Rafiki models should implement all abstract methods according to their associated tasks&#39; specifications,</span>
-<span class="sd">    together with the static method ``get_knob_config()``.</span>
+<span class="sd">    Rafiki&#39;s base model class that Rafiki models must extend.</span>
 
-<span class="sd">    In the model&#39;s ``__init__`` method, call ``super().__init__(**knobs)`` as the first line, </span>
-<span class="sd">    followed by the model&#39;s initialization logic. The model should be initialize itself with ``knobs``, </span>
-<span class="sd">    a set of generated knob values for the instance, and possibly save the knobs&#39; values as </span>
-<span class="sd">    attribute(s) of the model instance. These knob values will be chosen by Rafiki based on the model&#39;s knob config. </span>
-<span class="sd">    </span>
+<span class="sd">    Rafiki models must implement all abstract methods below, according to the specification of its associated task (see :ref:`tasks`).</span>
+<span class="sd">    They configure how this model template will be trained, evaluated, tuned, serialized and served on Rafiki.</span>
+
+<span class="sd">    In the model&#39;s ``__init__`` method, call ``super().__init__(**knobs)`` as the first line,</span>
+<span class="sd">    followed by the model&#39;s initialization logic. The model should be initialize itself with ``knobs``,</span>
+<span class="sd">    a set of generated knob values for the created model instance.</span>
+
+<span class="sd">    These knob values are chosen by Rafiki based on the model&#39;s knob configuration (defined in :meth:`rafiki.model.BaseModel.get_knob_config`).</span>
+
 <span class="sd">    For example:</span>
 
 <span class="sd">    ::</span>
@@ -187,315 +201,106 @@
 <span class="sd">            ...</span>
 <span class="sd">            self._build_model(self.knob1, self.knob2)</span>
 
-
-<span class="sd">    :param knobs: Dictionary of knob values for this model instance</span>
-<span class="sd">    :type knobs: dict[str, any]</span>
-<span class="sd">    &#39;&#39;&#39;</span>   
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">knobs</span><span class="p">):</span>
+<span class="sd">    :param knobs: Dictionary mapping knob names to knob values</span>
+<span class="sd">    :type knobs: :obj:`rafiki.model.Knobs`</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">knobs</span><span class="p">:</span> <span class="n">Knobs</span><span class="p">):</span>
         <span class="k">pass</span>
 
-<div class="viewcode-block" id="BaseModel.get_knob_config"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.get_knob_config">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_knob_config</span><span class="p">():</span>
+<div class="viewcode-block" id="BaseModel.get_knob_config"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.get_knob_config">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractstaticmethod</span>
+    <span class="k">def</span> <span class="nf">get_knob_config</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">KnobConfig</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Return a dictionary defining this model class&#39; knob configuration </span>
-<span class="sd">        (i.e. list of knob names, their data types and their ranges).</span>
+<span class="sd">        Return a dictionary that defines the search space for this model template&#39;s knobs</span>
+<span class="sd">        (i.e. knobs&#39; names, their types &amp; their ranges).</span>
 
-<span class="sd">        :returns: Dictionary defining this model&#39;s knob configuration </span>
-<span class="sd">        :rtype: dict[str, rafiki.model.BaseKnob]</span>
+<span class="sd">        Over the course of training, your model will be initialized with different values of knobs within this search space</span>
+<span class="sd">        to maximize this model’s performance.</span>
+
+<span class="sd">        Refer to :ref:`model-tuning` to understand more about how this works.</span>
+
+<span class="sd">        :returns: Dictionary mapping knob names to knob specifications</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="BaseModel.train"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.train">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
-    <span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">shared_params</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Params</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">train_args</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Train this model instance with given dataset and initialized knob values.</span>
+<span class="sd">        Train this model instance with the given traing dataset and initialized knob values.</span>
+<span class="sd">        Additional keyword arguments could be passed depending on the task&#39;s specification.</span>
 
-<span class="sd">        :param str dataset_uri: URI of the train dataset in a format specified by the task</span>
+<span class="sd">        Additionally, trained parameters shared from previous trials could be passed,</span>
+<span class="sd">        as part of the ``SHARE_PARAMS`` policy (see :ref:`model-policies`).</span>
+
+<span class="sd">        Subsequently, the model is considered *trained*.</span>
+
+<span class="sd">        :param dataset_path: File path of the train dataset file in the *local filesystem*, in a format specified by the task</span>
+<span class="sd">        :param shared_params: Dictionary mapping parameter names to values, as produced by your model&#39;s :meth:`rafiki.model.BaseModel.dump_parameters`.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
 
-    <span class="c1"># TODO: Allow configuration of other metrics</span>
 <div class="viewcode-block" id="BaseModel.evaluate"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.evaluate">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
-    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Evaluate this model instance with given dataset after training. </span>
+<span class="sd">        Evaluate this model instance with the given validation dataset after training.</span>
+
 <span class="sd">        This will be called only when model is *trained*.</span>
 
-<span class="sd">        :param str dataset_uri: URI of the test dataset in a format specified by the task</span>
-<span class="sd">        :returns: Accuracy as float from 0-1 on the test dataset</span>
-<span class="sd">        :rtype: float</span>
+<span class="sd">        :param dataset_path: File path of the validation dataset file in the *local filesystem*, in a format specified by the task</span>
+<span class="sd">        :returns: A score associated with the validation performance for the trained model instance, the higher the better e.g. classification accuracy.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="BaseModel.predict"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.predict">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
-    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queries</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queries</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Make predictions on a batch of queries with this model instance after training. </span>
-<span class="sd">        Each prediction should be JSON serializable.</span>
+<span class="sd">        Make predictions on a batch of queries after training.</span>
+
 <span class="sd">        This will be called only when model is *trained*.</span>
 
-<span class="sd">        :param queries: List of queries, where a query is in a format specified by the task </span>
-<span class="sd">        :type queries: list[any]</span>
-<span class="sd">        :returns: List of predictions, where a prediction is in a format specified by the task </span>
-<span class="sd">        :rtype: list[any]</span>
+<span class="sd">        :param queries: List of queries, where a query is in the format specified by the task</span>
+<span class="sd">        :returns: List of predictions, in an order corresponding to the queries, where a prediction is in the format specified by the task</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="BaseModel.dump_parameters"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.dump_parameters">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
-    <span class="k">def</span> <span class="nf">dump_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">dump_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Params</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Return a dictionary of model parameters that fully defines this model instance&#39;s trained state. </span>
-<span class="sd">        This dictionary should be serializable by the Python&#39;s ``pickle`` module.</span>
-<span class="sd">        This will be used for trained model serialization within Rafiki.</span>
+<span class="sd">        Returns a dictionary of model parameters that *fully define the trained state of the model*.</span>
+<span class="sd">        This dictionary must conform to the format :obj:`rafiki.model.Params`.</span>
+<span class="sd">        This will be used to save the trained model in Rafiki.</span>
+
+<span class="sd">        Additionally, trained parameters produced by this method could be shared with future trials, as</span>
+<span class="sd">        part of the ``SHARE_PARAMS`` policy (see :ref:`model-policies`).</span>
+
 <span class="sd">        This will be called only when model is *trained*.</span>
 
-<span class="sd">        :returns: Dictionary of model parameters</span>
-<span class="sd">        :rtype: dict[string, any]</span>
+<span class="sd">        :returns: Dictionary mapping parameter names to values</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="BaseModel.load_parameters"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.load_parameters">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
-    <span class="k">def</span> <span class="nf">load_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">load_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Params</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Load a dictionary of model parameters into this model instance.</span>
-<span class="sd">        This will be used for trained model deserialization within Rafiki.</span>
-<span class="sd">        The model will be considered *trained* subsequently.</span>
+<span class="sd">        Loads this model instance with previously trained model parameters produced by your model&#39;s :meth:`rafiki.model.BaseModel.dump_parameters`.</span>
+<span class="sd">        *This model instance&#39;s initialized knob values will match those during training*.</span>
 
-<span class="sd">        :param params: Dictionary of model parameters</span>
-<span class="sd">        :type params: dict[string, any]</span>
+<span class="sd">        Subsequently, the model is considered *trained*.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="BaseModel.destroy"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.destroy">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
-    <span class="k">def</span> <span class="nf">destroy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="BaseModel.destroy"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.destroy">[docs]</a>    <span class="k">def</span> <span class="nf">destroy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Destroy this model instance, closing any sessions or freeing any connections.</span>
-<span class="sd">        No other methods will be called subsequently.</span>
+<span class="sd">        Destroy this model instance, freeing any resources held by this model instance.</span>
+<span class="sd">        No other instance methods will be called subsequently.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="BaseModel.teardown"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.BaseModel.teardown">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">teardown</span><span class="p">():</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Runs class-wide teardown logic (e.g. close a training session shared across trials).</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">pass</span></div></div>
-
-<span class="k">def</span> <span class="nf">test_model_class</span><span class="p">(</span><span class="n">model_file_path</span><span class="p">,</span> <span class="n">model_class</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">dependencies</span><span class="p">,</span> \
-                    <span class="n">train_dataset_uri</span><span class="p">,</span> <span class="n">test_dataset_uri</span><span class="p">,</span> \
-                    <span class="n">queries</span><span class="o">=</span><span class="p">[],</span> <span class="n">knobs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Tests whether a model class is properly defined by running a full train-inference flow.</span>
-<span class="sd">    The model instance&#39;s methods will be called in an order similar to that in Rafiki.</span>
-<span class="sd">    It is assumed that all of the model&#39;s dependencies have been installed in the current Python environment. </span>
-
-<span class="sd">    :param str model_file_path: Path to a single Python file that contains the definition for the model class</span>
-<span class="sd">    :param type model_class: The name of the model class inside the Python file. This class should implement :class:`rafiki.model.BaseModel`</span>
-<span class="sd">    :param str task: Task type of model</span>
-<span class="sd">    :param dependencies: Model&#39;s dependencies</span>
-<span class="sd">    :type dependencies: dict[str, str]</span>
-<span class="sd">    :param str train_dataset_uri: URI of the train dataset for testing the training of model</span>
-<span class="sd">    :param str test_dataset_uri: URI of the test dataset for testing the evaluating of model</span>
-<span class="sd">    :param list[any] queries: List of queries for testing predictions with the trained model</span>
-<span class="sd">    :param knobs: Knobs to train the model with. If not specified, knobs from an advisor will be used</span>
-<span class="sd">    :type knobs: dict[str, any]</span>
-<span class="sd">    :returns: The trained model</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking model dependencies...&#39;</span><span class="p">)</span>
-        <span class="n">_check_dependencies</span><span class="p">(</span><span class="n">dependencies</span><span class="p">)</span>
-
-        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking loading of model &amp; model definition...&#39;</span><span class="p">)</span>
-        <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_file_path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span>
-        <span class="n">model_file_bytes</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-        <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-        <span class="n">py_model_class</span> <span class="o">=</span> <span class="n">load_model_class</span><span class="p">(</span><span class="n">model_file_bytes</span><span class="p">,</span> <span class="n">model_class</span><span class="p">,</span> <span class="n">temp_mod_name</span><span class="o">=</span><span class="s1">&#39;your-model-file-temp&#39;</span><span class="p">)</span>
-        <span class="n">_check_model_class</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">)</span>
-
-        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking model knob configuration...&#39;</span><span class="p">)</span>
-        <span class="n">knob_config</span> <span class="o">=</span> <span class="n">py_model_class</span><span class="o">.</span><span class="n">get_knob_config</span><span class="p">()</span>
-        <span class="n">_check_knob_config</span><span class="p">(</span><span class="n">knob_config</span><span class="p">)</span>
-
-        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking model initialization...&#39;</span><span class="p">)</span>
-        <span class="n">advisor</span> <span class="o">=</span> <span class="n">Advisor</span><span class="p">(</span><span class="n">knob_config</span><span class="p">,</span> <span class="n">advisor_type</span><span class="o">=</span><span class="n">AdvisorType</span><span class="o">.</span><span class="n">BTB_GP</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">knobs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">knobs</span> <span class="o">=</span> <span class="n">advisor</span><span class="o">.</span><span class="n">propose</span><span class="p">()</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Using knobs: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">knobs</span><span class="p">))</span>
-        <span class="n">model_inst</span> <span class="o">=</span> <span class="n">py_model_class</span><span class="p">(</span><span class="o">**</span><span class="n">knobs</span><span class="p">)</span>
-        <span class="n">_check_model_inst</span><span class="p">(</span><span class="n">model_inst</span><span class="p">)</span>
-
-        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking training &amp; evaluation of model...&#39;</span><span class="p">)</span>
-        <span class="n">model_inst</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">train_dataset_uri</span><span class="p">)</span>
-        <span class="n">score</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">test_dataset_uri</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;`evaluate()` should return a float!&#39;</span><span class="p">)</span>
-
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Score: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">score</span><span class="p">))</span>
-
-        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking dumping of parameters of model...&#39;</span><span class="p">)</span>
-        <span class="n">parameters</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">dump_parameters</span><span class="p">()</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;`dump_parameters()` should return a dict[str, any]&#39;</span><span class="p">)</span>
-
-        <span class="k">try</span><span class="p">:</span>
-            <span class="c1"># Model parameters are pickled and put into DB</span>
-            <span class="n">parameters</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">parameters</span><span class="p">))</span>
-        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="n">traceback</span><span class="o">.</span><span class="n">print_stack</span><span class="p">()</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;`parameters` should be serializable by `pickle`&#39;</span><span class="p">)</span>
-
-        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking loading of parameters of model...&#39;</span><span class="p">)</span>
-        <span class="n">model_inst</span><span class="o">.</span><span class="n">destroy</span><span class="p">()</span>
-        <span class="n">model_inst</span> <span class="o">=</span> <span class="n">py_model_class</span><span class="p">(</span><span class="o">**</span><span class="n">knobs</span><span class="p">)</span>
-        <span class="n">model_inst</span><span class="o">.</span><span class="n">load_parameters</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
-
-        <span class="n">_print_header</span><span class="p">(</span><span class="s1">&#39;Checking predictions with model...&#39;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Using queries: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">queries</span><span class="p">))</span>
-        <span class="n">predictions</span> <span class="o">=</span> <span class="n">model_inst</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">queries</span><span class="p">)</span>
-
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">prediction</span> <span class="ow">in</span> <span class="n">predictions</span><span class="p">:</span>
-                <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">prediction</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="n">traceback</span><span class="o">.</span><span class="n">print_stack</span><span class="p">()</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Each `prediction` should be JSON serializable&#39;</span><span class="p">)</span>
-
-        <span class="c1"># Ensembling predictions in predictor</span>
-        <span class="n">predictions</span> <span class="o">=</span> <span class="n">ensemble_predictions</span><span class="p">([</span><span class="n">predictions</span><span class="p">],</span> <span class="n">task</span><span class="p">)</span>
-
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Predictions: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">predictions</span><span class="p">))</span>
-
-        <span class="n">_note</span><span class="p">(</span><span class="s1">&#39;The model definition is valid!&#39;</span><span class="p">)</span>
-    
-        <span class="k">return</span> <span class="n">model_inst</span>
-
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">InvalidModelClassException</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">load_model_class</span><span class="p">(</span><span class="n">model_file_bytes</span><span class="p">,</span> <span class="n">model_class</span><span class="p">,</span> <span class="n">temp_mod_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">temp_mod_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">temp_mod_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
-
-    <span class="n">temp_model_file_name</span> <span class="o">=</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.py&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">temp_mod_name</span><span class="p">)</span>
-
-    <span class="c1"># Temporarily save the model file to disk</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">temp_model_file_name</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">model_file_bytes</span><span class="p">)</span>
-
-    <span class="k">try</span><span class="p">:</span>
-        <span class="c1"># Import model file as module</span>
-        <span class="n">mod</span> <span class="o">=</span> <span class="n">import_module</span><span class="p">(</span><span class="n">temp_mod_name</span><span class="p">)</span>
-        <span class="c1"># Extract model class from module</span>
-        <span class="n">clazz</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span> <span class="n">model_class</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">e</span>
-    <span class="k">finally</span><span class="p">:</span>
-        <span class="c1"># Ensure that temp model file is removed upon model loading error</span>
-        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">temp_model_file_name</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">clazz</span>
-
-<span class="k">def</span> <span class="nf">parse_model_install_command</span><span class="p">(</span><span class="n">dependencies</span><span class="p">,</span> <span class="n">enable_gpu</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-    <span class="n">conda_env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;CONDA_ENVIORNMENT&#39;</span><span class="p">)</span>
-    <span class="n">commands</span> <span class="o">=</span> <span class="p">[]</span>
-
-    <span class="c1"># Determine install commands for each dependency</span>
-    <span class="k">for</span> <span class="p">(</span><span class="n">dep</span><span class="p">,</span> <span class="n">ver</span><span class="p">)</span> <span class="ow">in</span> <span class="n">dependencies</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="k">if</span> <span class="n">dep</span> <span class="o">==</span> <span class="n">ModelDependency</span><span class="o">.</span><span class="n">KERAS</span><span class="p">:</span>
-            <span class="n">commands</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;pip install Keras==</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ver</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="n">dep</span> <span class="o">==</span> <span class="n">ModelDependency</span><span class="o">.</span><span class="n">PYTORCH</span><span class="p">:</span>
-            <span class="n">commands</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;pip install torch==</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ver</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="n">dep</span> <span class="o">==</span> <span class="n">ModelDependency</span><span class="o">.</span><span class="n">SCIKIT_LEARN</span><span class="p">:</span>
-            <span class="n">commands</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;pip install scikit-learn==</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ver</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="n">dep</span> <span class="o">==</span> <span class="n">ModelDependency</span><span class="o">.</span><span class="n">TENSORFLOW</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">enable_gpu</span><span class="p">:</span>
-                <span class="n">commands</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;pip install tensorflow-gpu==</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ver</span><span class="p">))</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">commands</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;pip install tensorflow==</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ver</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="n">dep</span> <span class="o">==</span> <span class="n">ModelDependency</span><span class="o">.</span><span class="n">SINGA</span><span class="p">:</span>
-            <span class="n">options</span> <span class="o">=</span> <span class="s1">&#39;-y -c nusdbsystem&#39;</span>
-            <span class="k">if</span> <span class="n">conda_env</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">options</span> <span class="o">+=</span> <span class="s1">&#39; -n </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">conda_env</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">enable_gpu</span><span class="p">:</span>
-                <span class="n">commands</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;conda install </span><span class="si">{}</span><span class="s1"> singa-gpu=</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">options</span><span class="p">,</span> <span class="n">ver</span><span class="p">))</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">commands</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;conda install </span><span class="si">{}</span><span class="s1"> singa-cpu=</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">options</span><span class="p">,</span> <span class="n">ver</span><span class="p">))</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Assume that dependency is the exact PIP package name</span>
-            <span class="n">commands</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;pip install </span><span class="si">{}</span><span class="s1">==</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dep</span><span class="p">,</span> <span class="n">ver</span><span class="p">))</span>
-
-    <span class="k">return</span> <span class="s1">&#39;; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">commands</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">_check_dependencies</span><span class="p">(</span><span class="n">dependencies</span><span class="p">):</span>
-
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dependencies</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;`dependencies` should be a dict[str, str]&#39;</span><span class="p">)</span>
-
-    <span class="k">for</span> <span class="p">(</span><span class="n">dep</span><span class="p">,</span> <span class="n">ver</span><span class="p">)</span> <span class="ow">in</span> <span class="n">dependencies</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="k">if</span> <span class="n">dep</span> <span class="o">==</span> <span class="n">ModelDependency</span><span class="o">.</span><span class="n">KERAS</span><span class="p">:</span>
-            <span class="c1"># Warn that Keras models should additionally depend on TF for GPU usage</span>
-            <span class="n">_note</span><span class="p">(</span><span class="s1">&#39;Keras models can enable GPU usage with by adding a `tensorflow` dependency.&#39;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">dep</span> <span class="o">==</span> <span class="n">ModelDependency</span><span class="o">.</span><span class="n">PYTORCH</span><span class="p">:</span>
-            <span class="k">pass</span>
-        <span class="k">elif</span> <span class="n">dep</span> <span class="o">==</span> <span class="n">ModelDependency</span><span class="o">.</span><span class="n">SCIKIT_LEARN</span><span class="p">:</span>
-            <span class="k">pass</span>
-        <span class="k">elif</span> <span class="n">dep</span> <span class="o">==</span> <span class="n">ModelDependency</span><span class="o">.</span><span class="n">TENSORFLOW</span><span class="p">:</span>
-            <span class="n">_note</span><span class="p">(</span><span class="s1">&#39;TensorFlow models must cater for GPU-sharing with &#39;</span> \
-                    <span class="o">+</span> <span class="s1">&#39;`config.gpu_options.allow_growth = True` (ref: https://www.tensorflow.org/guide/using_gpu#allowing_gpu_memory_growth).&#39;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">dep</span> <span class="o">==</span> <span class="n">ModelDependency</span><span class="o">.</span><span class="n">SINGA</span><span class="p">:</span>
-            <span class="k">pass</span>
-    
-    <span class="n">install_command</span> <span class="o">=</span> <span class="n">parse_model_install_command</span><span class="p">(</span><span class="n">dependencies</span><span class="p">,</span> <span class="n">enable_gpu</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="n">install_command_with_gpu</span> <span class="o">=</span> <span class="n">parse_model_install_command</span><span class="p">(</span><span class="n">dependencies</span><span class="p">,</span> <span class="n">enable_gpu</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">_note</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;Install command (without GPU): `</span><span class="si">{install_command}</span><span class="s1">`&#39;</span><span class="p">)</span>
-    <span class="n">_note</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;Install command (with GPU): `</span><span class="si">{install_command_with_gpu}</span><span class="s1">`&#39;</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">_check_model_class</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">):</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">,</span> <span class="n">BaseModel</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Model should extend `rafiki.model.BaseModel`&#39;</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isfunction</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">,</span> <span class="s1">&#39;init&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)):</span>
-        <span class="n">_warn</span><span class="p">(</span><span class="s1">&#39;`init` has been deprecated - use `__init__` for your model</span><span class="se">\&#39;</span><span class="s1">s initialization logic instead&#39;</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isfunction</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">py_model_class</span><span class="p">,</span> <span class="s1">&#39;get_knob_config&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span> <span class="ow">and</span> \
-        <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">py_model_class</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;get_knob_config&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="nb">staticmethod</span><span class="p">):</span>
-        <span class="n">_warn</span><span class="p">(</span><span class="s1">&#39;`get_knob_config` has been changed to a `@staticmethod`&#39;</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">_check_model_inst</span><span class="p">(</span><span class="n">model_inst</span><span class="p">):</span>
-    <span class="c1"># Throw error when deprecated methods are called</span>
-    <span class="k">def</span> <span class="nf">deprecated_func</span><span class="p">(</span><span class="n">desc</span><span class="p">):</span>
-        <span class="k">def</span> <span class="nf">throw_error</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">desc</span><span class="p">)</span>
-        
-        <span class="k">return</span> <span class="n">throw_error</span>
-
-    <span class="k">class</span> <span class="nc">DeprecatedModelUtils</span><span class="p">():</span>
-        <span class="n">log</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.log(...)` has been moved to `logger.log(...)`&#39;</span><span class="p">)</span>
-        <span class="n">log_metrics</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.log_metrics(...)` has been moved to `logger.log(...)`&#39;</span><span class="p">)</span>
-        <span class="n">define_plot</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.define_plot(...)` has been moved to `logger.define_plot(...)`&#39;</span><span class="p">)</span>
-        <span class="n">define_loss_plot</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.define_loss_plot(...)` has been moved to `logger.define_loss_plot(...)`&#39;</span><span class="p">)</span>
-        <span class="n">log_loss_metric</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.log_loss_metric(...)` has been moved to `logger.log_loss(...)`&#39;</span><span class="p">)</span>
-        <span class="n">load_dataset_of_image_files</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.load_dataset_of_image_files(...)` has been moved to `dataset_utils.load_dataset_of_image_files(...)`&#39;</span><span class="p">)</span>
-        <span class="n">load_dataset_of_corpus</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.load_dataset_of_corpus(...)` has been moved to `dataset_utils.load_dataset_of_corpus(...)`&#39;</span><span class="p">)</span>
-        <span class="n">resize_as_images</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.resize_as_images(...)` has been moved to `dataset_utils.resize_as_images(...)`&#39;</span><span class="p">)</span>
-        <span class="n">download_dataset_from_uri</span> <span class="o">=</span> <span class="n">deprecated_func</span><span class="p">(</span><span class="s1">&#39;`self.utils.download_dataset_from_uri(...)` has been moved to `dataset_utils.download_dataset_from_uri(...)`&#39;</span><span class="p">)</span>
-
-    <span class="n">model_inst</span><span class="o">.</span><span class="n">utils</span> <span class="o">=</span> <span class="n">DeprecatedModelUtils</span><span class="p">()</span>
-
-<span class="k">def</span> <span class="nf">_check_knob_config</span><span class="p">(</span><span class="n">knob_config</span><span class="p">):</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">knob_config</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> \
-        <span class="nb">any</span><span class="p">([(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">knob</span><span class="p">,</span> <span class="n">BaseKnob</span><span class="p">))</span> <span class="k">for</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">knob</span><span class="p">)</span> <span class="ow">in</span> <span class="n">knob_config</span><span class="o">.</span><span class="n">items</span><span class="p">()]):</span>
-        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Static method `get_knob_config()` should return a dict[str, BaseKnob]&#39;</span><span class="p">)</span>
-
-    <span class="c1"># Try serializing and deserialize knob config</span>
-    <span class="n">knob_config_str</span> <span class="o">=</span> <span class="n">serialize_knob_config</span><span class="p">(</span><span class="n">knob_config</span><span class="p">)</span>
-    <span class="n">knob_config</span> <span class="o">=</span> <span class="n">deserialize_knob_config</span><span class="p">(</span><span class="n">knob_config_str</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">_print_header</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;-&#39;</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="o">+</span> <span class="mi">4</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;| </span><span class="si">{}</span><span class="s1"> |&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;-&#39;</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="o">+</span> <span class="mi">4</span><span class="p">))</span>
-
-<span class="k">def</span> <span class="nf">_warn</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[93mWARNING: </span><span class="si">{msg}</span><span class="se">\033</span><span class="s1">[0m&#39;</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">_note</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[94mNOTE: </span><span class="si">{msg}</span><span class="se">\033</span><span class="s1">[0m&#39;</span><span class="p">)</span>
 </pre></div>
 
            </div>
@@ -508,7 +313,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
 
     </p>
   </div>
@@ -525,33 +330,16 @@
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../../',
-            VERSION:'',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

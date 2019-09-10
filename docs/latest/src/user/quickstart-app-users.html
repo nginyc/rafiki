@@ -17,34 +17,36 @@
   
 
   
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Quick Start (Admins)" href="quickstart-admins.html" />
     <link rel="prev" title="Quick Start (Application Developers)" href="quickstart-app-developers.html" /> 
-
-  
-  <script src="../../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -58,7 +60,7 @@
             
             
               <div class="version">
-                0.1.0
+                0.2.0
               </div>
             
           
@@ -88,15 +90,17 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart-model-developers.html">Quick Start (Model Developers)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html">Quick Start (Application Developers)</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Quick Start (Application Users)</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#making-predictions">Making predictions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#making-a-single-prediction">Making a single prediction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#making-batch-predictions">Making batch predictions</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html">Quick Start (Admins)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="using-admin-web.html">Using Rafiki’s Admin Web</a></li>
-<li class="toctree-l2"><a class="reference internal" href="creating-models.html">Creating Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using-web-admin.html">Using Rafiki’s Web Admin</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tasks.html">Supported Tasks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="datasets.html">Supported Dataset Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datasets.html">Dataset Types</a></li>
 <li class="toctree-l2"><a class="reference internal" href="installing-python.html">Installing Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model-development.html">Model Development Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model-tuning.html">How Model Tuning Works</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../dev/index.html">Developer Guide</a></li>
@@ -170,11 +174,11 @@
   <div class="section" id="quick-start-application-users">
 <span id="quickstart-app-users"></span><h1>Quick Start (Application Users)<a class="headerlink" href="#quick-start-application-users" title="Permalink to this headline">¶</a></h1>
 <p>As an App User, you can make predictions on models deployed on Rafiki.</p>
-<div class="section" id="making-predictions">
-<span id="id1"></span><h2>Making predictions<a class="headerlink" href="#making-predictions" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="making-a-single-prediction">
+<span id="making-predictions"></span><h2>Making a single prediction<a class="headerlink" href="#making-a-single-prediction" title="Permalink to this headline">¶</a></h2>
 <div class="admonition seealso">
-<p class="first admonition-title">See also</p>
-<p class="last"><a class="reference internal" href="quickstart-app-developers.html#creating-inference-job"><span class="std std-ref">Creating an inference job with the latest train job</span></a></p>
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="quickstart-app-developers.html#creating-inference-job"><span class="std std-ref">Creating an inference job with the latest train job</span></a></p>
 </div>
 <p>Your app developer should have created an inference job and shared <em>predictor_host</em>, the host at which you can send queries
 to and receive predictions over HTTP.</p>
@@ -198,17 +202,58 @@ to and receive predictions over HTTP.</p>
 <p>…where the format of <code class="docutils literal notranslate"><span class="pre">&lt;prediction&gt;</span></code> depends on the associated task.</p>
 <p>Example:</p>
 <blockquote>
-<div><p>If <code class="docutils literal notranslate"><span class="pre">predictor_host</span></code> is <code class="docutils literal notranslate"><span class="pre">127.0.0.1:30000</span></code>, run the following in shell:</p>
+<div><p>If <code class="docutils literal notranslate"><span class="pre">predictor_host</span></code> is <code class="docutils literal notranslate"><span class="pre">127.0.0.1:30000</span></code>, run the following in Python:</p>
 <blockquote>
-<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nv">predictor_host</span><span class="o">=</span><span class="s1">&#39;127.0.0.1:30000&#39;</span>
-<span class="nv">body</span><span class="o">=</span><span class="s1">&#39;{&quot;query&quot;: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 7, 0, 37, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 27, 84, 11, 0, 0, 0, 0, 0, 0, 119, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 88, 143, 110, 0, 0, 0, 0, 22, 93, 106, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 53, 129, 120, 147, 175, 157, 166, 135, 154, 168, 140, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 11, 137, 130, 128, 160, 176, 159, 167, 178, 149, 151, 144, 0, 0], [0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 0, 3, 0, 0, 115, 114, 106, 137, 168, 153, 156, 165, 167, 143, 157, 158, 11, 0], [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 89, 139, 90, 94, 153, 149, 131, 151, 169, 172, 143, 159, 169, 48, 0], [0, 0, 0, 0, 0, 0, 2, 4, 1, 0, 0, 0, 98, 136, 110, 109, 110, 162, 135, 144, 149, 159, 167, 144, 158, 169, 119, 0], [0, 0, 2, 2, 1, 2, 0, 0, 0, 0, 26, 108, 117, 99, 111, 117, 136, 156, 134, 154, 154, 156, 160, 141, 147, 156, 178, 0], [3, 0, 0, 0, 0, 0, 0, 21, 53, 92, 117, 111, 103, 115, 129, 134, 143, 154, 165, 170, 154, 151, 154, 143, 138, 150, 165, 43], [0, 0, 23, 54, 65, 76, 85, 118, 128, 123, 111, 113, 118, 127, 125, 139, 133, 136, 160, 140, 155, 161, 144, 155, 172, 161, 189, 62], [0, 68, 94, 90, 111, 114, 111, 114, 115, 127, 135, 136, 143, 126, 127, 151, 154, 143, 148, 125, 162, 162, 144, 138, 153, 162, 196, 58], [70, 169, 129, 104, 98, 100, 94, 97, 98, 102, 108, 106, 119, 120, 129, 149, 156, 167, 190, 190, 196, 198, 198, 187, 197, 189, 184, 36], [16, 126, 171, 188, 188, 184, 171, 153, 135, 120, 126, 127, 146, 185, 195, 209, 208, 255, 209, 177, 245, 252, 251, 251, 247, 220, 206, 49], [0, 0, 0, 12, 67, 106, 164, 185, 199, 210, 211, 210, 208, 190, 150, 82, 8, 0, 0, 0, 178, 208, 188, 175, 162, 158, 151, 11], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]}&#39;</span>
-curl -H <span class="s2">&quot;Content-Type: application/json&quot;</span> -X POST -d <span class="s2">&quot;</span><span class="nv">$body</span><span class="s2">&quot;</span> <span class="nv">$predictor_host</span>/predict
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">predictor_host</span> <span class="o">=</span> <span class="s1">&#39;127.0.0.1:30000&#39;</span>
+<span class="n">query_path</span> <span class="o">=</span> <span class="s1">&#39;examples/data/image_classification/fashion_mnist_test_1.png&#39;</span>
+
+<span class="c1"># Load query image as 3D list of pixels</span>
+<span class="kn">from</span> <span class="nn">rafiki.model</span> <span class="kn">import</span> <span class="n">utils</span>
+<span class="p">[</span><span class="n">query</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">load_images</span><span class="p">([</span><span class="n">query_path</span><span class="p">])</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+<span class="c1"># Make request to predictor</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;http://{}/predict&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">predictor_host</span><span class="p">),</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span> <span class="s1">&#39;query&#39;</span><span class="p">:</span> <span class="n">query</span> <span class="p">})</span>
+<span class="k">print</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">json</span><span class="p">())</span>
 </pre></div>
 </div>
 </div></blockquote>
 <p>Output:</p>
 <blockquote>
-<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">{</span><span class="s2">&quot;prediction&quot;</span>:<span class="o">[</span><span class="m">0</span>.0009956853634251576,0.0,0.00016594756057085962,0.00016594756057085962,0.0,0.035346830401593095,0.00016594756057085962,0.0879522071025556,0.01709259873879854,0.858114835711915<span class="o">]}</span>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s1">&#39;prediction&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.9364003576825639</span><span class="p">,</span> <span class="mf">1.016065009906697e-08</span><span class="p">,</span> <span class="mf">0.0027604885399341583</span><span class="p">,</span> <span class="mf">0.00014587241457775235</span><span class="p">,</span> <span class="mf">6.018594376655528e-06</span><span class="p">,</span> <span class="mf">1.042887332047826e-09</span><span class="p">,</span> <span class="mf">0.060679372351310566</span><span class="p">,</span> <span class="mf">2.024707311532037e-11</span><span class="p">,</span> <span class="mf">7.901770004536957e-06</span><span class="p">,</span> <span class="mf">1.5299328026685544e-08</span><span class="p">],</span>
+<span class="s1">&#39;predictions&#39;</span><span class="p">:</span> <span class="p">[]}</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div></blockquote>
+</div>
+<div class="section" id="making-batch-predictions">
+<h2>Making batch predictions<a class="headerlink" href="#making-batch-predictions" title="Permalink to this headline">¶</a></h2>
+<p>Similar to making a single prediction, but use the <code class="docutils literal notranslate"><span class="pre">queries</span></code> attribute instead of <code class="docutils literal notranslate"><span class="pre">query</span></code> in your request and
+pass an <em>array</em> of queries instead.</p>
+<p>Example:</p>
+<blockquote>
+<div><p>If <code class="docutils literal notranslate"><span class="pre">predictor_host</span></code> is <code class="docutils literal notranslate"><span class="pre">127.0.0.1:30000</span></code>, run the following in Python:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">predictor_host</span> <span class="o">=</span> <span class="s1">&#39;127.0.0.1:30000&#39;</span>
+<span class="n">query_paths</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;examples/data/image_classification/fashion_mnist_test_1.png&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;examples/data/image_classification/fashion_mnist_test_2.png&#39;</span><span class="p">]</span>
+
+<span class="c1"># Load query image as 3D list of pixels</span>
+<span class="kn">from</span> <span class="nn">rafiki.model</span> <span class="kn">import</span> <span class="n">utils</span>
+<span class="n">queries</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">load_images</span><span class="p">(</span><span class="n">query_paths</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+<span class="c1"># Make request to predictor</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;http://{}/predict&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">predictor_host</span><span class="p">),</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span> <span class="s1">&#39;queries&#39;</span><span class="p">:</span> <span class="n">queries</span> <span class="p">})</span>
+<span class="k">print</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">json</span><span class="p">())</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>Output:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s1">&#39;prediction&#39;</span><span class="p">:</span> <span class="bp">None</span><span class="p">,</span>
+<span class="s1">&#39;predictions&#39;</span><span class="p">:</span> <span class="p">[[</span><span class="mf">0.9364002384732744</span><span class="p">,</span> <span class="mf">1.0160608354681244e-08</span><span class="p">,</span> <span class="mf">0.0027604878414422274</span><span class="p">,</span> <span class="mf">0.0001458720798837021</span><span class="p">,</span> <span class="mf">6.018587100697914e-06</span><span class="p">,</span> <span class="mf">1.0428869989809186e-09</span><span class="p">,</span> <span class="mf">0.06067946175827773</span><span class="p">,</span> <span class="mf">2.0247028012509993e-11</span><span class="p">,</span> <span class="mf">7.901745448180009e-06</span><span class="p">,</span> <span class="mf">1.5299294275905595e-08</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.866741563402005</span><span class="p">,</span> <span class="mf">5.757699909736402e-05</span><span class="p">,</span> <span class="mf">0.0006144539802335203</span><span class="p">,</span> <span class="mf">0.03480150588134776</span><span class="p">,</span> <span class="mf">3.4249271266162395e-05</span><span class="p">,</span> <span class="mf">1.3578344004727683e-09</span><span class="p">,</span> <span class="mf">0.09774905198545598</span><span class="p">,</span> <span class="mf">6.071191726436664e-12</span><span class="p">,</span> <span class="mf">1.5324986861742218e-06</span><span class="p">,</span> <span class="mf">1.583319586551113e-10</span><span class="p">]]}</span>
 </pre></div>
 </div>
 </div></blockquote>
@@ -227,7 +272,7 @@ curl -H <span class="s2">&quot;Content-Type: application/json&quot;</span> -X PO
         <a href="quickstart-admins.html" class="btn btn-neutral float-right" title="Quick Start (Admins)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="quickstart-app-developers.html" class="btn btn-neutral" title="Quick Start (Application Developers)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="quickstart-app-developers.html" class="btn btn-neutral float-left" title="Quick Start (Application Developers)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -236,7 +281,7 @@ curl -H <span class="s2">&quot;Content-Type: application/json&quot;</span> -X PO
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
 
     </p>
   </div>
@@ -253,33 +298,16 @@ curl -H <span class="s2">&quot;Content-Type: application/json&quot;</span> -X PO
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../',
-            VERSION:'',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

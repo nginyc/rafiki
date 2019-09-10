@@ -17,32 +17,34 @@
   
 
   
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" /> 
-
-  
-  <script src="../../../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -56,7 +58,7 @@
             
             
               <div class="version">
-                0.1.0
+                0.2.0
               </div>
             
           
@@ -147,131 +149,161 @@
            <div itemprop="articleBody">
             
   <h1>Source code for rafiki.model.dataset</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">PIL</span> <span class="k">import</span> <span class="n">Image</span>
+<span></span><span class="c1">#</span>
+<span class="c1"># Licensed to the Apache Software Foundation (ASF) under one</span>
+<span class="c1"># or more contributor license agreements.  See the NOTICE file</span>
+<span class="c1"># distributed with this work for additional information</span>
+<span class="c1"># regarding copyright ownership.  The ASF licenses this file</span>
+<span class="c1"># to you under the Apache License, Version 2.0 (the</span>
+<span class="c1"># &quot;License&quot;); you may not use this file except in compliance</span>
+<span class="c1"># with the License.  You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing,</span>
+<span class="c1"># software distributed under the License is distributed on an</span>
+<span class="c1"># &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY</span>
+<span class="c1"># KIND, either express or implied.  See the License for the</span>
+<span class="c1"># specific language governing permissions and limitations</span>
+<span class="c1"># under the License.</span>
+<span class="c1">#</span>
+
+<span class="kn">from</span> <span class="nn">PIL</span> <span class="k">import</span> <span class="n">Image</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">random</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span>
 <span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">tempfile</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
-<span class="kn">from</span> <span class="nn">tqdm</span> <span class="k">import</span> <span class="n">tqdm</span>
-<span class="kn">import</span> <span class="nn">math</span>
-<span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="k">import</span> <span class="n">urlparse</span>
 <span class="kn">import</span> <span class="nn">zipfile</span>
 <span class="kn">import</span> <span class="nn">io</span>
 <span class="kn">import</span> <span class="nn">abc</span>
-<span class="kn">import</span> <span class="nn">tempfile</span>
 <span class="kn">import</span> <span class="nn">csv</span>
-
-<span class="kn">from</span> <span class="nn">rafiki.constants</span> <span class="k">import</span> <span class="n">DatasetType</span>
+<span class="kn">import</span> <span class="nn">pandas</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
-<span class="k">class</span> <span class="nc">InvalidDatasetProtocolException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span> 
-<span class="k">class</span> <span class="nc">InvalidDatasetTypeException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span> 
-<span class="k">class</span> <span class="nc">InvalidDatasetFormatException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span> 
+<span class="k">class</span> <span class="nc">InvalidDatasetFormatException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span>
 
-<div class="viewcode-block" id="ModelDatasetUtils"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils">[docs]</a><span class="k">class</span> <span class="nc">ModelDatasetUtils</span><span class="p">():</span>
+<div class="viewcode-block" id="DatasetUtils"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.DatasetUtils">[docs]</a><span class="k">class</span> <span class="nc">DatasetUtils</span><span class="p">():</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Collection of utility methods to help with the loading of datasets.</span>
 
-<span class="sd">    To use these utility methods, import the global ``dataset_utils`` instance from the module ``rafiki.model``.</span>
+<span class="sd">    Usage of these methods are optional.</span>
+<span class="sd">    In fact, you are encouraged to rely on your preferred ML libraries&#39; dataset loading methods, or hand-roll your own.</span>
+
+<span class="sd">    This should NOT be initiailized outside of the module. Instead,</span>
+<span class="sd">    import the global ``utils`` instance from the module ``rafiki.model``</span>
+<span class="sd">    and use ``utils.dataset``.</span>
 
 <span class="sd">    For example:</span>
 
 <span class="sd">    ::</span>
 
-<span class="sd">        from rafiki.model import dataset_utils</span>
+<span class="sd">        from rafiki.model import utils</span>
 <span class="sd">        ...</span>
-<span class="sd">        def train(self, dataset_uri):</span>
+<span class="sd">        def train(self, dataset_path, **kwargs):</span>
 <span class="sd">            ...</span>
-<span class="sd">            dataset_utils.load_dataset_of_image_files(dataset_uri)</span>
+<span class="sd">            utils.dataset.load_dataset_of_image_files(dataset_path)</span>
 <span class="sd">            ...</span>
-<span class="sd">    &#39;&#39;&#39;</span>   
-    
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># Caches downloaded datasets</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_uri_to_path</span> <span class="o">=</span> <span class="p">{}</span>
-
-<div class="viewcode-block" id="ModelDatasetUtils.load_dataset_of_corpus"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.load_dataset_of_corpus">[docs]</a>    <span class="k">def</span> <span class="nf">load_dataset_of_corpus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;tag&#39;</span><span class="p">],</span> <span class="n">split_by</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">n&#39;</span><span class="p">):</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+<div class="viewcode-block" id="DatasetUtils.load_dataset_of_corpus"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.DatasetUtils.load_dataset_of_corpus">[docs]</a>    <span class="k">def</span> <span class="nf">load_dataset_of_corpus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">split_by</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">n&#39;</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">            Loads dataset with type `CORPUS`.</span>
-<span class="sd">            </span>
-<span class="sd">            :param str dataset_uri: URI of the dataset file</span>
+<span class="sd">            Loads dataset for the task ``POS_TAGGING``</span>
+
+<span class="sd">            :param str dataset_path: File path of the dataset</span>
 <span class="sd">            :returns: An instance of ``CorpusDataset``.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">dataset_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">download_dataset_from_uri</span><span class="p">(</span><span class="n">dataset_uri</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">CorpusDataset</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">tags</span><span class="p">,</span> <span class="n">split_by</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">CorpusDataset</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">tags</span> <span class="ow">or</span> <span class="p">[</span><span class="s1">&#39;tag&#39;</span><span class="p">],</span> <span class="n">split_by</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ModelDatasetUtils.load_dataset_of_image_files"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.load_dataset_of_image_files">[docs]</a>    <span class="k">def</span> <span class="nf">load_dataset_of_image_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">,</span> <span class="n">image_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="DatasetUtils.load_dataset_of_image_files"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.DatasetUtils.load_dataset_of_image_files">[docs]</a>    <span class="k">def</span> <span class="nf">load_dataset_of_image_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">,</span> <span class="n">min_image_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                    <span class="n">max_image_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;RGB&#39;</span><span class="p">,</span> <span class="n">if_shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">            Loads dataset with type `IMAGE_FILES`.</span>
+<span class="sd">            Loads dataset for the task ``IMAGE_CLASSIFICATION``.</span>
+
+<span class="sd">            :param str dataset_path: File path of the dataset</span>
+<span class="sd">            :param int min_image_size: minimum width *and* height to resize all images to</span>
+<span class="sd">            :param int max_image_size: maximum width *and* height to resize all images to</span>
+<span class="sd">            :param str mode: Pillow image mode. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes</span>
+<span class="sd">            :param bool if_shuffle: Whether to shuffle the dataset</span>
+<span class="sd">            :returns: An instance of ``ImageFilesDataset``</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">ImageFilesDataset</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">min_image_size</span><span class="o">=</span><span class="n">min_image_size</span><span class="p">,</span> <span class="n">max_image_size</span><span class="o">=</span><span class="n">max_image_size</span><span class="p">,</span>
+                                <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">if_shuffle</span><span class="o">=</span><span class="n">if_shuffle</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DatasetUtils.load_dataset_of_audio_files"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.DatasetUtils.load_dataset_of_audio_files">[docs]</a>    <span class="k">def</span> <span class="nf">load_dataset_of_audio_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">,</span> <span class="n">dataset_dir</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">            Loads dataset with type `AUDIO_FILES`.</span>
 
 <span class="sd">            :param str dataset_uri: URI of the dataset file</span>
-<span class="sd">            :param str image_size: dimensions to resize all images to (None for no resizing)</span>
-<span class="sd">            :returns: An instance of ``ImageFilesDataset``.</span>
+<span class="sd">            :returns: An instance of ``AudioFilesDataset``.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">dataset_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">download_dataset_from_uri</span><span class="p">(</span><span class="n">dataset_uri</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">ImageFilesDataset</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">image_size</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">AudioFilesDataset</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">dataset_dir</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ModelDatasetUtils.resize_as_images"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.resize_as_images">[docs]</a>    <span class="k">def</span> <span class="nf">resize_as_images</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">images</span><span class="p">,</span> <span class="n">image_size</span><span class="p">):</span>
+<div class="viewcode-block" id="DatasetUtils.normalize_images"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.DatasetUtils.normalize_images">[docs]</a>    <span class="k">def</span> <span class="nf">normalize_images</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">images</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">std</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">            Resize a list of N grayscale images to another size.</span>
+<span class="sd">            Normalize all images.</span>
 
-<span class="sd">            :param int[][][] images: images to resize as a N x 2D lists (grayscale)</span>
-<span class="sd">            :param int image_size: dimensions to resize all images to (None for no resizing)</span>
-<span class="sd">            :returns: images as N x 2D numpy arrays</span>
+<span class="sd">            If mean `mean` and standard deviation `std` are `None`, they will be computed on the images.</span>
+
+<span class="sd">            :param images: (N x width x height x channels) array-like of images to resize</span>
+<span class="sd">            :param float[] mean: Mean for normalization, by channel</span>
+<span class="sd">            :param float[] std: Standard deviation for normalization, by channel</span>
+<span class="sd">            :returns: (images, mean, std)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">std</span><span class="p">)</span>
+
+        <span class="c1"># Convert to [0, 1]</span>
+        <span class="n">images</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">images</span><span class="p">)</span> <span class="o">/</span> <span class="mi">255</span>
+
+        <span class="k">if</span> <span class="n">mean</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="c1"># shape = (channels,)</span>
+        <span class="k">if</span> <span class="n">std</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="c1"># shape = (channels,)</span>
+
+        <span class="c1"># Normalize all images</span>
+        <span class="n">images</span> <span class="o">=</span> <span class="p">(</span><span class="n">images</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span> <span class="o">/</span> <span class="n">std</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">std</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DatasetUtils.transform_images"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.DatasetUtils.transform_images">[docs]</a>    <span class="k">def</span> <span class="nf">transform_images</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">images</span><span class="p">,</span> <span class="n">image_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">            Resize or convert a list of N images to another size and/or mode</span>
+
+<span class="sd">            :param images: (N x width x height x channels) array-like of images to resize</span>
+<span class="sd">            :param int image_size: width *and* height to resize all images to</span>
+<span class="sd">            :param str mode: Pillow image mode to convert all images to. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes</span>
+<span class="sd">            :returns: output images as a (N x width x height x channels) numpy array</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">images</span><span class="p">]</span>
-        <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">image_size</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">images</span><span class="p">]</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">images</span><span class="p">)</span></div>
-                
-<div class="viewcode-block" id="ModelDatasetUtils.download_dataset_from_uri"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ModelDatasetUtils.download_dataset_from_uri">[docs]</a>    <span class="k">def</span> <span class="nf">download_dataset_from_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_uri</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">image_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">resize</span><span class="p">([</span><span class="n">image_size</span><span class="p">,</span> <span class="n">image_size</span><span class="p">])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">images</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">images</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">images</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="DatasetUtils.load_images"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.DatasetUtils.load_images">[docs]</a>    <span class="k">def</span> <span class="nf">load_images</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_paths</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;RGB&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">            Maybe download the dataset at URI, ensuring that the dataset ends up in the local filesystem.</span>
+<span class="sd">            Loads multiple images from the local filesystem.</span>
+<span class="sd">            Assumes that images are of the same dimensions.</span>
 
-<span class="sd">            :param str dataset_uri: URI of the dataset file</span>
-<span class="sd">            :returns: file path of the dataset file in the local filesystem</span>
+<span class="sd">            :param images: Paths to images</span>
+<span class="sd">            :param str mode: Pillow image mode to convert all images to. Refer to https://pillow.readthedocs.io/en/3.1.x/handbook/concepts.html#concept-modes</span>
+<span class="sd">            :returns: images as a (N x width x height x channels) numpy array</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">if</span> <span class="n">dataset_uri</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_uri_to_path</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_uri_to_path</span><span class="p">[</span><span class="n">dataset_uri</span><span class="p">]</span>
-
-        <span class="n">dataset_path</span> <span class="o">=</span> <span class="kc">None</span>
-
-        <span class="n">parsed_uri</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">dataset_uri</span><span class="p">)</span>
-        <span class="n">protocol</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{uri.scheme}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">uri</span><span class="o">=</span><span class="n">parsed_uri</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-
-        <span class="c1"># Download dataset over HTTP/HTTPS</span>
-        <span class="k">if</span> <span class="n">protocol</span> <span class="o">==</span> <span class="s1">&#39;http&#39;</span> <span class="ow">or</span> <span class="n">protocol</span> <span class="o">==</span> <span class="s1">&#39;https&#39;</span><span class="p">:</span>
-
-            <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dataset_uri</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="n">temp_file</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-
-            <span class="c1"># Show a progress bar while downloading</span>
-            <span class="n">total_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;content-length&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">));</span> 
-            <span class="n">block_size</span> <span class="o">=</span> <span class="mi">1024</span>
-            <span class="n">iters</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">total_size</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">)</span> 
-            <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">iter_content</span><span class="p">(</span><span class="n">block_size</span><span class="p">),</span> <span class="n">total</span><span class="o">=</span><span class="n">iters</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;KB&#39;</span><span class="p">):</span>
-                <span class="n">temp_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-                
-            <span class="n">temp_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-            
-            <span class="n">dataset_path</span> <span class="o">=</span> <span class="n">temp_file</span><span class="o">.</span><span class="n">name</span>
-
-        <span class="c1"># Assume it is on filesystem</span>
-        <span class="k">elif</span> <span class="n">protocol</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="ow">or</span> <span class="n">protocol</span> <span class="o">==</span> <span class="s1">&#39;file&#39;</span><span class="p">:</span>
-            <span class="n">dataset_path</span> <span class="o">=</span> <span class="n">dataset_uri</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">InvalidDatasetProtocolException</span><span class="p">()</span>
-
-        <span class="c1"># Cache dataset path to possibly prevent re-downloading</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_uri_to_path</span><span class="p">[</span><span class="n">dataset_uri</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset_path</span>
-        <span class="k">return</span> <span class="n">dataset_path</span></div></div>
+        <span class="n">pil_images</span> <span class="o">=</span> <span class="n">_load_pil_images</span><span class="p">(</span><span class="n">image_paths</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span>
+        <span class="n">images</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">pil_images</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">images</span></div></div>
 
 <span class="k">class</span> <span class="nc">ModelDataset</span><span class="p">():</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Abstract that helps loading of dataset of a specific type</span>
-<span class="sd">    </span>
+
 <span class="sd">    ``size`` should be the total number of samples of the dataset</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">):</span>
@@ -288,16 +320,16 @@
 
 <div class="viewcode-block" id="CorpusDataset"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.CorpusDataset">[docs]</a><span class="k">class</span> <span class="nc">CorpusDataset</span><span class="p">(</span><span class="n">ModelDataset</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Class that helps loading of dataset with type `CORPUS`</span>
+<span class="sd">    Class that helps loading of dataset for task ``POS_TAGGING``.</span>
 
 <span class="sd">    ``tags`` is the expected list of tags for each token in the corpus.</span>
 <span class="sd">    Dataset samples are grouped as sentences by a delimiter token corresponding to ``split_by``.</span>
-<span class="sd">    </span>
+
 <span class="sd">    ``tag_num_classes`` is a list of &lt;number of classes for a tag&gt;, in the same order as ``tags``.</span>
-<span class="sd">    Each dataset sample is [[token, &lt;tag_1&gt;, &lt;tag_2&gt;, ..., &lt;tag_k&gt;]] where each token is a string, </span>
-<span class="sd">    each ``tag_i`` is an integer from 0 to (k_i - 1) as each token&#39;s corresponding class for that tag, </span>
-<span class="sd">    with tags appearing in the same order as ``tags``. </span>
-<span class="sd">    &#39;&#39;&#39;</span>   
+<span class="sd">    Each dataset sample is [[token, &lt;tag_1&gt;, &lt;tag_2&gt;, ..., &lt;tag_k&gt;]] where each token is a string,</span>
+<span class="sd">    each ``tag_i`` is an integer from 0 to (k_i - 1) as each token&#39;s corresponding class for that tag,</span>
+<span class="sd">    with tags appearing in the same order as ``tags``.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">,</span> <span class="n">tags</span><span class="p">,</span> <span class="n">split_by</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">)</span>
@@ -313,14 +345,14 @@
         <span class="n">tag_num_classes</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tags</span><span class="p">))]</span>
         <span class="n">max_token_len</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">max_sent_len</span> <span class="o">=</span> <span class="mi">0</span>
-        
+
         <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">d</span><span class="p">:</span>
             <span class="n">dataset_zipfile</span> <span class="o">=</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
             <span class="n">dataset_zipfile</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">d</span><span class="p">)</span>
             <span class="n">dataset_zipfile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
             <span class="c1"># Read corpus.tsv, read token by token, and merge them into sentences</span>
-            <span class="n">corpus_tsv_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s1">&#39;corpus.tsv&#39;</span><span class="p">)</span> 
+            <span class="n">corpus_tsv_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s1">&#39;corpus.tsv&#39;</span><span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">corpus_tsv_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
                     <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">dialect</span><span class="o">=</span><span class="s1">&#39;excel-tab&#39;</span><span class="p">)</span>
@@ -336,7 +368,7 @@
                             <span class="n">sents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sent</span><span class="p">)</span>
                             <span class="n">sent</span> <span class="o">=</span> <span class="p">[]</span>
                             <span class="k">continue</span>
-                        
+
                         <span class="n">token_tags</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">x</span><span class="p">])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">]</span>
                         <span class="n">sent</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">token</span><span class="p">,</span> <span class="o">*</span><span class="n">token_tags</span><span class="p">])</span>
 
@@ -349,7 +381,7 @@
                     <span class="c1"># Maintain max sent length</span>
                     <span class="n">max_sent_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sent</span><span class="p">),</span> <span class="n">max_sent_len</span><span class="p">)</span>
 
-            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">except</span><span class="p">:</span>
                 <span class="n">traceback</span><span class="o">.</span><span class="n">print_stack</span><span class="p">()</span>
                 <span class="k">raise</span> <span class="n">InvalidDatasetFormatException</span><span class="p">()</span>
 
@@ -359,64 +391,120 @@
 
 <div class="viewcode-block" id="ImageFilesDataset"><a class="viewcode-back" href="../../../src/python/rafiki.model.html#rafiki.model.ImageFilesDataset">[docs]</a><span class="k">class</span> <span class="nc">ImageFilesDataset</span><span class="p">(</span><span class="n">ModelDataset</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Class that helps loading of dataset with type `IMAGE_FILES`</span>
-<span class="sd">    </span>
-<span class="sd">    ``classes`` is the number of image classes.</span>
-<span class="sd">    Each dataset example is (image, class) where each image is a 2D list</span>
-<span class="sd">    of integers (0, 255) as grayscale, each class is an integer from 0 to (k - 1).</span>
-<span class="sd">    &#39;&#39;&#39;</span>   
+<span class="sd">    Class that helps loading of dataset for task ``IMAGE_CLASSIFICATION``.</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">,</span> <span class="n">image_size</span><span class="p">):</span>
+<span class="sd">    ``classes`` is the number of image classes.</span>
+
+<span class="sd">    Each dataset example is (image, class) where:</span>
+
+<span class="sd">        - Each image is a 3D numpy array (width x height x channels)</span>
+<span class="sd">        - Each class is an integer from 0 to (k - 1)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">,</span> <span class="n">min_image_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_image_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;RGB&#39;</span><span class="p">,</span> <span class="n">if_shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">image_size</span> <span class="o">=</span> <span class="n">image_size</span>
-        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_image_paths</span><span class="p">,</span> 
-            <span class="bp">self</span><span class="o">.</span><span class="n">_image_classes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_dir</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+        <span class="p">(</span><span class="n">pil_images</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_image_classes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="p">)</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_images</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_size</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preprocess</span><span class="p">(</span><span class="n">pil_images</span><span class="p">,</span> <span class="n">min_image_size</span><span class="p">,</span> <span class="n">max_image_size</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">if_shuffle</span><span class="p">:</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_images</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_image_classes</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shuffle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_images</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_image_classes</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
-        <span class="n">image_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_image_paths</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+        <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_images</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
         <span class="n">image_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_image_classes</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
-        <span class="n">dataset_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_dir</span>
-        <span class="n">image_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_size</span>
-
-        <span class="n">full_image_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">image_path</span><span class="p">)</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">full_image_path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">encoded</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
-            <span class="n">image</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">encoded</span><span class="p">)</span>
-            
-            <span class="k">if</span> <span class="n">image_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">image</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">image_size</span><span class="p">)</span>
-
-            <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
-
         <span class="k">return</span> <span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">image_class</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">):</span>
-        <span class="n">image_paths</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">image_classes</span> <span class="o">=</span> <span class="p">[]</span> 
+    <span class="k">def</span> <span class="nf">_preprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pil_images</span><span class="p">,</span> <span class="n">min_image_size</span><span class="p">,</span> <span class="n">max_image_size</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pil_images</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidDatasetFormatException</span><span class="p">(</span><span class="s1">&#39;Dataset should contain at least 1 image!&#39;</span><span class="p">)</span>
 
+        <span class="c1"># Decide on image size, adhering to min/max, making it square and trying not to stretch it</span>
+        <span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span> <span class="o">=</span> <span class="n">pil_images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span>
+        <span class="n">image_size</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">min</span><span class="p">([</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">max_image_size</span> <span class="ow">or</span> <span class="n">width</span><span class="p">]),</span> <span class="n">min_image_size</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Resize all images</span>
+        <span class="n">pil_images</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">resize</span><span class="p">([</span><span class="n">image_size</span><span class="p">,</span> <span class="n">image_size</span><span class="p">])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">pil_images</span><span class="p">]</span>
+
+        <span class="c1"># Convert to numpy arrays</span>
+        <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">pil_images</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">image_size</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
         <span class="c1"># Create temp directory to unzip to</span>
-        <span class="n">dataset_dir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">d</span><span class="p">:</span>
+            <span class="n">dataset_zipfile</span> <span class="o">=</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
+            <span class="n">dataset_zipfile</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">d</span><span class="p">)</span>
+            <span class="n">dataset_zipfile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+            <span class="c1"># Read images.csv, and read image paths &amp; classes</span>
+            <span class="n">image_paths</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">image_classes</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">images_csv_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s1">&#39;images.csv&#39;</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">images_csv_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+                    <span class="p">(</span><span class="n">image_paths</span><span class="p">,</span> <span class="n">image_classes</span><span class="p">)</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="p">[(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">]))</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">])</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">traceback</span><span class="o">.</span><span class="n">print_stack</span><span class="p">()</span>
+                <span class="k">raise</span> <span class="n">InvalidDatasetFormatException</span><span class="p">()</span>
+
+            <span class="c1"># Load images from files</span>
+            <span class="n">full_image_paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">image_paths</span><span class="p">]</span>
+            <span class="n">pil_images</span> <span class="o">=</span> <span class="n">_load_pil_images</span><span class="p">(</span><span class="n">full_image_paths</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span>
+
+        <span class="n">num_classes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">image_classes</span><span class="p">))</span>
+        <span class="n">num_samples</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">image_paths</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">pil_images</span><span class="p">,</span> <span class="n">image_classes</span><span class="p">,</span> <span class="n">num_samples</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_shuffle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">images</span><span class="p">,</span> <span class="n">classes</span><span class="p">):</span>
+        <span class="n">zipped</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">classes</span><span class="p">))</span>
+        <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">zipped</span><span class="p">)</span>
+        <span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">classes</span><span class="p">)</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">zipped</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">classes</span><span class="p">)</span></div>
+
+<span class="k">class</span> <span class="nc">AudioFilesDataset</span><span class="p">(</span><span class="n">ModelDataset</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Class that helps loading of dataset with type `AUDIO_FILES`</span>
+
+<span class="sd">    ``dataset_path`` is the URI to the dataset.</span>
+<span class="sd">    ``dataset_dir`` is the directory to store the extracted the Audio Files.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">,</span> <span class="n">dataset_dir</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_dir</span> <span class="o">=</span> <span class="n">dataset_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">            Loading the dataset into a pandas dataframe. Called in the class __init__ method.</span>
+
+<span class="sd">            :param str dataset_path: URI to the dataset</span>
+<span class="sd">            :returns: pandas dataframe with three columns: ``wav_filename``, ``wav_filesize`` and ``transcript``</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">dataset_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_dir</span>
 
         <span class="n">dataset_zipfile</span> <span class="o">=</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
         <span class="n">dataset_zipfile</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">dataset_dir</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
         <span class="n">dataset_zipfile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
         <span class="c1"># Read images.csv, and read image paths &amp; classes</span>
-        <span class="n">images_csv_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;images.csv&#39;</span><span class="p">)</span> 
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">images_csv_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-                <span class="p">(</span><span class="n">image_paths</span><span class="p">,</span> <span class="n">image_classes</span><span class="p">)</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="p">[(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">]))</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">])</span>
-        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="n">traceback</span><span class="o">.</span><span class="n">print_stack</span><span class="p">()</span>
-            <span class="k">raise</span> <span class="n">InvalidDatasetFormatException</span><span class="p">()</span>
+        <span class="n">audios_csv_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;audios.csv&#39;</span><span class="p">)</span>
 
-        <span class="n">num_classes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">image_classes</span><span class="p">))</span>
-        <span class="n">num_samples</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">image_paths</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">audios_csv_path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">,</span> <span class="n">na_filter</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="p">(</span><span class="n">num_samples</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">,</span> <span class="n">image_paths</span><span class="p">,</span> <span class="n">image_classes</span><span class="p">,</span> <span class="n">dataset_dir</span><span class="p">)</span></div>
-
-<span class="n">dataset_utils</span> <span class="o">=</span> <span class="n">ModelDatasetUtils</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">df</span>
+        
+<span class="k">def</span> <span class="nf">_load_pil_images</span><span class="p">(</span><span class="n">image_paths</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;RGB&#39;</span><span class="p">):</span>
+    <span class="n">pil_images</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">image_path</span> <span class="ow">in</span> <span class="n">image_paths</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">image_path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">encoded</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+            <span class="n">pil_image</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">encoded</span><span class="p">)</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+            <span class="n">pil_images</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pil_image</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">pil_images</span>
 </pre></div>
 
            </div>
@@ -429,7 +517,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
 
     </p>
   </div>
@@ -446,33 +534,16 @@
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../../',
-            VERSION:'',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

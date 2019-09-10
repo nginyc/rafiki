@@ -17,34 +17,36 @@
   
 
   
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Quick Start" href="quickstart.html" />
     <link rel="prev" title="Welcome to Rafiki’s Documentation!" href="../../index.html" /> 
-
-  
-  <script src="../../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -58,7 +60,7 @@
             
             
               <div class="version">
-                0.1.0
+                0.2.0
               </div>
             
           
@@ -89,11 +91,12 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html">Quick Start (Application Developers)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html">Quick Start (Application Users)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html">Quick Start (Admins)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="using-admin-web.html">Using Rafiki’s Admin Web</a></li>
-<li class="toctree-l2"><a class="reference internal" href="creating-models.html">Creating Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using-web-admin.html">Using Rafiki’s Web Admin</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tasks.html">Supported Tasks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="datasets.html">Supported Dataset Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datasets.html">Dataset Types</a></li>
 <li class="toctree-l2"><a class="reference internal" href="installing-python.html">Installing Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model-development.html">Model Development Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model-tuning.html">How Model Tuning Works</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../dev/index.html">Developer Guide</a></li>
@@ -171,6 +174,7 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html#initializing-the-client">Initializing the client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html#creating-models">Creating models</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html#listing-available-models-by-task">Listing available models by task</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#creating-datasets">Creating datasets</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html#creating-a-train-job">Creating a train job</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html#listing-train-jobs">Listing train jobs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html#creating-an-inference-job-with-the-latest-train-job">Creating an inference job with the latest train job</a></li>
@@ -191,6 +195,7 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html#installing-the-client">Installing the client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html#initializing-the-client">Initializing the client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html#listing-available-models-by-task">Listing available models by task</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html#creating-datasets">Creating datasets</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html#creating-a-train-job">Creating a train job</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html#listing-train-jobs">Listing train jobs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="quickstart-app-developers.html#retrieving-the-latest-train-job-s-details">Retrieving the latest train job’s details</a></li>
@@ -203,7 +208,8 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="quickstart-app-users.html">Quick Start (Application Users)</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html#making-predictions">Making predictions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html#making-a-single-prediction">Making a single prediction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart-app-users.html#making-batch-predictions">Making batch predictions</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="quickstart-admins.html">Quick Start (Admins)</a><ul>
@@ -214,30 +220,35 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart-admins.html#banning-a-user">Banning a user</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="using-admin-web.html">Using Rafiki’s Admin Web</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="using-admin-web.html#logging-in">Logging In</a></li>
-<li class="toctree-l2"><a class="reference internal" href="using-admin-web.html#viewing-train-jobs">Viewing Train Jobs</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="creating-models.html">Creating Models</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="creating-models.html#implementing-models">Implementing Models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="creating-models.html#model-environment">Model Environment</a></li>
-<li class="toctree-l2"><a class="reference internal" href="creating-models.html#logging-in-models">Logging in Models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="creating-models.html#dataset-loading-in-models">Dataset Loading in Models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="creating-models.html#sample-models">Sample Models</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="using-web-admin.html">Using Rafiki’s Web Admin</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tasks.html">Supported Tasks</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tasks.html#image-classification">IMAGE_CLASSIFICATION</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tasks.html#pos-tagging">POS_TAGGING</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tasks.html#tabular-classification">TABULAR_CLASSIFICATION</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tasks.html#tabular-regression">TABULAR_REGRESSION</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tasks.html#speech-recognition">SPEECH_RECOGNITION</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="datasets.html">Supported Dataset Types</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="datasets.html">Dataset Types</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="datasets.html#image-files">IMAGE_FILES</a></li>
 <li class="toctree-l2"><a class="reference internal" href="datasets.html#corpus">CORPUS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datasets.html#tabular">TABULAR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datasets.html#audio-files">AUDIO_FILES</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="installing-python.html">Installing Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model-development.html">Model Development Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="model-development.html#implementing-the-base-model-interface">Implementing the Base Model Interface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model-development.html#sample-models">Sample Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model-development.html#configuring-the-model-s-environment">Configuring the Model’s Environment</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="model-tuning.html">How Model Tuning Works</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="model-tuning.html#defining-hyperparameter-search-space">Defining Hyperparameter Search Space</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model-tuning.html#model-tuning-schemes">Model Tuning Schemes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model-tuning.html#deep-dive-on-enas">Deep Dive on ENAS</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -253,7 +264,7 @@
         <a href="quickstart.html" class="btn btn-neutral float-right" title="Quick Start" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../../index.html" class="btn btn-neutral" title="Welcome to Rafiki’s Documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../../index.html" class="btn btn-neutral float-left" title="Welcome to Rafiki’s Documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -262,7 +273,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
 
     </p>
   </div>
@@ -279,33 +290,16 @@
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../',
-            VERSION:'',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

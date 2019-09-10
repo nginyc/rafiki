@@ -17,34 +17,36 @@
   
 
   
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Setup &amp; Configuration" href="setup.html" />
-    <link rel="prev" title="Installing Python" href="../user/installing-python.html" /> 
-
-  
-  <script src="../../_static/js/modernizr.min.js"></script>
-
+    <link rel="prev" title="How Model Tuning Works" href="../user/model-tuning.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -58,7 +60,7 @@
             
             
               <div class="version">
-                0.1.0
+                0.2.0
               </div>
             
           
@@ -171,10 +173,12 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="development.html">Development</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="development.html#testing-latest-code-changes">Testing Latest Code Changes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="development.html#connecting-to-rafiki-s-db">Connecting to Rafiki’s DB</a></li>
-<li class="toctree-l2"><a class="reference internal" href="development.html#connecting-to-rafiki-s-cache">Connecting to Rafiki’s Cache</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#making-a-release-to-master">Making a Release to <code class="docutils literal notranslate"><span class="pre">master</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#managing-rafiki-s-db">Managing Rafiki’s DB</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#connecting-to-rafiki-s-redis">Connecting to Rafiki’s Redis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="development.html#pushing-images-to-docker-hub">Pushing Images to Docker Hub</a></li>
 <li class="toctree-l2"><a class="reference internal" href="development.html#building-rafiki-s-documentation">Building Rafiki’s Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#running-rafiki-s-tests">Running Rafiki’s Tests</a></li>
 <li class="toctree-l2"><a class="reference internal" href="development.html#troubleshooting">Troubleshooting</a></li>
 <li class="toctree-l2"><a class="reference internal" href="development.html#using-rafiki-admin-s-http-interface">Using Rafiki Admin’s HTTP interface</a></li>
 </ul>
@@ -203,7 +207,7 @@
         <a href="setup.html" class="btn btn-neutral float-right" title="Setup &amp; Configuration" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../user/installing-python.html" class="btn btn-neutral" title="Installing Python" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../user/model-tuning.html" class="btn btn-neutral float-left" title="How Model Tuning Works" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -212,7 +216,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
 
     </p>
   </div>
@@ -229,33 +233,16 @@
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../',
-            VERSION:'',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

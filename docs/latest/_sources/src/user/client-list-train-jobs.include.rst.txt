@@ -16,7 +16,7 @@ Example:
         'id': 'ec4db479-b9b2-4289-8086-52794ffc71c8',
         'status': 'RUNNING',
         'task': 'IMAGE_CLASSIFICATION',
-        'test_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true',
-        'train_dataset_uri': 'https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true'}]
+        'val_dataset_id': '7e9a2f8a-c61d-4365-ae4a-601e90892b88',
+        'train_dataset_id': 'ecf87d2f-6893-4e4b-8ed9-1d9454af9763'}]
 
 .. seealso:: :meth:`rafiki.client.Client.get_train_jobs_of_app`

@@ -17,34 +17,36 @@
   
 
   
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Users of Rafiki" href="user-types.html" />
     <link rel="prev" title="Setup &amp; Configuration" href="setup.html" /> 
-
-  
-  <script src="../../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -58,7 +60,7 @@
             
             
               <div class="version">
-                0.1.0
+                0.2.0
               </div>
             
           
@@ -88,10 +90,12 @@
 <li class="toctree-l2"><a class="reference internal" href="setup.html">Setup &amp; Configuration</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Development</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#testing-latest-code-changes">Testing Latest Code Changes</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#connecting-to-rafiki-s-db">Connecting to Rafiki’s DB</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#connecting-to-rafiki-s-cache">Connecting to Rafiki’s Cache</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#making-a-release-to-master">Making a Release to <code class="docutils literal notranslate"><span class="pre">master</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#managing-rafiki-s-db">Managing Rafiki’s DB</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#connecting-to-rafiki-s-redis">Connecting to Rafiki’s Redis</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pushing-images-to-docker-hub">Pushing Images to Docker Hub</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#building-rafiki-s-documentation">Building Rafiki’s Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#running-rafiki-s-tests">Running Rafiki’s Tests</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#using-rafiki-admin-s-http-interface">Using Rafiki Admin’s HTTP interface</a></li>
 </ul>
@@ -170,7 +174,7 @@
             
   <div class="section" id="development">
 <span id="id1"></span><h1>Development<a class="headerlink" href="#development" title="Permalink to this headline">¶</a></h1>
-<p>Before running any individual scripts, make sure to run the shell configuration script:</p>
+<p><strong>Before running any individual scripts, make sure to run the shell configuration script</strong>:</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nb">source</span> .env.sh
 </pre></div>
@@ -178,25 +182,64 @@
 </div></blockquote>
 <p>Refer to <a class="reference internal" href="architecture.html#architecture"><span class="std std-ref">Rafiki’s Architecture</span></a> and <a class="reference internal" href="folder-structure.html#folder-structure"><span class="std std-ref">Folder Structure</span></a> for a developer’s overview of Rafiki.</p>
 <div class="section" id="testing-latest-code-changes">
-<h2>Testing Latest Code Changes<a class="headerlink" href="#testing-latest-code-changes" title="Permalink to this headline">¶</a></h2>
+<span id="testing-latest-code"></span><h2>Testing Latest Code Changes<a class="headerlink" href="#testing-latest-code-changes" title="Permalink to this headline">¶</a></h2>
 <p>To test the lastet code changes e.g. in the <code class="docutils literal notranslate"><span class="pre">dev</span></code> branch, you’ll need to do the following:</p>
 <blockquote>
 <div><ol class="arabic simple">
-<li>Build Rafiki’s images on each participating node (the quickstart instructions pull pre-built <a class="reference external" href="https://hub.docker.com/r/rafikiai/">Rafiki’s images</a> from Docker Hub):</li>
+<li><p>Build Rafiki’s images on each participating node (the quickstart instructions pull pre-built <a class="reference external" href="https://hub.docker.com/r/rafikiai/">Rafiki’s images</a> from Docker Hub):</p></li>
 </ol>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/build_images.sh
 </pre></div>
 </div>
 <ol class="arabic simple" start="2">
-<li>Purge all of Rafiki’s data (since there might be database schema changes):</li>
+<li><p>Purge all of Rafiki’s data (since there might be database schema changes):</p></li>
 </ol>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/clean.sh
 </pre></div>
 </div>
 </div></blockquote>
 </div>
-<div class="section" id="connecting-to-rafiki-s-db">
-<h2>Connecting to Rafiki’s DB<a class="headerlink" href="#connecting-to-rafiki-s-db" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="making-a-release-to-master">
+<h2>Making a Release to <code class="docutils literal notranslate"><span class="pre">master</span></code><a class="headerlink" href="#making-a-release-to-master" title="Permalink to this headline">¶</a></h2>
+<p>In general, before making a release to <code class="docutils literal notranslate"><span class="pre">master</span></code> from <code class="docutils literal notranslate"><span class="pre">dev</span></code>, ensure that the code at <code class="docutils literal notranslate"><span class="pre">dev</span></code> is stable &amp; well-tested:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Consider running all of Rafiki’s tests (see <a class="reference internal" href="#testing-rafiki"><span class="std std-ref">Running Rafiki’s Tests</span></a>). Remember to re-build the Docker images to ensure the latest code changes are reflected (see <a class="reference internal" href="#testing-latest-code"><span class="std std-ref">Testing Latest Code Changes</span></a>)</p></li>
+<li><p>Consider running all of Rafiki’s example models in <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/models/">./examples/models/</a></p></li>
+<li><p>Consider running all of Rafiki’s example usage scripts in <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/scripts/">./examples/scripts/</a></p></li>
+<li><p>Consider running all of Rafiki’s example dataset-preparation scripts in <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/datasets/">./examples/datasets/</a></p></li>
+<li><p>Consider visiting Rafiki Web Admin and manually testing it</p></li>
+<li><p>Consider building Rafiki’s documentation site and checking if the documentation matches the codebase (see <a class="reference internal" href="#building-docs"><span class="std std-ref">Building Rafiki’s Documentation</span></a>)</p></li>
+</ol>
+</div></blockquote>
+<p>After merging <code class="docutils literal notranslate"><span class="pre">dev</span></code> into <code class="docutils literal notranslate"><span class="pre">master</span></code>, do the following:</p>
+<blockquote>
+<div><ol class="arabic">
+<li><p>Build &amp; push Rafiki’s new Docker images to <a class="reference external" href="https://hub.docker.com/u/rafikiai">Rafiki’s own Docker Hub account</a>:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/build_images.sh
+bash scripts/push_images.sh
+</pre></div>
+</div>
+<p>Get Docker Hub credentials from &#64;nginyc.</p>
+</div></blockquote>
+</li>
+<li><p>Build &amp; deploy Rafiki’s new documentation to <code class="docutils literal notranslate"><span class="pre">Rafiki's</span> <span class="pre">microsite</span> <span class="pre">powered</span> <span class="pre">by</span> <span class="pre">Github</span> <span class="pre">Pages</span></code>. Checkout Rafiki’s <code class="docutils literal notranslate"><span class="pre">gh-pages</span></code> branch, then run the following:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/build_docs.sh latest
+</pre></div>
+</div>
+<p>Finally, commit all resultant generated documentation changes and push them to <cite>gh-pages</cite> branch. The latest documentation should be reflected at <a class="reference external" href="https://nginyc.github.io/rafiki/docs/latest/">https://nginyc.github.io/rafiki/docs/latest/</a>.</p>
+<p>Refer to <cite>documentation on Github Pages &lt;https://guides.github.com/features/pages/&gt;</cite> to understand more on how this works.</p>
+</div></blockquote>
+</li>
+<li><p><a class="reference external" href="https://github.com/nginyc/rafiki/releases/new">Draft a new release on Github</a>. Make sure to include the list of changes relative to the previous release.</p></li>
+</ol>
+</div></blockquote>
+<p>Subsequently, you’ll need to increase <code class="docutils literal notranslate"><span class="pre">RAFIKI_VERSION</span></code> in <code class="docutils literal notranslate"><span class="pre">.env.sh</span></code> to reflect a new release.</p>
+</div>
+<div class="section" id="managing-rafiki-s-db">
+<h2>Managing Rafiki’s DB<a class="headerlink" href="#managing-rafiki-s-db" title="Permalink to this headline">¶</a></h2>
 <p>By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g <a class="reference external" href="https://eggerapps.at/postico/">Postico</a>) with these credentials:</p>
 <blockquote>
 <div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">RAFIKI_ADDR</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
@@ -207,9 +250,16 @@
 </pre></div>
 </div>
 </div></blockquote>
+<p>You can start &amp; stop Rafiki’s DB independently of the rest of Rafiki’s stack with:</p>
+<blockquote>
+<div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/start_db.sh
+bash scripts/stop_db.sh
+</pre></div>
 </div>
-<div class="section" id="connecting-to-rafiki-s-cache">
-<h2>Connecting to Rafiki’s Cache<a class="headerlink" href="#connecting-to-rafiki-s-cache" title="Permalink to this headline">¶</a></h2>
+</div></blockquote>
+</div>
+<div class="section" id="connecting-to-rafiki-s-redis">
+<h2>Connecting to Rafiki’s Redis<a class="headerlink" href="#connecting-to-rafiki-s-redis" title="Permalink to this headline">¶</a></h2>
 <p>You can connect to Redis DB with <a class="reference external" href="https://github.com/marians/rebrow">rebrow</a>:</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/start_rebrow.sh
@@ -234,12 +284,26 @@
 </div></blockquote>
 </div>
 <div class="section" id="building-rafiki-s-documentation">
-<h2>Building Rafiki’s Documentation<a class="headerlink" href="#building-rafiki-s-documentation" title="Permalink to this headline">¶</a></h2>
+<span id="building-docs"></span><h2>Building Rafiki’s Documentation<a class="headerlink" href="#building-rafiki-s-documentation" title="Permalink to this headline">¶</a></h2>
 <p>Rafiki uses <a class="reference external" href="http://www.sphinx-doc.org">Sphinx documentation</a> and hosts the documentation with <a class="reference external" href="https://pages.github.com/">Github Pages</a> on the <a class="reference external" href="https://github.com/nginyc/rafiki/tree/gh-pages">gh-pages branch</a>.
 Build &amp; view Rafiki’s Sphinx documentation on your machine with the following commands:</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bash scripts/build_docs.sh latest
 open docs/index.html
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="running-rafiki-s-tests">
+<span id="testing-rafiki"></span><h2>Running Rafiki’s Tests<a class="headerlink" href="#running-rafiki-s-tests" title="Permalink to this headline">¶</a></h2>
+<p>Rafiki uses <a class="reference external" href="https://docs.pytest.org">pytest</a>.</p>
+<p>First, start Rafiki.</p>
+<p>Then, run all integration tests with:</p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">rafiki</span><span class="o">/</span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">rafiki</span><span class="o">/</span><span class="n">advisor</span><span class="o">/</span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">test</span><span class="o">/</span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
+<span class="n">bash</span> <span class="n">scripts</span><span class="o">/</span><span class="n">test</span><span class="o">.</span><span class="n">sh</span>
 </pre></div>
 </div>
 </div></blockquote>
@@ -250,7 +314,7 @@ open docs/index.html
 you might be running out of space allocated for Docker. Try one of the following:</p>
 <blockquote>
 <div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Prunes dangling images</span>
-<span class="n">docker</span> <span class="n">system</span> <span class="n">prune</span>
+<span class="n">docker</span> <span class="n">system</span> <span class="n">prune</span> <span class="o">--</span><span class="nb">all</span>
 </pre></div>
 </div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span># Delete all containers
@@ -285,7 +349,7 @@ and subsequently add the <cite>Authorization</cite> header for every other call:
         <a href="user-types.html" class="btn btn-neutral float-right" title="Users of Rafiki" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="setup.html" class="btn btn-neutral" title="Setup &amp; Configuration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="setup.html" class="btn btn-neutral float-left" title="Setup &amp; Configuration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -294,7 +358,7 @@ and subsequently add the <cite>Authorization</cite> header for every other call:
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles.
+        &copy; Copyright 2019, nginyc, cadmusthefounder, nudles
 
     </p>
   </div>
@@ -311,33 +375,16 @@ and subsequently add the <cite>Authorization</cite> header for every other call:
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../',
-            VERSION:'',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

@@ -3,15 +3,14 @@
 Quick Start (Model Developers)
 ====================================================================
 
-As a Model Developer, you can manage models and manage train & inference jobs on Rafiki.
+As a *Model Developer*, you can manage models, datasets, train jobs & inference jobs on Rafiki. This guide only highlights the key methods available to manage models.
 
-This quickstart only highlights the key methods available to manage models.
-To learn about how to manage train & inference jobs, go to :ref:`quickstart-app-developers`.
-To learn more about what you can do on Rafiki, explore the methods of :class:`rafiki.client.Client`.
+To learn about how to manage datasets, train jobs & inference jobs, go to :ref:`quickstart-app-developers`.
 
-We assume that you have access to a running instance of *Rafiki Admin* at ``<rafiki_host>:<admin_port>``
-and *Rafiki Admin Web* at ``<rafiki_host>:<admin_web_port>``.
+This guide assumes that you have access to a running instance of *Rafiki Admin* at ``<rafiki_host>:<admin_port>``
+and *Rafiki Web Admin* at ``<rafiki_host>:<web_admin_port>``.
 
+To learn more about what else you can do on Rafiki, explore the methods of :class:`rafiki.client.Client`
 
 Installing the client
 --------------------------------------------------------------------

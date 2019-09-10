@@ -3,9 +3,26 @@
 Quick Start
 ====================================================================
 
-This guide assumes you have deployed your own empty instance of Rafiki and you want to try a *full* train-inference flow as the *Super Admin*, 
-including adding of models, submitting model training & serving jobs, and making predictions on Rafiki.
+.. contents:: Table of Contents
 
+This guide assumes you have deployed your own empty instance of Rafiki and you want to try a *full* train-inference flow as the *Super Admin*:
+
+    1. Authenticating on Rafiki
+    2. Submitting models
+    3. Uploading datasets
+    4. Creating a model training job
+    5. Creating a model serving job after the model training job completes
+    6. Making predictions 
+    
+Follow the sequence of examples below to submit the `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference.
+Alternatively, refer and run the scripted version of this quickstart 
+`./examples/scripts/quickstart.py <https://github.com/nginyc/rafiki/blob/master/examples/scripts/quickstart.py>`_.
+
+To learn more about what else you can do on Rafiki, explore the methods of :class:`rafiki.client.Client`.
+
+.. note::
+
+    If you haven't set up Rafiki on your local machine, refer to :ref:`quick-setup` before continuing.
 
 .. note::
 
@@ -13,20 +30,6 @@ including adding of models, submitting model training & serving jobs, and making
     - For *Application Developers* just looking to train and deploy models, refer to :ref:`quickstart-app-developers`
     - For *Application Users* just looking to make predictions, refer to :ref:`quickstart-app-users`
 
-.. note::
-
-    Refer to :ref:`user-types` to understand more about the different types of users on Rafiki.
-
-The sequence of examples below submits the `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference. 
-Alternatively, after installing the Rafiki Client's dependencies, you can refer and run the scripted version of this quickstart 
-`./examples/scripts/quickstart.py <https://github.com/nginyc/rafiki/blob/master/examples/scripts/quickstart.py>`_.
-
-.. note::
-
-    If you haven't set up Rafiki on your local machine, refer to :ref:`quick-setup` before continuing.
-
-
-To learn more about what you can do on Rafiki, explore the methods of :class:`rafiki.client.Client`.
 
 Installing the client
 --------------------------------------------------------------------
@@ -58,6 +61,12 @@ Listing available models by task
 --------------------------------------------------------------------
 
 .. include:: ./client-list-models.include.rst
+
+
+Creating datasets
+--------------------------------------------------------------------
+
+.. include:: ./client-create-datasets.include.rst
 
 
 Creating a train job
