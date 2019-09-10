@@ -3,13 +3,15 @@
 Development
 ====================================================================
 
-Before running any individual scripts, make sure to run the shell configuration script:
+**Before running any individual scripts, make sure to run the shell configuration script**:
 
     .. code-block:: shell
 
         source .env.sh
 
 Refer to :ref:`architecture` and :ref:`folder-structure` for a developer's overview of Rafiki.
+
+.. _`testing-latest-code`:
 
 Testing Latest Code Changes
 --------------------------------------------------------------------
@@ -29,7 +31,52 @@ To test the lastet code changes e.g. in the ``dev`` branch, you'll need to do th
         bash scripts/clean.sh
 
 
-Connecting to Rafiki's DB
+Making a Release to ``master``
+--------------------------------------------------------------------
+
+In general, before making a release to ``master`` from ``dev``, ensure that the code at ``dev`` is stable & well-tested:
+    
+    1. Consider running all of Rafiki's tests (see :ref:`testing-rafiki`). Remember to re-build the Docker images to ensure the latest code changes are reflected (see :ref:`testing-latest-code`)
+
+    2. Consider running all of Rafiki's example models in `./examples/models/ <https://github.com/nginyc/rafiki/tree/master/examples/models/>`_
+
+    3. Consider running all of Rafiki's example usage scripts in `./examples/scripts/ <https://github.com/nginyc/rafiki/tree/master/examples/scripts/>`_
+
+    4. Consider running all of Rafiki's example dataset-preparation scripts in `./examples/datasets/ <https://github.com/nginyc/rafiki/tree/master/examples/datasets/>`_
+
+    5. Consider visiting Rafiki Web Admin and manually testing it
+
+    6. Consider building Rafiki's documentation site and checking if the documentation matches the codebase (see :ref:`building-docs`)
+
+After merging ``dev`` into ``master``, do the following:
+
+    1. Build & push Rafiki's new Docker images to `Rafiki’s own Docker Hub account <https://hub.docker.com/u/rafikiai>`_:
+
+        .. code-block:: shell
+
+            bash scripts/build_images.sh
+            bash scripts/push_images.sh
+
+        Get Docker Hub credentials from @nginyc.
+
+    2. Build & deploy Rafiki's new documentation to ``Rafiki's microsite powered by Github Pages``. Checkout Rafiki's ``gh-pages`` branch, then run the following:
+
+        .. code-block:: shell
+
+            bash scripts/build_docs.sh latest
+
+        Finally, commit all resultant generated documentation changes and push them to `gh-pages` branch. The latest documentation should be reflected at https://nginyc.github.io/rafiki/docs/latest/.
+        
+        Refer to `documentation on Github Pages <https://guides.github.com/features/pages/>` to understand more on how this works. 
+
+
+    3. `Draft a new release on Github <https://github.com/nginyc/rafiki/releases/new>`_. Make sure to include the list of changes relative to the previous release.
+
+
+Subsequently, you'll need to increase ``RAFIKI_VERSION`` in ``.env.sh`` to reflect a new release.
+
+
+Managing Rafiki's DB
 --------------------------------------------------------------------
 
 By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g `Postico <https://eggerapps.at/postico/>`_) with these credentials:
@@ -42,7 +89,16 @@ By default, you can connect to the PostgreSQL DB using a PostgreSQL client (e.g 
         POSTGRES_DB=rafiki
         POSTGRES_PASSWORD=rafiki
 
-Connecting to Rafiki's Cache
+
+You can start & stop Rafiki's DB independently of the rest of Rafiki's stack with:
+
+    .. code-block:: shell
+
+        bash scripts/start_db.sh
+        bash scripts/stop_db.sh
+    
+
+Connecting to Rafiki's Redis
 --------------------------------------------------------------------
 
 You can connect to Redis DB with `rebrow <https://github.com/marians/rebrow>`_:
@@ -67,6 +123,8 @@ To push the Rafiki's latest images to Docker Hub (e.g. to reflect the latest cod
 
         bash scripts/push_images.sh
 
+.. _`building-docs`:
+
 Building Rafiki's Documentation
 --------------------------------------------------------------------
 
@@ -78,6 +136,25 @@ Build & view Rafiki's Sphinx documentation on your machine with the following co
         bash scripts/build_docs.sh latest
         open docs/index.html
 
+.. _`testing-rafiki`:
+
+Running Rafiki's Tests
+--------------------------------------------------------------------
+
+Rafiki uses `pytest <https://docs.pytest.org>`_.  
+
+First, start Rafiki.
+
+Then, run all integration tests with:
+
+    ::
+
+        pip install -r rafiki/requirements.txt
+        pip install -r rafiki/advisor/requirements.txt
+        pip install -r test/requirements.txt
+        bash scripts/test.sh
+
+
 Troubleshooting
 --------------------------------------------------------------------
 
@@ -87,7 +164,7 @@ you might be running out of space allocated for Docker. Try one of the following
     ::
 
         # Prunes dangling images
-        docker system prune
+        docker system prune --all
 
     ::
 

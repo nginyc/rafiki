@@ -1,31 +1,42 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import pytest
-import tempfile
-import os
-import time
 
 from rafiki.client import Client
-from rafiki.constants import ModelAccessRight, TrainJobStatus
-from test.utils import make_model_dev, make_app_dev, make_model, make_private_model, \
-                        gen, superadmin, DATASET_TRAIN_FILE_PATH, DATASET_VAL_FILE_PATH
+from rafiki.constants import TrainJobStatus, BudgetOption
+from test.utils import global_setup, make_model_dev, make_app_dev, make_model, make_private_model, \
+                    make_invalid_model, make_dataset, gen, superadmin, wait_for_train_job_status
 
-TRAIN_JOB_TIMEOUT_SECS = 5 * 60
-    
 class TestTrainJobs():
 
     @pytest.fixture(scope='class')
     def app_dev_create_train_job_and_waited(self):
-        (task, app, model_id, train_dataset_uri, val_dataset_uri, budget) = make_train_job_info()
         app_dev = make_app_dev()
+        (task, app, model_id, train_dataset_id, val_dataset_id, budget) = make_train_job_info(app_dev)
 
         # Create train job
-        train_job = app_dev.create_train_job(app, task, train_dataset_uri, val_dataset_uri, budget, models=[model_id])
+        train_job = app_dev.create_train_job(app, task, train_dataset_id, val_dataset_id, budget, models=[model_id])
         assert 'id' in train_job
-        train_job_id = train_job['id']
+        wait_for_train_job_status(app_dev, app, TrainJobStatus.STOPPED)
 
-        # Wait until train job stops
-        wait_until_train_job_stops(app, app_dev)
-
-        return (app_dev, app, train_job_id, task)
+        return (app_dev, app, train_job['id'], task)
 
     def test_app_dev_create_train_job(self, app_dev_create_train_job_and_waited):
         (app_dev, app, train_job_id, *args) = app_dev_create_train_job_and_waited
@@ -35,7 +46,7 @@ class TestTrainJobs():
         train_job = app_dev.get_train_job(app)
         assert train_job['id'] == train_job_id
         assert train_job['app'] == app
-        assert 'status' in train_job
+        assert train_job['status'] == TrainJobStatus.STOPPED
         
         # Get train job by user
         user = app_dev.get_current_user()
@@ -74,7 +85,7 @@ class TestTrainJobs():
         # Get info for a trial
         trial = app_dev.get_trial(trial_id)
         assert trial['id'] == trial_id
-        assert all([(x in trial) for x in ['knobs', 'status', 'score', 'datetime_started', 'datetime_stopped']])
+        assert all([(x in trial) for x in ['proposal', 'status', 'score', 'datetime_started', 'datetime_stopped']])
         
     
     def test_app_dev_get_trial_logs(self, app_dev_create_train_job_and_waited):
@@ -95,22 +106,22 @@ class TestTrainJobs():
 
     def test_app_dev_create_2nd_app_version(self, app_dev_create_train_job_and_waited):
         (app_dev, app, task, *args) = app_dev_create_train_job_and_waited
-        (_, _, model_id, train_dataset_uri, val_dataset_uri, budget) = make_train_job_info(task=task) # Get another set of job info
+        (_, _, model_id, train_dataset_id, val_dataset_id, budget) = make_train_job_info(app_dev, task=task) # Get another set of job info
         app_dev: Client
         
         # Create another train job
-        train_job = app_dev.create_train_job(app, task, train_dataset_uri, val_dataset_uri, budget, models=[model_id])
+        train_job = app_dev.create_train_job(app, task, train_dataset_id, val_dataset_id, budget, models=[model_id])
         assert train_job['app'] == app
         assert train_job['app_version'] == 2 # 2nd version of the train job
 
 
     def test_multiple_app_devs_use_same_app(self, app_dev_create_train_job_and_waited):
         (app_dev, app, task, *args) = app_dev_create_train_job_and_waited
-        (_, _, model_id, train_dataset_uri, val_dataset_uri, budget) = make_train_job_info(task=task) # Get another set of job info
         app_dev2 = make_app_dev()
+        (_, _, model_id, train_dataset_id, val_dataset_id, budget) = make_train_job_info(app_dev2, task=task) # Get another set of job info
         
         # App dev 2 create another train job with same app
-        train_job = app_dev2.create_train_job(app, task, train_dataset_uri, val_dataset_uri, budget, models=[model_id])
+        train_job = app_dev2.create_train_job(app, task, train_dataset_id, val_dataset_id, budget, models=[model_id])
         assert train_job['app'] == app
         assert train_job['app_version'] == 1 # Should not increment
 
@@ -127,11 +138,11 @@ class TestTrainJobs():
 
 
     def test_app_dev_stop_train_job(self):
-        (task, app, model_id, train_dataset_uri, val_dataset_uri, budget) = make_train_job_info()
         app_dev = make_app_dev()
+        (task, app, model_id, train_dataset_id, val_dataset_id, budget) = make_train_job_info(app_dev)
 
         # Create train job
-        train_job = app_dev.create_train_job(app, task, train_dataset_uri, val_dataset_uri, budget, models=[model_id])
+        train_job = app_dev.create_train_job(app, task, train_dataset_id, val_dataset_id, budget, models=[model_id])
         assert 'id' in train_job
 
         # Stop train job
@@ -143,16 +154,16 @@ class TestTrainJobs():
     
 
     def test_app_dev_create_train_job_with_gpu(self):
-        (task, app, model_id, train_dataset_uri, val_dataset_uri, budget) = make_train_job_info()
-        budget['GPU_COUNT'] = 1 # Activate GPU
         app_dev = make_app_dev()
+        (task, app, model_id, train_dataset_id, val_dataset_id, budget) = make_train_job_info(app_dev)
+        budget[BudgetOption.GPU_COUNT] = 1 # With GPU
         
         # Create train job
-        train_job = app_dev.create_train_job(app, task, train_dataset_uri, val_dataset_uri, budget, models=[model_id])
+        train_job = app_dev.create_train_job(app, task, train_dataset_id, val_dataset_id, budget, models=[model_id])
         assert 'id' in train_job
 
         # Wait until train job stops
-        wait_until_train_job_stops(app, app_dev)
+        wait_for_train_job_status(app_dev, app, TrainJobStatus.STOPPED)
 
         # Train job should have stopped without error
         train_job = app_dev.get_train_job(app)
@@ -162,43 +173,48 @@ class TestTrainJobs():
         trials = app_dev.get_trials_of_train_job(app)
         assert len(trials) > 0
 
-
     def test_app_dev_cant_use_private_model(self):
-        (task, app, model_id, train_dataset_uri, val_dataset_uri, budget) = make_train_job_info()
-        model_id = make_private_model() # Have private model created
         app_dev = make_app_dev()
+        (task, app, _, train_dataset_id, val_dataset_id, budget) = make_train_job_info(app_dev)
+        model_id = make_private_model(task=task) # Have private model created
 
         # Can't create train job with private model
-        with pytest.raises(Exception):
-            app_dev.create_train_job(app, task, train_dataset_uri, val_dataset_uri, budget, models=[model_id])
+        with pytest.raises(Exception, match='InvalidModelError'):
+            app_dev.create_train_job(app, task, train_dataset_id, val_dataset_id, budget, models=[model_id])
 
+    def test_app_dev_informed_model_error(self):
+        app_dev = make_app_dev()
+        (task, app, _, train_dataset_id, val_dataset_id, budget) = make_train_job_info(app_dev)
+        model_id = make_invalid_model(task=task) # Have invalid model created
 
-def make_train_job_info(task=None):
+        # Create train job
+        app_dev.create_train_job(app, task, train_dataset_id, val_dataset_id, budget, models=[model_id])
+        
+        # Train job will be errored
+        with pytest.raises(Exception, match='errored'):
+            wait_for_train_job_status(app_dev, app, TrainJobStatus.STOPPED)
+
+    def test_app_dev_informed_model_error_with_multiple_models(self):
+        app_dev = make_app_dev()
+        (task, app, _, train_dataset_id, val_dataset_id, budget) = make_train_job_info(app_dev)
+        model_id = make_invalid_model(task=task) # Have invalid model created
+        model_id2 = make_model(task=task) # Have valid model created
+
+        # Create train job
+        app_dev.create_train_job(app, task, train_dataset_id, val_dataset_id, budget, models=[model_id, model_id2])
+
+        # Train job will be errored
+        with pytest.raises(Exception, match='errored'):
+            wait_for_train_job_status(app_dev, app, TrainJobStatus.STOPPED)
+
+def make_train_job_info(client: Client, task=None):
     task = task or gen()
     app = gen()
+    train_dataset_id = make_dataset(client, task=task)
+    val_dataset_id = make_dataset(client, task=task)
     model_id = make_model(task=task)
-    train_dataset_uri = DATASET_TRAIN_FILE_PATH
-    val_dataset_uri = DATASET_VAL_FILE_PATH
-    budget = { 'MODEL_TRIAL_COUNT': 1 }
 
-    return (task, app, model_id, train_dataset_uri, val_dataset_uri, budget)
+    # 1 trial & no GPU
+    budget = {BudgetOption.MODEL_TRIAL_COUNT: 1, BudgetOption.GPU_COUNT: 0}
 
-
-def wait_until_train_job_stops(app, client: Client):
-    length = 0
-    timeout = TRAIN_JOB_TIMEOUT_SECS
-    tick = 1
-
-    while True:
-        train_job = client.get_train_job(app)
-        status = train_job['status']
-        if status not in [TrainJobStatus.STARTED, TrainJobStatus.RUNNING]:
-            # Train job has stopped
-            return
-            
-        # Still running...
-        if length >= timeout:
-            raise TimeoutError('Train job is running for too long')
-
-        length += tick
-        time.sleep(tick)
+    return (task, app, model_id, train_dataset_id, val_dataset_id, budget)

@@ -9,8 +9,9 @@ User Guide
    quickstart-app-developers
    quickstart-app-users
    quickstart-admins
-   using-admin-web
-   creating-models
+   using-web-admin
    tasks
    datasets
    installing-python
+   model-development
+   model-tuning

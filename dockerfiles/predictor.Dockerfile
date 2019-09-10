@@ -1,3 +1,22 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 FROM ubuntu:16.04
 
 RUN apt-get update && apt-get -y upgrade
@@ -24,10 +43,12 @@ COPY rafiki/requirements.txt rafiki/requirements.txt
 RUN pip install -r rafiki/requirements.txt
 COPY rafiki/utils/requirements.txt rafiki/utils/requirements.txt
 RUN pip install -r rafiki/utils/requirements.txt
-COPY rafiki/db/requirements.txt rafiki/db/requirements.txt
-RUN pip install -r rafiki/db/requirements.txt
-COPY rafiki/cache/requirements.txt rafiki/cache/requirements.txt
-RUN pip install -r rafiki/cache/requirements.txt
+COPY rafiki/meta_store/requirements.txt rafiki/meta_store/requirements.txt
+RUN pip install -r rafiki/meta_store/requirements.txt
+COPY rafiki/redis/requirements.txt rafiki/redis/requirements.txt
+RUN pip install -r rafiki/redis/requirements.txt
+COPY rafiki/kafka/requirements.txt rafiki/kafka/requirements.txt
+RUN pip install -r rafiki/kafka/requirements.txt
 COPY rafiki/predictor/requirements.txt rafiki/predictor/requirements.txt
 RUN pip install -r rafiki/predictor/requirements.txt
 

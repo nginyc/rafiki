@@ -1,20 +1,32 @@
-import os
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
 import math
-import sys
 import random
-import datetime
-import numpy as np
-import traceback
-import pprint
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data.dataset import Dataset
 
-from rafiki.model import BaseModel, InvalidModelParamsException, test_model_class, \
-                        IntegerKnob, FloatKnob, CategoricalKnob, FixedKnob, logger, dataset_utils
-from rafiki.constants import TaskType, ModelDependency
+from rafiki.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, utils
+from rafiki.constants import ModelDependency
+from rafiki.model.dev import test_model_class
 
 class PyBiLstm(BaseModel):
     '''
@@ -23,7 +35,7 @@ class PyBiLstm(BaseModel):
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': FixedKnob(10),
+            'epochs': FixedKnob(1),
             'word_embed_dims': IntegerKnob(16, 128),
             'word_rnn_hidden_size': IntegerKnob(16, 128),
             'word_dropout': FloatKnob(1e-3, 2e-1, is_exp=True),
@@ -35,22 +47,22 @@ class PyBiLstm(BaseModel):
         super().__init__(**knobs)
         self._knobs = knobs
 
-    def train(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_corpus(dataset_uri)
+    def train(self, dataset_path, **kwargs):
+        dataset = utils.dataset.load_dataset_of_corpus(dataset_path)
         self._word_dict = self._extract_word_dict(dataset)
         self._tag_count = dataset.tag_num_classes[0] 
 
-        logger.log('No. of unique words: {}'.format(len(self._word_dict)))
-        logger.log('No. of tags: {}'.format(self._tag_count))
+        utils.logger.log('No. of unique words: {}'.format(len(self._word_dict)))
+        utils.logger.log('No. of tags: {}'.format(self._tag_count))
         
         (self._net, self._optimizer) = self._train(dataset)
         sents_tags = self._predict(dataset)
         acc = self._compute_accuracy(dataset, sents_tags)
 
-        logger.log('Train accuracy: {}'.format(acc))
+        utils.logger.log('Train accuracy: {}'.format(acc))
 
-    def evaluate(self, dataset_uri):
-        dataset = dataset_utils.load_dataset_of_corpus(dataset_uri)
+    def evaluate(self, dataset_path):
+        dataset = utils.dataset.load_dataset_of_corpus(dataset_path)
         sents_tags = self._predict(dataset)
         acc = self._compute_accuracy(dataset, sents_tags)
         return acc
@@ -60,28 +72,24 @@ class PyBiLstm(BaseModel):
         sents_tags = self._predict(queries)
         return sents_tags
 
-    def destroy(self):
-        pass
-
     def dump_parameters(self):
-        params = {}
-        params['net_state_dict'] = self._net.state_dict()
-        params['optimizer_state_dict'] = self._optimizer.state_dict()
-        params['word_dict'] = self._word_dict
-        params['tag_count'] = self._tag_count
+        net_params = self._state_dict_to_params(self._net.state_dict())
+        net_params = self._namespace_params(net_params, 'net')
+        word_dict_params = self._namespace_params(self._word_dict, 'word_dict')
+        params = {
+            **net_params,
+            **word_dict_params,
+            'tag_count': self._tag_count
+        }
         return params
 
     def load_parameters(self, params):
-        self._word_dict = params['word_dict']
         self._tag_count = params['tag_count']
-        (net, optimizer) = self._create_model()
-        net_state_dict = params['net_state_dict']
-        net.load_state_dict(net_state_dict)
-        optimizer_state_dict = params['optimizer_state_dict']
-        optimizer.load_state_dict(optimizer_state_dict)
-
-        self._net = net
-        self._optimizer = optimizer
+        self._word_dict = self._extract_namespace_from_params(params, 'word_dict')
+        net_params = self._extract_namespace_from_params(params, 'net')
+        net_state_dict = self._params_to_state_dict(net_params)
+        (self._net, self._optimizer) = self._create_model()
+        self._net.load_state_dict(net_state_dict)
 
     def _extract_word_dict(self, dataset):
         word_dict = {}
@@ -137,7 +145,7 @@ class PyBiLstm(BaseModel):
 
         Tensor = torch.LongTensor
         if torch.cuda.is_available():
-            logger.log('Using CUDA...')
+            utils.logger.log('Using CUDA...')
             net = net.cuda()
             Tensor = torch.cuda.LongTensor
 
@@ -170,15 +178,14 @@ class PyBiLstm(BaseModel):
         null_tag = self._tag_count # Tag to ignore (from padding of sentences during batching)
         B = math.ceil(len(dataset) / N) # No. of batches
 
-        # Define 2 plots: Loss against time, loss against epochs
-        logger.define_loss_plot()
-        logger.define_plot('Loss Over Time', ['loss'])
+        # Define loss plot
+        utils.logger.define_loss_plot()
 
         (net, optimizer) = self._create_model()
 
         Tensor = torch.LongTensor
         if torch.cuda.is_available():
-            logger.log('Using CUDA...')
+            utils.logger.log('Using CUDA...')
             net = net.cuda()
             Tensor = torch.cuda.LongTensor
 
@@ -208,7 +215,7 @@ class PyBiLstm(BaseModel):
 
                 total_loss += loss.item()
 
-            logger.log_loss(loss=(total_loss / B), epoch=epoch)
+            utils.logger.log_loss(loss=(total_loss / B), epoch=epoch)
 
         return (net, optimizer)
 
@@ -230,10 +237,50 @@ class PyBiLstm(BaseModel):
         lr = self._knobs.get('learning_rate')
 
         word_count = len(self._word_dict)
-        net =  PyNet(word_count + 1, self._tag_count + 1, \
+        net = PyNet(word_count + 1, self._tag_count + 1, \
                 word_embed_dims, word_rnn_hidden_size, word_dropout)
         optimizer = optim.Adam(net.parameters(), lr=lr)
         return (net, optimizer)
+
+    def _state_dict_to_params(self, state_dict):
+        params = {}
+        # For each tensor, convert into numpy array
+        for (name, value) in state_dict.items():
+            if isinstance(value, torch.Tensor):
+                value = value.cpu().numpy()
+            else:
+                raise Exception(f'Param not supported: {value}')
+
+            params[name] = value
+                
+        return params 
+
+    def _params_to_state_dict(self, params):
+        state_dict = {}
+        # For each tensor, convert into numpy array
+        for (name, value) in params.items():
+            state_dict[name] = torch.from_numpy(value)
+                
+        return state_dict 
+
+    def _namespace_params(self, params, namespace):
+        # For each param, add namespace prefix
+        out_params = {}
+        for (name, value) in params.items():
+            out_params[f'{namespace}:{name}'] = value
+        
+        return out_params
+
+    def _extract_namespace_from_params(self, params, namespace):
+        out_params = {}
+        # For each param, check for matching namespace, adding to out params without namespace prefix if matching 
+        for (name, value) in params.items():
+            if name.startswith(f'{namespace}:'):
+                param_name = name[(len(namespace)+1):]
+                out_params[param_name] = value
+        
+        return out_params
+
 
 class PyNet(nn.Module):
     def __init__(self, word_count, tag_count, word_embed_dims=8, \
@@ -277,12 +324,12 @@ if __name__ == '__main__':
     test_model_class(
         model_file_path=__file__,
         model_class='PyBiLstm',
-        task=TaskType.POS_TAGGING,
+        task='POS_TAGGING',
         dependencies={
-            ModelDependency.PYTORCH: '0.4.1'
+            ModelDependency.TORCH: '0.4.1'
         },
-        train_dataset_uri='data/ptb_for_pos_tagging_train.zip',
-        test_dataset_uri='data/ptb_for_pos_tagging_test.zip',
+        train_dataset_path='data/ptb_train.zip',
+        val_dataset_path='data/ptb_val.zip',
         queries=[
             ['Ms.', 'Haag', 'plays', 'Elianti', '18', '.'],
             ['The', 'luxury', 'auto', 'maker', 'last', 'year', 'sold', '1,214', 'cars', 'in', 'the', 'U.S.']

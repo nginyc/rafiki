@@ -1,6 +1,10 @@
+# PIP
+.cache/pip/
+
 # Python virtualenv environments
 env/
 envs/
+venv/
 
 # Visual Studio Code config
 .vscode/
@@ -38,5 +42,12 @@ params/*
 .ipynb_checkpoints/*
 *.ipynb
 
+# Pytest
+.coverage*
+.pytest_cache/
+
 # SQL dump files
 *.sql
+
+# Tensorflow
+.keras
