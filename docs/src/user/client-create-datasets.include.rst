@@ -8,7 +8,7 @@ Example (pre-processing step):
   .. code-block:: shell
 
         # Run this in shell
-        python examples/datasets/image_files/load_mnist_format.py
+        python examples/datasets/image_files/load_fashion_mnist.py
 
 
 Example:
@@ -45,5 +45,5 @@ Example:
 
 .. note::
 
-    The code that preprocesses the original Fashion MNIST dataset is available at `./examples/datasets/image_files/load_mnist_format.py <https://github.com/nginyc/rafiki/tree/master/examples/datasets/image_files/load_mnist_format.py>`_.
+    The code that preprocesses the original Fashion MNIST dataset is available at `./examples/datasets/image_files/load_fashion_mnist.py <https://github.com/nginyc/rafiki/tree/master/examples/datasets/image_files/load_fashion_mnist.py>`_.
     
