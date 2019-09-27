@@ -170,7 +170,7 @@
 <h2>Core<a class="headerlink" href="#core" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="rafiki.model.BaseModel">
-<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">BaseModel</code><span class="sig-paren">(</span><em class="sig-param">**knobs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">BaseModel</code><span class="sig-paren">(</span><em class="sig-param">**knobs: Dict[str, Any]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/model.html#BaseModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.BaseModel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Rafiki’s base model class that Rafiki models must extend.</p>
 <p>Rafiki models must implement all abstract methods below, according to the specification of its associated task (see <a class="reference internal" href="../user/tasks.html#tasks"><span class="std std-ref">Supported Tasks</span></a>).
 They configure how this model template will be trained, evaluated, tuned, serialized and served on Rafiki.</p>
@@ -302,31 +302,49 @@ No other instance methods will be called subsequently.</p>
 <dl class="data">
 <dt id="rafiki.model.Knobs">
 <code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">Knobs</code><em class="property"> = typing.Dict[str, typing.Any]</em><a class="headerlink" href="#rafiki.model.Knobs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>The central part of internal API.</p>
+<p>This represents a generic version of type ‘origin’ with type arguments ‘params’.
+There are two kind of these aliases: user defined and special. The special ones
+are wrappers around builtin collections and ABCs in collections.abc. These must
+have ‘name’ always set. If ‘inst’ is False, then the alias can’t be instantiated,
+this is used by e.g. typing.List and typing.Dict.</p>
+</dd></dl>
 
 <dl class="data">
 <dt id="rafiki.model.KnobConfig">
 <code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">KnobConfig</code><em class="property"> = typing.Dict[str, rafiki.model.knob.BaseKnob]</em><a class="headerlink" href="#rafiki.model.KnobConfig" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>The central part of internal API.</p>
+<p>This represents a generic version of type ‘origin’ with type arguments ‘params’.
+There are two kind of these aliases: user defined and special. The special ones
+are wrappers around builtin collections and ABCs in collections.abc. These must
+have ‘name’ always set. If ‘inst’ is False, then the alias can’t be instantiated,
+this is used by e.g. typing.List and typing.Dict.</p>
+</dd></dl>
 
 <dl class="data">
 <dt id="rafiki.model.Params">
 <code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">Params</code><em class="property"> = typing.Dict[str, typing.Union[str, int, float, numpy.ndarray]]</em><a class="headerlink" href="#rafiki.model.Params" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>The central part of internal API.</p>
+<p>This represents a generic version of type ‘origin’ with type arguments ‘params’.
+There are two kind of these aliases: user defined and special. The special ones
+are wrappers around builtin collections and ABCs in collections.abc. These must
+have ‘name’ always set. If ‘inst’ is False, then the alias can’t be instantiated,
+this is used by e.g. typing.List and typing.Dict.</p>
+</dd></dl>
 
 </div>
 <div class="section" id="knobs">
 <h2>Knobs<a class="headerlink" href="#knobs" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="rafiki.model.CategoricalKnob">
-<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">CategoricalKnob</code><span class="sig-paren">(</span><em class="sig-param">values: List[Union[str, int, float, rafiki.model.knob.KnobValue]]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#CategoricalKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.CategoricalKnob" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">CategoricalKnob</code><span class="sig-paren">(</span><em class="sig-param">values: List[Union[str, int, float, bool, rafiki.model.knob.KnobValue]]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#CategoricalKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.CategoricalKnob" title="Permalink to this definition">¶</a></dt>
 <dd><p>Knob type representing a categorical value of type <code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">bool</span></code> or <code class="docutils literal notranslate"><span class="pre">str</span></code>.
 <code class="docutils literal notranslate"><span class="pre">values</span></code> is a list of candidate cateogrical values for this knob type; a realization of this knob type would be an element of <code class="docutils literal notranslate"><span class="pre">values</span></code>.</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="rafiki.model.KnobValue">
-<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">KnobValue</code><span class="sig-paren">(</span><em class="sig-param">value: Union[str, int, float]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#KnobValue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.KnobValue" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">KnobValue</code><span class="sig-paren">(</span><em class="sig-param">value: Union[str, int, float, bool]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#KnobValue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.KnobValue" title="Permalink to this definition">¶</a></dt>
 <dd><p>Wrapper for a <code class="docutils literal notranslate"><span class="pre">CategoricalValue</span></code>.</p>
 </dd></dl>
 
@@ -346,7 +364,7 @@ No other instance methods will be called subsequently.</p>
 
 <dl class="class">
 <dt id="rafiki.model.FixedKnob">
-<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">FixedKnob</code><span class="sig-paren">(</span><em class="sig-param">value: Union[str, int, float, rafiki.model.knob.KnobValue]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#FixedKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.FixedKnob" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">FixedKnob</code><span class="sig-paren">(</span><em class="sig-param">value: Union[str, int, float, bool, rafiki.model.knob.KnobValue]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#FixedKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.FixedKnob" title="Permalink to this definition">¶</a></dt>
 <dd><p>Knob type representing a fixed value of type <code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">bool</span></code> or <code class="docutils literal notranslate"><span class="pre">str</span></code>.
 Essentially, this represents a knob type that does not require tuning.</p>
 </dd></dl>
@@ -363,7 +381,7 @@ Activation of all policies default to false.</p>
 
 <dl class="class">
 <dt id="rafiki.model.ArchKnob">
-<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">ArchKnob</code><span class="sig-paren">(</span><em class="sig-param">items: List[List[Union[str, int, float, rafiki.model.knob.KnobValue]]]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#ArchKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.ArchKnob" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">rafiki.model.</code><code class="sig-name descname">ArchKnob</code><span class="sig-paren">(</span><em class="sig-param">items: List[List[Union[str, int, float, bool, rafiki.model.knob.KnobValue]]]</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/rafiki/model/knob.html#ArchKnob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rafiki.model.ArchKnob" title="Permalink to this definition">¶</a></dt>
 <dd><p>Knob type representing part of a model’s architecture as a fixed-size list of categorical values. 
 <code class="docutils literal notranslate"><span class="pre">items</span></code> is a list of list of candidate categorical values; a realization of this knob type would be a list of categorical values, wIth the value at each index matching an element of the list of candidates at that index.</p>
 <p>To illustrate, the following can be a definition of 3-layer model’s architecture search space inspired by the ENAS cell architecture construction strategy:</p>

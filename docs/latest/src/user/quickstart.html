@@ -239,6 +239,10 @@ Alternatively, refer and run the scripted version of this quickstart
 <div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="o">./</span><span class="n">rafiki</span><span class="o">/</span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
 </pre></div>
 </div>
+<p>Ensure that <cite>PYTHONPATH</cite> is set to project’s root folder:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>export PYTHONPATH=$PWD
+</pre></div>
+</div>
 </div></blockquote>
 </li>
 </ol>
@@ -328,7 +332,7 @@ After doing so, you’ll create 2 corresponding datasets on Rafiki by uploading 
 <p>Example (pre-processing step):</p>
 <blockquote>
 <div><div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run this in shell</span>
-python examples/datasets/image_files/load_mnist_format.py
+python examples/datasets/image_files/load_fashion_mnist.py
 </pre></div>
 </div>
 </div></blockquote>
@@ -366,7 +370,7 @@ python examples/datasets/image_files/load_mnist_format.py
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The code that preprocesses the original Fashion MNIST dataset is available at <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/datasets/image_files/load_mnist_format.py">./examples/datasets/image_files/load_mnist_format.py</a>.</p>
+<p>The code that preprocesses the original Fashion MNIST dataset is available at <a class="reference external" href="https://github.com/nginyc/rafiki/tree/master/examples/datasets/image_files/load_fashion_mnist.py">./examples/datasets/image_files/load_fashion_mnist.py</a>.</p>
 </div>
 </div>
 <div class="section" id="creating-a-train-job">

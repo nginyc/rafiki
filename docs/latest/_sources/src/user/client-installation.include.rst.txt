@@ -8,3 +8,9 @@
 
         pip install -r ./rafiki/requirements.txt
 
+    
+    Ensure that `PYTHONPATH` is set to project's root folder:
+
+    ::
+    
+        export PYTHONPATH=$PWD 
