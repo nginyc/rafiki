@@ -40,15 +40,15 @@ from rafiki.model.dev import test_model_class
 
 class LeNet5(BaseModel):
     '''
-    Implements LeNet5 network to train model for simple image classification
+    Implements LeNet5 network to train image classification model on mnist dataset
     '''
     @staticmethod
     def get_knob_config():
         return {
-            'epochs': FixedKnob(50),
-            'batch_size': CategoricalKnob([1, 64, 128]),
+            'epochs': FixedKnob(15),
+            'batch_size': CategoricalKnob([32, 64, 128]),
             'l_rate': FloatKnob(0.0001, 0.001, 0.01),
-            'max_image_size': FixedKnob(32)
+            'max_image_size': CategoricalKnob([28, 32])
         }
 
 
@@ -60,8 +60,8 @@ class LeNet5(BaseModel):
 
   
     def train(self, dataset_path, **kwargs):
-        ep = self._knobs['epochs']
-        bs = self._knobs['batch_size']
+        ep = self._knobs.get('epochs')
+        bs = self._knobs.get('batch_size')
         
         dataset = utils.dataset.load_dataset_of_image_files(dataset_path, max_image_size=self.max_image_size, mode='L')
         self._image_size = dataset.image_size
@@ -100,6 +100,7 @@ class LeNet5(BaseModel):
         images = self._prepare_X(images)
         images = np.pad(images, ((0,0),(2,2),(2,2),(0,0)), 'constant')
         X_test, y_test = images, to_categorical(classes, num_classes = 10)
+
         # Compute test accuracy
         (test_loss, test_acc) = self._model.evaluate(X_test, y_test)
         return test_acc
@@ -110,6 +111,7 @@ class LeNet5(BaseModel):
         X = self._prepare_X(queries)
         X = np.pad(X, ((0,0),(2,2),(2,2),(0,0)), 'constant')
         probs = self._model.predict_proba(X)
+        
         return probs.tolist()
 
 
@@ -146,7 +148,7 @@ class LeNet5(BaseModel):
             
     
     def _build_classifier(self, l_rate):
-        l_rate = self._knobs['l_rate']
+        l_rate = self._knobs.get('l_rate')
         model = models.Sequential()
         model.add(layers.Conv2D(filters=6, kernel_size=(3, 3), activation='relu', input_shape=(32,32,1)))
         model.add(layers.AveragePooling2D())
@@ -156,52 +158,32 @@ class LeNet5(BaseModel):
         model.add(layers.Dense(units=120, activation='relu'))
         model.add(layers.Dense(units=84, activation='relu'))
         model.add(layers.Dense(units=10, activation = 'softmax'))      
-        adam = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
+        adam = Adam(lr=l_rate, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
         model.compile(loss=keras.losses.categorical_crossentropy, optimizer=adam, metrics=['accuracy'])
         
         return model
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--train_path', type=str, default='data/fashion_mnist_train.zip', help='Path to train dataset')
+    parser.add_argument('--val_path', type=str, default='data/fashion_mnist_val.zip', help='Path to validation dataset')
+    parser.add_argument('--test_path', type=str, default='data/fashion_mnist_test.zip', help='Path to test dataset')
+    parser.add_argument('--query_path', type=str, default='examples/data/image_classification/fashion_mnist_test_1.png', 
+                        help='Path(s) to query image(s), delimited by commas')
+    (args, _) = parser.parse_known_args()
+
+    queries = utils.dataset.load_images(args.query_path.split(',')).tolist()
     test_model_class(
         model_file_path=__file__,
         model_class='LeNet5',
-        task=TaskType.IMAGE_CLASSIFICATION,
+        task='IMAGE_CLASSIFICATION',
         dependencies={
-            ModelDependency.TENSORFLOW: '1.12.0',
             ModelDependency.KERAS: '2.2.4'
-        },
-        train_dataset_path='data/fashion_mnist_train.zip',
-        val_dataset_path='data/fashion_mnist_val.zip',
-        test_dataset_path='data/fashion_mnist_test.zip',
-        queries=[
-            [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 7, 0, 37, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 27, 84, 11, 0, 0, 0, 0, 0, 0, 119, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 88, 143, 110, 0, 0, 0, 0, 22, 93, 106, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 53, 129, 120, 147, 175, 157, 166, 135, 154, 168, 140, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 11, 137, 130, 128, 160, 176, 159, 167, 178, 149, 151, 144, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 0, 3, 0, 0, 115, 114, 106, 137, 168, 153, 156, 165, 167, 143, 157, 158, 11, 0], 
-            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 89, 139, 90, 94, 153, 149, 131, 151, 169, 172, 143, 159, 169, 48, 0], 
-            [0, 0, 0, 0, 0, 0, 2, 4, 1, 0, 0, 0, 98, 136, 110, 109, 110, 162, 135, 144, 149, 159, 167, 144, 158, 169, 119, 0], 
-            [0, 0, 2, 2, 1, 2, 0, 0, 0, 0, 26, 108, 117, 99, 111, 117, 136, 156, 134, 154, 154, 156, 160, 141, 147, 156, 178, 0], 
-            [3, 0, 0, 0, 0, 0, 0, 21, 53, 92, 117, 111, 103, 115, 129, 134, 143, 154, 165, 170, 154, 151, 154, 143, 138, 150, 165, 43], 
-            [0, 0, 23, 54, 65, 76, 85, 118, 128, 123, 111, 113, 118, 127, 125, 139, 133, 136, 160, 140, 155, 161, 144, 155, 172, 161, 189, 62], 
-            [0, 68, 94, 90, 111, 114, 111, 114, 115, 127, 135, 136, 143, 126, 127, 151, 154, 143, 148, 125, 162, 162, 144, 138, 153, 162, 196, 58], 
-            [70, 169, 129, 104, 98, 100, 94, 97, 98, 102, 108, 106, 119, 120, 129, 149, 156, 167, 190, 190, 196, 198, 198, 187, 197, 189, 184, 36], 
-            [16, 126, 171, 188, 188, 184, 171, 153, 135, 120, 126, 127, 146, 185, 195, 209, 208, 255, 209, 177, 245, 252, 251, 251, 247, 220, 206, 49], 
-            [0, 0, 0, 12, 67, 106, 164, 185, 199, 210, 211, 210, 208, 190, 150, 82, 8, 0, 0, 0, 178, 208, 188, 175, 162, 158, 151, 11], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-        ]
+            },
+        train_dataset_path=args.train_path,
+        val_dataset_path=args.val_path,
+        test_dataset_path=args.test_path,
+        queries=queries
+
     )
