@@ -11,7 +11,7 @@ import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
 
-import Logo from "../../assets/Logo-Rafiki-cleaned.png"
+import Logo from "../../assets/Logo-SingaAuto-cleaned.png"
 
 
 // Navigator basic color dark blue specified in
@@ -102,7 +102,7 @@ class Navigator extends React.Component {
               classes.itemCategory)}
           >
             <img alt="logo" src={Logo} className={classes.logo} />
-            Rafiki
+            SingaAuto
           </ListItem>
           {navLinks.map((link, index) => (
             <ListItem

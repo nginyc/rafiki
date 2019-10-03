@@ -23,7 +23,7 @@ import Collapse from '@material-ui/core/Collapse';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
 
-import Logo from "assets/Logo-Rafiki-cleaned.png"
+import Logo from "assets/Logo-SingaAuto-cleaned.png"
 
 // customize scrollbar for the fixed-div navigator
 import SimpleBar from 'simplebar-react';
@@ -213,7 +213,7 @@ class Navigator extends React.Component {
                 classes.itemCategory)}
             >
               <img alt="logo" src={Logo} className={classes.logo} />
-              <span className={classes.logoText}>Rafiki</span>
+              <span className={classes.logoText}>SingaAuto</span>
             </ListItem>
          
             {categories.map(({id, collapseID, collapseIn, children }) => (

@@ -25,9 +25,9 @@ import numpy as np
 import base64
 import argparse
 
-from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, PolicyKnob
-from rafiki.constants import ModelDependency
-from rafiki.model.dev import test_model_class
+from singaauto.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, PolicyKnob
+from singaauto.constants import ModelDependency
+from singaauto.model.dev import test_model_class
 
 class TfFeedForward(BaseModel):
     '''

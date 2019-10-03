@@ -22,17 +22,17 @@ import argparse
 import os
 import base64
 
-from rafiki.client import Client
-from rafiki.config import SUPERADMIN_EMAIL
-from rafiki.constants import BudgetOption, ModelDependency
+from singaauto.client import Client
+from singaauto.config import SUPERADMIN_EMAIL
+from singaauto.constants import BudgetOption, ModelDependency
 
 from examples.scripts.quickstart import get_predictor_host, \
     wait_until_train_job_has_stopped, make_predictions, gen_id
 
 from examples.datasets.audio_files.load_librispeech import load_librispeech
 
-IMAGE_TFDEEPSPEECH_VERSION = os.environ['RAFIKI_VERSION']
-IMAGE_TFDEEPSPEECH = f'rafiki_tfdeepspeech:{IMAGE_TFDEEPSPEECH_VERSION}'
+IMAGE_TFDEEPSPEECH_VERSION = os.environ['SINGAAUTO_VERSION']
+IMAGE_TFDEEPSPEECH = f'singaauto_tfdeepspeech:{IMAGE_TFDEEPSPEECH_VERSION}'
 
 def run_speech_recognition(client, train_dataset_path, val_dataset_path, gpus, hours):
     '''
@@ -46,13 +46,13 @@ def run_speech_recognition(client, train_dataset_path, val_dataset_path, gpus, h
     app = 'speech_recognition_app_{}'.format(app_id)
     tf_model_name = 'TfDeepSpeech_{}'.format(app_id)
 
-    print('Creating & uploading datasets onto Rafiki...')
+    print('Creating & uploading datasets onto SingaAuto...')
     train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
     pprint(train_dataset)
     val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_path)
     pprint(val_dataset)
 
-    print('Adding models "{}" to Rafiki...'.format(tf_model_name)) 
+    print('Adding models "{}" to SingaAuto...'.format(tf_model_name)) 
     tf_model = client.create_model(tf_model_name, task, 'examples/models/speech_recognition/TfDeepSpeech.py',
                         'TfDeepSpeech',
                         docker_image=IMAGE_TFDEEPSPEECH,
@@ -62,7 +62,7 @@ def run_speech_recognition(client, train_dataset_path, val_dataset_path, gpus, h
                         })
     pprint(tf_model)
 
-    print('Creating train job for app "{}" on Rafiki...'.format(app))
+    print('Creating train job for app "{}" on SingaAuto...'.format(app))
     budget = {
         BudgetOption.TIME_HOURS: hours,
         BudgetOption.GPU_COUNT: gpus
@@ -71,7 +71,7 @@ def run_speech_recognition(client, train_dataset_path, val_dataset_path, gpus, h
                                         budget, models=[tf_model['id']])
     pprint(train_job)
 
-    print('Monitor the train job on Rafiki Web Admin')
+    print('Monitor the train job on SingaAuto Web Admin')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

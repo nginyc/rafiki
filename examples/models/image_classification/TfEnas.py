@@ -29,10 +29,10 @@ from collections import namedtuple
 import numpy as np
 import argparse
 
-from rafiki.constants import ModelDependency
-from rafiki.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
+from singaauto.constants import ModelDependency
+from singaauto.model import utils, BaseModel, IntegerKnob, CategoricalKnob, FloatKnob, \
                             FixedKnob, ArchKnob, KnobValue, PolicyKnob
-from rafiki.model.dev import test_model_class
+from singaauto.model.dev import test_model_class
 
 _Model = namedtuple('_Model', 
                     ['train_dataset_init_op', 'pred_dataset_init_op', 
@@ -52,7 +52,7 @@ TF_COLLECTION_MONITORED = 'MONITORED'
 class TfEnas(BaseModel):
     '''
         Implements the child model of cell-based "Efficient Neural Architecture Search via Parameter Sharing" (ENAS) 
-        for IMAGE_CLASSIFICATION, configured for *architecture tuning with ENAS* on Rafiki. 
+        for IMAGE_CLASSIFICATION, configured for *architecture tuning with ENAS* on SingaAuto. 
         
         Original paper: https://arxiv.org/abs/1802.03268
         Implementation is with credits to https://github.com/melodyguan/enas

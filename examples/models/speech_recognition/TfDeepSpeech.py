@@ -20,10 +20,10 @@ import base64
 import argparse
 from ds_ctcdecoder import ctc_beam_search_decoder_batch, ctc_beam_search_decoder, Scorer
 
-from rafiki.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, \
+from singaauto.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, \
     PolicyKnob, utils, logger
-from rafiki.constants import ModelDependency
-from rafiki.model.dev import test_model_class
+from singaauto.constants import ModelDependency
+from singaauto.model.dev import test_model_class
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -113,13 +113,13 @@ class TfDeepSpeech(BaseModel):
     Implements a speech recognition neural network model developed by Baidu. It contains five hiddlen layers.
     By default, this model works only for the *English* language.
     
-    To run this model locally, you'll first need to download this model's file dependencies by running (in Rafiki's root folder):
+    To run this model locally, you'll first need to download this model's file dependencies by running (in SingaAuto's root folder):
     
     ```
     bash examples/models/speech_recognition/tfdeepspeech/download_file_deps.sh
     ```
 
-    To add this model to Rafiki, you'll need to build the model's custom Docker image by running (in Rafiki's root folder):
+    To add this model to SingaAuto, you'll need to build the model's custom Docker image by running (in SingaAuto's root folder):
  
     ```
     bash examples/models/speech_recognition/tfdeepspeech/build_image.sh

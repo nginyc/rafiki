@@ -53,7 +53,7 @@ function DocsCard(props) {
         <SyntaxHighlighter language='javascript' style={gruvboxDark}>
           {`
 ustore> get -k myfirstKey -b master
-[SUCCESS: GET] Value<Blob>: "this is the first key i put into the rafiki"
+[SUCCESS: GET] Value<Blob>: "this is the first key i put into the singaauto"
 
 ustore> get -k myfirstKey -v A62JUGB6ORFDMN3LKMFDM6MRLAKMFIXE
 [SUCCESS: GET] Value<Blob>: "i want to know the version generated"

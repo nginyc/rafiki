@@ -1,3 +1,3 @@
 # /bin/bash
 
-docker build -t rafiki-web-ui:dev -f ../docker-web/Dockerfile .
+docker build -t singaauto-web-ui:dev -f ../docker-web/Dockerfile .

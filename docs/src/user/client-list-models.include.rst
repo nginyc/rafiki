@@ -23,4 +23,4 @@ Example:
         'task': 'IMAGE_CLASSIFICATION',
         'user_id': 'fb5671f1-c673-40e7-b53a-9208eb1ccc50'}]
 
-.. seealso:: :meth:`rafiki.client.Client.get_available_models`
+.. seealso:: :meth:`singaauto.client.Client.get_available_models`

@@ -20,8 +20,8 @@
 import math
 import json
 
-from rafiki.model import BaseModel, utils, FixedKnob
-from rafiki.model.dev import test_model_class
+from singaauto.model import BaseModel, utils, FixedKnob
+from singaauto.model.dev import test_model_class
 
 class BigramHmm(BaseModel):
     '''

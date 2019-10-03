@@ -22,7 +22,7 @@ import { Route } from "react-router-dom";
 import { withStyles, } from '@material-ui/core/styles';
 import * as moment from 'moment';
 import PlotManager from "app/PlotManager";
-import RafikiClient from "app/RafikiClient";
+import SingaAutoClient from "app/SingaAutoClient";
 import HTTPconfig from "HTTPconfig"
 
 import { Paper, List, ListItem, Typography, Divider, Table, TableBody, TableRow, 
@@ -56,7 +56,7 @@ class TrialDetails extends React.Component {
     this.chart = []
     const adminHost = HTTPconfig.adminHost || "localhost"; 
     const adminPort = HTTPconfig.adminPort || 3000;
-    this.rafikiClient = new RafikiClient(adminHost, adminPort);
+    this.singaautoClient = new SingaAutoClient(adminHost, adminPort);
     this.plotManager = new PlotManager();
   }
 
@@ -66,8 +66,8 @@ class TrialDetails extends React.Component {
 
     try {
       const [logs, trial] = await Promise.all([
-        this.rafikiClient.getTrialLogs(trialId),
-        this.rafikiClient.getTrial(trialId)
+        this.singaautoClient.getTrialLogs(trialId),
+        this.singaautoClient.getTrial(trialId)
       ]);
       this.setState({ logs, trial });
     } catch (error) {

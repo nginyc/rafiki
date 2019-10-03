@@ -8,7 +8,7 @@ import Typography from '../LandingComponents/Typography';
 import LayoutBody from '../LandingComponents/LayoutBody';
 import Button from '../LandingComponents/Button';
 
-import tryRafiki from "../../assets/tryRafiki.png"
+import trySingaAuto from "../../assets/trySingaAuto.png"
 
 const styles = theme => ({
   root: {
@@ -45,7 +45,7 @@ const styles = theme => ({
   },
 });
 
-class LandingTryRafiki extends React.Component {
+class LandingTrySingaAuto extends React.Component {
   render() {
     const { classes } = this.props;
 
@@ -56,7 +56,7 @@ class LandingTryRafiki extends React.Component {
             <div className={classes.card}>
               <div className={classes.cardContent}>
                 <Typography variant="h2" component="h2" gutterBottom>
-                  Try rafiki
+                  Try singaauto
                 </Typography>
                 <Typography variant="h5">
                 a distributed system that trains machine learning (ML) models and deploys trained models
@@ -78,8 +78,8 @@ class LandingTryRafiki extends React.Component {
           <Grid item xs={12} md={6} className={classes.imagesWrapper}>
             <Hidden smDown>
               <img
-                src={tryRafiki}
-                alt="tryRafiki"
+                src={trySingaAuto}
+                alt="trySingaAuto"
                 className={classes.image}
               />
             </Hidden>
@@ -90,4 +90,4 @@ class LandingTryRafiki extends React.Component {
   }
 }
 
-export default withStyles(styles)(LandingTryRafiki);
+export default withStyles(styles)(LandingTrySingaAuto);

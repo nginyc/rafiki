@@ -37,12 +37,12 @@ sys.path.insert(0, os.path.abspath('.'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'Rafiki'
+project = 'SingaAuto'
 copyright = '2019, nginyc, cadmusthefounder, nudles'
 author = 'nginyc, cadmusthefounder, nudles'
 
 # The short X.Y version
-version = os.environ['RAFIKI_VERSION']
+version = os.environ['SINGAAUTO_VERSION']
 # The full version, including alpha/beta/rc tags
 release = ''
 
@@ -123,7 +123,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Rafikidoc'
+htmlhelp_basename = 'SingaAutodoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -150,7 +150,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'Rafiki.tex', 'Rafiki Documentation',
+    (master_doc, 'SingaAuto.tex', 'SingaAuto Documentation',
      'nginyc, cadmusthefounder, nudles', 'manual'),
 ]
 
@@ -160,7 +160,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'rafiki', 'Rafiki Documentation',
+    (master_doc, 'singaauto', 'SingaAuto Documentation',
      [author], 1)
 ]
 
@@ -171,8 +171,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'Rafiki', 'Rafiki Documentation',
-     author, 'Rafiki', 'One line description of project.',
+    (master_doc, 'SingaAuto', 'SingaAuto Documentation',
+     author, 'SingaAuto', 'One line description of project.',
      'Miscellaneous'),
 ]
 

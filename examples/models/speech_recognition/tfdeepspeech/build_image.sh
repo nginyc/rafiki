@@ -19,6 +19,6 @@
 
 WORKDIR=$(dirname $0)
 
-docker build -t rafiki_tfdeepspeech:$RAFIKI_VERSION -f $WORKDIR/tfdeepspeech.Dockerfile \
-    --build-arg RAFIKI_IMAGE_WORKER=$RAFIKI_IMAGE_WORKER \
-    --build-arg RAFIKI_VERSION=$RAFIKI_VERSION $WORKDIR
+docker build -t singaauto_tfdeepspeech:$SINGAAUTO_VERSION -f $WORKDIR/tfdeepspeech.Dockerfile \
+    --build-arg SINGAAUTO_IMAGE_WORKER=$SINGAAUTO_IMAGE_WORKER \
+    --build-arg SINGAAUTO_VERSION=$SINGAAUTO_VERSION $WORKDIR

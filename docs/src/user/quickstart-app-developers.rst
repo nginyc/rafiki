@@ -3,17 +3,17 @@
 Quick Start (Application Developers)
 ====================================================================
 
-As an *App Developer*, you can manage datasets, train jobs & inference jobs on Rafiki. This guide walks through a *full* train-inference flow:
+As an *App Developer*, you can manage datasets, train jobs & inference jobs on SingaAuto. This guide walks through a *full* train-inference flow:
 
-    1. Authenticating on Rafiki
+    1. Authenticating on SingaAuto
     2. Uploading datasets
     3. Creating a model training job
     4. Creating a model serving job after the model training job completes
     
-This guide assumes that you have access to a running instance of *Rafiki Admin* at ``<rafiki_host>:<admin_port>``
-and *Rafiki Web Admin* at ``<rafiki_host>:<web_admin_port>``, and there have been models added to Rafiki under the task of `IMAGE_CLASSIFICATION`.
+This guide assumes that you have access to a running instance of *SingaAuto Admin* at ``<singaauto_host>:<admin_port>``
+and *SingaAuto Web Admin* at ``<singaauto_host>:<web_admin_port>``, and there have been models added to SingaAuto under the task of `IMAGE_CLASSIFICATION`.
 
-To learn more about what else you can do on Rafiki, explore the methods of :class:`rafiki.client.Client`.
+To learn more about what else you can do on SingaAuto, explore the methods of :class:`singaauto.client.Client`.
 
 Installing the client
 --------------------------------------------------------------------
@@ -28,11 +28,11 @@ Example:
 
     .. code-block:: python
 
-        from rafiki.client import Client
+        from singaauto.client import Client
         client = Client(admin_host='localhost', admin_port=3000)
-        client.login(email='app_developer@rafiki', password='rafiki')
+        client.login(email='app_developer@singaauto', password='singaauto')
         
-.. seealso:: :meth:`rafiki.client.Client.login`
+.. seealso:: :meth:`singaauto.client.Client.login`
 
 Listing available models by task
 --------------------------------------------------------------------
@@ -93,7 +93,7 @@ Example:
                     'service_id': '81ff23a7-ddd0-4a62-9d86-a3cc985ca6fe',
                     'status': 'STOPPED'}]}
 
-.. seealso:: :meth:`rafiki.client.Client.get_train_job`
+.. seealso:: :meth:`singaauto.client.Client.get_train_job`
 
 Listing best trials of the latest train job
 --------------------------------------------------------------------
@@ -126,7 +126,7 @@ Example:
         'model_name': 'SkDt',
         'score': 0.6686}]
 
-.. seealso:: :meth:`rafiki.client.Client.get_best_trials_of_train_job`
+.. seealso:: :meth:`singaauto.client.Client.get_best_trials_of_train_job`
 
 .. _`creating-inference-job`:
 
@@ -149,7 +149,7 @@ Listing inference jobs
 Retrieving details of running inference job
 --------------------------------------------------------------------
 
-.. seealso:: :meth:`rafiki.client.Client.get_running_inference_job`
+.. seealso:: :meth:`singaauto.client.Client.get_running_inference_job`
 
 Example:
 
@@ -211,7 +211,7 @@ To do this, you must have the trial's model class file already in your local fil
 the dependencies of the model must have been installed separately, and the model class must have been 
 imported and passed into this method.
 
-To download the model class file, use the method :meth:`rafiki.client.Client.download_model_file`.
+To download the model class file, use the method :meth:`singaauto.client.Client.download_model_file`.
 
 Example:
 
@@ -269,4 +269,4 @@ Example:
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]]
             print(model_inst.predict(queries))
 
-.. seealso:: :meth:`rafiki.client.Client.load_trial_model`
+.. seealso:: :meth:`singaauto.client.Client.load_trial_model`

@@ -19,7 +19,7 @@
 
 import pytest
 
-from rafiki.client import Client
+from singaauto.client import Client
 from test.utils import global_setup, make_app_dev, gen, DATASET_FILE_PATH
 
 class TestDatasets():

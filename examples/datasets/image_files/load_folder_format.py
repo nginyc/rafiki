@@ -31,7 +31,7 @@ def load(data_dir: str, image_width: int, image_height: int,
         out_train_dataset_path: str, out_val_dataset_path: str, 
         out_meta_csv_path: str, validation_split: float):
     '''
-        Loads and converts a set of labelled folders of images as a Rafiki-conformant dataset for IMAGE_CLASSIFICATION.
+        Loads and converts a set of labelled folders of images as a SingaAuto-conformant dataset for IMAGE_CLASSIFICATION.
 
         :param str data_dir: Root directory containing the set of labelled folders
         :param int image_width: Width to resize all images to

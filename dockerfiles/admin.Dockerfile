@@ -39,18 +39,18 @@ WORKDIR $DOCKER_WORKDIR_PATH
 ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 
 # Install python dependencies
-COPY rafiki/requirements.txt rafiki/requirements.txt
-RUN pip install -r rafiki/requirements.txt
-COPY rafiki/utils/requirements.txt rafiki/utils/requirements.txt
-RUN pip install -r rafiki/utils/requirements.txt
-COPY rafiki/meta_store/requirements.txt rafiki/meta_store/requirements.txt
-RUN pip install -r rafiki/meta_store/requirements.txt
-COPY rafiki/container/requirements.txt rafiki/container/requirements.txt
-RUN pip install -r rafiki/container/requirements.txt
-COPY rafiki/admin/requirements.txt rafiki/admin/requirements.txt
-RUN pip install -r rafiki/admin/requirements.txt
+COPY singaauto/requirements.txt singaauto/requirements.txt
+RUN pip install -r singaauto/requirements.txt
+COPY singaauto/utils/requirements.txt singaauto/utils/requirements.txt
+RUN pip install -r singaauto/utils/requirements.txt
+COPY singaauto/meta_store/requirements.txt singaauto/meta_store/requirements.txt
+RUN pip install -r singaauto/meta_store/requirements.txt
+COPY singaauto/container/requirements.txt singaauto/container/requirements.txt
+RUN pip install -r singaauto/container/requirements.txt
+COPY singaauto/admin/requirements.txt singaauto/admin/requirements.txt
+RUN pip install -r singaauto/admin/requirements.txt
 
-COPY rafiki/ rafiki/
+COPY singaauto/ singaauto/
 COPY scripts/ scripts/
 
 EXPOSE 3000

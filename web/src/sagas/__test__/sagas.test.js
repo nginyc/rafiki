@@ -12,7 +12,7 @@ describe("watchSigninRequest should wait for action SIGN_IN_REQUEST", function()
 })
 
 describe("authLogin Saga Unit Test", function() {
-    const gen = cloneableGenerator(authLogin)(actions.signInRequest({ username: "superadmin@rafiki ", password: "rafiki" }))
+    const gen = cloneableGenerator(authLogin)(actions.signInRequest({ username: "superadmin@singaauto ", password: "singaauto" }))
 
     it("should dispatch action AUTH_START", function() { 
         const step1 = gen.next() 
@@ -22,8 +22,8 @@ describe("authLogin Saga Unit Test", function() {
     it("should be able to call request the token", function() {
         const step2 = gen.next()
         expect(step2.value).toEqual(call(api.requestSignIn, {
-            username: "superadmin@rafiki ",
-            password: "rafiki"
+            username: "superadmin@singaauto ",
+            password: "singaauto"
         }))
     });
 

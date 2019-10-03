@@ -17,7 +17,7 @@
 # under the License.
 #
 
-from rafiki.model import BaseModel
+from singaauto.model import BaseModel
 
 class Model(BaseModel):
     '''

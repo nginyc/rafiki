@@ -22,21 +22,21 @@ source ./.env.sh
 
 source ./scripts/utils.sh
 
-# Build Rafiki's images
+# Build SingaAuto's images
 
-title "Building Rafiki Admin's image..."
-docker build -t $RAFIKI_IMAGE_ADMIN:$RAFIKI_VERSION -f ./dockerfiles/admin.Dockerfile \
+title "Building SingaAuto Admin's image..."
+docker build -t $SINGAAUTO_IMAGE_ADMIN:$SINGAAUTO_VERSION -f ./dockerfiles/admin.Dockerfile \
     --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH \
     --build-arg CONDA_ENVIORNMENT=$CONDA_ENVIORNMENT $PWD || exit 1 
-title "Building Rafiki Worker's image..."
-docker build -t $RAFIKI_IMAGE_WORKER:$RAFIKI_VERSION -f ./dockerfiles/worker.Dockerfile \
+title "Building SingaAuto Worker's image..."
+docker build -t $SINGAAUTO_IMAGE_WORKER:$SINGAAUTO_VERSION -f ./dockerfiles/worker.Dockerfile \
     --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH \
     --build-arg CONDA_ENVIORNMENT=$CONDA_ENVIORNMENT $PWD || exit 1 
-title "Building Rafiki Predictor's image..."
-docker build -t $RAFIKI_IMAGE_PREDICTOR:$RAFIKI_VERSION -f ./dockerfiles/predictor.Dockerfile \
+title "Building SingaAuto Predictor's image..."
+docker build -t $SINGAAUTO_IMAGE_PREDICTOR:$SINGAAUTO_VERSION -f ./dockerfiles/predictor.Dockerfile \
     --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH \
     --build-arg CONDA_ENVIORNMENT=$CONDA_ENVIORNMENT $PWD || exit 1 
-title "Building Rafiki Web Admin's image..."
-docker build -t $RAFIKI_IMAGE_WEB_ADMIN:$RAFIKI_VERSION -f ./dockerfiles/web_admin.Dockerfile \
+title "Building SingaAuto Web Admin's image..."
+docker build -t $SINGAAUTO_IMAGE_WEB_ADMIN:$SINGAAUTO_VERSION -f ./dockerfiles/web_admin.Dockerfile \
     --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH $PWD || exit 1 
-echo "Finished building all Rafiki's images successfully!"
+echo "Finished building all SingaAuto's images successfully!"

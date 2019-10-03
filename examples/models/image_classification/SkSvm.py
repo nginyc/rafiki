@@ -23,9 +23,9 @@ import base64
 import numpy as np
 import argparse
 
-from rafiki.model import BaseModel, CategoricalKnob, FloatKnob, FixedKnob, utils
-from rafiki.constants import ModelDependency
-from rafiki.model.dev import test_model_class
+from singaauto.model import BaseModel, CategoricalKnob, FloatKnob, FixedKnob, utils
+from singaauto.constants import ModelDependency
+from singaauto.model.dev import test_model_class
 
 class SkSvm(BaseModel):
     '''

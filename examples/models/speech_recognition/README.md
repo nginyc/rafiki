@@ -5,13 +5,13 @@
 ### Using Pre-built LM and Trie
 
 By default, the `TfDeepSpeech` model should use the pre-built language model (LM) and trie from https://github.com/mozilla/DeepSpeech/tree/v0.6.0-alpha.4/data/lm for training,
-which works for the *English* language. You'll need to first download this model's file dependencies by running (in Rafiki's root folder):
+which works for the *English* language. You'll need to first download this model's file dependencies by running (in SingaAuto's root folder):
     
 ```
 bash examples/models/speech_recognition/tfdeepspeech/download_file_deps.sh
 ```
 
-This downloads the files `alphabet.txt`, `lm.binary` and `trie` into `<rafiki_root_directory>/tfdeepspeech`, where the `TfDeepSpeech` model reads its dependencies from by default.
+This downloads the files `alphabet.txt`, `lm.binary` and `trie` into `<singaauto_root_directory>/tfdeepspeech`, where the `TfDeepSpeech` model reads its dependencies from by default.
 
 If you wish to generate your own language models and trie files instead, or wish to implement TfDeepSpeech to other languages, see instructions provided below.
 
@@ -55,14 +55,14 @@ The TfDeepSpeech model requires a binary n-gram language model compiled by `kenl
     
 4. Quantize and produce trie binary
 
-    Now substitute `<rafiki_root_directory>` with the path to rafiki root, and run the following:
+    Now substitute `<singaauto_root_directory>` with the path to singaauto root, and run the following:
 
     ```sh
     bin/build_binary -a 255 \
                      -q 8 \
                      trie \
                      /tmp/lm.arpa \
-                     <rafiki_root_directory>/data/lm.binary
+                     <singaauto_root_directory>/data/lm.binary
     rm /tmp/lm.arpa
     ```
     The `lm.binary` binary Language Model file is now in the data directory.
@@ -76,7 +76,7 @@ Remember to modify the `alphabet.txt` file if you are training TfDeepSpeech on l
 Run
 
 ```sh
-bazel-bin/native-clinet/generate_trie ../rafiki/examples/datasets/speech_recognition/alphabet.txt ../rafiki/data/lm.binary ../rafiki/data/trie
+bazel-bin/native-clinet/generate_trie ../singaauto/examples/datasets/speech_recognition/alphabet.txt ../singaauto/data/lm.binary ../singaauto/data/trie
 ```
 
 The `trie` file is now in the data directory.

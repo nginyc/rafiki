@@ -21,9 +21,9 @@ from pprint import pprint
 import argparse
 import os
 
-from rafiki.client import Client
-from rafiki.config import SUPERADMIN_EMAIL
-from rafiki.constants import BudgetOption, ModelDependency
+from singaauto.client import Client
+from singaauto.config import SUPERADMIN_EMAIL
+from singaauto.constants import BudgetOption, ModelDependency
 
 from examples.scripts.quickstart import get_predictor_host, \
     wait_until_train_job_has_stopped, make_predictions, gen_id
@@ -47,18 +47,18 @@ def run_tabular_regression(client, csv_file_url, gpus, hours, features=None, tar
     print('Preprocessing dataset...')
     load(csv_file_url, train_dataset_path, val_dataset_path)
 
-    print('Creating & uploading datasets onto Rafiki...')
+    print('Creating & uploading datasets onto SingaAuto...')
     train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
     pprint(train_dataset)
     val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_path)
     pprint(val_dataset)
 
-    print('Adding models "{}" to Rafiki...'.format(xgb_model_name)) 
+    print('Adding models "{}" to SingaAuto...'.format(xgb_model_name)) 
     xgb_model = client.create_model(xgb_model_name, task, 'examples/models/tabular_regression/XgbReg.py', \
                         'XgbReg', dependencies={ ModelDependency.XGBOOST: '0.90' }) 
     pprint(xgb_model)
 
-    print('Creating train job for app "{}" on Rafiki...'.format(app))
+    print('Creating train job for app "{}" on SingaAuto...'.format(app))
     budget = {
         BudgetOption.TIME_HOURS: hours,
         BudgetOption.GPU_COUNT: gpus
@@ -75,7 +75,7 @@ def run_tabular_regression(client, csv_file_url, gpus, hours, features=None, tar
     print('Listing best trials of latest train job for app "{}"...'.format(app))
     pprint(client.get_best_trials_of_train_job(app))
 
-    print('Creating inference job for app "{}" on Rafiki...'.format(app))
+    print('Creating inference job for app "{}" on SingaAuto...'.format(app))
     pprint(client.create_inference_job(app))
     predictor_host = get_predictor_host(client, app)
     if not predictor_host: raise Exception('Inference job has errored or stopped')

@@ -3,8 +3,8 @@ Dataset Types
 
 .. note::
 
-    Refer to `./examples/datasets/ <https://github.com/nginyc/rafiki/tree/master/examples/datasets/>`_ for examples on pre-processing 
-    common dataset formats to conform to the Rafiki's own dataset formats.
+    Refer to `./examples/datasets/ <https://github.com/nginyc/singaauto/tree/master/examples/datasets/>`_ for examples on pre-processing 
+    common dataset formats to conform to the SingaAuto's own dataset formats.
 
 .. _`dataset-type:IMAGE_FILES`:
 

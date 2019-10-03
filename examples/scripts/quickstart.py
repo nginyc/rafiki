@@ -23,10 +23,10 @@ import requests
 import argparse
 import os
 
-from rafiki.client import Client
-from rafiki.config import SUPERADMIN_EMAIL
-from rafiki.constants import BudgetOption, InferenceBudgetOption, InferenceJobStatus, ModelDependency
-from rafiki.model import utils
+from singaauto.client import Client
+from singaauto.config import SUPERADMIN_EMAIL
+from singaauto.constants import BudgetOption, InferenceBudgetOption, InferenceJobStatus, ModelDependency
+from singaauto.model import utils
 
 from examples.scripts.utils import gen_id, wait_until_train_job_has_stopped
 from examples.datasets.image_files.load_fashion_mnist import load_fashion_mnist
@@ -75,13 +75,13 @@ def quickstart(client, train_dataset_path, val_dataset_path, gpus, hours, query_
     print('Preprocessing datasets...')
     load_fashion_mnist(train_dataset_path, val_dataset_path)
     
-    print('Creating & uploading datasets onto Rafiki...')
+    print('Creating & uploading datasets onto SingaAuto...')
     train_dataset = client.create_dataset('{}_train'.format(app), task, train_dataset_path)
     pprint(train_dataset)
     val_dataset = client.create_dataset('{}_val'.format(app), task, val_dataset_path)
     pprint(val_dataset)
 
-    print('Adding models "{}" and "{}" to Rafiki...'.format(tf_model_name, sk_model_name)) 
+    print('Adding models "{}" and "{}" to SingaAuto...'.format(tf_model_name, sk_model_name)) 
     tf_model = client.create_model(tf_model_name, task, 'examples/models/image_classification/TfFeedForward.py', 
                         'TfFeedForward', dependencies={ ModelDependency.TENSORFLOW: '1.12.0' })
     pprint(tf_model)
@@ -90,7 +90,7 @@ def quickstart(client, train_dataset_path, val_dataset_path, gpus, hours, query_
     pprint(sk_model)
     model_ids = [tf_model['id'], sk_model['id']]
 
-    print('Creating train job for app "{}" on Rafiki...'.format(app)) 
+    print('Creating train job for app "{}" on SingaAuto...'.format(app)) 
 
     budget = {
         BudgetOption.TIME_HOURS: hours,
@@ -108,7 +108,7 @@ def quickstart(client, train_dataset_path, val_dataset_path, gpus, hours, query_
     print('Listing best trials of latest train job for app "{}"...'.format(app))
     pprint(client.get_best_trials_of_train_job(app))
 
-    print('Creating inference job for app "{}" on Rafiki...'.format(app))
+    print('Creating inference job for app "{}" on SingaAuto...'.format(app))
     pprint(client.create_inference_job(app))
     predictor_host = get_predictor_host(client, app)
     if not predictor_host: raise Exception('Inference job has errored')
@@ -126,8 +126,8 @@ def quickstart(client, train_dataset_path, val_dataset_path, gpus, hours, query_
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--host', type=str, default='localhost', help='Host of Rafiki instance')
-    parser.add_argument('--web_admin_port', type=int, default=os.environ.get('WEB_ADMIN_EXT_PORT', 3001), help='Port for Rafiki Web Admin on host')
+    parser.add_argument('--host', type=str, default='localhost', help='Host of SingaAuto instance')
+    parser.add_argument('--web_admin_port', type=int, default=os.environ.get('WEB_ADMIN_EXT_PORT', 3001), help='Port for SingaAuto Web Admin on host')
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
     parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use for training')

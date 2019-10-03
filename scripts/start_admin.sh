@@ -28,7 +28,7 @@ fi
 
 source ./scripts/utils.sh
 
-title "Starting Rafiki's Admin..."
+title "Starting SingaAuto's Admin..."
 
 (docker run --rm --name $ADMIN_HOST \
   --network $DOCKER_NETWORK \
@@ -45,10 +45,10 @@ title "Starting Rafiki's Admin..."
   -e KAFKA_HOST=$KAFKA_HOST \
   -e KAFKA_PORT=$KAFKA_PORT \
   -e PREDICTOR_PORT=$PREDICTOR_PORT \
-  -e RAFIKI_ADDR=$RAFIKI_ADDR \
-  -e RAFIKI_IMAGE_WORKER=$RAFIKI_IMAGE_WORKER \
-  -e RAFIKI_IMAGE_PREDICTOR=$RAFIKI_IMAGE_PREDICTOR \
-  -e RAFIKI_VERSION=$RAFIKI_VERSION \
+  -e SINGAAUTO_ADDR=$SINGAAUTO_ADDR \
+  -e SINGAAUTO_IMAGE_WORKER=$SINGAAUTO_IMAGE_WORKER \
+  -e SINGAAUTO_IMAGE_PREDICTOR=$SINGAAUTO_IMAGE_PREDICTOR \
+  -e SINGAAUTO_VERSION=$SINGAAUTO_VERSION \
   -e DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH \
   -e WORKDIR_PATH=$DOCKER_WORKDIR_PATH \
   -e HOST_WORKDIR_PATH=$HOST_WORKDIR_PATH \
@@ -59,7 +59,7 @@ title "Starting Rafiki's Admin..."
   -v /var/run/docker.sock:/var/run/docker.sock \
   $VOLUME_MOUNTS \
   -p $ADMIN_EXT_PORT:$ADMIN_PORT \
-  $RAFIKI_IMAGE_ADMIN:$RAFIKI_VERSION \
+  $SINGAAUTO_IMAGE_ADMIN:$SINGAAUTO_VERSION \
   &> $LOG_FILE_PATH) &
 
-ensure_stable "Rafiki's Admin" $LOG_FILE_PATH 20
+ensure_stable "SingaAuto's Admin" $LOG_FILE_PATH 20

@@ -28,27 +28,27 @@ title "Stopping any existing jobs..."
 python ./scripts/stop_all_jobs.py
 
 # Prompt if should stop DB
-if prompt "Should stop Rafiki's DB?"
+if prompt "Should stop SingaAuto's DB?"
 then
     bash scripts/stop_db.sh || exit 1
 else
-    echo "Not stopping Rafiki's DB!"
+    echo "Not stopping SingaAuto's DB!"
 fi
 
-title "Stopping Rafiki's Zookeeper..."
-docker rm -f $ZOOKEEPER_HOST || echo "Failed to stop Rafiki's Zookeeper"
+title "Stopping SingaAuto's Zookeeper..."
+docker rm -f $ZOOKEEPER_HOST || echo "Failed to stop SingaAuto's Zookeeper"
 
-title "Stopping Rafiki's Kafka..."
-docker rm -f $KAFKA_HOST || echo "Failed to stop Rafiki's Kafka"
+title "Stopping SingaAuto's Kafka..."
+docker rm -f $KAFKA_HOST || echo "Failed to stop SingaAuto's Kafka"
 
-title "Stopping Rafiki's Redis..."
-docker rm -f $REDIS_HOST || echo "Failed to stop Rafiki's Redis"
+title "Stopping SingaAuto's Redis..."
+docker rm -f $REDIS_HOST || echo "Failed to stop SingaAuto's Redis"
 
-title "Stopping Rafiki's Admin..."
-docker rm -f $ADMIN_HOST || echo "Failed to stop Rafiki's Admin"
+title "Stopping SingaAuto's Admin..."
+docker rm -f $ADMIN_HOST || echo "Failed to stop SingaAuto's Admin"
 
-title "Stopping Rafiki's Web Admin..."
-docker rm -f $WEB_ADMIN_HOST || echo "Failed to stop Rafiki's Web Admin"
+title "Stopping SingaAuto's Web Admin..."
+docker rm -f $WEB_ADMIN_HOST || echo "Failed to stop SingaAuto's Web Admin"
 
 echo "You'll need to destroy your machine's Docker swarm manually"
 

@@ -55,7 +55,7 @@ function DocsCard(props) {
         <SyntaxHighlighter language='javascript' style={gruvboxDark}>
           {`
 // Put simple string to master
-ustore> put -k myfirstKey -b master -x "this is the first key i put into the rafiki"
+ustore> put -k myfirstKey -b master -x "this is the first key i put into the singaauto"
 [SUCCESS: PUT] Type: Blob, Version: QOPJBWT4ITXVOSFWY4RNYPIXIPRVHCAZ
 
 // Put a file to master

@@ -29,7 +29,7 @@ Example:
             query_path = 'examples/data/image_classification/fashion_mnist_test_1.png'
 
             # Load query image as 3D list of pixels
-            from rafiki.model import utils
+            from singaauto.model import utils
             [query] = utils.dataset.load_images([query_path]).tolist()
 
             # Make request to predictor

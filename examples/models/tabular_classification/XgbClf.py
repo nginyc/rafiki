@@ -24,9 +24,9 @@ import pandas as pd
 import numpy as np
 import json
 
-from rafiki.model import BaseModel, IntegerKnob, FloatKnob, logger
-from rafiki.model.dev import test_model_class
-from rafiki.constants import ModelDependency
+from singaauto.model import BaseModel, IntegerKnob, FloatKnob, logger
+from singaauto.model.dev import test_model_class
+from singaauto.constants import ModelDependency
 
 class XgbClf(BaseModel):
     '''

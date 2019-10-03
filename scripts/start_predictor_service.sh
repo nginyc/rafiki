@@ -18,7 +18,7 @@
 #
 
 usage()  {
-  echo "Usage: $0 <service_name> <rafiki_service_id> <rafiki_service_type> <published_port>"
+  echo "Usage: $0 <service_name> <singaauto_service_id> <singaauto_service_type> <published_port>"
   exit 1
 }
 
@@ -38,8 +38,8 @@ docker service create --name $1 \
   -e KAFKA_HOST=$KAFKA_HOST \
   -e KAFKA_PORT=$KAFKA_PORT \
   -e PREDICTOR_PORT=$PREDICTOR_PORT \
-  -e RAFIKI_SERVICE_TYPE=$3 \
-  -e RAFIKI_SERVICE_ID=$2 \
+  -e SINGAAUTO_SERVICE_TYPE=$3 \
+  -e SINGAAUTO_SERVICE_ID=$2 \
   -e WORKDIR_PATH=$DOCKER_WORKDIR_PATH \
   -e DATA_DIR_PATH=$DATA_DIR_PATH \
   -e PARAMS_DIR_PATH=$PARAMS_DIR_PATH \
@@ -48,4 +48,4 @@ docker service create --name $1 \
   --mount type=bind,src=$HOST_WORKDIR_PATH/$PARAMS_DIR_PATH,dst=$DOCKER_WORKDIR_PATH/$PARAMS_DIR_PATH \
   --mount type=bind,src=$HOST_WORKDIR_PATH/$LOGS_DIR_PATH:$DOCKER_WORKDIR_PATH,dst=$LOGS_DIR_PATH \
   -p $4:$PREDICTOR_PORT \
-  $RAFIKI_IMAGE_PREDICTOR:$RAFIKI_VERSION
+  $SINGAAUTO_IMAGE_PREDICTOR:$SINGAAUTO_VERSION

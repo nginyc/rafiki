@@ -43,7 +43,7 @@ function ContactComponents(props) {
             <div className="center__description">
               <p className="description__text">
                 <b>Repository: </b><br />
-                <a href="https://github.com/nginyc/rafiki" target="_blank" rel="noopener noreferrer">https://github.com/nginyc/rafiki</a>
+                <a href="https://github.com/nginyc/singaauto" target="_blank" rel="noopener noreferrer">https://github.com/nginyc/singaauto</a>
               </p>
             </div>
           </div>

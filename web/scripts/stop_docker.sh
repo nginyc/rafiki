@@ -1,4 +1,4 @@
 # bin/bash
 
-docker stop rafiki-web-ui
-docker rm rafiki-web-ui
+docker stop singaauto-web-ui
+docker rm singaauto-web-ui

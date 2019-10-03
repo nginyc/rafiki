@@ -4,6 +4,6 @@ Python Documentation
 .. toctree::
    :maxdepth: 2
    
-   rafiki.client
-   rafiki.model
-   rafiki.constants
+   singaauto.client
+   singaauto.model
+   singaauto.constants

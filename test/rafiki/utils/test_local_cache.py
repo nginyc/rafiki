@@ -20,7 +20,7 @@
 import pytest
 import numpy as np
 
-from rafiki.utils.local_cache import LocalCache
+from singaauto.utils.local_cache import LocalCache
 from test.utils import global_setup
 
 class TestLocalCache():

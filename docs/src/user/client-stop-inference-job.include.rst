@@ -4,4 +4,4 @@ Example:
 
         client.stop_inference_job(app='fashion_mnist_app')
 
-.. seealso:: :meth:`rafiki.client.Client.stop_inference_job`
+.. seealso:: :meth:`singaauto.client.Client.stop_inference_job`

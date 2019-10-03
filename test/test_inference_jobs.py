@@ -19,8 +19,8 @@
 
 import pytest
 
-from rafiki.client import Client
-from rafiki.constants import TrainJobStatus, InferenceJobStatus
+from singaauto.client import Client
+from singaauto.constants import TrainJobStatus, InferenceJobStatus
 from test.utils import global_setup, make_app_dev, make_model, gen,make_train_job, \
                     wait_for_train_job_status, wait_for_inference_job_status
 

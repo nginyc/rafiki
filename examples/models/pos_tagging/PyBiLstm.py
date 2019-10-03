@@ -24,9 +24,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from rafiki.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, utils
-from rafiki.constants import ModelDependency
-from rafiki.model.dev import test_model_class
+from singaauto.model import BaseModel, FixedKnob, IntegerKnob, FloatKnob, CategoricalKnob, utils
+from singaauto.constants import ModelDependency
+from singaauto.model.dev import test_model_class
 
 class PyBiLstm(BaseModel):
     '''

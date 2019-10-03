@@ -17,4 +17,4 @@ Example:
         'status': 'RUNNING',
         'train_job_id': 'ec4db479-b9b2-4289-8086-52794ffc71c8'}
 
-.. seealso:: :meth:`rafiki.client.Client.get_inference_jobs_of_app`
+.. seealso:: :meth:`singaauto.client.Client.get_inference_jobs_of_app`

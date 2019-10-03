@@ -33,16 +33,16 @@ from collections import namedtuple
 from collections import OrderedDict
 import argparse
 
-from rafiki.constants import ModelDependency
-from rafiki.model import BaseModel, utils, FixedKnob, FloatKnob, CategoricalKnob, PolicyKnob
-from rafiki.model.dev import test_model_class
+from singaauto.constants import ModelDependency
+from singaauto.model import BaseModel, utils, FixedKnob, FloatKnob, CategoricalKnob, PolicyKnob
+from singaauto.model.dev import test_model_class
 
 _Model = namedtuple('_Model', ['net', 'step'])
 
 class PyDenseNetBc(BaseModel):
     '''
         Implements DenseNet-BC of "Densely Connected Convolutional Networks" for IMAGE_CLASSIFICATION,
-        configured for *hyperparameter tuning with distributed parameter sharing* on Rafiki.
+        configured for *hyperparameter tuning with distributed parameter sharing* on SingaAuto.
         
         Original paper: https://arxiv.org/abs/1608.06993
         Implementation is with credits to https://github.com/gpleiss/efficient_densenet_pytorch

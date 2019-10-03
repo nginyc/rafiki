@@ -21,10 +21,10 @@ LOG_FILE_PATH=$PWD/logs/start_zookeeper.log
 
 source ./scripts/utils.sh
 
-title "Starting Rafiki's Zookeeper..."
+title "Starting SingaAuto's Zookeeper..."
 (docker run --rm --name $ZOOKEEPER_HOST \
   --network $DOCKER_NETWORK \
   -p $ZOOKEEPER_EXT_PORT:$ZOOKEEPER_PORT \
   -d $IMAGE_ZOOKEEPER \
   &> $LOG_FILE_PATH) &
-ensure_stable "Rafiki's Zookeeper" $LOG_FILE_PATH 30
+ensure_stable "SingaAuto's Zookeeper" $LOG_FILE_PATH 30

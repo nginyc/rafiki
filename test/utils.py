@@ -24,9 +24,9 @@ import uuid
 import random
 import numpy as np
 
-from rafiki.constants import UserType, ModelAccessRight, TrainJobStatus, BudgetOption, InferenceJobStatus
-from rafiki.client import Client
-from rafiki.config import SUPERADMIN_EMAIL
+from singaauto.constants import UserType, ModelAccessRight, TrainJobStatus, BudgetOption, InferenceJobStatus
+from singaauto.client import Client
+from singaauto.config import SUPERADMIN_EMAIL
 
 
 superadmin_email = SUPERADMIN_EMAIL
@@ -52,7 +52,7 @@ def gen():
     return str(uuid.uuid4())
 
 def gen_email():
-    return f'{uuid.uuid4()}@rafiki'
+    return f'{uuid.uuid4()}@singaauto'
 
 ####################################
 # Users

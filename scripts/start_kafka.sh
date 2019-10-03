@@ -21,7 +21,7 @@ LOG_FILE_PATH=$PWD/logs/start_kafka.log
 
 source ./scripts/utils.sh
 
-title "Starting Rafiki's Kafka..."
+title "Starting SingaAuto's Kafka..."
 (docker run --rm --name $KAFKA_HOST \
   --network $DOCKER_NETWORK \
   -e KAFKA_ZOOKEEPER_CONNECT=$ZOOKEEPER_HOST:$ZOOKEEPER_PORT \
@@ -30,4 +30,4 @@ title "Starting Rafiki's Kafka..."
   -p $KAFKA_EXT_PORT:$KAFKA_PORT \
   -d $IMAGE_KAFKA \
   &> $LOG_FILE_PATH) &
-ensure_stable "Rafiki's Kafka" $LOG_FILE_PATH 30
+ensure_stable "SingaAuto's Kafka" $LOG_FILE_PATH 30

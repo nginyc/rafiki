@@ -33,5 +33,5 @@ then
     fi
 fi
 
-title "Stopping Rafiki's DB..."
-docker rm -f $POSTGRES_HOST || echo "Failed to stop Rafiki's DB"
+title "Stopping SingaAuto's DB..."
+docker rm -f $POSTGRES_HOST || echo "Failed to stop SingaAuto's DB"

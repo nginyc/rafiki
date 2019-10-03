@@ -1,4 +1,4 @@
-# Rafiki Dashboard
+# SingaAuto Dashboard
 
 ## How to run the app
 
@@ -9,24 +9,24 @@ yarn start
 ## How to setup Api End Point (environment parameters)
 
 ```
-rafiki $ source env.sh
+singaauto $ source env.sh
 ```
 
 ```
-rafiki/web $ vim .env
+singaauto/web $ vim .env
 ```
 
 ```
 PORT=$WEB_ADMIN_EXT_PORT
 NODE_PATH=./src
-REACT_APP_API_POINT_HOST=$RAFIKI_ADDR
+REACT_APP_API_POINT_HOST=$SINGAAUTO_ADDR
 REACT_APP_API_POINT_PORT=$ADMIN_EXT_PORT
 ```
 
 ```
 export DOCKER_SWARM_ADVERTISE_ADDR=10.0.0.125
-export RAFIKI_VERSION=0.3.0
-export RAFIKI_ADDR=ncrs.d2.comp.nus.edu.sg
+export SINGAAUTO_VERSION=0.3.0
+export SINGAAUTO_ADDR=ncrs.d2.comp.nus.edu.sg
 ```
 
 ## How to SET input path
@@ -78,8 +78,8 @@ header: content_type = 'application/json'
 #### request
 ``` json
 {
-	"email": "superadmin@rafiki",
-	"password": "rafiki"
+	"email": "superadmin@singaauto",
+	"password": "singaauto"
 }
 ```
 
@@ -132,7 +132,7 @@ should use muitlform but does not need to set it because the browser would set i
         "dependencies": {
             "tensorflow": "1.12.0"
         },
-        "docker_image": "rafikiai/rafiki_worker:0.0.9",
+        "docker_image": "singaautoai/singaauto_worker:0.0.9",
         "model_class": "TfFeedForward",
         "name": "TfFeedForward_GOZ9JANFQVVQT6LX",
         "task": "IMAGE_CLASSIFICATION",
@@ -144,7 +144,7 @@ should use muitlform but does not need to set it because the browser would set i
         "dependencies": {
             "scikit-learn": "0.20.0"
         },
-        "docker_image": "rafikiai/rafiki_worker:0.0.9",
+        "docker_image": "singaautoai/singaauto_worker:0.0.9",
         "model_class": "SkDt",
         "name": "SkDt_GOZ9JANFQVVQT6LX",
         "task": "IMAGE_CLASSIFICATION",
@@ -156,7 +156,7 @@ should use muitlform but does not need to set it because the browser would set i
         "dependencies": {
             "tensorflow": "1.12.0"
         },
-        "docker_image": "rafikiai/rafiki_worker:0.0.9",
+        "docker_image": "singaautoai/singaauto_worker:0.0.9",
         "model_class": "TfFeedForward",
         "name": "TfFeedForward_RY0DI2PV26UMPJ2L",
         "task": "IMAGE_CLASSIFICATION",
@@ -168,7 +168,7 @@ should use muitlform but does not need to set it because the browser would set i
         "dependencies": {
             "scikit-learn": "0.20.0"
         },
-        "docker_image": "rafikiai/rafiki_worker:0.0.9",
+        "docker_image": "singaautoai/singaauto_worker:0.0.9",
         "model_class": "SkDt",
         "name": "SkDt_RY0DI2PV26UMPJ2L",
         "task": "IMAGE_CLASSIFICATION",
@@ -180,7 +180,7 @@ should use muitlform but does not need to set it because the browser would set i
         "dependencies": {
             "tensorflow": "1.12.0"
         },
-        "docker_image": "rafikiai/rafiki_worker:0.0.9",
+        "docker_image": "singaautoai/singaauto_worker:0.0.9",
         "model_class": "TfFeedForward",
         "name": "TfFeedForward",
         "task": "IMAGE_CLASSIFICATION",
@@ -206,8 +206,8 @@ should use muitlform but does not need to set it because the browser would set i
 {
     "app":"fashion_mnist_app",
     "task": "IMAGE_CLASSIFICATION",
-    "train_dataset_uri":"https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true",
-    "test_dataset_uri":"https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true",
+    "train_dataset_uri":"https://github.com/nginyc/singaauto-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true",
+    "test_dataset_uri":"https://github.com/nginyc/singaauto-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true",
         "budget": { "MODEL_TRIAL_COUNT": 2 }
     "models" ["TfFeedForward"]
 }
@@ -247,8 +247,8 @@ should use muitlform but does not need to set it because the browser would set i
         "id": "db738d0e-9a5f-48af-bde1-28b1c71bee02",
         "status": "STOPPED",
         "task": "IMAGE_CLASSIFICATION",
-        "test_dataset_uri": "https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true",
-        "train_dataset_uri": "https://github.com/nginyc/rafiki-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true"
+        "test_dataset_uri": "https://github.com/nginyc/singaauto-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_test.zip?raw=true",
+        "train_dataset_uri": "https://github.com/nginyc/singaauto-datasets/blob/master/fashion_mnist/fashion_mnist_for_image_classification_train.zip?raw=true"
     },
 	......
 ]

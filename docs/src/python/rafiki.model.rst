@@ -1,55 +1,55 @@
-rafiki.model
+singaauto.model
 ====================================================================
 
 Core
 --------------------------------------------------------------------
 
-.. autoclass:: rafiki.model.BaseModel
+.. autoclass:: singaauto.model.BaseModel
     :members:
 
-.. autoclass:: rafiki.model.BaseKnob
+.. autoclass:: singaauto.model.BaseKnob
     :members:
 
-.. autodata:: rafiki.model.Knobs
-.. autodata:: rafiki.model.KnobConfig
-.. autodata:: rafiki.model.Params
+.. autodata:: singaauto.model.Knobs
+.. autodata:: singaauto.model.KnobConfig
+.. autodata:: singaauto.model.Params
 
 Knobs
 --------------------------------------------------------------------
 
-.. autoclass:: rafiki.model.CategoricalKnob
+.. autoclass:: singaauto.model.CategoricalKnob
     :members:
 
-.. autoclass:: rafiki.model.KnobValue
+.. autoclass:: singaauto.model.KnobValue
     :members:
 
-.. autoclass:: rafiki.model.IntegerKnob
+.. autoclass:: singaauto.model.IntegerKnob
     :members:
 
-.. autoclass:: rafiki.model.FloatKnob
+.. autoclass:: singaauto.model.FloatKnob
     :members:
 
-.. autoclass:: rafiki.model.FixedKnob
+.. autoclass:: singaauto.model.FixedKnob
     :members:
 
-.. autoclass:: rafiki.model.PolicyKnob
+.. autoclass:: singaauto.model.PolicyKnob
     :members:
 
-.. autoclass:: rafiki.model.ArchKnob
+.. autoclass:: singaauto.model.ArchKnob
     :members:
 
 Utility
 --------------------------------------------------------------------
 
-.. automodule:: rafiki.model.dev
+.. automodule:: singaauto.model.dev
     :members:
 
-.. autoclass:: rafiki.model.LoggerUtils
+.. autoclass:: singaauto.model.LoggerUtils
     :members:
 
-.. autoclass:: rafiki.model.DatasetUtils
+.. autoclass:: singaauto.model.DatasetUtils
     :members:
 
-.. autoclass:: rafiki.model.ImageFilesDataset
+.. autoclass:: singaauto.model.ImageFilesDataset
 
-.. autoclass:: rafiki.model.CorpusDataset
+.. autoclass:: singaauto.model.CorpusDataset

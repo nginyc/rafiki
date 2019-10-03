@@ -3,7 +3,7 @@
 Quick Start (Application Users)
 ====================================================================
 
-As an App User, you can make predictions on models deployed on Rafiki.
+As an App User, you can make predictions on models deployed on SingaAuto.
 
 .. _`making-predictions`:
 
@@ -36,7 +36,7 @@ Example:
                         'examples/data/image_classification/fashion_mnist_test_2.png']
 
             # Load query image as 3D list of pixels
-            from rafiki.model import utils
+            from singaauto.model import utils
             queries = utils.dataset.load_images(query_paths).tolist()
 
             # Make request to predictor
