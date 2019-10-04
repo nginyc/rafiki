@@ -4,7 +4,7 @@
 Installing Python
 ====================================================================
 
-Usage of Rafiki requires Python 3.6. Specifically, you'll need the command ``python`` to point to a Python 3.6 program, and ``pip`` to point to PIP for that Python 3.6 installation.
+Usage of SingaAuto requires Python 3.6. Specifically, you'll need the command ``python`` to point to a Python 3.6 program, and ``pip`` to point to PIP for that Python 3.6 installation.
 
 To achieve this, we recommend using *Conda* with a Python 3.6 environment as per the instructions below:
 
@@ -14,13 +14,13 @@ To achieve this, we recommend using *Conda* with a Python 3.6 environment as per
 
         .. code-block:: shell
 
-            conda create --name rafiki python=3.6
+            conda create --name singaauto python=3.6
 
-    3. Every time you need to use ``python`` or ``pip`` for Rafiki, run the following command on shell:
+    3. Every time you need to use ``python`` or ``pip`` for SingaAuto, run the following command on shell:
 
         .. code-block:: shell
 
-            conda activate rafiki
+            conda activate singaauto
 
 
 Otherwise, you can refer to these links below on installing Python natively: 

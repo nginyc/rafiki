@@ -3,47 +3,47 @@
 Folder Structure
 ====================================================================
 
-- `rafiki/`
+- `singaauto/`
 
-    Rafiki's Python package 
+    SingaAuto's Python package 
 
     - `admin/`
 
-        Rafiki's static Admin component
+        SingaAuto's static Admin component
 
     - `advisor/`
 
-        Rafiki's advisors
+        SingaAuto's advisors
 
     - `client/`
 
-        Rafiki's client-side SDK
+        SingaAuto's client-side SDK
 
-        .. seealso:: :class:`rafiki.client`
+        .. seealso:: :class:`singaauto.client`
 
     - `worker/`
 
-        Rafiki's train, inference & advisor workers
+        SingaAuto's train, inference & advisor workers
     
     - `predictor/`
 
-        Rafiki's predictor
+        SingaAuto's predictor
 
     - `meta_store/`
 
-        Abstract data access layer for Rafiki's main metadata store (backed by PostgreSQL)
+        Abstract data access layer for SingaAuto's main metadata store (backed by PostgreSQL)
     
     - `param_store/`
 
-        Abstract data access layer for Rafiki's store of model parameters (backed by filesystem)
+        Abstract data access layer for SingaAuto's store of model parameters (backed by filesystem)
 
     - `data_store/`
 
-        Abstract data access layer for Rafiki's store of datasets (backed by filesystem)
+        Abstract data access layer for SingaAuto's store of datasets (backed by filesystem)
 
     - `cache/`
 
-        Abstract data access layer for Rafiki's temporary store of model parameters, train job metadata and queries & predictions in train & inference jobs (backed by Redis)
+        Abstract data access layer for SingaAuto's temporary store of model parameters, train job metadata and queries & predictions in train & inference jobs (backed by Redis)
 
     - `container/`
 
@@ -51,42 +51,42 @@ Folder Structure
 
     - `utils/`
 
-        Collection of Rafiki-internal utility methods (e.g. for logging, authentication)
+        Collection of SingaAuto-internal utility methods (e.g. for logging, authentication)
 
     - `model/`
 
-        Definition of abstract :class:`rafiki.model.BaseModel` that all Rafiki models should extend, programming 
+        Definition of abstract :class:`singaauto.model.BaseModel` that all SingaAuto models should extend, programming 
         abstractions used in model development, as well as a collection of utility methods for model developers 
         in the implementation of their own models
     
     - `constants.py`
 
-        Rafiki's programming abstractions & constants (e.g. valid values for user types, job statuses)
+        SingaAuto's programming abstractions & constants (e.g. valid values for user types, job statuses)
 
 - `web/`
 
-    Rafiki's Web Admin component
+    SingaAuto's Web Admin component
     
 - `dockerfiles/`
     
-    Stores Dockerfiles for customized components of Rafiki 
+    Stores Dockerfiles for customized components of SingaAuto 
 
 - `examples/`
     
-    Sample usage code for Rafiki.
+    Sample usage code for SingaAuto.
 
 - `docs/`
 
-    Source documentation for Rafiki (e.g. Sphinx documentation files)
+    Source documentation for SingaAuto (e.g. Sphinx documentation files)
 
 - `test/`
 
-    Test code for Rafiki
+    Test code for SingaAuto
 
 - `scripts/`
 
-    Shell & python scripts for initializing, starting and stopping various components of Rafiki's stack
+    Shell & python scripts for initializing, starting and stopping various components of SingaAuto's stack
 
 - `.env.sh`
 
-    Stores configuration variables for Rafiki
+    Stores configuration variables for SingaAuto

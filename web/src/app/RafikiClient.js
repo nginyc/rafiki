@@ -19,7 +19,7 @@
 
 import 'whatwg-fetch';
 
-class RafikiClient {
+class SingaAutoClient {
   _storage;
   _adminHost;
   _adminPort;
@@ -28,7 +28,7 @@ class RafikiClient {
 
   /*
     Initializes the Client to connect to a running 
-    Rafiki Admin instance that the Client connects to.
+    SingaAuto Admin instance that the Client connects to.
   */
   constructor(
     adminHost = 'localhost', 
@@ -46,7 +46,7 @@ class RafikiClient {
   }
 
   /*
-    Creates a login session as a Rafiki user. You will have to be logged in to perform any actions.
+    Creates a login session as a SingaAuto user. You will have to be logged in to perform any actions.
   */
   async login(email, password) {
     const data = await this._post('/tokens', {
@@ -127,7 +127,7 @@ class RafikiClient {
    * ***************************************/
 
   /*
-    Create a train jobs associated to an user on Rafiki.
+    Create a train jobs associated to an user on SingaAuto.
   */
   async createTrainJob(json) {
     const data = await this._post('/train_jobs', json)
@@ -136,7 +136,7 @@ class RafikiClient {
   }
 
   /*
-    Lists all train jobs associated to an user on Rafiki.
+    Lists all train jobs associated to an user on SingaAuto.
   */
   async getTrainJobsByUser(userId) {
     const data = await this._get('/train_jobs', {
@@ -169,7 +169,7 @@ class RafikiClient {
    * ***************************************/
 
   /*
-    Lists all inference jobs associated to an user on Rafiki.
+    Lists all inference jobs associated to an user on SingaAuto.
   */
 
   async getInferenceJobsByUser(user_id) {
@@ -369,4 +369,4 @@ class RafikiClient {
   }
 }
 
-export default RafikiClient;
+export default SingaAutoClient;

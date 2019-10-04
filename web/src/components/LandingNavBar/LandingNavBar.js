@@ -19,7 +19,7 @@ import Avatar from '@material-ui/core/Avatar';
 import AppBarMenuItems from "./AppBarMenuItems"
 
 import Toolbar, { styles as toolbarStyles } from '../LandingComponents/Toolbar';
-import Logo from "../../assets/LOGO_Rafiki-4.svg"
+import Logo from "../../assets/LOGO_SingaAuto-4.svg"
 
 import * as actions from "../../containers/Root/actions"
 
@@ -189,7 +189,7 @@ class LandingNavBar extends React.Component {
         label: "Contact",
       },
       {
-        url: "https://nginyc.github.io/rafiki/docs/latest/src/user/index.html",
+        url: "https://nginyc.github.io/singaauto/docs/latest/src/user/index.html",
         label: "Docs",
       },
     ]
@@ -221,7 +221,7 @@ class LandingNavBar extends React.Component {
                 <img alt="logo" src={Logo} className={classes.logo} />
               </Link>
               <Link to="/" className={classes.title}>
-                {'Rafiki'}
+                {'SingaAuto'}
               </Link>
               <Hidden smDown>
                 {navLinks.map((link, index) => (

@@ -18,4 +18,4 @@ Example:
         'predictor_host': '127.0.0.1:30001',
         'train_job_id': 'ec4db479-b9b2-4289-8086-52794ffc71c8'}
 
-.. seealso:: :meth:`rafiki.client.Client.create_inference_job`
+.. seealso:: :meth:`singaauto.client.Client.create_inference_job`

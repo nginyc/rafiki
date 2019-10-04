@@ -26,9 +26,9 @@ import json
 import base64
 import argparse
 
-from rafiki.model import BaseModel, FloatKnob, CategoricalKnob, FixedKnob, utils
-from rafiki.constants import ModelDependency
-from rafiki.model.dev import test_model_class
+from singaauto.model import BaseModel, FloatKnob, CategoricalKnob, FixedKnob, utils
+from singaauto.constants import ModelDependency
+from singaauto.model.dev import test_model_class
 
 class TfVgg16(BaseModel):
     '''

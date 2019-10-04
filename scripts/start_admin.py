@@ -19,9 +19,9 @@
 
 import os
 
-from rafiki.utils.log import configure_logging
-from rafiki.admin import Admin
-from rafiki.admin.app import app
+from singaauto.utils.log import configure_logging
+from singaauto.admin import Admin
+from singaauto.admin.app import app
 
 configure_logging('admin')
 

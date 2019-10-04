@@ -53,7 +53,7 @@ export const postCreateDataset = (name, task, file, dataset_url, token) => {
 
 /* ========== Models ============= */
 export const requestModelList = (params, token) => {
-   // http://rafiki.nus:3000/models/available
+   // http://singaauto.nus:3000/models/available
    return _getWithToken("/models/available", params, token)
 }
 

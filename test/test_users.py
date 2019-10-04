@@ -19,7 +19,7 @@
 
 import pytest
 
-from rafiki.constants import UserType
+from singaauto.constants import UserType
 from test.utils import global_setup, gen, gen_email, make_admin, make_app_dev, make_model_dev
 
 class TestUsers():
@@ -87,7 +87,7 @@ class TestUsers():
         
 
     def test_app_dev_cant_manage_users(self):
-        ban_email = f'{gen()}@rafiki'
+        ban_email = f'{gen()}@singaauto'
         email = gen_email()
         password = gen()
         model_dev = make_model_dev(email=ban_email)

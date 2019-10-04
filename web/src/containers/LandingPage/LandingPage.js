@@ -4,7 +4,7 @@ import { connect } from "react-redux";
 import LandingNavBar from "../../components/LandingNavBar/LandingNavBar"
 import LandingProductHero from "../../components/LandingProductHero/LandingProductHero"
 import LandingProductCategories from "../../components/LandingMainPage/LandingProductCategories"
-import LandingTryRafiki from '../../components/LandingTryRafiki/LandingTryRafiki'
+import LandingTrySingaAuto from '../../components/LandingTrySingaAuto/LandingTrySingaAuto'
 import LandingFooter from '../../components/LandingFooter/LandingFooter'
 
 
@@ -25,7 +25,7 @@ class LandingPage extends React.Component {
         <LandingNavBar auth={auth} />
         <LandingProductHero />
         <LandingProductCategories />
-        <LandingTryRafiki />
+        <LandingTrySingaAuto />
         <hr />
         <LandingFooter />
       </Fragment>

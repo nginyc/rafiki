@@ -5,9 +5,9 @@ Quick Start
 
 .. contents:: Table of Contents
 
-This guide assumes you have deployed your own empty instance of Rafiki and you want to try a *full* train-inference flow as the *Super Admin*:
+This guide assumes you have deployed your own empty instance of SingaAuto and you want to try a *full* train-inference flow as the *Super Admin*:
 
-    1. Authenticating on Rafiki
+    1. Authenticating on SingaAuto
     2. Submitting models
     3. Uploading datasets
     4. Creating a model training job
@@ -16,13 +16,13 @@ This guide assumes you have deployed your own empty instance of Rafiki and you w
     
 Follow the sequence of examples below to submit the `Fashion MNIST dataset <https://github.com/zalandoresearch/fashion-mnist>`_ for training and inference.
 Alternatively, refer and run the scripted version of this quickstart 
-`./examples/scripts/quickstart.py <https://github.com/nginyc/rafiki/blob/master/examples/scripts/quickstart.py>`_.
+`./examples/scripts/quickstart.py <https://github.com/nginyc/singaauto/blob/master/examples/scripts/quickstart.py>`_.
 
-To learn more about what else you can do on Rafiki, explore the methods of :class:`rafiki.client.Client`.
+To learn more about what else you can do on SingaAuto, explore the methods of :class:`singaauto.client.Client`.
 
 .. note::
 
-    If you haven't set up Rafiki on your local machine, refer to :ref:`quick-setup` before continuing.
+    If you haven't set up SingaAuto on your local machine, refer to :ref:`quick-setup` before continuing.
 
 .. note::
 
@@ -44,12 +44,12 @@ Example:
 
     .. code-block:: python
 
-        from rafiki.client import Client
+        from singaauto.client import Client
         client = Client(admin_host='localhost', admin_port=3000)
-        client.login(email='superadmin@rafiki', password='rafiki')
+        client.login(email='superadmin@singaauto', password='singaauto')
 
 
-.. seealso:: :meth:`rafiki.client.Client.login`
+.. seealso:: :meth:`singaauto.client.Client.login`
 
 Creating models
 --------------------------------------------------------------------

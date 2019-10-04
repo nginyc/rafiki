@@ -6,7 +6,7 @@ import LayoutBody from '../LandingComponents/LayoutBody';
 import Typography from '../LandingComponents/Typography';
 
 import './Overview.css'
-import rafikiArch from "../../assets/rafikiArch.png"
+import singaautoArch from "../../assets/singaautoArch.png"
 
 
 const styles = theme => ({
@@ -28,11 +28,11 @@ function ProductCategories(props) {
         <div className="section_center">
           <div className="center__description">
             <p className="description__text">
-            Rafiki’s system architecture consists of 3 static components, 2 central databases, 3 types of dynamic components, and 1 client-side SDK, which can be illustrated with a 3-layer architecture diagram.
+            SingaAuto’s system architecture consists of 3 static components, 2 central databases, 3 types of dynamic components, and 1 client-side SDK, which can be illustrated with a 3-layer architecture diagram.
             </p>
           </div>
           <div className="img-container">
-            <img src={rafikiArch} alt="rafikiArch" className="fullWidthImg" />
+            <img src={singaautoArch} alt="singaautoArch" className="fullWidthImg" />
           </div>
         </div>
       </LayoutBody>

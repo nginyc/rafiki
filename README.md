@@ -17,11 +17,11 @@
     under the License.
 -->
 
-# Rafiki
+# SingaAuto
 
-*Rafiki* is a distributed system that trains machine learning (ML) models and deploys trained models, built with ease-of-use in mind. To do so, it leverages on automated machine learning (AutoML).
+*SingaAuto* is a distributed system that trains machine learning (ML) models and deploys trained models, built with ease-of-use in mind. To do so, it leverages on automated machine learning (AutoML).
 
-Read Rafiki's full documentation at https://nginyc.github.io/rafiki/docs/latest
+Read SingaAuto's full documentation at https://nginyc.github.io/singaauto/docs/latest
 
 ## Quick Setup
 
@@ -33,24 +33,24 @@ Prerequisites: MacOS or Linux environment
 
 3. Clone this project (e.g. with [Git](https://git-scm.com/downloads>))
 
-4. Setup Rafiki's complete stack with the setup script:
+4. Setup SingaAuto's complete stack with the setup script:
 
     ```sh
     bash scripts/start.sh
     ```
 
-To completely destroy Rafiki's stack:
+To completely destroy SingaAuto's stack:
 
 ```sh
 bash scripts/stop.sh
 ```
 
-More instructions are available in [Rafiki's Developer Guide](https://nginyc.github.io/rafiki/docs/latest/src/dev).
+More instructions are available in [SingaAuto's Developer Guide](https://nginyc.github.io/singaauto/docs/latest/src/dev).
 
 
 ## Issues
 
-Report any issues at [Apache SINGA's JIRA](https://issues.apache.org/jira/browse/SINGA) or [Rafiki's Github Issues](https://github.com/nginyc/rafiki/issues)
+Report any issues at [Apache SINGA's JIRA](https://issues.apache.org/jira/browse/SINGA) or [SingaAuto's Github Issues](https://github.com/nginyc/singaauto/issues)
 
 
 ## Acknowledgements

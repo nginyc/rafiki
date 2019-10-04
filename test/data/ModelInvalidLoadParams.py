@@ -19,7 +19,7 @@
 
 import random
 
-from rafiki.model import BaseModel
+from singaauto.model import BaseModel
 
 class Model(BaseModel):
     '''

@@ -19,12 +19,12 @@
 
 import pytest
 
-from rafiki.model import IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, ArchKnob, KnobValue, PolicyKnob
-from rafiki.advisor import make_advisor
-from rafiki.advisor.advisor import FixedAdvisor, RandomAdvisor
-from rafiki.advisor.skopt import BayesOptAdvisor, BayesOptWithParamSharingAdvisor
-from rafiki.advisor.tf import EnasAdvisor
-from rafiki.constants import BudgetOption
+from singaauto.model import IntegerKnob, CategoricalKnob, FloatKnob, FixedKnob, ArchKnob, KnobValue, PolicyKnob
+from singaauto.advisor import make_advisor
+from singaauto.advisor.advisor import FixedAdvisor, RandomAdvisor
+from singaauto.advisor.skopt import BayesOptAdvisor, BayesOptWithParamSharingAdvisor
+from singaauto.advisor.tf import EnasAdvisor
+from singaauto.constants import BudgetOption
 
 from test.utils import global_setup
 

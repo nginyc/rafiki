@@ -1,8 +1,8 @@
 To create a model training job, you'll specify the train & validation datasets by their IDs, together with your application's name and its associated task.
 
-After creating a train job, you can monitor it on Rafiki Web Admin (see :ref:`using-web-admin`).
+After creating a train job, you can monitor it on SingaAuto Web Admin (see :ref:`using-web-admin`).
 
-Refer to the parameters of :meth:`rafiki.client.Client.create_train_job()` for configuring how your train job runs on Rafiki, such as enabling GPU usage & specifying which models to use.
+Refer to the parameters of :meth:`singaauto.client.Client.create_train_job()` for configuring how your train job runs on SingaAuto, such as enabling GPU usage & specifying which models to use.
 
 Example:
 
@@ -24,4 +24,4 @@ Example:
         'app_version': 1,
         'id': 'ec4db479-b9b2-4289-8086-52794ffc71c8'}
 
-.. seealso:: :meth:`rafiki.client.Client.create_train_job`
+.. seealso:: :meth:`singaauto.client.Client.create_train_job`

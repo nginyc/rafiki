@@ -19,9 +19,9 @@
 
 import os
 
-from rafiki.constants import ServiceType
-from rafiki.utils.service import run_worker
-from rafiki.meta_store import MetaStore
+from singaauto.constants import ServiceType
+from singaauto.utils.service import run_worker
+from singaauto.meta_store import MetaStore
 
 # Run install command
 install_command = os.environ.get('WORKER_INSTALL_COMMAND', '')
@@ -35,15 +35,15 @@ def start_worker(service_id, service_type, container_id):
     global worker
 
     if service_type == ServiceType.TRAIN:
-        from rafiki.worker.train import TrainWorker
+        from singaauto.worker.train import TrainWorker
         worker = TrainWorker(service_id, container_id)
         worker.start()
     elif service_type == ServiceType.INFERENCE:
-        from rafiki.worker.inference import InferenceWorker
+        from singaauto.worker.inference import InferenceWorker
         worker = InferenceWorker(service_id, container_id)
         worker.start()
     elif service_type == ServiceType.ADVISOR:
-        from rafiki.worker.advisor import AdvisorWorker
+        from singaauto.worker.advisor import AdvisorWorker
         worker = AdvisorWorker(service_id)
         worker.start()
     else:

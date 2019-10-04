@@ -19,8 +19,8 @@
 
 import pytest
 
-from rafiki.client import Client
-from rafiki.constants import TrainJobStatus, BudgetOption
+from singaauto.client import Client
+from singaauto.constants import TrainJobStatus, BudgetOption
 from test.utils import global_setup, make_model_dev, make_app_dev, make_model, make_private_model, \
                     make_invalid_model, make_dataset, gen, superadmin, wait_for_train_job_status
 

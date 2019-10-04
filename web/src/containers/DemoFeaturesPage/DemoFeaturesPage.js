@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { connect } from "react-redux";
 import LandingNavBar from "../../components/LandingNavBar/LandingNavBar"
 import DemoFeaturesComponents from "../../components/DemoFeaturesPageComponents/DemoFeaturesComponents"
-import LandingTryRafiki from '../../components/LandingTryRafiki/LandingTryRafiki'
+import LandingTrySingaAuto from '../../components/LandingTrySingaAuto/LandingTrySingaAuto'
 import LandingFooter from '../../components/LandingFooter/LandingFooter'
 
 
@@ -23,7 +23,7 @@ class DemoFeaturesPage extends React.Component {
       <Fragment>
         <LandingNavBar auth={auth} />
         <DemoFeaturesComponents />
-        <LandingTryRafiki />
+        <LandingTrySingaAuto />
         <LandingFooter />
       </Fragment>
     )

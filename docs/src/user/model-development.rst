@@ -4,15 +4,15 @@
 Model Development Guide
 ====================================================================
 
-Rafiki leverages on a dynamic pool of model templates contributed by *Model Developers*.
+SingaAuto leverages on a dynamic pool of model templates contributed by *Model Developers*.
 
-As a *Model Developer*, you'll define a *Python class* that conforms to Rafiki's base model specification, and
-submit it to Rafiki with the :meth:`rafiki.client.Client.create_model` method.
+As a *Model Developer*, you'll define a *Python class* that conforms to SingaAuto's base model specification, and
+submit it to SingaAuto with the :meth:`singaauto.client.Client.create_model` method.
 
 Implementing the Base Model Interface
 --------------------------------------------------------------------
 
-As an overview, your model template needs to provide the following logic for deployment on Rafiki:
+As an overview, your model template needs to provide the following logic for deployment on SingaAuto:
 
 - Definition of the space of your model's hyperparameters (*knob configuration*)
 - Initialization of the model with a concrete set of hyperparameters (*knobs*)
@@ -22,33 +22,33 @@ As an overview, your model template needs to provide the following logic for dep
 - Loading of the model with trained parameters
 - Making batch predictions with the model, after being trained
 
-Full details of Rafiki's base model interface is documented at :class:`rafiki.model.BaseModel`.
+Full details of SingaAuto's base model interface is documented at :class:`singaauto.model.BaseModel`.
 Your model implementation has to follow a specific task's specification (see :ref:`tasks`).
 
 To aid your implementation, you can refer to :ref:`sample-models`.
 
 Testing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-After implementing your model, you'll use :meth:`rafiki.model.dev.test_model_class` to test your model. 
+After implementing your model, you'll use :meth:`singaauto.model.dev.test_model_class` to test your model. 
 Refer to its documentation for more details on how to use it, or refer to the sample models' usage of the method. 
 
 Logging
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-``utils.logger`` in the ``rafiki.model`` module provides a set of methods to log messages & metrics while your model is training.
-These messages & metrics would be displayed on Rafiki Web Admin for monitoring & debugging purposes.
-Refer to :class:`rafiki.model.LoggerUtils` for more details.
+``utils.logger`` in the ``singaauto.model`` module provides a set of methods to log messages & metrics while your model is training.
+These messages & metrics would be displayed on SingaAuto Web Admin for monitoring & debugging purposes.
+Refer to :class:`singaauto.model.LoggerUtils` for more details.
 
 .. seealso:: :ref:`using-web-admin` 
 
 Dataset Loading
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-``utils.dataset`` in the ``rafiki.model`` module provides a simple set of in-built dataset loading methods. 
-Refer to :class:`rafiki.model.DatasetUtils` for more details.
+``utils.dataset`` in the ``singaauto.model`` module provides a simple set of in-built dataset loading methods. 
+Refer to :class:`singaauto.model.DatasetUtils` for more details.
 
 
 Defining Hyperparameter Search Space
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Refer to :ref:`model-tuning` for the specifics of how you can tune your models on Rafiki. 
+Refer to :ref:`model-tuning` for the specifics of how you can tune your models on SingaAuto. 
 
 
 .. _`sample-models`:
@@ -56,10 +56,10 @@ Refer to :ref:`model-tuning` for the specifics of how you can tune your models o
 Sample Models
 --------------------------------------------------------------------
 
-To illustrate how to write models for Rafiki, we have written the following:
+To illustrate how to write models for SingaAuto, we have written the following:
 
-    - Sample pre-processing logic to convert common dataset formats to Rafiki's own dataset formats in `./examples/datasets/ <https://github.com/nginyc/rafiki/tree/master/examples/datasets/>`_ 
-    - Sample models in `./examples/models/ <https://github.com/nginyc/rafiki/tree/master/examples/models/>`_
+    - Sample pre-processing logic to convert common dataset formats to SingaAuto's own dataset formats in `./examples/datasets/ <https://github.com/nginyc/singaauto/tree/master/examples/datasets/>`_ 
+    - Sample models in `./examples/models/ <https://github.com/nginyc/singaauto/tree/master/examples/models/>`_
 
 
 Example: Testing Models for ``IMAGE_CLASSIFICATION``
@@ -125,9 +125,9 @@ Your model will be run in Python 3.6 with the following Python libraries pre-ins
 Additionally, you'll specify a list of Python dependencies to be installed for your model, 
 prior to model training and inference. This is configurable with the ``dependencies`` option 
 during model creation. These dependencies will be lazily installed on top of the worker's Docker image before your model's code is executed.
-If the model is to be run on GPU, Rafiki would map dependencies to their GPU-supported versions, if supported. 
+If the model is to be run on GPU, SingaAuto would map dependencies to their GPU-supported versions, if supported. 
 For example, ``{ 'tensorflow': '1.12.0' }`` will be installed as ``{ 'tensorflow-gpu': '1.12.0' }``.
-Rafiki could also parse specific dependency names to install certain non-PyPI packages. 
+SingaAuto could also parse specific dependency names to install certain non-PyPI packages. 
 For example, ``{ 'singa': '1.1.1' }`` will be installed as ``singa-cpu=1.1.1`` or ``singa-gpu=1.1.1`` using ``conda``.
 
 Refer to the list of officially supported dependencies below. For dependencies that are not listed,
@@ -143,11 +143,11 @@ they will be installed as PyPI packages of the specified name and version.
 ``torch``                   ``pip install torch==${ver}``
 =====================       =====================
 
-Alternatively, you can build a custom Docker image that extends ``rafikiai/rafiki_worker``,
+Alternatively, you can build a custom Docker image that extends ``singaautoai/singaauto_worker``,
 installing the required dependencies for your model. This is configurable with ``docker_image`` option
 during model creation.
 
-.. seealso:: :meth:`rafiki.client.Client.create_model`
+.. seealso:: :meth:`singaauto.client.Client.create_model`
 
 Your model should be GPU-sensitive based on the environment variable ``CUDA_AVAILABLE_DEVICES`` 
 (see `here <https://devblogs.nvidia.com/cuda-pro-tip-control-gpu-visibility-cuda_visible_devices/>`_).  

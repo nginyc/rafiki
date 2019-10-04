@@ -21,8 +21,8 @@ import pytest
 import numpy as np
 from datetime import datetime, timedelta
 
-from rafiki.advisor import ParamsType
-from rafiki.redis import ParamCache
+from singaauto.advisor import ParamsType
+from singaauto.redis import ParamCache
 from test.utils import global_setup
 
 class TestParamCache():    

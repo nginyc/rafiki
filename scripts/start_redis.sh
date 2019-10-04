@@ -21,11 +21,11 @@ LOG_FILE_PATH=$PWD/logs/start_redis.log
 
 source ./scripts/utils.sh
 
-title "Starting Rafiki's Redis..."
+title "Starting SingaAuto's Redis..."
 (docker run --rm --name $REDIS_HOST \
   --network $DOCKER_NETWORK \
   -p $REDIS_EXT_PORT:$REDIS_PORT \
   $IMAGE_REDIS \
   &> $LOG_FILE_PATH) &
 
-ensure_stable "Rafiki's Redis" $LOG_FILE_PATH 10
+ensure_stable "SingaAuto's Redis" $LOG_FILE_PATH 10
