@@ -84,7 +84,7 @@ class XgbReg(BaseModel):
 
         preds = self._clf.predict(X)
         rmse = np.sqrt(mean_squared_error(y, preds))
-        return rmse
+        return 1 / rmse
 
     def predict(self, queries):
         queries = [pd.DataFrame(query, index=[0]) for query in queries]

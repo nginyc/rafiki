@@ -95,7 +95,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--email', type=str, default=SUPERADMIN_EMAIL, help='Email of user')
     parser.add_argument('--password', type=str, default=os.environ.get('SUPERADMIN_PASSWORD'), help='Password of user')
-    parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use')
+    parser.add_argument('--gpus', type=int, default=0, help='How many GPUs to use for training')
     parser.add_argument('--hours', type=float, default=0.1, help='How long the train job should run for (in hours)') 
     parser.add_argument('--csv', type=str, default='https://course1.winona.edu/bdeppa/Stat%20425/Data/bodyfat.csv', help='Path to a standard CSV file to perform regression on')
     parser.add_argument('--features', type=str, default=None, help='List of feature columns\' names as comma separated values')

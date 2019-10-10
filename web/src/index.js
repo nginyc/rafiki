@@ -1,30 +1,68 @@
-/*
-  Licensed to the Apache Software Foundation (ASF) under one
-  or more contributor license agreements.  See the NOTICE file
-  distributed with this work for additional information
-  regarding copyright ownership.  The ASF licenses this file
-  to you under the Apache License, Version 2.0 (the
-  "License"); you may not use this file except in compliance
-  with the License.  You may obtain a copy of the License at
- 
-    http://www.apache.org/licenses/LICENSE-2.0
- 
-  Unless required by applicable law or agreed to in writing,
-  software distributed under the License is distributed on an
-  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-  KIND, either express or implied.  See the License for the
-  specific language governing permissions and limitations
-  under the License.
- */
+// React and React-DOM
+import React from 'react';
+import ReactDOM from 'react-dom';
 
-import React from "react";
-import ReactDOM from "react-dom";
+// Redux and Middleware
+import { createStore, applyMiddleware, compose } from "redux";
+import { Provider } from "react-redux";
+import createSagaMiddleware from 'redux-saga'
+import { createBrowserHistory } from 'history'
+import { routerMiddleware } from 'connected-react-router'
 
-import App from "./App"
+import { ConnectedRouter } from "connected-react-router";
 
-import "assets/css/material-dashboard-react.css?v=1.6.0";
+// Material-UI
+import { MuiThemeProvider } from "@material-ui/core/styles";
+import CssBaseline from "@material-ui/core/CssBaseline";
+import theme from "./theme"
+import 'typeface-roboto';
+
+import App from './App';
+import createRootReducer from "./store/rootReducer"
+import rootSaga from "./sagas"
+import ErrorBoundary from "./containers/ErrorBoundary/ErrorBoundary"
+import Root from "./containers/Root/Root"
+
+// Load Roboto typeface
+require('typeface-roboto')
+
+// create the saga middleware
+const sagaMiddleware = createSagaMiddleware()
+
+export const history = createBrowserHistory()
+
+// compose to combine store enhancers
+const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
+const store = createStore(
+  createRootReducer(history),
+  composeEnhancers(
+    applyMiddleware(
+      routerMiddleware(history),
+      // mount Saga on the Store
+      sagaMiddleware,
+    )
+  )
+);
+
+// then run the saga
+sagaMiddleware.run(rootSaga)
 
 ReactDOM.render(
-  <App />,
-  document.getElementById("root")
+  <ErrorBoundary
+    render={() => (
+      <div>An error occurred in this page, please go back and refresh</div>
+    )}
+  >
+    <MuiThemeProvider theme={theme}>
+      <CssBaseline />
+      <Provider store={store}>
+        <ConnectedRouter history={history}>
+          <Root>
+            <App />
+          </Root>
+        </ConnectedRouter>
+      </Provider>
+    </MuiThemeProvider>
+  </ErrorBoundary>,
+  document.getElementById('root')
 );

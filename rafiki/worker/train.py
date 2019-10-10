@@ -28,11 +28,12 @@ from rafiki.utils.auth import superadmin_client
 from rafiki.meta_store import MetaStore
 from rafiki.model import BaseModel, load_model_class, logger as model_logger
 from rafiki.advisor import Proposal, TrialResult, ParamsType
-from rafiki.cache import TrainCache, ParamCache
+from rafiki.redis import TrainCache, ParamCache
 from rafiki.data_store import FileDataStore
 from rafiki.param_store import FileParamStore, ParamStore
 
 LOOP_SLEEP_SECS = 0.1
+MAX_CONSEC_TRIAL_ERRORS = 100
 
 class InvalidWorkerError(Exception): pass
 class InvalidDatasetError(Exception): pass
@@ -49,6 +50,7 @@ class TrainWorker():
         self._trial_id = None # ID of currently running trial
         self._train_cache: TrainCache = None
         self._param_cache: ParamCache = None
+        self._trial_errors = 0 # Consecutive traial errors
 
     def start(self):
         self._monitor.pull_job_info()
@@ -72,12 +74,12 @@ class TrainWorker():
     def stop(self):
         self._notify_stop()
 
-        # If worker is currently running a trial, mark it has terminated
+        # If worker is currently running a trial, mark it has errored
         try:
             if self._trial_id is not None: 
-                self._monitor.mark_trial_as_terminated(self._trial_id)
+                self._monitor.mark_trial_as_errored(self._trial_id)
         except:
-            logger.error('Error marking trial as terminated:')
+            logger.error('Error marking trial as errored:')
             logger.error(traceback.format_exc())
 
         # Run model class teardown
@@ -114,12 +116,20 @@ class TrainWorker():
             model_inst.destroy()
 
             self._monitor.mark_trial_as_completed(self._trial_id, result.score, store_params_id)
+            self._trial_errors = 0
             return result
         except Exception as e:
             logger.error('Error while running trial:')
             logger.error(traceback.format_exc())
             self._monitor.mark_trial_as_errored(self._trial_id)
-            raise e
+
+            # Ensure that trial doesn't error too many times consecutively
+            self._trial_errors += 1
+            if self._trial_errors > MAX_CONSEC_TRIAL_ERRORS:
+                logger.error(f'Reached {MAX_CONSEC_TRIAL_ERRORS} consecutive errors - raising exception')
+                raise e
+
+            return TrialResult(proposal)
         finally:
             self._stop_logging_to_trial(logger_info)
 
@@ -171,7 +181,7 @@ class TrainWorker():
         if not proposal.to_eval: 
             return TrialResult(proposal)
             
-        logger.info('Evaluting model...')
+        logger.info('Evaluating model...')
         score = model_inst.evaluate(val_dataset_path)
         logger.info(f'Score on validation dataset: {score}')
         return TrialResult(proposal, score=score)
@@ -214,6 +224,7 @@ class _SubTrainJobMonitor():
         self.model_class = None
         self.train_dataset_path = None
         self.val_dataset_path = None
+        self.train_args = None
         self._meta_store = meta_store or MetaStore()
         self._service_id = service_id
         self._data_store = FileDataStore()
@@ -262,12 +273,6 @@ class _SubTrainJobMonitor():
         with self._meta_store:
             trial = self._meta_store.get_trial(trial_id)
             self._meta_store.mark_trial_as_completed(trial, score, store_params_id)
-
-    def mark_trial_as_terminated(self, trial_id):
-        logger.info('Marking trial as terminated in store...')
-        with self._meta_store:
-            trial = self._meta_store.get_trial(trial_id)
-            self._meta_store.mark_trial_as_terminated(trial)
 
     def log_to_trial(self, trial_id, log_line, log_lvl):
         with self._meta_store:

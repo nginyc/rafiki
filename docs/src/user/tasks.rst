@@ -50,12 +50,13 @@ An example:
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A ``W x H`` 2D list representing a grayscale version of the query image. 
+A ``W x H x 3`` 3D array representing a *RGB* version of the query image.
+The query image can be of *any dimensions*.
 
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A size-``k`` list of floats, representing the probabilities of each class, by index, from ``0`` to ``k-1``.
+A size-``k`` array of floats, representing the probabilities of each class, by index, from ``0`` to ``k-1``.
 For example, the float at index 0 corresponds to the probability of class 0.
 
 
@@ -94,12 +95,12 @@ An example:
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A list of strings representing a sentence as a list of tokens in that sentence.
+An array of strings representing a sentence as a list of tokens in that sentence.
 
 Prediction Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A list of integers representing the list of predicted tag for each token, in sequence, for the sentence.
+A array of integers representing the list of predicted tag for each token, in sequence, for the sentence.
 
 TABULAR_CLASSIFICATION
 --------------------------------------------------------------------
@@ -130,6 +131,7 @@ Prediction Format
 
 A size-``k`` list of floats, representing the probabilities of each class from ``0`` to ``k-1`` for the target column.
 
+
 TABULAR_REGRESSION
 --------------------------------------------------------------------
 
@@ -149,6 +151,16 @@ The following optional train arguments are supported:
     
 The train & validation datasets should have the same columns. 
 
+An example of the dataset follows:
+
+.. code-block:: text
+
+    density,bodyfat,age,weight,height,neck,chest,abdomen,hip,thigh,knee,ankle,biceps,forearm,wrist
+    1.0708,12.3,23,154.25,67.75,36.2,93.1,85.2,94.5,59,37.3,21.9,32,27.4,17.1
+    1.0853,6.1,22,173.25,72.25,38.5,93.6,83,98.7,58.7,37.3,23.4,30.5,28.9,18.2
+    1.0414,25.3,22,154,66.25,34,95.8,87.9,99.2,59.6,38.9,24,28.8,25.2,16.6
+    ...
+
 Query Format 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -158,3 +170,82 @@ Prediction Format
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A float, representing the value of the target column.
+
+
+SPEECH_RECOGNITION
+--------------------------------------------------------------------
+
+Speech recognition for the *English* language.
+
+Dataset Type
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:ref:`dataset-type:AUDIO_FILES`
+
+The ``audios.csv`` should be of a `.CSV <https://en.wikipedia.org/wiki/Comma-separated_values>`_
+format with 3 columns of ``wav_filename``, ``wav_filesize`` and ``transcript``.
+
+For each row,
+
+    ``wav_filename`` should be a file path to a ``.wav`` audio file within the archive, relative to the root of the directory.
+    Each audio file's sample rate must equal to 16kHz.
+
+    ``wav_filesize`` should be an integer representing the size of the ``.wav`` audio file, in number of bytes.
+
+    ``transcript`` should be a string of the true transcript for the audio file. Transcripts should only contain the following alphabets:
+
+        ::
+
+            a
+            b
+            c
+            d
+            e
+            f
+            g
+            h
+            i
+            j
+            k
+            l
+            m
+            n
+            o
+            p
+            q
+            r
+            s
+            t
+            u
+            v
+            w
+            x
+            y
+            z
+
+            
+            '
+
+ An example of ``audios.csv`` follows:
+
+.. code-block:: text
+
+    wav_filename,wav_filesize,transcript
+    6930-81414-0000.wav,412684,audio transcript one
+    6930-81414-0001.wav,559564,audio transcript two
+    ...
+    672-122797-0005.wav,104364,audio transcript one thousand
+    ...
+    1995-1837-0001.wav,279404,audio transcript three thousand
+
+
+Query Format
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A `Base64-encoded <https://en.wikipedia.org/wiki/Base64>`_ string of the bytes of the audio as a 16kHz `.wav` file
+
+
+Prediction Format
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A string, representing the predicted transcript for the audio.
