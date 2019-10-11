@@ -24,10 +24,8 @@ import base64
 import pickle
 import tensorflow as tf
 from tensorflow import keras
-from keras import models
-from keras import layers
-from keras.optimizers import Adam
 from keras.layers import Dense, Flatten, Conv2D, AveragePooling2D
+from keras.optimizers import Adam
 from keras.models import Sequential
 from keras.preprocessing.image import ImageDataGenerator
 from keras.utils.np_utils import to_categorical

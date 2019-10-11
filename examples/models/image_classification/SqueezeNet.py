@@ -23,23 +23,18 @@ import argparse
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from keras.layers import Input, Dense, Lambda
-from keras.models import Model
 from keras import backend as K
 from keras import objectives
-from keras.datasets import mnist
+from keras.models import Model, Sequential
+from keras.layers import Input, Dense, Lambda, Dropout, Activation, Flatten, Concatenate, Convolution2D, MaxPooling2D
 from keras.layers.core import Reshape
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, Flatten, Concatenate
-from keras.layers import Convolution2D, MaxPooling2D
 from keras.layers.convolutional import Conv2D, MaxPooling2D, ZeroPadding2D, UpSampling2D
+from keras.layers.pooling import GlobalAveragePooling2D
+from keras.layers.normalization import BatchNormalization
+from keras.layers.advanced_activations import ELU
 from keras.utils import np_utils
 from keras.utils.np_utils import to_categorical
-from keras.layers.normalization import BatchNormalization
 from keras.optimizers import SGD
-from keras.layers.advanced_activations import ELU
-from keras.layers.pooling import GlobalAveragePooling2D
-import pandas as pd
 
 from rafiki.model import BaseModel, FixedKnob, FloatKnob, CategoricalKnob, utils
 from rafiki.constants import ModelDependency
