@@ -38,7 +38,7 @@ from rafiki.model.dev import test_model_class
 
 class ResNet(BaseModel):
     '''
-    Implements ResNet network to train model for simple image classification
+    Implements ResNet to train image classification model on Cifa10 dataset
     '''
     @staticmethod
     def get_knob_config():
