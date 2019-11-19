@@ -63,16 +63,9 @@ class AdvisorWorker():
         self._notify_start()
         
         while True:
-            
-
             self._fetch_results()
-           
-
             if not self._make_proposals():
-              
                 self._notify_budget_reached()
-               
-
                 break
             time.sleep(LOOP_SLEEP_SECS)
 
@@ -96,7 +89,6 @@ class AdvisorWorker():
         superadmin_client().send_event('sub_train_job_advisor_started', sub_train_job_id=self._monitor.sub_train_job_id)
 
     def _make_advisor(self):
-
         clazz = self._monitor.model_class
         budget = self._monitor.budget
 
@@ -109,7 +101,6 @@ class AdvisorWorker():
 
     # Fetch results of workers
     def _fetch_results(self):
-       
         for (worker_id, info) in self._worker_infos.items():
             # If no pending trial, skip
             if info.trial_id is None:
@@ -130,52 +121,35 @@ class AdvisorWorker():
     # Make proposals for workers
     # Returns False if tuning is to be stopped
     def _make_proposals(self):
-        
         # For each free worker
         worker_ids = self._train_cache.get_workers()
-        
-
         for worker_id in worker_ids:
             # If new worker, add info
             if worker_id not in self._worker_infos:
-                
                 self._worker_infos[worker_id] = _WorkerInfo()
 
             # Get info for worker
-           
-
             worker_info = self._worker_infos[worker_id]
 
             # Check that worker doesn't already have a proposal
-           
-
             proposal = self._train_cache.get_proposal(worker_id)
-           
-
             if proposal is not None:
-                
                 continue
 
             # Create trial
-            
-
             (trial_no, trial_id) = self._monitor.create_next_trial(worker_id)
            
             # Make proposal to free worker
             proposal = self._advisor.propose(worker_id, trial_no)
-            
 
             # If advisor has no more proposals, to stop tuning
             if proposal is None:
-                
                 return False
 
             # Attach trial ID to proposal
-           
             proposal.trial_id = trial_id
  
             # Push proposal to worker
-            
             self._train_cache.create_proposal(worker_id, proposal)
             
             # Associate trial ID to worker

@@ -46,17 +46,13 @@ def run_worker(meta_store, start_worker, stop_worker):
         meta_store.mark_service_as_running(service)
 
     try:
-        logger.info('service11111111')
         logger.info('Starting worker "{}" for service of ID "{}"...'.format(container_id, service_id))
         start_worker(service_id, service_type, container_id)
-        logger.info('service22222222')
         logger.info('Stopping worker...')
         stop_worker()
-        logger.info('service33333333')
 
 
     except Exception as e:
-        logger.info('service44444444')
         logger.error('Error while running worker:')
         logger.error(traceback.format_exc())
 
