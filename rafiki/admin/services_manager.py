@@ -36,7 +36,7 @@ class ServiceDeploymentError(Exception): pass
 # List of environment variables that will be auto-forwarded to services deployed
 ENVIRONMENT_VARIABLES_AUTOFORWARD = [
     'POSTGRES_HOST', 'POSTGRES_PORT', 'POSTGRES_USER', 'POSTGRES_PASSWORD',
-    'SUPERADMIN_PASSWORD', 'POSTGRES_DB', 'REDIS_HOST', 'REDIS_PORT',
+    'SUPERADMIN_PASSWORD', 'POSTGRES_DB', 'REDIS_HOST', 'REDIS_PORT','REDIS_PASSWD',
     'ADMIN_HOST', 'ADMIN_PORT', 'DATA_DIR_PATH', 'LOGS_DIR_PATH', 'PARAMS_DIR_PATH', 'KAFKA_HOST', 'KAFKA_PORT',
 ]
 DEFAULT_TRAIN_GPU_COUNT = 0
@@ -455,7 +455,11 @@ class ServicesManager(object):
             publish_port = (ext_port, container_port)
 
         try:
-            container_service_name = 'rafiki_service_{}'.format(service.id)
+            container_service_name = ''
+            if os.getenv('CONTAINER_MODE', 'SWARM') == 'SWARM':
+                container_service_name = 'rafiki_service_{}'.format(service.id)
+            else:
+                container_service_name = 'rafiki-service-{}'.format(service.id)
             container_service = self._container_manager.create_service(
                 service_name=container_service_name,
                 docker_image=docker_image, 

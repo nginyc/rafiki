@@ -54,21 +54,28 @@ class TrainWorker():
 
     def start(self):
         self._monitor.pull_job_info()
+        
         self._train_cache = TrainCache(self._monitor.sub_train_job_id, 
                                         self._redis_host, 
                                         self._redis_port)
+       
         self._param_cache = ParamCache(self._monitor.sub_train_job_id,
                                         self._redis_host,
                                         self._redis_port)
-
+       
         logger.info(f'Starting worker for sub train job "{self._monitor.sub_train_job_id}"...')
         self._notify_start()
         
         while True:
+           
             proposal = self._fetch_proposal()
+            
             if proposal is not None:
+               
                 result = self._perform_trial(proposal)
+                
                 self._submit_result(result)
+               
             time.sleep(LOOP_SLEEP_SECS)
 
     def stop(self):
@@ -76,14 +83,19 @@ class TrainWorker():
 
         # If worker is currently running a trial, mark it has errored
         try:
+            
             if self._trial_id is not None: 
+               
                 self._monitor.mark_trial_as_errored(self._trial_id)
+                
         except:
+           
             logger.error('Error marking trial as errored:')
             logger.error(traceback.format_exc())
 
         # Run model class teardown
         try:
+            
             self._monitor.model_class.teardown()
         except:
             logger.error('Error tearing down model class:')
@@ -94,27 +106,36 @@ class TrainWorker():
         self._train_cache.add_worker(self._worker_id)
 
     def _fetch_proposal(self):
+       
         proposal = self._train_cache.get_proposal(self._worker_id)
+       
         return proposal
 
     def _perform_trial(self, proposal: Proposal) -> TrialResult:
+       
         self._trial_id = proposal.trial_id
-
+      
         logger.info(f'Starting trial {self._trial_id} with proposal {proposal}...')
         try:
             # Setup logging
             logger_info = self._start_logging_to_trial(
                     lambda log_line, log_lvl: self._monitor.log_to_trial(self._trial_id, log_line, log_lvl))
+          
 
             self._monitor.mark_trial_as_running(self._trial_id, proposal)
-
+           
             shared_params = self._pull_shared_params(proposal)
+           
             model_inst = self._load_model(proposal)
+          
             self._train_model(model_inst, proposal, shared_params)
+           
             result = self._evaluate_model(model_inst, proposal)
+           
             store_params_id = self._save_model(model_inst, proposal, result)
+           
             model_inst.destroy()
-
+            
             self._monitor.mark_trial_as_completed(self._trial_id, result.score, store_params_id)
             self._trial_errors = 0
             return result

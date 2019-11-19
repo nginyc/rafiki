@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: PV_NAME
+  labels:
+    LABLES_KEYS_0: LABLES_VALUES_0
+    type: nfs
+spec:
+  capacity:
+    storage: PV_STORAGE
+#  storageClassName: "PostgreSQLStorageClass"
+  accessModes:
+    - PV_ACCESS_MODES
+  persistentVolumeReclaimPolicy: PV_RECLAIN_POLICY
+  nfs:
+    server: PV_IP
+    path: "PV_PATH"

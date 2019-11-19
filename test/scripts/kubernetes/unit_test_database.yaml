@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rafiki-db-unittest
+  labels:
+    name: rafiki-db-unittest
+spec:
+  type: NodePort
+  ports:
+  - port: 30001
+    targetPort: 5432
+    nodePort: 30002
+  selector:
+    name: rafiki-db-unittest
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rafiki-db-unittest
+  labels:
+    name: rafiki-db-unittest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: rafiki-db-unittest
+  template:
+    metadata:
+      labels:
+        name: rafiki-db-unittest
+    spec:
+      containers:
+      - name: rafiki-db-unittest
+        image: postgres:10.5-alpine
+        

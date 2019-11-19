@@ -42,8 +42,10 @@ class Predictor():
     def __init__(self, service_id, meta_store=None):
         self._service_id = service_id
         self._meta_store = meta_store or MetaStore()
-        self._redis_host = os.environ['REDIS_HOST']
-        self._redis_port = os.environ['REDIS_PORT']
+        self._redis_host = os.getenv('REDIS_HOST', 'rafiki_redis')
+        self._redis_port = os.getenv('REDIS_PORT', 6379)
+        self._kafka_host = os.getenv('KAFKA_HOST', 'rafiki_kafka')
+        self._kafka_port = os.getenv('KAFKA_PORT', 9092)
         self._ensemble_method: Callable[[List[Any]], Any] = None
         self._inference_job_id = None
 

@@ -19,3 +19,4 @@
 
 from .container_manager import ContainerManager, InvalidServiceRequestError, ContainerService
 from .docker_swarm import DockerSwarmContainerManager
+from .kubernetes_operation import KubernetesContainerManager

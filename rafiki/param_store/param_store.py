@@ -78,7 +78,8 @@ def _simplify_params(params):
                 name = f'{PARAM_DATA_TYPE_NUMPY}{PARAM_DATA_TYPE_SEPARATOR}{name}'
                 value = value.tolist()
             else:
-                assert isinstance(value, (str, float, int))
+                pass
+                #assert isinstance(value, (str, float, int,dict))
 
             params_simple[name] = value
 

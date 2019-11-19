@@ -31,7 +31,7 @@ RUN apt-get update && \
       cuda-curand-9-0 \
       cuda-cusolver-9-0 \
       cuda-cusparse-9-0 \
-      libcudnn7=7.2.1.38-1+cuda9.0 \
+      libcudnn7=7.6.0.64-1+cuda9.0 \
       libnccl2=2.2.13-1+cuda9.0 \
       libfreetype6-dev \
       libhdf5-serial-dev \
@@ -66,6 +66,8 @@ WORKDIR $DOCKER_WORKDIR_PATH
 ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 
 # Install python dependencies
+RUN mkdir ~/.pip
+COPY ./pip.conf /root/.pip/pip.conf
 COPY rafiki/requirements.txt rafiki/requirements.txt
 RUN pip install -r rafiki/requirements.txt
 COPY rafiki/utils/requirements.txt rafiki/utils/requirements.txt
