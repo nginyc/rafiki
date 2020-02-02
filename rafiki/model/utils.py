@@ -62,18 +62,18 @@ def parse_model_install_command(dependencies, enable_gpu=False):
     # Determine install commands for each dependency
     for (dep, ver) in dependencies.items():
         if dep == ModelDependency.KERAS:
-            commands.append('pip install Keras=={}'.format(ver))
+            commands.append('pip --no-cache-dir install Keras=={}'.format(ver))
         elif dep == ModelDependency.TORCH:
-            commands.append('pip install torch=={}'.format(ver))
+            commands.append('pip --no-cache-dir install torch=={}'.format(ver))
         elif dep == ModelDependency.TORCHVISION:
-            commands.append('pip install torchvision=={}'.format(ver))
+            commands.append('pip --no-cache-dir install torchvision=={}'.format(ver))
         elif dep == ModelDependency.SCIKIT_LEARN:
-            commands.append('pip install scikit-learn=={}'.format(ver))
+            commands.append('pip --no-cache-dir install scikit-learn=={}'.format(ver))
         elif dep == ModelDependency.TENSORFLOW:
             if enable_gpu:
-                commands.append('pip install tensorflow-gpu=={}'.format(ver))
+                commands.append('pip --no-cache-dir install tensorflow-gpu=={}'.format(ver))
             else:
-                commands.append('pip install tensorflow=={}'.format(ver))
+                commands.append('pip --no-cache-dir install tensorflow=={}'.format(ver))
         elif dep == ModelDependency.SINGA:
             options = '-y -c nusdbsystem'
             if conda_env is not None:
@@ -83,10 +83,10 @@ def parse_model_install_command(dependencies, enable_gpu=False):
             else:
                 commands.append('conda install {} singa-cpu={}'.format(options, ver))
         elif dep == ModelDependency.DS_CTCDECODER:
-            commands.append('pip install {}'.format(parse_ctc_decoder_url(ver)))
+            commands.append('pip --no-cache-dir install {}'.format(parse_ctc_decoder_url(ver)))
         else:
             # Assume that dependency is the exact PIP package name
-            commands.append('pip install {}=={}'.format(dep, ver))
+            commands.append('pip --no-cache-dir install {}=={}'.format(dep, ver))
 
     return '; '.join(commands)
 

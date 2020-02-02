@@ -99,10 +99,9 @@ class ResNet(BaseModel):
 
 
     def predict(self, queries):
-        image_size = self._image_size
-        images = utils.dataset.transform_images(queries, image_size=image_size, mode='RGB')
+        queries = utils.dataset.transform_images(queries, image_size=self._image_size, mode='RGB')
         X = self._prepare_X(queries)
-        probs = self._model.predict_proba(X)
+        probs = self._model.predict(X)
         return probs.tolist()
 
 
