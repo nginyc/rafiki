@@ -18,7 +18,7 @@
 #
 
 # Read from shell configuration file
-source ./.env.sh
+source ./scripts/kubernetes/.env.sh
 
 source ./scripts/utils.sh
 
@@ -39,4 +39,8 @@ docker build -t $RAFIKI_IMAGE_PREDICTOR:$RAFIKI_VERSION -f ./dockerfiles/predict
 title "Building Rafiki Web Admin's image..."
 docker build -t $RAFIKI_IMAGE_WEB_ADMIN:$RAFIKI_VERSION -f ./dockerfiles/web_admin.Dockerfile \
     --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH $PWD || exit 1 
+title "Building Rafiki Test's image..."
+docker build -t $RAFIKI_IMAGE_TEST:$RAFIKI_VERSION -f ./dockerfiles/test.Dockerfile \
+    --build-arg DOCKER_WORKDIR_PATH=$DOCKER_WORKDIR_PATH \
+    --build-arg CONDA_ENVIORNMENT=$CONDA_ENVIORNMENT $PWD || exit 1 
 echo "Finished building all Rafiki's images successfully!"

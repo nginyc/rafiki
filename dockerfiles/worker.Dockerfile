@@ -66,6 +66,8 @@ WORKDIR $DOCKER_WORKDIR_PATH
 ENV PYTHONPATH $DOCKER_WORKDIR_PATH
 
 # Install python dependencies
+RUN mkdir ~/.pip
+COPY ./pip.conf /root/.pip/pip.conf
 COPY rafiki/requirements.txt rafiki/requirements.txt
 RUN pip install -r rafiki/requirements.txt
 COPY rafiki/utils/requirements.txt rafiki/utils/requirements.txt

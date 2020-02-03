@@ -35,15 +35,31 @@ Prerequisites: MacOS or Linux environment
 
 4. Setup Rafiki's complete stack with the setup script:
 
+   if use docker swarm mode, use this script: 
+
     ```sh
     bash scripts/start.sh
     ```
+    
+   if use kubernetes mode, use this script:
+   
+    ```sh
+    bash scripts/kubernetes/start.sh
+    ```
 
-To completely destroy Rafiki's stack:
+  To completely destroy Rafiki's stack:
 
-```sh
-bash scripts/stop.sh
-```
+   if use docker swarm mode, use this script:
+   
+    ```sh
+    bash scripts/stop.sh
+    ```
+    
+   if user kubernetes mode, use this script:
+   
+    ```sh
+    bash scripts/kubernetes/stop.sh
+    ```
 
 More instructions are available in [Rafiki's Developer Guide](https://nginyc.github.io/rafiki/docs/latest/src/dev).
 

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: PVC_NAME
+spec:
+  accessModes:
+    - PV_ACCESS_MODES
+  resources:
+    requests:
+      storage: PV_STORAGE
+  selector:
+    matchLabels:
+      LABLES_KEYS_0: LABLES_VALUES_0
+    

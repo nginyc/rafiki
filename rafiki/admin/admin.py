@@ -26,6 +26,7 @@ from rafiki.config import SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
 from rafiki.meta_store import MetaStore
 from rafiki.model import LoggerUtils
 from rafiki.container import DockerSwarmContainerManager 
+from rafiki.container import KubernetesContainerManager
 from rafiki.data_store import FileDataStore, DataStore
 from rafiki.param_store import FileParamStore, ParamStore
 
@@ -48,7 +49,11 @@ class InvalidDatasetError(Exception): pass
 class Admin(object):
     def __init__(self, meta_store=None, container_manager=None, data_store=None, param_store=None):
         self._meta_store = meta_store or MetaStore()
-        container_manager = container_manager or DockerSwarmContainerManager()
+        container_manager = None
+        if os.getenv('CONTAINER_MODE', 'SWARM') == 'SWARM':
+            container_manager = container_manager or DockerSwarmContainerManager()
+        else:
+            container_manager = container_manager or KubernetesContainerManager()
         self._data_store: DataStore = data_store or FileDataStore()
         self._param_store: ParamStore = param_store or FileParamStore()
         self._base_worker_image = '{}:{}'.format(os.environ['RAFIKI_IMAGE_WORKER'],
@@ -112,7 +117,7 @@ class Admin(object):
         }
 
     def ban_user(self, email):
-        user = self._meta_store.get_user_by_email(email)
+        user = self._meta_store.get_user_by_email(email) 
         if user is None:
             raise InvalidUserError()
         if user.banned_date is not None:
@@ -194,7 +199,9 @@ class Admin(object):
         if len(model_ids) == 0:
             raise NoModelsForTrainJobError()
 
-        # Compute auto-incremented app version
+        # Compute auto-incremented app version # config.load_kube_config(config_file='/root/rafiki/k8sconfig')
+        logger.info('config k8s')
+        # self._client_service = kubernetes.client.CoreV1Api()
         app_version = max([x.app_version for x in train_jobs], default=0) + 1
 
         # Get models available to user
