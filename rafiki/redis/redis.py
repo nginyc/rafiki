@@ -21,7 +21,7 @@ import uuid
 import time
 import logging
 import msgpack
-
+import os
 logger = logging.getLogger(__name__)
 
 REDIS_LOCK_EXPIRE_SECONDS = 60
@@ -43,7 +43,8 @@ class RedisSession(object):
                 redis_port=None):
         self._uid = str(uuid.uuid4()) # Process identifier for distributed locking
         self._namespace = namespace
-        self._redis = self._make_redis_client(redis_host, redis_port)
+        passwd=os.environ['REDIS_PASSWD']
+        self._redis = self._make_redis_client(passwd,redis_host, redis_port)
 
     def acquire_lock(self):
         lock_value = self._uid        
@@ -131,10 +132,10 @@ class RedisSession(object):
     def _get_redis_name(self, name):
         return '{}:{}'.format(self._namespace, name)
 
-    def _make_redis_client(self, host, port):
+    def _make_redis_client(self,passwd,host, port):
         if host is not None and port is not None:
             import redis
-            cache_connection_url = 'redis://{}:{}'.format(host, port)
+            cache_connection_url = 'redis://:{}@{}:{}'.format(passwd,host, port)
             connection_pool = redis.ConnectionPool.from_url(cache_connection_url)
             client = redis.StrictRedis(connection_pool=connection_pool, decode_responses=True)
             logger.info(f'Connecting to Redis at namespace {self._namespace}...')

@@ -138,7 +138,7 @@ class AdvisorWorker():
 
             # Create trial
             (trial_no, trial_id) = self._monitor.create_next_trial(worker_id)
-
+           
             # Make proposal to free worker
             proposal = self._advisor.propose(worker_id, trial_no)
 

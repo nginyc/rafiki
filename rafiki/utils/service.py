@@ -51,6 +51,7 @@ def run_worker(meta_store, start_worker, stop_worker):
         logger.info('Stopping worker...')
         stop_worker()
 
+
     except Exception as e:
         logger.error('Error while running worker:')
         logger.error(traceback.format_exc())

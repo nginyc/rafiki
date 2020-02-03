@@ -72,6 +72,7 @@ class TrainCache(object):
 
     def get_proposal(self, worker_id: str) -> Union[Proposal, None]:
         name = f'workers:{worker_id}:proposal'
+        logger.info(name)
         proposal = self._redis.get(name)
         if proposal is None:
             return None
@@ -82,6 +83,7 @@ class TrainCache(object):
         name = f'workers:{worker_id}:proposal'
         assert self._redis.get(name) is None
         logger.info(f'Creating proposal "{proposal}" for worker "{worker_id}"...')
+        
         self._redis.set(name, proposal.to_jsonable())
 
     def clear_all(self):
