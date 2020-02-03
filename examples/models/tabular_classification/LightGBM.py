@@ -68,7 +68,8 @@ class LightGBM(BaseModel):
         self._target = target
 
         df = pd.read_csv(dataset_url, index_col=0)
-        df = df.drop(exclude, axis=1)
+        if exclude and set(df.columns.tolist()).intersection(set(exclude)) == set(exclude):
+            df = df.drop(exclude, axis=1)
 
         # Optional: Remove 4 applications with XNA CODE_GENDER (train set)
         df = df[df['CODE_GENDER'] != 'XNA']

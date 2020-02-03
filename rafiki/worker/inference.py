@@ -151,7 +151,7 @@ class InferenceWorker():
         except:
             logger.error('Error while making predictions:')
             logger.error(traceback.format_exc())
-            predictions = [None for x in range(queries)]
+            predictions = [None for x in range(len(queries))]
 
         # Transform predictions, adding associated worker & query ID
         predictions = [Prediction(x, query.id, self._worker_id) for (x, query) in zip(predictions, queries)]

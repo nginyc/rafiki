@@ -222,7 +222,8 @@ class DNNTorch(BaseModel):
 
         # Load CSV file as pandas dataframe
         df = pd.read_csv(dataset_url, index_col=0)
-        df = df.drop(exclude, axis=1)
+        if exclude and set(df.columns.tolist()).intersection(set(exclude)) == set(exclude):
+            df = df.drop(exclude, axis=1)
 
         # Optional: Remove 4 applications with XNA CODE_GENDER (train set)
         df = df[df['CODE_GENDER'] != 'XNA']
@@ -342,7 +343,7 @@ class DNNTorch(BaseModel):
         df = pd.DataFrame(queries)
 
         # Extract X & y from dataframe
-        (X, y) = self._extract_xy(df)
+        (X, y) = self._extract_xy(df, method='predict')
         # Encode categorical features
         X = self._features_mapping(X)
         # other preprocessing
@@ -415,7 +416,7 @@ class DNNTorch(BaseModel):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self._model = self._model.to(device)
 
-    def _extract_xy(self, data):
+    def _extract_xy(self, data, method=None):
         if self._target is None:
             self._target = 'TARGET'
         y = data[self._target] if self._target in data else None
@@ -425,8 +426,10 @@ class DNNTorch(BaseModel):
             self._features = list(X.columns)
         else:
             X = data[self._features]
-
-        return (X, y)
+        if method == 'predict':
+            return (X, None)
+        else:
+            return (X, y)
 
     def _encoding_categorical_type(self, df):
         # Apply label encoding for those categorical columns
@@ -461,7 +464,8 @@ class DNNTorch(BaseModel):
         cat_cols = [col for col in df.columns if df[col].dtype == 'object']
         df_tmp = df.copy()
         for name in cat_cols:
-            df_tmp[name] = df[name].map(self._encoding_dict[name]).fillna(0)
+            if name in self._encoding_dict:
+                df_tmp[name] = df[name].map(self._encoding_dict[name]).fillna(0)
         df = df_tmp
         return df
 
