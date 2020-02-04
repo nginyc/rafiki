@@ -52,7 +52,6 @@ def load_model_class(model_file_bytes, model_class, temp_mod_name=None) -> Type[
     finally:
         # Ensure that temp model file is removed upon model loading error
         os.remove(temp_model_file_name)
-#         pass
 
     return clazz
 
