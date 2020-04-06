@@ -23,6 +23,7 @@ import os
 import base64
 import pickle
 import tensorflow as tf
+from keras import models, layers
 from tensorflow import keras
 from keras.layers import Dense, Flatten, Conv2D, AveragePooling2D
 from keras.optimizers import Adam
@@ -119,16 +120,6 @@ class LeNet5(BaseModel):
 
     def dump_parameters(self):
         params = {}
-        # Save model parameters
-        model_bytes = pickle.dumps(self._model)
-        model_base64 = base64.b64encode(model_bytes).decode('utf-8')
-        params['model_base64'] = model_base64
-        
-        return params
-
-
-    def load_parameters(self, params):
-        params = {}
         # Put model parameters
         model_bytes = pickle.dumps(self._model)
         model_base64 = base64.b64encode(model_bytes).decode('utf-8')
@@ -138,8 +129,17 @@ class LeNet5(BaseModel):
         params['image_size'] = self._image_size
 
         return params
-    
-    
+
+    def load_parameters(self, params):
+        # Load model parameters
+        model_base64 = params['model_base64']
+        model_bytes = base64.b64decode(model_base64.encode('utf-8'))
+        self._model = pickle.loads(model_bytes)
+
+        # Load image size
+        self._image_size = params['image_size']
+
+
     def _prepare_X(self, images):
         X = np.asarray(images)
         return X.reshape(-1,28,28,1)
