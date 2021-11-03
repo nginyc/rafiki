@@ -42,7 +42,7 @@
     "redux-saga": "^1.0.1",
     "simplebar-react": "^0.1.4",
     "typeface-roboto": "^0.0.54",
-    "validator": "^10.11.0"
+    "validator": "^13.7.0"
   },
   "scripts": {
     "start": "react-scripts start --watch --watch-poll",
