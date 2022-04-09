@@ -20,7 +20,7 @@
     "gitgraph.js": "^1.15.1",
     "is-plain-object": "^3.0.0",
     "jss": "^9.8.7",
-    "moment": "^2.24.0",
+    "moment": "^2.29.2",
     "mui-form-fields": "^0.1.0",
     "query-string": "^6.2.0",
     "react": "^16.8.6",
