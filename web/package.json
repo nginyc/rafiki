@@ -15,7 +15,7 @@
     "core-js": "^3.1.4",
     "css-vendor": "^2.0.5",
     "echarts": "^4.2.1",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "final-form": "^4.18.2",
     "gitgraph.js": "^1.15.1",
     "is-plain-object": "^3.0.0",
